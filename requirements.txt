@@ -1,0 +1,29 @@
+# AutoRedTeam-Orchestrator Dependencies
+
+# Core
+pyyaml>=6.0
+python-dotenv>=1.0.0
+
+# Async support
+aiohttp>=3.9.0
+aiofiles>=23.2.1
+
+# CLI
+rich>=13.7.0
+click>=8.1.7
+
+# Reporting
+jinja2>=3.1.2
+
+# Optional: LLM Integration
+openai>=1.12.0
+anthropic>=0.18.0
+
+# Optional: Web UI
+flask>=3.0.0
+flask-socketio>=5.3.6
+
+# Development
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+black>=24.1.0

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "autored-team": {
+      "command": "python",
+      "args": ["/home/kali/Desktop/AutoRedTeam-Orchestrator/mcp_server.py"],
+      "env": {
+        "PYTHONPATH": "/home/kali/Desktop/AutoRedTeam-Orchestrator"
+      }
+    }
+  }
+}
