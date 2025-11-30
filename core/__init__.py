@@ -1,28 +1,19 @@
 """
-AutoRedTeam-Orchestrator Core Module
-AI-Driven Automated Red Team Penetration Testing Agent
+AI Red Team MCP - Core Module
 """
 
-from .ai_brain import AIBrain, Asset, Vulnerability, RiskLevel, ServiceType
-from .tool_executor import ToolExecutor, ToolResult, ToolStatus
-from .orchestrator import RedTeamOrchestrator
-from .async_engine import AsyncEngine, RateLimitConfig, TokenBucket
-from .smart_decision import ThreatAnalyzer, AttackSurfaceAnalyzer, SmartDecisionEngine
-from .web_scanner import WebScanner, WebFinding
-from .report_generator import ReportGenerator
-from .payload_library import PayloadLibrary, PayloadCategory
-from .attack_engine import AttackEngine, AttackResult
-from .advanced_attack_engine import AdvancedAttackEngine, ChainAttackEngine, PayloadOptimizer
+# 注释有依赖问题的导入，使用时再单独导入
+# from core.mcp_server import MCPServer, create_app
+# from core.tool_registry import ToolRegistry, BaseTool
+# from core.session_manager import SessionManager, Session
+# from core.ai_engine import AIDecisionEngine
 
 __all__ = [
-    'AIBrain', 'Asset', 'Vulnerability', 'RiskLevel', 'ServiceType',
-    'ToolExecutor', 'ToolResult', 'ToolStatus',
-    'RedTeamOrchestrator',
-    'AsyncEngine', 'RateLimitConfig', 'TokenBucket',
-    'ThreatAnalyzer', 'AttackSurfaceAnalyzer', 'SmartDecisionEngine',
-    'WebScanner', 'WebFinding',
-    'ReportGenerator',
-    'PayloadLibrary', 'PayloadCategory',
-    'AttackEngine', 'AttackResult',
-    'AdvancedAttackEngine', 'ChainAttackEngine', 'PayloadOptimizer'
+    # "MCPServer",
+    # "create_app",
+    # "ToolRegistry",
+    # "BaseTool",
+    # "SessionManager",
+    # "Session",
+    # "AIDecisionEngine"
 ]

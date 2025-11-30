@@ -1,0 +1,82 @@
+# AI Red Team MCP Server Configuration
+# AI红队MCP服务器配置
+
+server:
+  host: "127.0.0.1"
+  port: 5000
+  debug: false
+  threaded: true
+  
+# AI配置
+ai:
+  # 提供商: openai, anthropic, local
+  provider: "openai"
+  model: "gpt-4"
+  # API密钥 (建议使用环境变量 OPENAI_API_KEY)
+  api_key: ""
+  temperature: 0.7
+  max_tokens: 4000
+
+# 日志配置
+logging:
+  level: "INFO"
+  file_logging: true
+  console_logging: true
+  log_rotation: true
+  max_file_size: "10MB"
+  backup_count: 5
+
+# 工具配置
+tools:
+  # 默认超时(秒)
+  default_timeout: 300
+  # 并发限制
+  max_concurrent: 5
+  # 需要root权限的工具
+  root_required:
+    - nmap_scan
+    - nmap_os
+    - masscan
+  
+# 扫描配置
+scanning:
+  # 默认线程数
+  default_threads: 10
+  # 默认延迟(毫秒)
+  default_delay: 100
+  # 速率限制
+  rate_limit: 150
+
+# 字典路径
+wordlists:
+  directories: "/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt"
+  passwords: "/usr/share/wordlists/rockyou.txt"
+  usernames: "/usr/share/seclists/Usernames/top-usernames-shortlist.txt"
+  subdomains: "/usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt"
+
+# API密钥 (建议使用环境变量)
+api_keys:
+  shodan: ""  # SHODAN_API_KEY
+  censys_id: ""  # CENSYS_API_ID
+  censys_secret: ""  # CENSYS_API_SECRET
+  virustotal: ""  # VT_API_KEY
+
+# 报告配置
+reporting:
+  output_dir: "reports"
+  default_format: "html"
+  include_raw_output: false
+  
+# 安全配置
+security:
+  # 允许的目标范围 (CIDR)
+  allowed_targets: []
+  # 禁止的目标
+  blocked_targets:
+    - "127.0.0.1"
+    - "localhost"
+  # 需要确认的危险操作
+  dangerous_operations:
+    - exploit
+    - brute_force
+    - dos

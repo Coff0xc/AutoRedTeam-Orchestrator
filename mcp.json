@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "ai-redteam": {
+      "command": "python3",
+      "args": [
+        "/home/kali/Desktop/ai-recon-mcp/mcp_server_full.py"
+      ],
+      "env": {
+        "PYTHONPATH": "/home/kali/Desktop/ai-recon-mcp"
+      }
+    }
+  }
+}

