@@ -25,7 +25,7 @@ class AttackPhase(Enum):
     DISCOVERY = "discovery"                    # 发现
     LATERAL_MOVEMENT = "lateral_movement"      # 横向移动
     COLLECTION = "collection"                  # 收集
-    EXFILTRATION = "exfiltration"             # 数据外传
+    EXFILTRATION = "exfiltration"              # 数据外传
     IMPACT = "impact"                          # 影响
 
 
