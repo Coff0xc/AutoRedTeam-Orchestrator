@@ -24,6 +24,7 @@ class ToolCategory(Enum):
     WIRELESS = "wireless"              # 无线攻击
     CRYPTO = "crypto"                  # 密码攻击
     REPORT = "report"                  # 报告生成
+    CREDENTIAL_ACCESS = "credential_access"  # 凭证访问
 
 
 @dataclass
