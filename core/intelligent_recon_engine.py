@@ -11,11 +11,18 @@ import subprocess
 import urllib.request
 import urllib.error
 import ssl
+import shutil
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
+
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -130,6 +137,19 @@ class IntelligentReconEngine:
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
+        # 初始化HTTP会话
+        if REQUESTS_AVAILABLE:
+            self.session = requests.Session()
+            self.session.headers.update(self.headers)
+            self.session.verify = False
+        else:
+            self.session = None
+            logger.warning("requests库未安装，部分功能将受限")
+
+    @staticmethod
+    def _check_tool(tool_name: str) -> bool:
+        """检查外部工具是否存在"""
+        return shutil.which(tool_name) is not None
     
     def run(self) -> Dict:
         """运行智能侦察"""
@@ -188,35 +208,45 @@ class IntelligentReconEngine:
         """资产发现"""
         # 提取域名
         domain = self.target.replace("https://", "").replace("http://", "").split("/")[0]
-        
+
         # 子域名枚举
-        try:
-            result = subprocess.run(
-                ["subfinder", "-d", domain, "-silent"],
-                capture_output=True,
-                text=True,
-                timeout=120
-            )
-            if result.returncode == 0:
-                self.asset.subdomains = [s.strip() for s in result.stdout.split('\n') if s.strip()]
-                logger.info(f"  发现 {len(self.asset.subdomains)} 个子域名")
-        except Exception as e:
-            logger.warning(f"  子域名枚举失败: {e}")
-        
+        if self._check_tool("subfinder"):
+            try:
+                result = subprocess.run(
+                    ["subfinder", "-d", domain, "-silent"],
+                    capture_output=True,
+                    text=True,
+                    timeout=120
+                )
+                if result.returncode == 0:
+                    self.asset.subdomains = [s.strip() for s in result.stdout.split('\n') if s.strip()]
+                    logger.info(f"  发现 {len(self.asset.subdomains)} 个子域名")
+            except subprocess.TimeoutExpired:
+                logger.warning("  子域名枚举超时")
+            except Exception as e:
+                logger.warning(f"  子域名枚举失败: {e}")
+        else:
+            logger.warning("  subfinder未安装，跳过子域名枚举")
+
         # 端口扫描
-        try:
-            result = subprocess.run(
-                ["nmap", "-T4", "-F", domain],
-                capture_output=True,
-                text=True,
-                timeout=120
-            )
-            if result.returncode == 0:
-                ports = re.findall(r'(\d+)/tcp\s+open', result.stdout)
-                self.asset.ports = [int(p) for p in ports]
-                logger.info(f"  发现 {len(self.asset.ports)} 个开放端口")
-        except Exception as e:
-            logger.warning(f"  端口扫描失败: {e}")
+        if self._check_tool("nmap"):
+            try:
+                result = subprocess.run(
+                    ["nmap", "-T4", "-F", domain],
+                    capture_output=True,
+                    text=True,
+                    timeout=120
+                )
+                if result.returncode == 0:
+                    ports = re.findall(r'(\d+)/tcp\s+open', result.stdout)
+                    self.asset.ports = [int(p) for p in ports]
+                    logger.info(f"  发现 {len(self.asset.ports)} 个开放端口")
+            except subprocess.TimeoutExpired:
+                logger.warning("  端口扫描超时")
+            except Exception as e:
+                logger.warning(f"  端口扫描失败: {e}")
+        else:
+            logger.warning("  nmap未安装，跳过端口扫描")
     
     def _deep_fingerprint(self):
         """深度指纹识别"""
@@ -283,18 +313,22 @@ class IntelligentReconEngine:
     
     def _js_deep_analysis(self):
         """深度JS文件分析"""
+        if not self.session:
+            logger.warning("  requests库未安装，跳过JS深度分析")
+            return
+
         try:
             req = urllib.request.Request(self.target, headers=self.headers)
             with urllib.request.urlopen(req, timeout=10, context=ssl_context) as response:
                 resp_text = response.read().decode('utf-8', errors='ignore')
-            
+
             # 提取JS文件
             js_files = re.findall(r'<script[^>]+src=["\']([^"\']+\.js[^"\']*)["\']', resp_text)
             js_files += re.findall(r'src:\s*["\']([^"\']+\.js[^"\']*)["\']', resp_text)
-            
+
             self.asset.js_files = list(set(js_files))
             logger.info(f"  发现 {len(self.asset.js_files)} 个JS文件")
-            
+
             # 分析JS文件
             for js_file in self.asset.js_files[:10]:  # 限制分析前10个
                 try:
@@ -302,14 +336,14 @@ class IntelligentReconEngine:
                         js_url = f"{self.target.rstrip('/')}/{js_file.lstrip('/')}"
                     else:
                         js_url = js_file
-                    
+
                     js_resp = self.session.get(js_url, timeout=5)
                     if js_resp.status_code == 200:
                         js_content = js_resp.text
-                        
+
                         # 检测敏感信息
                         for keyword_pattern in self.JS_SENSITIVE_KEYWORDS:
-                            matches = re.findall(f'{keyword_pattern}["\']?\\s*[:=]\\s*["\']([^"\']+)["\']', 
+                            matches = re.findall(f'{keyword_pattern}["\']?\\s*[:=]\\s*["\']([^"\']+)["\']',
                                                js_content, re.IGNORECASE)
                             if matches:
                                 self.asset.sensitive_info.extend(matches)
@@ -322,7 +356,7 @@ class IntelligentReconEngine:
                                     recommendation="移除JS中的敏感信息，使用环境变量",
                                     confidence=0.8
                                 )
-                        
+
                         # 提取API端点
                         api_patterns = [
                             r'["\']/(api|admin|user|login|auth)/[^"\']+["\']',
@@ -332,7 +366,7 @@ class IntelligentReconEngine:
                         for pattern in api_patterns:
                             endpoints = re.findall(pattern, js_content)
                             self.asset.api_endpoints.extend([e if isinstance(e, str) else e[1] for e in endpoints])
-                        
+
                         # 检测webpack sourcemap
                         if '.map' in js_content or 'sourceMappingURL' in js_content:
                             self._add_finding(
@@ -344,7 +378,9 @@ class IntelligentReconEngine:
                                 recommendation="生产环境禁用sourcemap",
                                 confidence=0.7
                             )
-                
+
+                except requests.RequestException as e:
+                    logger.debug(f"  获取JS文件失败 {js_file}: {e}")
                 except Exception as e:
                     continue
             
@@ -388,10 +424,14 @@ class IntelligentReconEngine:
     
     def _login_intelligent_test(self):
         """登录框智能测试"""
+        if not self.session:
+            logger.warning("  requests库未安装，跳过登录测试")
+            return
+
         # 检测登录页面
         login_paths = ['/login', '/admin', '/admin/login', '/user/login', '/signin', '/auth/login']
         login_url = None
-        
+
         for path in login_paths:
             try:
                 url = f"{self.target.rstrip('/')}{path}"
@@ -399,12 +439,14 @@ class IntelligentReconEngine:
                 if resp.status_code == 200 and any(k in resp.text.lower() for k in ['password', 'username', 'login']):
                     login_url = url
                     break
-            except:
+            except requests.RequestException:
                 continue
-        
+            except Exception:
+                continue
+
         if not login_url:
             return
-        
+
         logger.info(f"  发现登录页面: {login_url}")
         
         # 识别CMS类型
@@ -463,6 +505,9 @@ class IntelligentReconEngine:
     
     def _api_discovery(self):
         """API接口发现"""
+        if not self.session:
+            return
+
         # 常见API路径
         api_paths = [
             '/api/v1', '/api/v2', '/api',
@@ -470,7 +515,7 @@ class IntelligentReconEngine:
             '/v2/api-docs', '/api-docs',
             '/graphql', '/graphiql'
         ]
-        
+
         for path in api_paths:
             try:
                 url = f"{self.target.rstrip('/')}{path}"
@@ -485,18 +530,23 @@ class IntelligentReconEngine:
                         recommendation="保护API文档，限制访问",
                         confidence=0.9
                     )
-            except:
+            except requests.RequestException:
                 pass
-    
+            except Exception:
+                pass
+
     def _cloud_storage_detection(self):
         """云存储检测"""
+        if not self.session:
+            return
+
         # S3存储桶检测
         s3_patterns = [
             r's3\.amazonaws\.com/([^/\s"\']+)',
             r'([^/\s"\']+)\.s3\.amazonaws\.com',
             r'([^/\s"\']+)\.s3-[^/\s"\']+\.amazonaws\.com'
         ]
-        
+
         try:
             resp = self.session.get(self.target, timeout=10)
             for pattern in s3_patterns:
@@ -511,32 +561,42 @@ class IntelligentReconEngine:
                         recommendation="检查存储桶权限配置",
                         confidence=0.7
                     )
-        except:
+        except requests.RequestException:
             pass
-    
+        except Exception:
+            pass
+
     def _check_url_exists(self, url: str) -> Tuple[bool, int, str]:
         """检查URL是否存在"""
+        if not self.session:
+            return False, 0, ""
         try:
             resp = self.session.get(url, timeout=5, verify=False, allow_redirects=False)
             if resp.status_code in [200, 301, 302]:
                 return True, resp.status_code, resp.text[:1000]
-        except:
+        except requests.RequestException:
+            pass
+        except Exception:
             pass
         return False, 0, ""
-    
+
     def _identify_cms(self) -> Optional[str]:
         """识别CMS类型"""
+        if not self.session:
+            return None
         try:
             resp = self.session.get(self.target, timeout=10)
             content = resp.text.lower()
-            
+
             if 'seeyon' in content or '/seeyon/' in content:
                 return 'seeyon'
             elif 'weaver' in content or 'ecology' in content:
                 return 'weaver'
             elif 'ruoyi' in content:
                 return 'ruoyi'
-        except:
+        except requests.RequestException:
+            pass
+        except Exception:
             pass
         return None
     
