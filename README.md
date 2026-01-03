@@ -178,7 +178,7 @@
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/YOUR_USERNAME/AutoRedTeam-Orchestrator.git
+git clone https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git
 cd AutoRedTeam-Orchestrator
 
 # 2. 运行安装脚本 (自动安装所有依赖工具)
@@ -467,7 +467,7 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 
 ## 🗺️ 路线图
 
-- [x] 64+ 安全工具集成
+- [x] 52+ 安全工具集成
 - [x] Nuclei 11997+ 模板支持
 - [x] 2000+ Payload 库
 - [x] 智能侦察引擎
@@ -542,7 +542,8 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 
 ## 📮 联系方式
 
-如有问题，请提交 [Issue](https://github.com/YOUR_USERNAME/AutoRedTeam-Orchestrator/issues)
+- 📧 Email: Coff0xc@protonmail.com
+- 🐛 Issue: [GitHub Issues](https://github.com/Coff0xc/AutoRedTeam-Orchestrator/issues)
 
 ---
 
