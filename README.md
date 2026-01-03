@@ -1,5 +1,7 @@
 # 🔥 AutoRedTeam-Orchestrator
 
+**[中文](README.md)** | [English](README_EN.md)
+
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Kali%20Linux-557C94?style=for-the-badge&logo=kalilinux&logoColor=white" alt="Kali Linux"/>
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>

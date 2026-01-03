@@ -6,7 +6,7 @@
 
 如果你发现了安全漏洞，请通过以下方式私下报告：
 
-📧 **Email**: security@example.com
+📧 **Email**: Coff0xc@protonmail.com
 
 请在报告中包含：
 - 漏洞描述
