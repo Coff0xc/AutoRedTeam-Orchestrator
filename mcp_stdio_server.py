@@ -13,8 +13,12 @@ import json
 import subprocess
 import platform
 import re
+import time
+import threading
 from typing import Optional
 from urllib.parse import urlparse
+from functools import wraps
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -42,6 +46,36 @@ except ImportError:
 mcp = FastMCP("AutoRedTeam")
 
 IS_WINDOWS = platform.system() == "Windows"
+
+# ========== 全局配置 ==========
+GLOBAL_CONFIG = {
+    "verify_ssl": os.getenv("VERIFY_SSL", "false").lower() == "true",  # SSL验证开关
+    "rate_limit_delay": float(os.getenv("RATE_LIMIT_DELAY", "0.3")),   # 请求间隔(秒)
+    "max_threads": int(os.getenv("MAX_THREADS", "50")),                # 最大并发线程
+    "request_timeout": int(os.getenv("REQUEST_TIMEOUT", "10")),       # 请求超时(秒)
+}
+
+# 速率限制器
+_rate_limit_lock = threading.Lock()
+_last_request_time = 0
+
+def rate_limited(func):
+    """速率限制装饰器 - 防止触发WAF/被封IP"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        global _last_request_time
+        with _rate_limit_lock:
+            elapsed = time.time() - _last_request_time
+            delay = GLOBAL_CONFIG["rate_limit_delay"]
+            if elapsed < delay:
+                time.sleep(delay - elapsed)
+            _last_request_time = time.time()
+        return func(*args, **kwargs)
+    return wrapper
+
+def get_verify_ssl():
+    """获取SSL验证配置"""
+    return GLOBAL_CONFIG["verify_ssl"]
 
 # 内置字典
 COMMON_DIRS = [
@@ -104,17 +138,29 @@ def check_tool(name: str) -> bool:
     return shutil.which(name) is not None
 
 def run_cmd(cmd: list, timeout: int = 300) -> dict:
-    """跨平台命令执行"""
+    """跨平台命令执行 - 安全版本，避免命令注入"""
+    if not cmd or not isinstance(cmd, list):
+        return {"success": False, "error": "命令必须是非空列表"}
+
     tool = cmd[0]
     if not check_tool(tool):
         return {"success": False, "error": f"工具 {tool} 未安装。Windows用户请安装对应工具或使用WSL。"}
 
+    # 安全检查：禁止危险字符
+    dangerous_chars = [';', '|', '&', '`', '$', '>', '<', '\n', '\r']
+    for arg in cmd:
+        if any(c in str(arg) for c in dangerous_chars):
+            return {"success": False, "error": f"检测到危险字符，拒绝执行: {arg}"}
+
     try:
-        # Windows 需要特殊处理
-        if IS_WINDOWS:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, shell=True)
-        else:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        # 不使用 shell=True，避免命令注入
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            shell=False  # 关键：禁用shell
+        )
 
         return {
             "success": True,
@@ -124,29 +170,44 @@ def run_cmd(cmd: list, timeout: int = 300) -> dict:
         }
     except subprocess.TimeoutExpired:
         return {"success": False, "error": f"命令超时 ({timeout}s)"}
+    except FileNotFoundError:
+        return {"success": False, "error": f"工具 {tool} 未找到，请确认已安装"}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
 # ========== 纯 Python 实现的工具 (跨平台) ==========
 
 @mcp.tool()
-def port_scan(target: str, ports: str = "21,22,23,25,53,80,110,143,443,445,3306,3389,5432,6379,8080,8443") -> dict:
-    """端口扫描 - 纯Python实现，跨平台可用"""
-    results = {"target": target, "open_ports": [], "closed_ports": []}
+def port_scan(target: str, ports: str = "21,22,23,25,53,80,110,143,443,445,3306,3389,5432,6379,8080,8443", threads: int = 50) -> dict:
+    """端口扫描 - 并发版本，大幅提升扫描速度"""
+    results = {"target": target, "open_ports": [], "closed_ports": [], "scan_time": 0}
     port_list = [int(p.strip()) for p in ports.split(",")]
+    threads = min(threads, GLOBAL_CONFIG["max_threads"])
 
-    for port in port_list:
+    def scan_single_port(port: int) -> tuple:
+        """扫描单个端口"""
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(2)
             result = sock.connect_ex((target, port))
-            if result == 0:
+            sock.close()
+            return (port, result == 0)
+        except:
+            return (port, False)
+
+    start_time = time.time()
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        futures = {executor.submit(scan_single_port, port): port for port in port_list}
+        for future in as_completed(futures):
+            port, is_open = future.result()
+            if is_open:
                 results["open_ports"].append(port)
             else:
                 results["closed_ports"].append(port)
-            sock.close()
-        except Exception as e:
-            results["closed_ports"].append(port)
+
+    results["open_ports"].sort()
+    results["closed_ports"].sort()
+    results["scan_time"] = round(time.time() - start_time, 2)
 
     return {"success": True, "data": results}
 
@@ -736,13 +797,13 @@ def vuln_check(url: str) -> dict:
     return {"success": True, "url": url, "vulnerabilities": vulns, "total": len(vulns)}
 
 @mcp.tool()
-def sqli_detect(url: str, param: str = None) -> dict:
-    """SQL注入检测 - 自动检测SQL注入漏洞"""
+def sqli_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
+    """SQL注入检测 - 增强版，支持时间盲注和布尔盲注"""
     if not HAS_REQUESTS:
         return {"success": False, "error": "需要安装 requests: pip install requests"}
 
     vulns = []
-    payloads = ["'", "\"", "' OR '1'='1", "\" OR \"1\"=\"1", "1' AND '1'='1", "1 AND 1=1", "' UNION SELECT NULL--"]
+    error_payloads = ["'", "\"", "' OR '1'='1", "\" OR \"1\"=\"1", "1' AND '1'='1", "1 AND 1=1", "' UNION SELECT NULL--"]
     error_patterns = [
         "sql syntax", "mysql", "sqlite", "postgresql", "oracle", "sqlserver",
         "syntax error", "unclosed quotation", "quoted string not properly terminated",
@@ -753,21 +814,31 @@ def sqli_detect(url: str, param: str = None) -> dict:
     base_url = url
     test_params = [param] if param else ["id", "page", "cat", "search", "q", "query", "user", "name"]
 
+    # 1. 获取基线响应
+    try:
+        baseline_resp = requests.get(base_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
+        baseline_length = len(baseline_resp.text)
+        baseline_time = baseline_resp.elapsed.total_seconds()
+    except:
+        baseline_length = 0
+        baseline_time = 0
+
     for p in test_params:
-        for payload in payloads:
+        # 错误型注入检测
+        for payload in error_payloads:
             try:
                 if "?" in base_url:
                     test_url = f"{base_url}&{p}={payload}"
                 else:
                     test_url = f"{base_url}?{p}={payload}"
 
-                resp = requests.get(test_url, timeout=10, verify=False)
+                resp = requests.get(test_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
                 resp_lower = resp.text.lower()
 
                 for pattern in error_patterns:
                     if pattern in resp_lower:
                         vulns.append({
-                            "type": "SQL Injection",
+                            "type": "Error-based SQLi",
                             "severity": "CRITICAL",
                             "param": p,
                             "payload": payload,
@@ -778,7 +849,74 @@ def sqli_detect(url: str, param: str = None) -> dict:
             except:
                 pass
 
-    return {"success": True, "url": url, "sqli_vulns": vulns, "total": len(vulns)}
+        if not deep_scan:
+            continue
+
+        # 2. 时间��注检测
+        time_payloads = [
+            ("' AND SLEEP(3)--", 3),
+            ("' AND (SELECT * FROM (SELECT(SLEEP(3)))a)--", 3),
+            ("'; WAITFOR DELAY '0:0:3'--", 3),
+            ("' AND pg_sleep(3)--", 3),
+        ]
+        for payload, delay in time_payloads:
+            try:
+                if "?" in base_url:
+                    test_url = f"{base_url}&{p}={payload}"
+                else:
+                    test_url = f"{base_url}?{p}={payload}"
+
+                start = time.time()
+                requests.get(test_url, timeout=delay + 5, verify=get_verify_ssl())
+                elapsed = time.time() - start
+
+                if elapsed >= delay:
+                    vulns.append({
+                        "type": "Time-based Blind SQLi",
+                        "severity": "CRITICAL",
+                        "param": p,
+                        "payload": payload,
+                        "evidence": f"响应延迟 {elapsed:.2f}s (预期 {delay}s)",
+                        "url": test_url
+                    })
+                    break
+            except:
+                pass
+
+        # 3. 布尔盲注检测
+        bool_payloads = [
+            ("' AND '1'='1", "' AND '1'='2"),
+            ("' AND 1=1--", "' AND 1=2--"),
+            ("\" AND \"1\"=\"1", "\" AND \"1\"=\"2"),
+        ]
+        for true_payload, false_payload in bool_payloads:
+            try:
+                if "?" in base_url:
+                    true_url = f"{base_url}&{p}={true_payload}"
+                    false_url = f"{base_url}&{p}={false_payload}"
+                else:
+                    true_url = f"{base_url}?{p}={true_payload}"
+                    false_url = f"{base_url}?{p}={false_payload}"
+
+                true_resp = requests.get(true_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
+                false_resp = requests.get(false_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
+
+                # 响应长度差异超过10%认为存在布尔盲注
+                len_diff = abs(len(true_resp.text) - len(false_resp.text))
+                if len_diff > baseline_length * 0.1 and len_diff > 50:
+                    vulns.append({
+                        "type": "Boolean-based Blind SQLi",
+                        "severity": "HIGH",
+                        "param": p,
+                        "payload": f"TRUE: {true_payload} | FALSE: {false_payload}",
+                        "evidence": f"响应长度差异: {len_diff} bytes",
+                        "url": true_url
+                    })
+                    break
+            except:
+                pass
+
+    return {"success": True, "url": url, "sqli_vulns": vulns, "total": len(vulns), "deep_scan": deep_scan}
 
 @mcp.tool()
 def xss_detect(url: str, param: str = None) -> dict:
@@ -2276,6 +2414,42 @@ PROXY_CONFIG = {
     "http": None,
     "https": None
 }
+
+
+@mcp.tool()
+def set_config(verify_ssl: bool = None, rate_limit_delay: float = None, max_threads: int = None, request_timeout: int = None) -> dict:
+    """配置管理 - 动态调整全局配置
+
+    Args:
+        verify_ssl: SSL证书验证开关 (True/False)
+        rate_limit_delay: 请求间隔秒数 (0.1-5.0)
+        max_threads: 最大并发线程数 (1-100)
+        request_timeout: 请求超时秒数 (5-60)
+    """
+    global GLOBAL_CONFIG
+    changes = []
+
+    if verify_ssl is not None:
+        GLOBAL_CONFIG["verify_ssl"] = verify_ssl
+        changes.append(f"verify_ssl: {verify_ssl}")
+
+    if rate_limit_delay is not None:
+        GLOBAL_CONFIG["rate_limit_delay"] = max(0.1, min(5.0, rate_limit_delay))
+        changes.append(f"rate_limit_delay: {GLOBAL_CONFIG['rate_limit_delay']}s")
+
+    if max_threads is not None:
+        GLOBAL_CONFIG["max_threads"] = max(1, min(100, max_threads))
+        changes.append(f"max_threads: {GLOBAL_CONFIG['max_threads']}")
+
+    if request_timeout is not None:
+        GLOBAL_CONFIG["request_timeout"] = max(5, min(60, request_timeout))
+        changes.append(f"request_timeout: {GLOBAL_CONFIG['request_timeout']}s")
+
+    return {
+        "success": True,
+        "changes": changes if changes else ["无更改"],
+        "current_config": GLOBAL_CONFIG.copy()
+    }
 
 
 @mcp.tool()
