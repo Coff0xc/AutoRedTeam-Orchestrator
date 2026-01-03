@@ -116,17 +116,26 @@ class NucleiScanner:
         os.makedirs(output_dir, exist_ok=True)
         self.results = []
     
-    def _run_nuclei(self, cmd: List[str], timeout: int = 3600) -> Dict:
-        """运行Nuclei命令"""
-        try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-            return {"success": True, "stdout": proc.stdout, "stderr": proc.stderr, "code": proc.returncode}
-        except subprocess.TimeoutExpired:
-            return {"success": False, "error": "Timeout"}
-        except FileNotFoundError:
-            return {"success": False, "error": "Nuclei not found. Install: go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+    def _run_nuclei(self, cmd: List[str], timeout: int = 3600, retries: int = 2) -> Dict:
+        """运行Nuclei命令 (带重试)"""
+        last_error = None
+        for attempt in range(retries + 1):
+            try:
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+                return {"success": True, "stdout": proc.stdout, "stderr": proc.stderr, "code": proc.returncode}
+            except subprocess.TimeoutExpired:
+                last_error = "Timeout"
+                if attempt < retries:
+                    print(f"[!] 超时，重试 {attempt + 1}/{retries}...")
+                    continue
+            except FileNotFoundError:
+                return {"success": False, "error": "Nuclei not found. Install: go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"}
+            except Exception as e:
+                last_error = str(e)
+                if attempt < retries:
+                    print(f"[!] 错误: {e}，重试 {attempt + 1}/{retries}...")
+                    continue
+        return {"success": False, "error": last_error}
     
     def update_templates(self) -> Dict:
         """更新Nuclei模板到最新"""
@@ -295,18 +304,29 @@ class NucleiScanner:
         return {"success": False, "error": f"Unknown tech: {tech}"}
     
     def _parse_results(self, output_file: str) -> List[Dict]:
-        """解析扫描结果"""
+        """解析扫描结果 (带去重)"""
         vulns = []
-        
+        seen = set()  # 用于去重
+
         if not os.path.exists(output_file):
             return vulns
-        
+
         try:
-            with open(output_file, 'r') as f:
+            with open(output_file, 'r', encoding='utf-8') as f:
                 for line in f:
                     if line.strip():
                         try:
                             vuln = json.loads(line)
+                            # 生成唯一标识用于去重
+                            dedup_key = (
+                                vuln.get("template-id", ""),
+                                vuln.get("matched-at", ""),
+                                vuln.get("matcher-name", "")
+                            )
+                            if dedup_key in seen:
+                                continue
+                            seen.add(dedup_key)
+
                             vulns.append({
                                 "template_id": vuln.get("template-id", ""),
                                 "name": vuln.get("info", {}).get("name", "Unknown"),
@@ -322,11 +342,12 @@ class NucleiScanner:
                                 "host": vuln.get("host", ""),
                                 "timestamp": vuln.get("timestamp", ""),
                             })
-                        except json.JSONDecodeError:
+                        except json.JSONDecodeError as e:
+                            print(f"[!] JSON解析错误: {e}")
                             continue
-        except Exception:
-            pass
-        
+        except IOError as e:
+            print(f"[!] 文件读取错误: {e}")
+
         self.results = vulns
         return vulns
     

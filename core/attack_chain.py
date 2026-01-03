@@ -39,9 +39,9 @@ class AttackNode:
     params: Dict[str, Any]
     dependencies: List[str] = field(default_factory=list)
     status: str = "pending"  # pending, running, success, failed, skipped
-    result: Dict[str, Any] = None
-    started_at: datetime = None
-    finished_at: datetime = None
+    result: Optional[Dict[str, Any]] = None
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
 
 
 @dataclass
@@ -252,13 +252,17 @@ class AttackChainEngine:
         
         return nodes
     
-    def execute_chain(self, chain_id: str, 
+    def execute_chain(self, chain_id: str,
                       session_id: str = None) -> Dict[str, Any]:
         """执行攻击链"""
         chain = self.chains.get(chain_id)
         if not chain:
             raise ValueError(f"攻击链不存在: {chain_id}")
-        
+
+        # 修复: 执行前检测循环依赖
+        if self._detect_cycle(chain):
+            raise ValueError(f"攻击链存在循环依赖: {chain_id}")
+
         chain.status = "running"
         results = []
         
@@ -311,14 +315,45 @@ class AttackChainEngine:
             "findings": chain.findings
         }
     
-    def _check_dependencies(self, chain: AttackChain, 
+    def _check_dependencies(self, chain: AttackChain,
                             node: AttackNode) -> bool:
         """检查节点依赖"""
         for dep_id in node.dependencies:
             dep_node = next((n for n in chain.nodes if n.id == dep_id), None)
-            if dep_node and dep_node.status not in ["success"]:
+            # 修复: 依赖节点不存在或未成功都应返回False
+            if dep_node is None:
+                logger.warning(f"依赖节点不存在: {dep_id}")
+                return False
+            if dep_node.status != "success":
                 return False
         return True
+
+    def _detect_cycle(self, chain: AttackChain) -> bool:
+        """检测循环依赖"""
+        visited = set()
+        rec_stack = set()
+
+        def dfs(node_id: str) -> bool:
+            visited.add(node_id)
+            rec_stack.add(node_id)
+
+            node = next((n for n in chain.nodes if n.id == node_id), None)
+            if node:
+                for dep_id in node.dependencies:
+                    if dep_id not in visited:
+                        if dfs(dep_id):
+                            return True
+                    elif dep_id in rec_stack:
+                        return True
+
+            rec_stack.remove(node_id)
+            return False
+
+        for node in chain.nodes:
+            if node.id not in visited:
+                if dfs(node.id):
+                    return True
+        return False
     
     def _extract_findings(self, node: AttackNode, 
                           result: Dict) -> List[Dict]:
