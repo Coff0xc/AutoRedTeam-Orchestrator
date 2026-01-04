@@ -429,9 +429,11 @@ class AutoReconEngine:
         # 生成建议
         self.results["recommendations"] = self._generate_recommendations()
         
+import tempfile
+
         # 保存报告
-        report_file = f"/tmp/recon_report_{self.target.replace('.', '_')}_{int(time.time())}.json"
-        with open(report_file, 'w') as f:
+        report_file = os.path.join(tempfile.gettempdir(), f"recon_report_{self.target.replace('.', '_')}_{int(time.time())}.json")
+        with open(report_file, 'w', encoding='utf-8') as f:
             json.dump(self.results, f, indent=2, ensure_ascii=False)
         
         self.results["report_file"] = report_file

@@ -841,7 +841,9 @@ def _privesc_script(script_name: str, args: Dict) -> Dict:
     }
     
     if args.get("action") == "download":
-        return run_cmd(["wget", "-q", urls[script_name], "-O", f"/tmp/{script_name}"], 60)
+        import tempfile
+        output_path = os.path.join(tempfile.gettempdir(), script_name)
+        return run_cmd(["wget", "-q", urls[script_name], "-O", output_path], 60)
     
     return {
         "success": True,

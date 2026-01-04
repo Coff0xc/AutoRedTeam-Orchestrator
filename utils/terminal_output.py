@@ -13,20 +13,26 @@ from typing import Dict, List, Optional, Callable
 from datetime import datetime
 
 # 日志文件路径
-LOG_FILE = "/tmp/mcp_redteam_live.log"
+import tempfile
+import os
+
+LOG_FILE = os.path.join(tempfile.gettempdir(), "mcp_redteam_live.log")
 
 # 尝试打开真正的终端或日志文件
 def get_tty():
     """获取输出目标 - 优先日志文件，方便tail -f查看"""
     try:
         # 始终写入日志文件，方便用户用 tail -f 查看
-        log_file = open(LOG_FILE, 'a', buffering=1)  # 行缓冲
+        log_file = open(LOG_FILE, 'a', buffering=1, encoding='utf-8')  # 行缓冲
         return log_file
     except:
         try:
-            return open('/dev/tty', 'w')
+            # 跨平台：仅在 Unix 系统尝试打开 /dev/tty
+            if sys.platform != 'win32':
+                return open('/dev/tty', 'w')
         except:
-            return sys.stderr
+            pass
+        return sys.stderr
 
 
 class TerminalLogger:
@@ -48,19 +54,20 @@ class TerminalLogger:
     def __init__(self):
         # 尝试打开日志文件
         try:
-            self.log_file = open(LOG_FILE, 'a', buffering=1)
+            self.log_file = open(LOG_FILE, 'a', buffering=1, encoding='utf-8')
         except:
             self.log_file = None
             
         self.lock = threading.Lock()
         self.enabled = True
         
-        # 尝试获取真实的 TTY (直接控制台输出)
+        # 跨平台：仅在 Unix 系统尝试获取真实 TTY
         self.real_tty = None
-        try:
-            self.real_tty = open('/dev/tty', 'w')
-        except:
-            pass
+        if sys.platform != 'win32':
+            try:
+                self.real_tty = open('/dev/tty', 'w')
+            except:
+                pass
     
     def _write(self, msg: str):
         """线程安全写入"""

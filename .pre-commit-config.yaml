@@ -1,0 +1,34 @@
+# Pre-commit hooks 配置
+# 安装: pip install pre-commit && pre-commit install
+
+repos:
+  # 本地 hooks
+  - repo: local
+    hooks:
+      # 检查硬编码路径（跨平台兼容性）
+      - id: check-hardcoded-paths
+        name: Check for hardcoded Unix paths
+        entry: python scripts/check_paths.py
+        language: python
+        files: \.py$
+        pass_filenames: true
+        
+      # 检查文件编码
+      - id: check-encoding
+        name: Check file encoding declaration
+        entry: python -c "import sys; [exit(1) for f in sys.argv[1:] if 'encoding' not in open(f).read()[:500] and 'open(' in open(f).read()]"
+        language: python
+        files: \.py$
+        pass_filenames: true
+        verbose: false
+
+  # 标准 hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=1000']

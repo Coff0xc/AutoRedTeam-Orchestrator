@@ -111,9 +111,11 @@ class NucleiScanner:
         }
     }
     
-    def __init__(self, output_dir: str = "/tmp/nuclei_results"):
-        self.output_dir = output_dir
-        os.makedirs(output_dir, exist_ok=True)
+import tempfile
+
+    def __init__(self, output_dir: str = None):
+        self.output_dir = output_dir or os.path.join(tempfile.gettempdir(), "nuclei_results")
+        os.makedirs(self.output_dir, exist_ok=True)
         self.results = []
     
     def _run_nuclei(self, cmd: List[str], timeout: int = 3600, retries: int = 2) -> Dict:

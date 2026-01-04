@@ -14,11 +14,14 @@ from typing import Any, Dict, List, Optional, Callable
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
 
+import tempfile
+
 # 配置日志
+log_file_path = os.path.join(tempfile.gettempdir(), 'mcp_redteam.log')
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.FileHandler('/tmp/mcp_redteam.log'), logging.StreamHandler(sys.stderr)]
+    handlers=[logging.FileHandler(log_file_path), logging.StreamHandler(sys.stderr)]
 )
 logger = logging.getLogger(__name__)
 
