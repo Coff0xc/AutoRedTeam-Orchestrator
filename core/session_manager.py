@@ -6,13 +6,18 @@
 import json
 import logging
 import os
+import re
 import uuid
+from pathlib import Path
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+# Session ID 安全正则
+SESSION_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]{8,64}$')
 
 
 class SessionStatus(Enum):
@@ -194,26 +199,53 @@ class SessionManager:
             return session.export_results()
         return []
     
+    def _validate_session_id(self, session_id: str) -> bool:
+        """验证 Session ID 格式，防止路径遍历"""
+        if not session_id:
+            return False
+        if not SESSION_ID_PATTERN.match(session_id):
+            return False
+        # 额外检查危险字符
+        if '..' in session_id or '/' in session_id or '\\' in session_id:
+            return False
+        return True
+
+    def _get_safe_filepath(self, session_id: str) -> str:
+        """获取安全的文件路径，防止路径遍历"""
+        if not self._validate_session_id(session_id):
+            raise ValueError(f"无效的 Session ID: {session_id}")
+
+        # 构建路径并验证
+        filepath = Path(self._storage_path) / f"{session_id}.json"
+        resolved = filepath.resolve()
+        storage_resolved = Path(self._storage_path).resolve()
+
+        # 确保路径在存储目录内
+        if not str(resolved).startswith(str(storage_resolved)):
+            raise ValueError(f"路径遍历攻击检测: {session_id}")
+
+        return str(resolved)
+
     def save_session(self, session_id: str):
-        """保存会话到文件"""
+        """保存会话到文件 - 安全版"""
         session = self.get_session(session_id)
         if not session:
             raise ValueError(f"会话不存在: {session_id}")
-        
-        filepath = os.path.join(self._storage_path, f"{session_id}.json")
+
+        filepath = self._get_safe_filepath(session_id)
         data = {
             **session.to_dict(),
             "results": session.export_results()
         }
-        
+
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        
+
         logger.info(f"会话已保存: {filepath}")
-    
+
     def load_session(self, session_id: str) -> Session:
-        """从文件加载会话"""
-        filepath = os.path.join(self._storage_path, f"{session_id}.json")
+        """从文件加载会话 - 安全版"""
+        filepath = self._get_safe_filepath(session_id)
         
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"会话文件不存在: {filepath}")
@@ -293,12 +325,13 @@ class HTTPSessionManager:
         self._auth_contexts: Dict[str, AuthContext] = {}
         self._request_count: Dict[str, int] = {}
 
-    def create_session(self, session_id: str = None) -> str:
+    def create_session(self, session_id: str = None, verify_ssl: bool = True) -> str:
         """
         创建HTTP会话
 
         Args:
             session_id: 会话ID (可选，自动生成)
+            verify_ssl: 是否验证SSL证书 (默认启用)
 
         Returns:
             session_id
@@ -309,7 +342,7 @@ class HTTPSessionManager:
         session_id = session_id or str(uuid.uuid4())[:8]
 
         sess = requests.Session()
-        sess.verify = False
+        sess.verify = verify_ssl  # 安全修复: 默认启用 SSL 验证
         sess.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",

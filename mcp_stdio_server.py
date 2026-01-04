@@ -49,7 +49,7 @@ IS_WINDOWS = platform.system() == "Windows"
 
 # ========== 全局配置 ==========
 GLOBAL_CONFIG = {
-    "verify_ssl": os.getenv("VERIFY_SSL", "false").lower() == "true",  # SSL验证开关
+    "verify_ssl": os.getenv("VERIFY_SSL", "true").lower() == "true",   # SSL验证开关 (默认启用)
     "rate_limit_delay": float(os.getenv("RATE_LIMIT_DELAY", "0.3")),   # 请求间隔(秒)
     "max_threads": int(os.getenv("MAX_THREADS", "50")),                # 最大并发线程
     "request_timeout": int(os.getenv("REQUEST_TIMEOUT", "10")),       # 请求超时(秒)

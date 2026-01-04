@@ -5,9 +5,11 @@
 """
 
 import re
+import os
 import ipaddress
-from typing import Optional, List, Tuple
-from urllib.parse import urlparse
+from pathlib import Path
+from typing import Optional, List, Tuple, Dict
+from urllib.parse import urlparse, unquote
 
 
 class ValidationError(Exception):
@@ -18,9 +20,17 @@ class ValidationError(Exception):
 class InputValidator:
     """输入验证器"""
     
-    # 危险字符和命令
-    DANGEROUS_CHARS = [';', '|', '&', '$', '`', '\n', '\r', '>', '<']
-    DANGEROUS_COMMANDS = ['rm', 'dd', 'mkfs', 'format', ':(){:|:&};:']
+    # 危险字符和命令 - 增强版
+    DANGEROUS_CHARS = [
+        ';', '|', '&', '$', '`', '\n', '\r', '>', '<',  # 原有
+        "'", '"', '\\', '(', ')', '{', '}', '[', ']',   # 引号和括号
+        '\x00', '\t', '\x0b', '\x0c',                    # 控制字符
+    ]
+    # 危险命令模式
+    DANGEROUS_COMMANDS = ['rm', 'dd', 'mkfs', 'format', ':(){:|:&};:',
+                          'chmod', 'chown', 'shutdown', 'reboot', 'init']
+    # Session ID 安全正则
+    SESSION_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]{8,64}$')
     
     # 允许的端口范围
     MIN_PORT = 1
@@ -161,28 +171,81 @@ class InputValidator:
         return True, None
     
     @staticmethod
-    def validate_file_path(path: str, allow_absolute: bool = False) -> Tuple[bool, Optional[str]]:
+    def validate_file_path(path: str, allow_absolute: bool = False,
+                           base_dir: Optional[str] = None) -> Tuple[bool, Optional[str]]:
         """
-        验证文件路径，防止路径遍历
-        
+        验证文件路径，防止路径遍历 - 增强版
+
         Args:
             path: 文件路径
             allow_absolute: 是否允许绝对路径
+            base_dir: 限制的基础目录（可选）
         """
-        # 检查路径遍历
-        if '..' in path:
-            return False, "路径包含非法字符: .."
-        
-        # 检查绝对路径
-        if not allow_absolute and path.startswith('/'):
-            return False, "不允许绝对路径"
-        
-        # 检查危险路径
-        dangerous_paths = ['/etc/', '/sys/', '/proc/', '/dev/']
+        if not path or not isinstance(path, str):
+            return False, "路径不能为空"
+
+        # URL 解码防止绕过
+        decoded_path = unquote(path)
+
+        # 检查路径遍历 (包括编码变体)
+        traversal_patterns = ['..', '%2e%2e', '%252e%252e', '....', '..\\']
+        for pattern in traversal_patterns:
+            if pattern.lower() in decoded_path.lower():
+                return False, f"路径包含非法字符: {pattern}"
+
+        # 规范化路径
+        try:
+            normalized = os.path.normpath(decoded_path)
+        except Exception:
+            return False, "路径格式无效"
+
+        # 检查绝对路径 (跨平台)
+        if not allow_absolute:
+            # Unix 绝对路径
+            if normalized.startswith('/'):
+                return False, "不允许绝对路径"
+            # Windows 盘符路径 (C:\, D:\, etc.)
+            if re.match(r'^[A-Za-z]:', normalized):
+                return False, "不允许 Windows 绝对路径"
+            # UNC 路径 (\\server\share)
+            if normalized.startswith('\\\\') or normalized.startswith('//'):
+                return False, "不允许 UNC 路径"
+
+        # 检查危险系统路径
+        dangerous_paths = [
+            '/etc/', '/sys/', '/proc/', '/dev/', '/root/', '/boot/',
+            'C:\\Windows', 'C:\\System32', 'C:\\Program Files'
+        ]
+        normalized_lower = normalized.lower().replace('\\', '/')
         for dangerous in dangerous_paths:
-            if path.startswith(dangerous):
+            if normalized_lower.startswith(dangerous.lower().replace('\\', '/')):
                 return False, f"不允许访问系统路径: {dangerous}"
-        
+
+        # 如果指定了基础目录，验证路径在其内
+        if base_dir:
+            try:
+                base_resolved = Path(base_dir).resolve()
+                path_resolved = (base_resolved / normalized).resolve()
+                if not str(path_resolved).startswith(str(base_resolved)):
+                    return False, "路径超出允许范围"
+            except Exception:
+                return False, "路径解析失败"
+
+        return True, None
+
+    @staticmethod
+    def validate_session_id(session_id: str) -> Tuple[bool, Optional[str]]:
+        """验证 Session ID 格式，防止路径遍历"""
+        if not session_id:
+            return False, "Session ID 不能为空"
+
+        if not InputValidator.SESSION_ID_PATTERN.match(session_id):
+            return False, "Session ID 格式无效 (仅允许字母数字下划线连字符, 8-64字符)"
+
+        # 额外检查危险字符
+        if '..' in session_id or '/' in session_id or '\\' in session_id:
+            return False, "Session ID 包含非法字符"
+
         return True, None
     
     @staticmethod
@@ -241,7 +304,8 @@ def validate_and_sanitize(
     port: Optional[int] = None,
     url: Optional[str] = None,
     domain: Optional[str] = None,
-    file_path: Optional[str] = None
+    file_path: Optional[str] = None,
+    session_id: Optional[str] = None
 ) -> Dict[str, any]:
     """
     便捷函数: 验证和清理多个输入
@@ -275,7 +339,12 @@ def validate_and_sanitize(
         valid, err = InputValidator.validate_file_path(file_path)
         if not valid:
             errors.append(err)
-    
+
+    if session_id is not None:
+        valid, err = InputValidator.validate_session_id(session_id)
+        if not valid:
+            errors.append(err)
+
     return {
         "valid": len(errors) == 0,
         "errors": errors
