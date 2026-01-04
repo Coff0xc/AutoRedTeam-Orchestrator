@@ -18,7 +18,7 @@ pip install -r requirements.txt
 # Just ask: "对 example.com 进行渗透测试"
 ```
 
-## MCP Tools (39+ Pure Python)
+## MCP Tools (46+ Pure Python)
 
 ### Core Tools (全自动)
 - `auto_pentest(target, deep_scan=True)` - 全自动渗透测试
@@ -30,6 +30,15 @@ pip install -r requirements.txt
 - `task_status(task_id)` - 查询任务状态
 - `task_cancel(task_id)` - 取消等待中的任务
 - `task_list(limit)` - 列出所有任务
+
+### Advanced Pentest Tools (渗透增强 v2.2)
+- `oob_detect(url, param, vuln_type)` - OOB带外检测 (盲SSRF/XXE/SQLi)
+- `session_create(name)` - 创建HTTP会话
+- `session_login(session_id, login_url, username, password)` - 会话登录
+- `session_request(session_id, url, method)` - 带认证的HTTP请求
+- `session_context(session_id)` - 获取会话上下文
+- `smart_payload(vuln_type, payload, waf)` - Payload变异 (WAF绕过)
+- `verify_vuln(url, param, vuln_type, payload, rounds)` - 统计学漏洞验证
 
 ### Recon Tools (信息收集)
 - `port_scan` - 端口扫描
@@ -124,8 +133,12 @@ python test_server.py
 
 ## Key Components
 
-- **mcp_stdio_server.py**: MCP stdio server with 39+ pure Python tools (recommended)
+- **mcp_stdio_server.py**: MCP stdio server with 46+ pure Python tools (recommended)
 - **utils/task_queue.py**: Lightweight task queue for async execution
+- **modules/oob_detector.py**: OOB detection with Interactsh/DNSLog
+- **modules/smart_payload_engine.py**: Payload mutation for WAF bypass
+- **modules/vuln_verifier.py**: Statistical vulnerability verification
+- **core/session_manager.py**: HTTP session management with auth support
 - **main.py**: Legacy Flask HTTP server
 - **auto_recon.py**: Standalone auto reconnaissance engine
 - **core/**: Legacy HTTP server components

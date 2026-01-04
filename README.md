@@ -499,6 +499,41 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 
 ## 📝 更新日志
 
+### v2.2.0 (2025-01-05)
+
+#### 🆕 渗透测试增强 (Phase 2)
+
+- **OOB带外检测模块** (`modules/oob_detector.py`)
+  - 集成 Interactsh / DNSLog 平台
+  - 支持盲 SSRF/XXE/SQLi/RCE 检测
+  - 自动生成唯一回调URL，轮询检测交互
+  - 新增 MCP 工具: `oob_detect`
+
+- **HTTP会话管理器** (`core/session_manager.py`)
+  - 支持登录态渗透测试
+  - 自动提取 CSRF Token
+  - Cookie/Token/认证状态管理
+  - 新增 MCP 工具: `session_create`, `session_login`, `session_request`, `session_context`
+
+- **Payload变异器** (`modules/smart_payload_engine.py`)
+  - 8种变异方法: 大小写混淆/URL编码/双重编码/注释分割/Unicode/十六进制/字符串拼接/空白符替换
+  - WAF特定绕过策略 (Cloudflare/AWS WAF/ModSecurity/Imperva)
+  - 新增 MCP 工具: `smart_payload`
+
+- **统计学漏洞验证器** (`modules/vuln_verifier.py`)
+  - 多轮测试降低误报率
+  - 置信度评分 (80%+确认/60%+可疑/40%-可能误报)
+  - 新增 MCP 工具: `verify_vuln`
+
+#### 📦 文件变更
+- 新增: `modules/oob_detector.py` (~390行)
+- 修改: `core/session_manager.py` (+280行)
+- 修改: `modules/smart_payload_engine.py` (+230行)
+- 修改: `modules/vuln_verifier.py` (+230行)
+- 修改: `mcp_stdio_server.py` (+130行)
+
+---
+
 ### v2.1.0 (2025-01-05)
 
 #### 🆕 新增功能
