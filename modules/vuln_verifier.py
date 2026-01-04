@@ -537,5 +537,238 @@ class VulnerabilityVerifier:
                 continue
             
             results.append(result)
-        
+
         return results
+
+
+# ========== 统计学漏洞验证器 (新增) ==========
+
+from typing import Callable
+import statistics
+
+
+@dataclass
+class StatisticalVerification:
+    """统计验证结果"""
+    vuln_type: str
+    url: str
+    param: str
+    payload: str
+    rounds: int
+    positive_count: int
+    confidence_score: float  # 0-1
+    is_confirmed: bool
+    details: List[Dict] = field(default_factory=list)
+    recommendation: str = ""
+
+
+class StatisticalVerifier:
+    """
+    统计学漏洞验证器
+    通过多轮测试降低误报率
+    """
+
+    # 置信度阈值
+    CONFIDENCE_THRESHOLDS = {
+        "high": 0.8,      # 80%以上确认
+        "medium": 0.6,    # 60%以上可疑
+        "low": 0.4,       # 40%以下可能误报
+    }
+
+    def __init__(self, base_verifier: VulnerabilityVerifier = None):
+        self.verifier = base_verifier or VulnerabilityVerifier()
+
+    def verify_with_statistics(self, vuln_type: str, url: str, param: str,
+                                payload: str, rounds: int = 5) -> StatisticalVerification:
+        """
+        多轮统计验证
+
+        Args:
+            vuln_type: 漏洞类型 (sqli/xss/lfi/rce/ssrf)
+            url: 目标URL
+            param: 参数名
+            payload: 测试Payload
+            rounds: 验证轮数
+
+        Returns:
+            StatisticalVerification
+        """
+        results = []
+        positive_count = 0
+
+        for i in range(rounds):
+            result = self._single_verify(vuln_type, url, param, payload)
+            results.append({
+                "round": i + 1,
+                "is_vulnerable": result.is_vulnerable,
+                "confidence": result.confidence,
+                "evidence": result.evidence[:100] if result.evidence else ""
+            })
+            if result.is_vulnerable:
+                positive_count += 1
+
+            # 短暂延迟避免触发限流
+            time.sleep(0.5)
+
+        # 计算置信度
+        confidence_score = positive_count / rounds
+
+        # 判断是否确认
+        is_confirmed = confidence_score >= self.CONFIDENCE_THRESHOLDS["high"]
+
+        # 生成建议
+        if is_confirmed:
+            recommendation = f"漏洞已确认 ({positive_count}/{rounds}轮阳性)，建议立即修复"
+        elif confidence_score >= self.CONFIDENCE_THRESHOLDS["medium"]:
+            recommendation = f"可疑漏洞 ({positive_count}/{rounds}轮阳性)，建议人工复核"
+        else:
+            recommendation = f"可能误报 ({positive_count}/{rounds}轮阳性)，建议忽略或深入分析"
+
+        return StatisticalVerification(
+            vuln_type=vuln_type,
+            url=url,
+            param=param,
+            payload=payload,
+            rounds=rounds,
+            positive_count=positive_count,
+            confidence_score=confidence_score,
+            is_confirmed=is_confirmed,
+            details=results,
+            recommendation=recommendation
+        )
+
+    def _single_verify(self, vuln_type: str, url: str, param: str,
+                       payload: str) -> VerificationResult:
+        """单次验证"""
+        vuln_type_lower = vuln_type.lower()
+
+        if "sqli" in vuln_type_lower or "sql" in vuln_type_lower:
+            # 依次尝试不同方法
+            result = self.verifier.verify_sqli_error(url, param)
+            if not result.is_vulnerable:
+                result = self.verifier.verify_sqli_boolean(url, param)
+            if not result.is_vulnerable:
+                result = self.verifier.verify_sqli_time_based(url, param, delay=3)
+            return result
+
+        elif "xss" in vuln_type_lower:
+            return self.verifier.verify_xss_reflected(url, param, payload)
+
+        elif "lfi" in vuln_type_lower:
+            return self.verifier.verify_lfi(url, param, payload)
+
+        elif "rce" in vuln_type_lower:
+            return self.verifier.verify_rce_time_based(url, param, delay=3)
+
+        elif "ssrf" in vuln_type_lower:
+            return self.verifier.verify_ssrf(url, param)
+
+        # 默认返回未验证
+        return VerificationResult(
+            vuln_type=vuln_type,
+            payload=payload,
+            url=url,
+            is_vulnerable=False,
+            confidence="low",
+            evidence="Unsupported vuln type",
+            response_time=0,
+            response_code=0,
+            response_length=0,
+            verification_method="none"
+        )
+
+    def batch_statistical_verify(self, findings: List[Dict],
+                                  rounds: int = 3) -> List[StatisticalVerification]:
+        """
+        批量统计验证
+
+        Args:
+            findings: 漏洞发现列表
+            rounds: 每个漏洞的验证轮数
+
+        Returns:
+            统计验证结果列表
+        """
+        results = []
+
+        for finding in findings:
+            url = finding.get("url", "")
+            param = finding.get("param", "")
+            vuln_type = finding.get("type", "")
+            payload = finding.get("payload", "")
+
+            if not url or not vuln_type:
+                continue
+
+            result = self.verify_with_statistics(
+                vuln_type=vuln_type,
+                url=url,
+                param=param,
+                payload=payload,
+                rounds=rounds
+            )
+            results.append(result)
+
+        return results
+
+    def get_summary(self, results: List[StatisticalVerification]) -> Dict:
+        """
+        生成验证摘要
+
+        Args:
+            results: 统计验证结果列表
+
+        Returns:
+            摘要信息
+        """
+        confirmed = [r for r in results if r.is_confirmed]
+        suspicious = [r for r in results if not r.is_confirmed and
+                      r.confidence_score >= self.CONFIDENCE_THRESHOLDS["medium"]]
+        likely_fp = [r for r in results if
+                     r.confidence_score < self.CONFIDENCE_THRESHOLDS["medium"]]
+
+        return {
+            "total": len(results),
+            "confirmed": len(confirmed),
+            "suspicious": len(suspicious),
+            "likely_false_positive": len(likely_fp),
+            "confirmed_vulns": [
+                {"type": r.vuln_type, "url": r.url, "confidence": f"{r.confidence_score:.0%}"}
+                for r in confirmed
+            ],
+            "suspicious_vulns": [
+                {"type": r.vuln_type, "url": r.url, "confidence": f"{r.confidence_score:.0%}"}
+                for r in suspicious
+            ]
+        }
+
+
+def verify_vuln_statistically(url: str, param: str, vuln_type: str,
+                               payload: str, rounds: int = 5) -> Dict:
+    """
+    便捷函数: 统计学验证漏洞
+
+    Args:
+        url: 目标URL
+        param: 参数名
+        vuln_type: 漏洞类型
+        payload: Payload
+        rounds: 验证轮数
+
+    Returns:
+        验证结果字典
+    """
+    verifier = StatisticalVerifier()
+    result = verifier.verify_with_statistics(vuln_type, url, param, payload, rounds)
+
+    return {
+        "vuln_type": result.vuln_type,
+        "url": result.url,
+        "param": result.param,
+        "rounds": result.rounds,
+        "positive_count": result.positive_count,
+        "confidence_score": f"{result.confidence_score:.0%}",
+        "is_confirmed": result.is_confirmed,
+        "recommendation": result.recommendation,
+        "details": result.details
+    }

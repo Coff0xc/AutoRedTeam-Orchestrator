@@ -4339,5 +4339,134 @@ def task_list(limit: int = 20) -> dict:
     from utils.task_queue import get_task_queue
     return get_task_queue().list_tasks(limit)
 
+
+# ========== Phase 2: 渗透测试增强工具 ==========
+
+@mcp.tool()
+def oob_detect(url: str, param: str, vuln_type: str = "ssrf", timeout: int = 30) -> dict:
+    """OOB带外检测 - 检测盲SSRF/XXE/SQLi等漏洞
+
+    Args:
+        url: 目标URL
+        param: 测试参数
+        vuln_type: 漏洞类型 (ssrf/xxe/sqli/rce)
+        timeout: 等待回调超时(秒)
+
+    Returns:
+        OOB检测结果
+    """
+    from modules.oob_detector import quick_oob_test
+    return quick_oob_test(url, param, vuln_type, timeout)
+
+
+@mcp.tool()
+def session_create(name: str = None) -> dict:
+    """创建HTTP会话 - 用于登录态测试
+
+    Args:
+        name: 会话名称 (可选)
+
+    Returns:
+        会话ID和信息
+    """
+    from core.session_manager import get_http_session_manager
+    mgr = get_http_session_manager()
+    session_id = mgr.create_session(name)
+    return {
+        "success": True,
+        "session_id": session_id,
+        "message": f"HTTP会话已创建: {session_id}"
+    }
+
+
+@mcp.tool()
+def session_login(session_id: str, login_url: str, username: str, password: str,
+                  username_field: str = "username", password_field: str = "password") -> dict:
+    """会话登录 - 执行登录获取认证态
+
+    Args:
+        session_id: 会话ID
+        login_url: 登录URL
+        username: 用户名
+        password: 密码
+        username_field: 用户名字段名 (默认username)
+        password_field: 密码字段名 (默认password)
+
+    Returns:
+        登录结果
+    """
+    from core.session_manager import get_http_session_manager
+    mgr = get_http_session_manager()
+    return mgr.login(session_id, login_url, username, password, username_field, password_field)
+
+
+@mcp.tool()
+def session_request(session_id: str, url: str, method: str = "GET", data: str = None) -> dict:
+    """会话请求 - 使用已认证会话发送请求
+
+    Args:
+        session_id: 会话ID
+        url: 请求URL
+        method: HTTP方法 (GET/POST)
+        data: POST数据 (JSON格式)
+
+    Returns:
+        响应结果
+    """
+    from core.session_manager import get_http_session_manager
+    import json
+    mgr = get_http_session_manager()
+    data_dict = json.loads(data) if data else None
+    return mgr.request(session_id, url, method, data_dict)
+
+
+@mcp.tool()
+def session_context(session_id: str) -> dict:
+    """获取会话上下文 - 查看Cookie/Token/认证状态
+
+    Args:
+        session_id: 会话ID
+
+    Returns:
+        会话上下文信息
+    """
+    from core.session_manager import get_http_session_manager
+    return get_http_session_manager().get_context(session_id)
+
+
+@mcp.tool()
+def smart_payload(vuln_type: str, payload: str, waf: str = None) -> dict:
+    """智能Payload变异 - WAF绕过
+
+    Args:
+        vuln_type: 漏洞类型 (sqli/xss/rce等)
+        payload: 原始Payload
+        waf: WAF类型 (cloudflare/aws_waf/modsecurity等，可选)
+
+    Returns:
+        变异后的Payload列表
+    """
+    from modules.smart_payload_engine import mutate_payload
+    return mutate_payload(payload, waf)
+
+
+@mcp.tool()
+def verify_vuln(url: str, param: str, vuln_type: str, payload: str = "", rounds: int = 5) -> dict:
+    """统计学漏洞验证 - 多轮测试降低误报
+
+    Args:
+        url: 目标URL (需包含参数，如 http://example.com/page?id=1)
+        param: 测试参数名
+        vuln_type: 漏洞类型 (sqli/xss/lfi/rce/ssrf)
+        payload: 测试Payload (XSS/LFI需要)
+        rounds: 验证轮数 (默认5轮)
+
+    Returns:
+        统计验证结果，包含置信度和建议
+    """
+    from modules.vuln_verifier import verify_vuln_statistically
+    return verify_vuln_statistically(url, param, vuln_type, payload, rounds)
+
+
 if __name__ == "__main__":
     mcp.run()
