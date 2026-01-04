@@ -18,12 +18,18 @@ pip install -r requirements.txt
 # Just ask: "对 example.com 进行渗透测试"
 ```
 
-## MCP Tools (35+ Pure Python)
+## MCP Tools (39+ Pure Python)
 
 ### Core Tools (全自动)
 - `auto_pentest(target, deep_scan=True)` - 全自动渗透测试
-- `generate_report(target, format)` - 生成渗透测试报告
+- `generate_report(target, format)` - 生成渗透测试报告 (markdown/json/html/pdf)
 - `smart_analyze(target)` - 智能分析目标
+
+### Task Queue Tools (任务队列)
+- `task_submit(tool_name, target)` - 提交后台异步任务
+- `task_status(task_id)` - 查询任务状态
+- `task_cancel(task_id)` - 取消等待中的任务
+- `task_list(limit)` - 列出所有任务
 
 ### Recon Tools (信息收集)
 - `port_scan` - 端口扫描
@@ -118,7 +124,8 @@ python test_server.py
 
 ## Key Components
 
-- **mcp_stdio_server.py**: MCP stdio server with 35+ pure Python tools (recommended)
+- **mcp_stdio_server.py**: MCP stdio server with 39+ pure Python tools (recommended)
+- **utils/task_queue.py**: Lightweight task queue for async execution
 - **main.py**: Legacy Flask HTTP server
 - **auto_recon.py**: Standalone auto reconnaissance engine
 - **core/**: Legacy HTTP server components
@@ -141,3 +148,13 @@ MCP config (`~/.claude/mcp.json` or project `.mcp.json`):
 ## Language
 
 Code comments and documentation are in Chinese (简体中文). Maintain this convention.
+
+## Coding Guidelines (CRITICAL)
+
+- **Cross-Platform Compatibility**: This project runs on Windows, Linux, and macOS.
+- **Path Handling**:
+  - **NEVER** use hardcoded paths like `/tmp/` or `/var/log/`.
+  - **ALWAYS** use `os.path.join`, `pathlib.Path`, or `tempfile.gettempdir()` for paths.
+  - **Example**: Use `os.path.join(tempfile.gettempdir(), 'app.log')` instead of `/tmp/app.log`.
+- **Encoding**: Always specify `encoding='utf-8'` when opening files (e.g., `open(file, 'w', encoding='utf-8')`).
+- **External Tools**: Check for tool availability (e.g., `shutil.which('nmap')`) before execution. Do not assume tools exist.

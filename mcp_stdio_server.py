@@ -3645,13 +3645,245 @@ def auto_pentest(target: str, deep_scan: bool = True) -> dict:
 
     return {"success": True, "report": report}
 
+def _get_chinese_font():
+    """跨平台获取中文字体路径"""
+    import tempfile
+    font_paths = []
+
+    if platform.system() == "Windows":
+        font_paths = [
+            os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts", "msyh.ttc"),
+            os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts", "simhei.ttf"),
+            os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts", "simsun.ttc"),
+        ]
+    elif platform.system() == "Darwin":  # macOS
+        font_paths = [
+            "/System/Library/Fonts/PingFang.ttc",
+            "/System/Library/Fonts/STHeiti Light.ttc",
+            "/Library/Fonts/Arial Unicode.ttf",
+        ]
+    else:  # Linux
+        font_paths = [
+            "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+        ]
+
+    for path in font_paths:
+        if os.path.exists(path):
+            return path
+    return None
+
+def _generate_html_report(report_data: dict, cve_info: list) -> dict:
+    """生成HTML格式报告"""
+    import tempfile
+    from jinja2 import Template
+
+    html_template = '''<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>渗透测试报告 - {{ target }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+               background: #0a0a0a; color: #e0e0e0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 40px;
+                 border-radius: 10px; margin-bottom: 30px; border: 1px solid #333; }
+        h1 { color: #00ff88; font-size: 2.5em; margin-bottom: 10px; }
+        h2 { color: #00d4ff; margin: 30px 0 15px; padding-bottom: 10px; border-bottom: 2px solid #333; }
+        .meta { color: #888; font-size: 0.9em; }
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
+        .summary-card { background: #1a1a1a; padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #333; }
+        .summary-card.critical { border-color: #ff4757; }
+        .summary-card.high { border-color: #ff6b6b; }
+        .summary-card.medium { border-color: #ffa502; }
+        .summary-card.low { border-color: #2ed573; }
+        .summary-card .count { font-size: 2em; font-weight: bold; }
+        .summary-card.critical .count { color: #ff4757; }
+        .summary-card.high .count { color: #ff6b6b; }
+        .summary-card.medium .count { color: #ffa502; }
+        .summary-card.low .count { color: #2ed573; }
+        .finding { background: #1a1a1a; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #333; }
+        .finding.critical { border-left-color: #ff4757; }
+        .finding.high { border-left-color: #ff6b6b; }
+        .finding.medium { border-left-color: #ffa502; }
+        .finding.low { border-left-color: #2ed573; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+        .badge.critical { background: #ff4757; color: white; }
+        .badge.high { background: #ff6b6b; color: white; }
+        .badge.medium { background: #ffa502; color: black; }
+        .badge.low { background: #2ed573; color: black; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+        th { background: #1a1a1a; color: #00d4ff; }
+        footer { text-align: center; padding: 30px; color: #666; margin-top: 40px; border-top: 1px solid #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔒 渗透测试报告</h1>
+            <p class="meta">目标: {{ target }}</p>
+            <p class="meta">测试时间: {{ start_time }} ~ {{ end_time }}</p>
+            <p class="meta">整体风险等级: <strong style="color: {% if overall_risk == 'CRITICAL' %}#ff4757{% elif overall_risk == 'HIGH' %}#ff6b6b{% elif overall_risk == 'MEDIUM' %}#ffa502{% else %}#2ed573{% endif %}">{{ overall_risk }}</strong></p>
+        </header>
+
+        <section>
+            <h2>📊 风险统计</h2>
+            <div class="summary">
+                <div class="summary-card critical"><div class="count">{{ risk_summary.critical }}</div><div>严重</div></div>
+                <div class="summary-card high"><div class="count">{{ risk_summary.high }}</div><div>高危</div></div>
+                <div class="summary-card medium"><div class="count">{{ risk_summary.medium }}</div><div>中危</div></div>
+                <div class="summary-card low"><div class="count">{{ risk_summary.low }}</div><div>低危</div></div>
+            </div>
+        </section>
+
+        <section>
+            <h2>🔍 发现的问题</h2>
+            {% for finding in findings %}
+            <div class="finding {{ finding.type }}">
+                <span class="badge {{ finding.type }}">{{ finding.type|upper }}</span>
+                {{ finding.detail }}
+            </div>
+            {% endfor %}
+        </section>
+
+        <section>
+            <h2>⚔️ 攻击路径建议</h2>
+            <ul>{% for path in attack_paths %}<li>{{ path }}</li>{% endfor %}</ul>
+        </section>
+
+        {% if cve_info %}
+        <section>
+            <h2>🛡️ 相关CVE漏洞</h2>
+            <table>
+                <tr><th>技术</th><th>CVE编号</th><th>CVSS</th><th>描述</th></tr>
+                {% for cve in cve_info %}
+                <tr><td>{{ cve.tech }}</td><td>{{ cve.cve_id }}</td><td>{{ cve.cvss }}</td><td>{{ cve.summary }}</td></tr>
+                {% endfor %}
+            </table>
+        </section>
+        {% endif %}
+
+        <section>
+            <h2>✅ 修复建议</h2>
+            <ul>{% for rec in recommendations %}<li>{{ rec }}</li>{% endfor %}</ul>
+        </section>
+
+        <footer>
+            <p>AutoRedTeam v2.0 - 自动化渗透测试报告</p>
+            <p>⚠️ 仅用于授权的安全测试</p>
+        </footer>
+    </div>
+</body>
+</html>'''
+
+    template = Template(html_template)
+    html_content = template.render(**report_data, cve_info=cve_info)
+
+    # 保存到临时目录
+    filename = f"pentest_report_{int(time.time())}.html"
+    filepath = os.path.join(tempfile.gettempdir(), filename)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+
+    return {"success": True, "format": "html", "path": filepath, "preview": html_content[:500] + "..."}
+
+def _generate_pdf_report(report_data: dict, cve_info: list) -> dict:
+    """生成PDF格式报告 (支持中文)"""
+    import tempfile
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+    except ImportError:
+        return {"success": False, "error": "reportlab 未安装，请运行: pip install reportlab"}
+
+    # 注册中文字体
+    font_path = _get_chinese_font()
+    font_name = "ChineseFont"
+    if font_path:
+        try:
+            pdfmetrics.registerFont(TTFont(font_name, font_path))
+        except:
+            font_name = "Helvetica"
+    else:
+        font_name = "Helvetica"
+
+    # 创建PDF
+    filename = f"pentest_report_{int(time.time())}.pdf"
+    filepath = os.path.join(tempfile.gettempdir(), filename)
+    doc = SimpleDocTemplate(filepath, pagesize=A4)
+
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='Chinese', fontName=font_name, fontSize=10, leading=14))
+    styles.add(ParagraphStyle(name='ChineseTitle', fontName=font_name, fontSize=18, leading=22, spaceAfter=12))
+    styles.add(ParagraphStyle(name='ChineseH2', fontName=font_name, fontSize=14, leading=18, spaceAfter=8, textColor=colors.darkblue))
+
+    story = []
+
+    # 标题
+    story.append(Paragraph("渗透测试报告", styles['ChineseTitle']))
+    story.append(Spacer(1, 12))
+
+    # 基本信息
+    story.append(Paragraph(f"目标: {report_data.get('target', 'N/A')}", styles['Chinese']))
+    story.append(Paragraph(f"测试时间: {report_data.get('start_time', '')} ~ {report_data.get('end_time', '')}", styles['Chinese']))
+    story.append(Paragraph(f"整体风险等级: {report_data.get('overall_risk', 'N/A')}", styles['Chinese']))
+    story.append(Spacer(1, 20))
+
+    # 风险统计表格
+    story.append(Paragraph("风险统计", styles['ChineseH2']))
+    risk = report_data.get('risk_summary', {})
+    risk_data = [
+        ['等级', '数量'],
+        ['严重', str(risk.get('critical', 0))],
+        ['高危', str(risk.get('high', 0))],
+        ['中危', str(risk.get('medium', 0))],
+        ['低危', str(risk.get('low', 0))],
+        ['信息', str(risk.get('info', 0))],
+    ]
+    t = Table(risk_data, colWidths=[200, 100])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 20))
+
+    # 发现的问题
+    story.append(Paragraph("发现的问题", styles['ChineseH2']))
+    for finding in report_data.get('findings', [])[:20]:  # 限制数量
+        severity = finding.get('type', 'info').upper()
+        detail = finding.get('detail', '')
+        story.append(Paragraph(f"[{severity}] {detail}", styles['Chinese']))
+    story.append(Spacer(1, 20))
+
+    # 修复建议
+    story.append(Paragraph("修复建议", styles['ChineseH2']))
+    for rec in report_data.get('recommendations', []):
+        story.append(Paragraph(f"• {rec}", styles['Chinese']))
+
+    doc.build(story)
+    return {"success": True, "format": "pdf", "path": filepath}
+
 @mcp.tool()
 def generate_report(target: str, format: str = "markdown", include_cve: bool = True) -> dict:
     """生成渗透测试报告 - 执行完整测试并生成专业报告
 
     Args:
         target: 目标URL或域名
-        format: 报告格式 (markdown/json)
+        format: 报告格式 (markdown/json/html/pdf)
         include_cve: 是否包含CVE信息
     """
     from datetime import datetime
@@ -3743,8 +3975,14 @@ def generate_report(target: str, format: str = "markdown", include_cve: bool = T
     elif format == "json":
         return {"success": True, "format": "json", "report": report_data}
 
+    elif format == "html":
+        return _generate_html_report(report_data, cve_info)
+
+    elif format == "pdf":
+        return _generate_pdf_report(report_data, cve_info)
+
     else:
-        return {"success": False, "error": f"不支持的格式: {format}，可用: markdown, json"}
+        return {"success": False, "error": f"不支持的格式: {format}，可用: markdown, json, html, pdf"}
 
 @mcp.tool()
 def smart_analyze(target: str) -> dict:
@@ -3989,6 +4227,18 @@ def help_info() -> dict:
             "reverse_shell_gen - 反向Shell生成",
             "google_dorks - Google Dork生成"
         ],
+        "task_queue_tools": [
+            "task_submit - 提交后台任务 (异步执行)",
+            "task_status - 查询任务状态",
+            "task_cancel - 取消等待中的任务",
+            "task_list - 列出所有任务"
+        ],
+        "report_formats": [
+            "markdown - Markdown格式报告",
+            "json - JSON格式报告",
+            "html - HTML网页报告 [NEW]",
+            "pdf - PDF专业报告 (支持中文) [NEW]"
+        ],
         "coverage": {
             "OWASP_Top10": [
                 "✅ A01 - Broken Access Control (IDOR, Auth Bypass)",
@@ -4005,6 +4255,89 @@ def help_info() -> dict:
         },
         "tip": "所有工具均为纯Python实现，无需安装任何外部工具，Windows/Linux通用"
     }
+
+# ========== 任务队列工具 ==========
+
+@mcp.tool()
+def task_submit(tool_name: str, target: str, **kwargs) -> dict:
+    """提交后台任务 - 异步执行耗时扫描
+
+    Args:
+        tool_name: 要执行的工具名称 (如 auto_pentest, full_recon, port_scan)
+        target: 目标URL或IP
+        **kwargs: 工具的其他参数
+
+    Returns:
+        task_id: 任务ID，用于查询状态
+    """
+    from utils.task_queue import get_task_queue
+
+    # 获取工具函数
+    tool_map = {
+        "auto_pentest": auto_pentest,
+        "full_recon": full_recon,
+        "port_scan": port_scan,
+        "subdomain_bruteforce": subdomain_bruteforce,
+        "dir_bruteforce": dir_bruteforce,
+        "sensitive_scan": sensitive_scan,
+        "vuln_check": vuln_check,
+        "sqli_detect": sqli_detect,
+        "xss_detect": xss_detect,
+        "generate_report": generate_report,
+    }
+
+    if tool_name not in tool_map:
+        return {"success": False, "error": f"不支持的工具: {tool_name}", "available": list(tool_map.keys())}
+
+    tq = get_task_queue()
+    task_id = tq.submit(tool_map[tool_name], target, **kwargs)
+
+    return {
+        "success": True,
+        "task_id": task_id,
+        "tool": tool_name,
+        "target": target,
+        "message": f"任务已提交，使用 task_status('{task_id}') 查询状态"
+    }
+
+@mcp.tool()
+def task_status(task_id: str) -> dict:
+    """查询任务状态
+
+    Args:
+        task_id: 任务ID
+
+    Returns:
+        任务状态和结果
+    """
+    from utils.task_queue import get_task_queue
+    return get_task_queue().get_status(task_id)
+
+@mcp.tool()
+def task_cancel(task_id: str) -> dict:
+    """取消任务 (仅限等待中的任务)
+
+    Args:
+        task_id: 任务ID
+
+    Returns:
+        操作结果
+    """
+    from utils.task_queue import get_task_queue
+    return get_task_queue().cancel(task_id)
+
+@mcp.tool()
+def task_list(limit: int = 20) -> dict:
+    """列出所有任务
+
+    Args:
+        limit: 返回数量限制 (默认20)
+
+    Returns:
+        任务列表和统计信息
+    """
+    from utils.task_queue import get_task_queue
+    return get_task_queue().list_tasks(limit)
 
 if __name__ == "__main__":
     mcp.run()
