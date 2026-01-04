@@ -15,6 +15,23 @@ from core.tool_registry import BaseTool, ToolCategory, ToolParameter
 logger = logging.getLogger(__name__)
 
 
+def sanitize_cmd_for_log(cmd: List[str]) -> str:
+    """脱敏命令行日志，隐藏敏感信息"""
+    sensitive_flags = ['-p', '-P', '-l', '-L', '--password', '--username']
+    sanitized = []
+    skip_next = False
+    for arg in cmd:
+        if skip_next:
+            sanitized.append('***')
+            skip_next = False
+        elif arg in sensitive_flags:
+            sanitized.append(arg)
+            skip_next = True
+        else:
+            sanitized.append(arg)
+    return ' '.join(sanitized)
+
+
 @dataclass
 class HydraTool(BaseTool):
     """Hydra密码爆破"""
@@ -89,7 +106,7 @@ class HydraTool(BaseTool):
             cmd.append(service)
         
         try:
-            logger.info(f"执行Hydra: {' '.join(cmd)}")
+            logger.info(f"执行Hydra: {sanitize_cmd_for_log(cmd)}")
             result = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -180,7 +197,7 @@ class MedusaTool(BaseTool):
             cmd.append("-f")
         
         try:
-            logger.info(f"执行Medusa: {' '.join(cmd)}")
+            logger.info(f"执行Medusa: {sanitize_cmd_for_log(cmd)}")
             result = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -278,7 +295,7 @@ class CrackMapExecTool(BaseTool):
             cmd.append("--lsa")
         
         try:
-            logger.info(f"执行CrackMapExec: {' '.join(cmd)}")
+            logger.info(f"执行CrackMapExec: {sanitize_cmd_for_log(cmd)}")
             result = subprocess.run(
                 cmd,
                 capture_output=True,

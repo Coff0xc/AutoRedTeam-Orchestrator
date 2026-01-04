@@ -8,6 +8,8 @@ import json
 import logging
 import os
 import sys
+import hashlib
+import secrets
 from datetime import datetime
 from functools import wraps
 from typing import Any, Dict, List, Optional, Callable
@@ -18,6 +20,8 @@ from flask_cors import CORS
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from utils.input_validator import InputValidator, validate_and_sanitize
+
 from core.tool_registry import ToolRegistry
 from core.session_manager import SessionManager
 from core.ai_engine import AIDecisionEngine
@@ -26,6 +30,48 @@ from utils.logger import setup_logger
 
 # 配置日志
 logger = setup_logger("mcp_server")
+
+
+def require_api_key(f):
+    """API Key 认证装饰器"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        api_key = request.headers.get('X-API-Key') or request.args.get('api_key')
+        expected_key = os.getenv('MCP_API_KEY')
+
+        # 如果未配置 API Key，允许本地访问
+        if not expected_key:
+            if request.remote_addr not in ('127.0.0.1', '::1', 'localhost'):
+                return jsonify({"error": "API Key 未配置，仅允许本地访问"}), 403
+            return f(*args, **kwargs)
+
+        if not api_key:
+            return jsonify({"error": "缺少 API Key"}), 401
+
+        # 安全比较防止时序攻击
+        if not secrets.compare_digest(api_key, expected_key):
+            logger.warning(f"无效的 API Key 尝试: {request.remote_addr}")
+            return jsonify({"error": "无效的 API Key"}), 401
+
+        return f(*args, **kwargs)
+    return decorated
+
+
+def sanitize_error_message(error: Exception) -> str:
+    """清理错误信息，防止敏感信息泄露"""
+    error_str = str(error)
+    # 移除可能的路径信息
+    sensitive_patterns = [
+        (r'[A-Za-z]:\\[^\s]+', '[PATH]'),
+        (r'/home/[^\s]+', '[PATH]'),
+        (r'/root/[^\s]+', '[PATH]'),
+        (r'/tmp/[^\s]+', '[PATH]'),
+    ]
+    import re
+    for pattern, replacement in sensitive_patterns:
+        error_str = re.sub(pattern, replacement, error_str)
+    return error_str
+
 
 class MCPServer:
     """MCP服务器核心类"""
@@ -101,19 +147,31 @@ class MCPServer:
             return jsonify({"error": f"工具 {tool_name} 不存在"}), 404
         
         @self.app.route("/execute", methods=["POST"])
+        @require_api_key
         def execute_tool():
             """执行工具"""
             data = request.get_json()
             if not data:
                 return jsonify({"error": "请求体为空"}), 400
-            
+
             tool_name = data.get("tool")
             params = data.get("params", {})
             session_id = data.get("session_id")
-            
+
             if not tool_name:
                 return jsonify({"error": "未指定工具名称"}), 400
-            
+
+            # 输入验证
+            if "target" in params:
+                validation = validate_and_sanitize(target=params["target"])
+                if not validation["valid"]:
+                    return jsonify({"error": f"输入验证失败: {validation['errors']}"}), 400
+
+            if session_id:
+                validation = validate_and_sanitize(session_id=session_id)
+                if not validation["valid"]:
+                    return jsonify({"error": f"Session ID 验证失败: {validation['errors']}"}), 400
+
             try:
                 result = self.tool_registry.execute(tool_name, params, session_id)
                 return jsonify({
@@ -127,19 +185,25 @@ class MCPServer:
                 return jsonify({
                     "success": False,
                     "tool": tool_name,
-                    "error": str(e)
+                    "error": sanitize_error_message(e)
                 }), 500
         
         @self.app.route("/ai/analyze", methods=["POST"])
+        @require_api_key
         def ai_analyze():
             """AI分析目标"""
             data = request.get_json()
             target = data.get("target")
             context = data.get("context", {})
-            
+
             if not target:
                 return jsonify({"error": "未指定目标"}), 400
-            
+
+            # 输入验证
+            validation = validate_and_sanitize(target=target)
+            if not validation["valid"]:
+                return jsonify({"error": f"目标验证失败: {validation['errors']}"}), 400
+
             try:
                 analysis = self.ai_engine.analyze_target(target, context)
                 return jsonify({
@@ -148,15 +212,16 @@ class MCPServer:
                 })
             except Exception as e:
                 logger.error(f"AI分析失败: {str(e)}")
-                return jsonify({"success": False, "error": str(e)}), 500
+                return jsonify({"success": False, "error": sanitize_error_message(e)}), 500
         
         @self.app.route("/ai/plan", methods=["POST"])
+        @require_api_key
         def ai_plan():
             """AI生成攻击计划"""
             data = request.get_json()
             target = data.get("target")
             recon_data = data.get("recon_data", {})
-            
+
             try:
                 plan = self.ai_engine.generate_attack_plan(target, recon_data)
                 return jsonify({
@@ -165,7 +230,7 @@ class MCPServer:
                 })
             except Exception as e:
                 logger.error(f"生成攻击计划失败: {str(e)}")
-                return jsonify({"success": False, "error": str(e)}), 500
+                return jsonify({"success": False, "error": sanitize_error_message(e)}), 500
         
         @self.app.route("/session/create", methods=["POST"])
         def create_session():
@@ -192,28 +257,34 @@ class MCPServer:
             return jsonify({"results": results})
         
         @self.app.route("/workflow/auto", methods=["POST"])
+        @require_api_key
         def auto_workflow():
             """自动化工作流"""
             data = request.get_json()
             target = data.get("target")
             options = data.get("options", {})
-            
+
             if not target:
                 return jsonify({"error": "未指定目标"}), 400
-            
+
+            # 输入验证
+            validation = validate_and_sanitize(target=target)
+            if not validation["valid"]:
+                return jsonify({"error": f"目标验证失败: {validation['errors']}"}), 400
+
             try:
                 # 创建会话
                 session = self.session_manager.create_session(f"auto_{target}")
-                
+
                 # 执行自动化流程
                 from modules.workflow import AutoWorkflow
                 workflow = AutoWorkflow(
-                    self.tool_registry, 
+                    self.tool_registry,
                     self.ai_engine,
                     session
                 )
                 result = workflow.execute(target, options)
-                
+
                 return jsonify({
                     "success": True,
                     "session_id": session.id,
@@ -221,15 +292,16 @@ class MCPServer:
                 })
             except Exception as e:
                 logger.error(f"自动化工作流失败: {str(e)}")
-                return jsonify({"success": False, "error": str(e)}), 500
+                return jsonify({"success": False, "error": sanitize_error_message(e)}), 500
         
         @self.app.route("/report/generate", methods=["POST"])
+        @require_api_key
         def generate_report():
             """生成报告"""
             data = request.get_json()
             session_id = data.get("session_id")
             format_type = data.get("format", "html")
-            
+
             try:
                 from utils.report_generator import ReportGenerator
                 generator = ReportGenerator()
@@ -240,21 +312,27 @@ class MCPServer:
                 })
             except Exception as e:
                 logger.error(f"报告生成失败: {str(e)}")
-                return jsonify({"success": False, "error": str(e)}), 500
-        
+                return jsonify({"success": False, "error": sanitize_error_message(e)}), 500
+
         # ===== 攻击链API =====
-        
+
         @self.app.route("/chain/create", methods=["POST"])
+        @require_api_key
         def create_attack_chain():
             """创建攻击链"""
             data = request.get_json()
             target = data.get("target")
             target_type = data.get("target_type", "ip")
             objectives = data.get("objectives", [])
-            
+
             if not target:
                 return jsonify({"error": "未指定目标"}), 400
-            
+
+            # 输入验证
+            validation = validate_and_sanitize(target=target)
+            if not validation["valid"]:
+                return jsonify({"error": f"目标验证失败: {validation['errors']}"}), 400
+
             try:
                 engine = self._get_attack_chain_engine()
                 chain = engine.create_chain(target, target_type, objectives)
@@ -266,14 +344,15 @@ class MCPServer:
                 })
             except Exception as e:
                 logger.error(f"创建攻击链失败: {str(e)}")
-                return jsonify({"success": False, "error": str(e)}), 500
-        
+                return jsonify({"success": False, "error": sanitize_error_message(e)}), 500
+
         @self.app.route("/chain/<chain_id>/execute", methods=["POST"])
+        @require_api_key
         def execute_attack_chain(chain_id: str):
             """执行攻击链"""
             data = request.get_json() or {}
             session_id = data.get("session_id")
-            
+
             try:
                 engine = self._get_attack_chain_engine()
                 result = engine.execute_chain(chain_id, session_id)
@@ -283,7 +362,7 @@ class MCPServer:
                 })
             except Exception as e:
                 logger.error(f"执行攻击链失败: {str(e)}")
-                return jsonify({"success": False, "error": str(e)}), 500
+                return jsonify({"success": False, "error": sanitize_error_message(e)}), 500
         
         @self.app.route("/chain/<chain_id>", methods=["GET"])
         def get_attack_chain(chain_id: str):
