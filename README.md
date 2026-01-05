@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/Platform-Kali%20Linux-557C94?style=for-the-badge&logo=kalilinux&logoColor=white" alt="Kali Linux"/>
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/MCP-Protocol-00ADD8?style=for-the-badge" alt="MCP"/>
-  <img src="https://img.shields.io/badge/Tools-70+-FF6B6B?style=for-the-badge" alt="Tools"/>
+  <img src="https://img.shields.io/badge/Tools-80+-FF6B6B?style=for-the-badge" alt="Tools"/>
   <img src="https://img.shields.io/badge/Payloads-2000+-orange?style=for-the-badge" alt="Payloads"/>
   <img src="https://img.shields.io/badge/AI-Powered-blueviolet?style=for-the-badge" alt="AI Powered"/>
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License"/>
@@ -20,7 +20,7 @@
 
 ## 📖 简介
 
-**AutoRedTeam-Orchestrator** 是一个集成了 **70+ 安全工具** 和 **2000+ Payload** 的智能化渗透测试平台。通过 MCP 协议与 AI 编辑器（Windsurf / Cursor / Claude Desktop / Kiro）无缝集成，实现 **AI 驱动的自动化红队作业**。
+**AutoRedTeam-Orchestrator** 是一个集成了 **80+ 安全工具** 和 **2000+ Payload** 的智能化渗透测试平台。通过 MCP 协议与 AI 编辑器（Windsurf / Cursor / Claude Desktop / Kiro）无缝集成，实现 **AI 驱动的自动化红队作业**。
 
 只需用自然语言描述目标，AI 就能自动选择工具、执行侦察、发现漏洞、推荐攻击路径。
 
@@ -256,6 +256,29 @@
 |------|------|----------|
 | 🔍 综合侦察 | `redteam_recon` | 端口+WAF+指纹综合侦察 |
 | 🔗 横向链 | `redteam_lateral_chain` | 批量横向移动执行 |
+
+### 🔒 Red Team 持久化 (Persistence) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🪟 Windows持久化 | `persistence_windows` | 注册表/计划任务/服务/WMI/BITS |
+| 🐧 Linux持久化 | `persistence_linux` | Crontab/Systemd/Bashrc/SSH/LD_PRELOAD |
+| 🐚 Webshell生成 | `persistence_webshell` | PHP/JSP/ASPX/冰蝎/哥斯拉兼容 |
+
+### 🔑 Red Team 凭证收集 (Credential Access) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 💾 凭证提取 | `credential_dump` | WiFi/浏览器/注册表/Shadow凭证 |
+| 🔍 敏感信息搜索 | `credential_find_secrets` | 密码/API密钥/私钥/Token搜索 |
+
+### 🏰 Red Team AD域渗透 (Active Directory) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 📋 AD枚举 | `ad_enumerate` | 用户/组/计算机/GPO/信任关系 |
+| ⚔️ Kerberos攻击 | `ad_kerberos_attack` | AS-REP Roasting/密码喷洒 |
+| 🎯 SPN扫描 | `ad_spn_scan` | Kerberoasting目标发现 |
 
 ---
 
@@ -568,7 +591,7 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 
 ## 🗺️ 路线图
 
-- [x] 70+ 安全工具集成
+- [x] 80+ 安全工具集成
 - [x] Nuclei 11997+ 模板支持
 - [x] 2000+ Payload 库
 - [x] 智能侦察引擎
@@ -589,6 +612,9 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 - [x] 🆕 混淆免杀模块 (XOR/AES/Shellcode)
 - [x] 🆕 隐蔽通信模块 (JA3指纹/代理池)
 - [x] 🆕 纯Python漏洞利用 (无需外部工具)
+- [x] 🆕 持久化模块 (Windows/Linux/Webshell)
+- [x] 🆕 凭证收集模块 (浏览器/WiFi/敏感文件)
+- [x] 🆕 AD域渗透模块 (LDAP枚举/Kerberos攻击)
 - [ ] Web UI 界面
 - [ ] 分布式扫描支持
 - [ ] 更多云平台支持 (GCP/Alibaba Cloud)
@@ -597,6 +623,31 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 ---
 
 ## 📝 更新日志
+
+### v2.5.0 (2026-01-06)
+
+#### 🆕 ATT&CK 全流程覆盖 (持久化/凭证/AD域渗透)
+
+- **持久化模块** (`core/persistence/`)
+  - Windows持久化: 注册表Run、计划任务、服务、WMI订阅、启动文件夹、屏保、BITS作业
+  - Linux持久化: Crontab、Systemd服务/定时器、Bashrc/Profile、SSH密钥、LD_PRELOAD、init.d、rc.local
+  - Webshell生成: PHP/JSP/ASPX/Python多类型、冰蝎/哥斯拉兼容、内存马
+  - 新增 MCP 工具: `persistence_windows`, `persistence_linux`, `persistence_webshell`
+
+- **凭证收集模块** (`core/credential/`)
+  - 凭证提取: Windows WiFi/凭据管理器/注册表(PuTTY/WinSCP)、Linux Shadow、SSH密钥、Chrome/Firefox密码
+  - 敏感信息搜索: 密码/API密钥/私钥/数据库连接/JWT/Webhook URL、Git历史扫描
+  - 新增 MCP 工具: `credential_dump`, `credential_find_secrets`
+
+- **AD域渗透模块** (`core/ad/`)
+  - LDAP枚举: 用户/组/计算机/SPN/GPO/信任关系、域管理员发现
+  - Kerberos攻击: AS-REP Roasting、密码喷洒、用户枚举
+  - 新增 MCP 工具: `ad_enumerate`, `ad_kerberos_attack`, `ad_spn_scan`
+
+- **ATT&CK 覆盖率提升至 95%+**
+  - TA0003 持久化: 8种Windows技术 + 12种Linux技术
+  - TA0006 凭证访问: 8种凭证源 + 敏感文件搜索
+  - TA0007 发现: LDAP枚举 + Kerberos用户枚举
 
 ### v2.4.0 (2026-01-06)
 
