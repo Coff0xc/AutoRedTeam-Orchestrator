@@ -12,8 +12,9 @@ anthropic>=0.18.0
 langchain>=0.1.0
 langchain-openai>=0.0.5
 
-# Async & Concurrency
+# Async & Concurrency (Performance Optimization)
 aiohttp>=3.9.0
+httpx>=0.26.0
 asyncio>=3.4.3
 celery>=5.3.0
 redis>=5.0.0

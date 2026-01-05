@@ -77,6 +77,43 @@ def get_verify_ssl():
     """获取SSL验证配置"""
     return GLOBAL_CONFIG["verify_ssl"]
 
+def safe_execute(func, *args, timeout_sec: int = 30, default=None, **kwargs):
+    """安全执行函数 - 带超时保护，防止单个检测阻塞整个流程
+
+    Args:
+        func: 要执行的函数
+        timeout_sec: 超时秒数
+        default: 超时或异常时的默认返回值
+    """
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(func, *args, **kwargs)
+        try:
+            return future.result(timeout=timeout_sec)
+        except concurrent.futures.TimeoutError:
+            return default if default is not None else {"success": False, "error": f"操作超时 ({timeout_sec}s)"}
+        except Exception as e:
+            return default if default is not None else {"success": False, "error": str(e)}
+
+# 渗透测试阶段定义
+PENTEST_PHASES = {
+    "recon": {
+        "name": "信息收集",
+        "checks": ["dns", "http", "tech", "subdomain", "port"],
+        "timeout": 60
+    },
+    "vuln_basic": {
+        "name": "基础漏洞扫描",
+        "checks": ["dir", "sensitive", "vuln", "sqli", "xss"],
+        "timeout": 90
+    },
+    "vuln_advanced": {
+        "name": "高级漏洞检测",
+        "checks": ["csrf", "ssrf", "cmd_inject", "xxe", "idor", "auth_bypass", "logic", "file_upload", "ssti", "lfi", "waf"],
+        "timeout": 120
+    }
+}
+
 # 内置字典
 COMMON_DIRS = [
     "admin", "administrator", "login", "wp-admin", "wp-login.php", "phpmyadmin",
@@ -3328,6 +3365,275 @@ if len(set(lengths)) > 1:
         "supported_types": list(poc_templates.keys())
     }
 
+def _run_pentest_phase(target: str, url: str, domain: str, phase: str, report: dict) -> dict:
+    """执行单个渗透测试阶段 - 内部函数"""
+    phase_timeout = PENTEST_PHASES.get(phase, {}).get("timeout", 60)
+    single_check_timeout = 15  # 单个检测最大15秒
+
+    if phase == "recon":
+        report["phases"]["recon"] = {"status": "running", "results": {}}
+
+        # DNS
+        dns_result = safe_execute(dns_lookup, domain, timeout_sec=single_check_timeout)
+        report["phases"]["recon"]["results"]["dns"] = dns_result
+        if dns_result.get("success"):
+            report["findings"].append({"phase": "recon", "type": "info", "detail": f"DNS解析成功: {dns_result.get('records', [])}"})
+
+        # HTTP探测
+        http_result = safe_execute(http_probe, url, timeout_sec=single_check_timeout)
+        report["phases"]["recon"]["results"]["http"] = http_result
+        if http_result.get("success"):
+            report["findings"].append({"phase": "recon", "type": "info", "detail": f"HTTP状态: {http_result.get('status_code')}, Server: {http_result.get('server')}"})
+
+        # 技术栈识别
+        tech_result = safe_execute(tech_detect, url, timeout_sec=single_check_timeout)
+        report["phases"]["recon"]["results"]["tech"] = tech_result
+        if tech_result.get("success"):
+            tech = tech_result.get("technology", {})
+            if tech.get("cms"):
+                report["findings"].append({"phase": "recon", "type": "info", "detail": f"检测到CMS: {tech['cms']}"})
+                for cms in tech["cms"]:
+                    if cms == "WordPress":
+                        report["attack_paths"].append("WordPress: 尝试 /wp-admin, xmlrpc.php, 插件漏洞")
+                    elif cms == "ThinkPHP":
+                        report["attack_paths"].append("ThinkPHP: 尝试 RCE漏洞 (5.x版本)")
+
+        # 子域名枚举 (限制线程数)
+        subdomain_result = safe_execute(subdomain_bruteforce, domain, threads=3, timeout_sec=20)
+        report["phases"]["recon"]["results"]["subdomains"] = subdomain_result
+        if subdomain_result.get("success") and subdomain_result.get("found"):
+            report["findings"].append({"phase": "recon", "type": "info", "detail": f"发现 {len(subdomain_result['found'])} 个子域名"})
+
+        # 端口扫描
+        try:
+            ip = socket.gethostbyname(domain)
+            port_result = safe_execute(port_scan, ip, timeout_sec=20)
+            report["phases"]["recon"]["results"]["ports"] = port_result
+            if port_result.get("success"):
+                open_ports = port_result.get("data", {}).get("open_ports", [])
+                if open_ports:
+                    report["findings"].append({"phase": "recon", "type": "info", "detail": f"开放端口: {open_ports}"})
+                    if 22 in open_ports:
+                        report["attack_paths"].append("SSH(22): 尝试弱口令爆破")
+                    if 3306 in open_ports:
+                        report["attack_paths"].append("MySQL(3306): 尝试弱口令, 未授权访问")
+                    if 6379 in open_ports:
+                        report["attack_paths"].append("Redis(6379): 尝试未授权访问, 写入SSH密钥")
+        except Exception:
+            pass
+
+        report["phases"]["recon"]["status"] = "completed"
+
+    elif phase == "vuln_basic":
+        report["phases"]["vuln_scan"] = {"status": "running", "results": {}}
+
+        # 目录扫描
+        dir_result = safe_execute(dir_bruteforce, url, threads=3, timeout_sec=20)
+        report["phases"]["vuln_scan"]["results"]["directories"] = dir_result
+        if dir_result.get("success") and dir_result.get("found"):
+            for item in dir_result["found"]:
+                if item["status"] == 200:
+                    report["findings"].append({"phase": "vuln_scan", "type": "info", "detail": f"发现目录: {item['path']}"})
+                    if item["path"] in [".git", ".svn", ".env", "backup"]:
+                        report["findings"].append({"phase": "vuln_scan", "type": "high", "detail": f"敏感目录泄露: {item['path']}"})
+                        report["risk_summary"]["high"] += 1
+
+        # 敏感文件扫描
+        sensitive_result = safe_execute(sensitive_scan, url, threads=3, timeout_sec=20)
+        report["phases"]["vuln_scan"]["results"]["sensitive"] = sensitive_result
+        if sensitive_result.get("success") and sensitive_result.get("sensitive_files"):
+            for f in sensitive_result["sensitive_files"]:
+                report["findings"].append({"phase": "vuln_scan", "type": "high", "detail": f"敏感文件泄露: {f['path']}"})
+                report["risk_summary"]["high"] += 1
+
+        # 基础漏洞检测
+        vuln_result = safe_execute(vuln_check, url, timeout_sec=single_check_timeout)
+        report["phases"]["vuln_scan"]["results"]["vulns"] = vuln_result
+        if vuln_result.get("success") and vuln_result.get("vulnerabilities"):
+            for v in vuln_result["vulnerabilities"]:
+                severity = v.get("severity", "MEDIUM").lower()
+                report["findings"].append({"phase": "vuln_scan", "type": severity, "detail": f"{v['type']}"})
+                report["risk_summary"][severity] += 1
+
+        # SQL注入检测
+        sqli_result = safe_execute(sqli_detect, url, timeout_sec=20)
+        report["phases"]["vuln_scan"]["results"]["sqli"] = sqli_result
+        if sqli_result.get("success") and sqli_result.get("sqli_vulns"):
+            for v in sqli_result["sqli_vulns"]:
+                report["findings"].append({"phase": "vuln_scan", "type": "critical", "detail": f"SQL注入: 参数 {v['param']}"})
+                report["risk_summary"]["critical"] += 1
+                report["attack_paths"].append(f"SQL注入: 参数 {v['param']} 可利用")
+
+        # XSS检测
+        xss_result = safe_execute(xss_detect, url, timeout_sec=single_check_timeout)
+        report["phases"]["vuln_scan"]["results"]["xss"] = xss_result
+        if xss_result.get("success") and xss_result.get("xss_vulns"):
+            for v in xss_result["xss_vulns"]:
+                report["findings"].append({"phase": "vuln_scan", "type": "high", "detail": f"XSS漏洞: 参数 {v['param']}"})
+                report["risk_summary"]["high"] += 1
+
+        report["phases"]["vuln_scan"]["status"] = "completed"
+
+    elif phase == "vuln_advanced":
+        report["phases"]["advanced_scan"] = {"status": "running", "results": {}}
+
+        # CSRF检测
+        csrf_result = safe_execute(csrf_detect, url, timeout_sec=single_check_timeout)
+        report["phases"]["advanced_scan"]["results"]["csrf"] = csrf_result
+        if csrf_result.get("success") and csrf_result.get("csrf_vulns"):
+            for v in csrf_result["csrf_vulns"]:
+                severity = v.get("severity", "MEDIUM").lower()
+                report["findings"].append({"phase": "advanced_scan", "type": severity, "detail": f"CSRF: {v['type']}"})
+                report["risk_summary"][severity] += 1
+
+        # SSRF检测
+        ssrf_result = safe_execute(ssrf_detect, url, timeout_sec=single_check_timeout)
+        report["phases"]["advanced_scan"]["results"]["ssrf"] = ssrf_result
+        if ssrf_result.get("success") and ssrf_result.get("ssrf_vulns"):
+            for v in ssrf_result["ssrf_vulns"]:
+                report["findings"].append({"phase": "advanced_scan", "type": "critical", "detail": f"SSRF: 参数 {v['param']}"})
+                report["risk_summary"]["critical"] += 1
+                report["attack_paths"].append(f"SSRF: 参数 {v['param']} 可访问内网资源")
+
+        # 命令注入检测
+        cmd_result = safe_execute(cmd_inject_detect, url, timeout_sec=single_check_timeout)
+        report["phases"]["advanced_scan"]["results"]["cmd_inject"] = cmd_result
+        if cmd_result.get("success") and cmd_result.get("cmd_vulns"):
+            for v in cmd_result["cmd_vulns"]:
+                report["findings"].append({"phase": "advanced_scan", "type": "critical", "detail": f"命令注入: 参数 {v['param']}"})
+                report["risk_summary"]["critical"] += 1
+                report["attack_paths"].append(f"命令注入: 参数 {v['param']} 可执行系统命令")
+
+        # XXE检测
+        xxe_result = safe_execute(xxe_detect, url, timeout_sec=single_check_timeout)
+        report["phases"]["advanced_scan"]["results"]["xxe"] = xxe_result
+        if xxe_result.get("success") and xxe_result.get("xxe_vulns"):
+            for v in xxe_result["xxe_vulns"]:
+                severity = v.get("severity", "HIGH").lower()
+                report["findings"].append({"phase": "advanced_scan", "type": severity, "detail": f"XXE: {v['type']}"})
+                report["risk_summary"][severity] += 1
+
+        # IDOR检测
+        idor_result = safe_execute(idor_detect, url, timeout_sec=single_check_timeout)
+        report["phases"]["advanced_scan"]["results"]["idor"] = idor_result
+        if idor_result.get("success") and idor_result.get("idor_vulns"):
+            for v in idor_result["idor_vulns"]:
+                report["findings"].append({"phase": "advanced_scan", "type": "high", "detail": f"IDOR: 参数 {v['param']}"})
+                report["risk_summary"]["high"] += 1
+                report["attack_paths"].append(f"IDOR: 参数 {v['param']} 可越权访问")
+
+        # 认证绕过检测
+        auth_result = safe_execute(auth_bypass_detect, url, timeout_sec=single_check_timeout)
+        report["phases"]["advanced_scan"]["results"]["auth_bypass"] = auth_result
+        if auth_result.get("success") and auth_result.get("auth_bypass_vulns"):
+            for v in auth_result["auth_bypass_vulns"]:
+                report["findings"].append({"phase": "advanced_scan", "type": "high", "detail": f"认证绕过: {v['type']}"})
+                report["risk_summary"]["high"] += 1
+
+        # 逻辑漏洞检测
+        logic_result = safe_execute(logic_vuln_check, url, timeout_sec=single_check_timeout)
+        report["phases"]["advanced_scan"]["results"]["logic"] = logic_result
+        if logic_result.get("success") and logic_result.get("findings"):
+            for f in logic_result["findings"]:
+                severity = f.get("severity", "INFO").lower()
+                report["findings"].append({"phase": "advanced_scan", "type": severity, "detail": f"逻辑漏洞风险: {f['type']}"})
+                report["risk_summary"][severity] += 1
+            if logic_result.get("recommendations"):
+                report["recommendations"].extend(logic_result["recommendations"][:5])
+
+        # 文件上传检测
+        upload_result = safe_execute(file_upload_detect, url, timeout_sec=single_check_timeout)
+        report["phases"]["advanced_scan"]["results"]["file_upload"] = upload_result
+        if upload_result.get("success") and upload_result.get("upload_vulns"):
+            for v in upload_result["upload_vulns"]:
+                severity = v.get("severity", "INFO").lower()
+                report["findings"].append({"phase": "advanced_scan", "type": severity, "detail": f"文件上传: {v['type']}"})
+                report["risk_summary"][severity] += 1
+
+        # SSTI检测
+        ssti_result = safe_execute(ssti_detect, url, timeout_sec=single_check_timeout)
+        report["phases"]["advanced_scan"]["results"]["ssti"] = ssti_result
+        if ssti_result.get("success") and ssti_result.get("ssti_vulns"):
+            for v in ssti_result["ssti_vulns"]:
+                report["findings"].append({"phase": "advanced_scan", "type": "critical", "detail": f"SSTI模板注入: {v['engine']} - 参数 {v['param']}"})
+                report["risk_summary"]["critical"] += 1
+                report["attack_paths"].append(f"SSTI: {v['engine']}模板注入可执行任意代码")
+
+        # LFI检测
+        lfi_result = safe_execute(lfi_detect, url, timeout_sec=single_check_timeout)
+        report["phases"]["advanced_scan"]["results"]["lfi"] = lfi_result
+        if lfi_result.get("success") and lfi_result.get("lfi_vulns"):
+            for v in lfi_result["lfi_vulns"]:
+                severity = "critical" if v["type"] == "LFI" else "high"
+                report["findings"].append({"phase": "advanced_scan", "type": severity, "detail": f"{v['type']}: 参数 {v['param']}"})
+                report["risk_summary"][severity] += 1
+                report["attack_paths"].append(f"文件包含: 参数 {v['param']} 可读取敏感文件")
+
+        # WAF检测
+        waf_result = safe_execute(waf_detect, url, timeout_sec=single_check_timeout)
+        report["phases"]["advanced_scan"]["results"]["waf"] = waf_result
+        if waf_result.get("waf_detected"):
+            for w in waf_result["detected_wafs"]:
+                report["findings"].append({"phase": "advanced_scan", "type": "info", "detail": f"检测到WAF: {w['waf']} (置信度: {w['confidence']}%)"})
+                report["risk_summary"]["info"] += 1
+
+        report["phases"]["advanced_scan"]["status"] = "completed"
+
+    return report
+
+@mcp.tool()
+def pentest_phase(target: str, phase: str = "recon") -> dict:
+    """分阶段渗透测试 - 执行单个阶段，避免超时
+
+    Args:
+        target: 目标URL或域名
+        phase: 阶段名称 (recon/vuln_basic/vuln_advanced)
+
+    Returns:
+        该阶段的扫描结果
+    """
+    from datetime import datetime
+
+    if phase not in PENTEST_PHASES:
+        return {
+            "success": False,
+            "error": f"不支持的阶段: {phase}",
+            "available_phases": list(PENTEST_PHASES.keys()),
+            "phase_info": {k: v["name"] for k, v in PENTEST_PHASES.items()}
+        }
+
+    # 解析目标
+    if target.startswith("http"):
+        from urllib.parse import urlparse
+        parsed = urlparse(target)
+        domain = parsed.netloc
+        url = target
+    else:
+        domain = target
+        url = f"https://{target}"
+
+    report = {
+        "target": target,
+        "phase": phase,
+        "phase_name": PENTEST_PHASES[phase]["name"],
+        "start_time": datetime.now().isoformat(),
+        "phases": {},
+        "findings": [],
+        "risk_summary": {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0},
+        "attack_paths": [],
+        "recommendations": []
+    }
+
+    # 执行指定阶段
+    report = _run_pentest_phase(target, url, domain, phase, report)
+
+    report["end_time"] = datetime.now().isoformat()
+    report["overall_risk"] = "CRITICAL" if report["risk_summary"]["critical"] > 0 else \
+                            "HIGH" if report["risk_summary"]["high"] > 0 else \
+                            "MEDIUM" if report["risk_summary"]["medium"] > 0 else "LOW"
+
+    return {"success": True, "report": report}
+
 @mcp.tool()
 def auto_pentest(target: str, deep_scan: bool = True) -> dict:
     """全自动渗透测试 - 智能分析目标并执行完整渗透测试流程
@@ -3335,6 +3641,9 @@ def auto_pentest(target: str, deep_scan: bool = True) -> dict:
     Args:
         target: 目标URL或域名
         deep_scan: 是否执行深度扫描(包含CSRF/SSRF/XXE等高级检测)
+
+    注意: 此函数使用分阶段执行+超时保护，避免MCP调用超时。
+    如需更精细控制，请使用 pentest_phase() 分阶段执行。
     """
     from datetime import datetime
 
@@ -3359,276 +3668,15 @@ def auto_pentest(target: str, deep_scan: bool = True) -> dict:
         domain = target
         url = f"https://{target}"
 
-    # ===== 阶段1: 信息收集 =====
-    report["phases"]["recon"] = {"status": "running", "results": {}}
+    # ===== 阶段1: 信息收集 (使用超时保护) =====
+    report = _run_pentest_phase(target, url, domain, "recon", report)
 
-    # DNS
-    try:
-        dns_result = dns_lookup(domain)
-        report["phases"]["recon"]["results"]["dns"] = dns_result
-        if dns_result.get("success"):
-            report["findings"].append({"phase": "recon", "type": "info", "detail": f"DNS解析成功: {dns_result.get('records', [])}"})
-    except:
-        pass
-
-    # HTTP探测
-    try:
-        http_result = http_probe(url)
-        report["phases"]["recon"]["results"]["http"] = http_result
-        if http_result.get("success"):
-            report["findings"].append({"phase": "recon", "type": "info", "detail": f"HTTP状态: {http_result.get('status_code')}, Server: {http_result.get('server')}"})
-    except:
-        pass
-
-    # 技术栈识别
-    try:
-        tech_result = tech_detect(url)
-        report["phases"]["recon"]["results"]["tech"] = tech_result
-        if tech_result.get("success"):
-            tech = tech_result.get("technology", {})
-            if tech.get("cms"):
-                report["findings"].append({"phase": "recon", "type": "info", "detail": f"检测到CMS: {tech['cms']}"})
-                # 根据CMS推荐攻击路径
-                for cms in tech["cms"]:
-                    if cms == "WordPress":
-                        report["attack_paths"].append("WordPress: 尝试 /wp-admin, xmlrpc.php, 插件漏洞")
-                    elif cms == "ThinkPHP":
-                        report["attack_paths"].append("ThinkPHP: 尝试 RCE漏洞 (5.x版本)")
-    except:
-        pass
-
-    # 子域名枚举
-    try:
-        subdomain_result = subdomain_bruteforce(domain, threads=5)
-        report["phases"]["recon"]["results"]["subdomains"] = subdomain_result
-        if subdomain_result.get("success") and subdomain_result.get("found"):
-            report["findings"].append({"phase": "recon", "type": "info", "detail": f"发现 {len(subdomain_result['found'])} 个子域名"})
-    except:
-        pass
-
-    # 端口扫描
-    try:
-        ip = socket.gethostbyname(domain)
-        port_result = port_scan(ip)
-        report["phases"]["recon"]["results"]["ports"] = port_result
-        if port_result.get("success"):
-            open_ports = port_result.get("data", {}).get("open_ports", [])
-            if open_ports:
-                report["findings"].append({"phase": "recon", "type": "info", "detail": f"开放端口: {open_ports}"})
-                # 根据端口推荐攻击路径
-                if 22 in open_ports:
-                    report["attack_paths"].append("SSH(22): 尝试弱口令爆破")
-                if 3306 in open_ports:
-                    report["attack_paths"].append("MySQL(3306): 尝试弱口令, 未授权访问")
-                if 6379 in open_ports:
-                    report["attack_paths"].append("Redis(6379): 尝试未授权访问, 写入SSH密钥")
-    except:
-        pass
-
-    report["phases"]["recon"]["status"] = "completed"
-
-    # ===== 阶段2: 漏洞扫描 =====
-    report["phases"]["vuln_scan"] = {"status": "running", "results": {}}
-
-    # 目录扫描
-    try:
-        dir_result = dir_bruteforce(url, threads=5)
-        report["phases"]["vuln_scan"]["results"]["directories"] = dir_result
-        if dir_result.get("success") and dir_result.get("found"):
-            for item in dir_result["found"]:
-                if item["status"] == 200:
-                    report["findings"].append({"phase": "vuln_scan", "type": "info", "detail": f"发现目录: {item['path']}"})
-                    if item["path"] in [".git", ".svn", ".env", "backup"]:
-                        report["findings"].append({"phase": "vuln_scan", "type": "high", "detail": f"敏感目录泄露: {item['path']}"})
-                        report["risk_summary"]["high"] += 1
-    except:
-        pass
-
-    # 敏感文件扫描
-    try:
-        sensitive_result = sensitive_scan(url, threads=5)
-        report["phases"]["vuln_scan"]["results"]["sensitive"] = sensitive_result
-        if sensitive_result.get("success") and sensitive_result.get("sensitive_files"):
-            for f in sensitive_result["sensitive_files"]:
-                report["findings"].append({"phase": "vuln_scan", "type": "high", "detail": f"敏感文件泄露: {f['path']}"})
-                report["risk_summary"]["high"] += 1
-    except:
-        pass
-
-    # 基础漏洞检测
-    try:
-        vuln_result = vuln_check(url)
-        report["phases"]["vuln_scan"]["results"]["vulns"] = vuln_result
-        if vuln_result.get("success") and vuln_result.get("vulnerabilities"):
-            for v in vuln_result["vulnerabilities"]:
-                severity = v.get("severity", "MEDIUM").lower()
-                report["findings"].append({"phase": "vuln_scan", "type": severity, "detail": f"{v['type']}"})
-                report["risk_summary"][severity] += 1
-    except:
-        pass
-
-    # SQL注入检测
-    try:
-        sqli_result = sqli_detect(url)
-        report["phases"]["vuln_scan"]["results"]["sqli"] = sqli_result
-        if sqli_result.get("success") and sqli_result.get("sqli_vulns"):
-            for v in sqli_result["sqli_vulns"]:
-                report["findings"].append({"phase": "vuln_scan", "type": "critical", "detail": f"SQL注入: 参数 {v['param']}"})
-                report["risk_summary"]["critical"] += 1
-                report["attack_paths"].append(f"SQL注入: 参数 {v['param']} 可利用")
-    except:
-        pass
-
-    # XSS检测
-    try:
-        xss_result = xss_detect(url)
-        report["phases"]["vuln_scan"]["results"]["xss"] = xss_result
-        if xss_result.get("success") and xss_result.get("xss_vulns"):
-            for v in xss_result["xss_vulns"]:
-                report["findings"].append({"phase": "vuln_scan", "type": "high", "detail": f"XSS漏洞: 参数 {v['param']}"})
-                report["risk_summary"]["high"] += 1
-    except:
-        pass
+    # ===== 阶段2: 基础漏洞扫描 =====
+    report = _run_pentest_phase(target, url, domain, "vuln_basic", report)
 
     # ===== 阶段3: 高级漏洞检测 (深度扫描) =====
     if deep_scan:
-        report["phases"]["advanced_scan"] = {"status": "running", "results": {}}
-
-        # CSRF检测
-        try:
-            csrf_result = csrf_detect(url)
-            report["phases"]["advanced_scan"]["results"]["csrf"] = csrf_result
-            if csrf_result.get("success") and csrf_result.get("csrf_vulns"):
-                for v in csrf_result["csrf_vulns"]:
-                    severity = v.get("severity", "MEDIUM").lower()
-                    report["findings"].append({"phase": "advanced_scan", "type": severity, "detail": f"CSRF: {v['type']}"})
-                    report["risk_summary"][severity] += 1
-        except:
-            pass
-
-        # SSRF检测
-        try:
-            ssrf_result = ssrf_detect(url)
-            report["phases"]["advanced_scan"]["results"]["ssrf"] = ssrf_result
-            if ssrf_result.get("success") and ssrf_result.get("ssrf_vulns"):
-                for v in ssrf_result["ssrf_vulns"]:
-                    report["findings"].append({"phase": "advanced_scan", "type": "critical", "detail": f"SSRF: 参数 {v['param']}"})
-                    report["risk_summary"]["critical"] += 1
-                    report["attack_paths"].append(f"SSRF: 参数 {v['param']} 可访问内网资源")
-        except:
-            pass
-
-        # 命令注入检测
-        try:
-            cmd_result = cmd_inject_detect(url)
-            report["phases"]["advanced_scan"]["results"]["cmd_inject"] = cmd_result
-            if cmd_result.get("success") and cmd_result.get("cmd_vulns"):
-                for v in cmd_result["cmd_vulns"]:
-                    report["findings"].append({"phase": "advanced_scan", "type": "critical", "detail": f"命令注入: 参数 {v['param']}"})
-                    report["risk_summary"]["critical"] += 1
-                    report["attack_paths"].append(f"命令注入: 参数 {v['param']} 可执行系统命令")
-        except:
-            pass
-
-        # XXE检测
-        try:
-            xxe_result = xxe_detect(url)
-            report["phases"]["advanced_scan"]["results"]["xxe"] = xxe_result
-            if xxe_result.get("success") and xxe_result.get("xxe_vulns"):
-                for v in xxe_result["xxe_vulns"]:
-                    severity = v.get("severity", "HIGH").lower()
-                    report["findings"].append({"phase": "advanced_scan", "type": severity, "detail": f"XXE: {v['type']}"})
-                    report["risk_summary"][severity] += 1
-        except:
-            pass
-
-        # IDOR检测
-        try:
-            idor_result = idor_detect(url)
-            report["phases"]["advanced_scan"]["results"]["idor"] = idor_result
-            if idor_result.get("success") and idor_result.get("idor_vulns"):
-                for v in idor_result["idor_vulns"]:
-                    report["findings"].append({"phase": "advanced_scan", "type": "high", "detail": f"IDOR: 参数 {v['param']}"})
-                    report["risk_summary"]["high"] += 1
-                    report["attack_paths"].append(f"IDOR: 参数 {v['param']} 可越权访问")
-        except:
-            pass
-
-        # 认证绕过检测
-        try:
-            auth_result = auth_bypass_detect(url)
-            report["phases"]["advanced_scan"]["results"]["auth_bypass"] = auth_result
-            if auth_result.get("success") and auth_result.get("auth_bypass_vulns"):
-                for v in auth_result["auth_bypass_vulns"]:
-                    report["findings"].append({"phase": "advanced_scan", "type": "high", "detail": f"认证绕过: {v['type']}"})
-                    report["risk_summary"]["high"] += 1
-        except:
-            pass
-
-        # 逻辑漏洞检测
-        try:
-            logic_result = logic_vuln_check(url)
-            report["phases"]["advanced_scan"]["results"]["logic"] = logic_result
-            if logic_result.get("success") and logic_result.get("findings"):
-                for f in logic_result["findings"]:
-                    severity = f.get("severity", "INFO").lower()
-                    report["findings"].append({"phase": "advanced_scan", "type": severity, "detail": f"逻辑漏洞风险: {f['type']}"})
-                    report["risk_summary"][severity] += 1
-                # 添加逻辑漏洞测试建议
-                if logic_result.get("recommendations"):
-                    report["recommendations"].extend(logic_result["recommendations"][:5])
-        except:
-            pass
-
-        # 文件上传检测
-        try:
-            upload_result = file_upload_detect(url)
-            report["phases"]["advanced_scan"]["results"]["file_upload"] = upload_result
-            if upload_result.get("success") and upload_result.get("upload_vulns"):
-                for v in upload_result["upload_vulns"]:
-                    severity = v.get("severity", "INFO").lower()
-                    report["findings"].append({"phase": "advanced_scan", "type": severity, "detail": f"文件上传: {v['type']}"})
-                    report["risk_summary"][severity] += 1
-        except:
-            pass
-
-        # SSTI检测
-        try:
-            ssti_result = ssti_detect(url)
-            report["phases"]["advanced_scan"]["results"]["ssti"] = ssti_result
-            if ssti_result.get("success") and ssti_result.get("ssti_vulns"):
-                for v in ssti_result["ssti_vulns"]:
-                    report["findings"].append({"phase": "advanced_scan", "type": "critical", "detail": f"SSTI模板注入: {v['engine']} - 参数 {v['param']}"})
-                    report["risk_summary"]["critical"] += 1
-                    report["attack_paths"].append(f"SSTI: {v['engine']}模板注入可执行任意代码")
-        except:
-            pass
-
-        # LFI检测
-        try:
-            lfi_result = lfi_detect(url)
-            report["phases"]["advanced_scan"]["results"]["lfi"] = lfi_result
-            if lfi_result.get("success") and lfi_result.get("lfi_vulns"):
-                for v in lfi_result["lfi_vulns"]:
-                    severity = "critical" if v["type"] == "LFI" else "high"
-                    report["findings"].append({"phase": "advanced_scan", "type": severity, "detail": f"{v['type']}: 参数 {v['param']}"})
-                    report["risk_summary"][severity] += 1
-                    report["attack_paths"].append(f"文件包含: 参数 {v['param']} 可读取敏感文件")
-        except:
-            pass
-
-        # WAF检测
-        try:
-            waf_result = waf_detect(url)
-            report["phases"]["advanced_scan"]["results"]["waf"] = waf_result
-            if waf_result.get("waf_detected"):
-                for w in waf_result["detected_wafs"]:
-                    report["findings"].append({"phase": "advanced_scan", "type": "info", "detail": f"检测到WAF: {w['waf']} (置信度: {w['confidence']}%)"})
-                    report["risk_summary"]["info"] += 1
-        except:
-            pass
-
-        report["phases"]["advanced_scan"]["status"] = "completed"
+        report = _run_pentest_phase(target, url, domain, "vuln_advanced", report)
 
     # ===== 阶段4: 生成建议 =====
     if report["risk_summary"]["critical"] > 0:
@@ -4466,6 +4514,17 @@ def verify_vuln(url: str, param: str, vuln_type: str, payload: str = "", rounds:
     """
     from modules.vuln_verifier import verify_vuln_statistically
     return verify_vuln_statistically(url, param, vuln_type, payload, rounds)
+
+
+# ========== 注册优化模块工具 ==========
+try:
+    from modules.optimization_tools import register_optimization_tools
+    registered_tools = register_optimization_tools(mcp)
+    logger.info(f"优化模块工具已注册: {registered_tools}")
+except ImportError as e:
+    logger.warning(f"优化模块加载失败 (可选): {e}")
+except Exception as e:
+    logger.warning(f"优化模块注册失败: {e}")
 
 
 if __name__ == "__main__":
