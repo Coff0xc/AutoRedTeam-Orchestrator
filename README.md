@@ -6,8 +6,9 @@
   <img src="https://img.shields.io/badge/Platform-Kali%20Linux-557C94?style=for-the-badge&logo=kalilinux&logoColor=white" alt="Kali Linux"/>
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/MCP-Protocol-00ADD8?style=for-the-badge" alt="MCP"/>
-  <img src="https://img.shields.io/badge/Tools-52+-FF6B6B?style=for-the-badge" alt="Tools"/>
+  <img src="https://img.shields.io/badge/Tools-60+-FF6B6B?style=for-the-badge" alt="Tools"/>
   <img src="https://img.shields.io/badge/Payloads-2000+-orange?style=for-the-badge" alt="Payloads"/>
+  <img src="https://img.shields.io/badge/AI-Powered-blueviolet?style=for-the-badge" alt="AI Powered"/>
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License"/>
 </p>
 
@@ -19,7 +20,7 @@
 
 ## 📖 简介
 
-**AutoRedTeam-Orchestrator** 是一个集成了 **52+ 安全工具** 和 **2000+ Payload** 的智能化渗透测试平台。通过 MCP 协议与 AI 编辑器（Windsurf / Cursor / Claude Desktop）无缝集成，实现 **AI 驱动的自动化红队作业**。
+**AutoRedTeam-Orchestrator** 是一个集成了 **60+ 安全工具** 和 **2000+ Payload** 的智能化渗透测试平台。通过 MCP 协议与 AI 编辑器（Windsurf / Cursor / Claude Desktop / Kiro）无缝集成，实现 **AI 驱动的自动化红队作业**。
 
 只需用自然语言描述目标，AI 就能自动选择工具、执行侦察、发现漏洞、推荐攻击路径。
 
@@ -39,14 +40,17 @@
 | 特性 | 描述 |
 |------|------|
 | 🤖 **AI 智能驱动** | 基于 LLM 的智能侦察、攻击路径规划、漏洞验证 |
+| 🧠 **AI 决策引擎** | 智能攻击推荐、攻击链规划、历史学习优化 |
+| ⚡ **异步高性能** | 异步扫描引擎，性能提升 5-10 倍 |
 | 🔍 **全自动侦察** | 一键完成子域名、端口、指纹、WAF、漏洞全流程扫描 |
 | ☢️ **Nuclei 集成** | 11997+ 漏洞检测模板，覆盖最新 CVE |
 | 💉 **Payload 库** | 2000+ Payload，含 SQLi/XSS/NoSQL/GraphQL/WAF绕过 |
 | 🧠 **智能选择** | 根据目标指纹自动选择最优 Payload |
-| 🔗 **工具链编排** | 自动化工具链，端口扫描→服务识别→漏洞扫描 |
+| 🔗 **漏洞关联分析** | 自动分析漏洞关联，推荐利用链 |
 | 📊 **智能报告** | 自动生成 HTML/PDF/Markdown/JSON 格式报告 |
 | 🔗 **MCP 协议** | 原生支持 Windsurf/Cursor/Claude Desktop/Kiro |
 | ⚡ **任务队列** | 后台异步执行，支持大规模扫描任务 |
+| 📈 **性能监控** | 实时监控工具执行性能，识别瓶颈 |
 
 ---
 
@@ -175,6 +179,32 @@
 | 📋 任务状态 | `task_status` | 查询任务执行状态 |
 | ❌ 取消任务 | `task_cancel` | 取消等待中的任务 |
 | 📜 任务列表 | `task_list` | 列出所有任务 |
+
+### 🧠 AI 智能化 (AI Intelligence) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🎯 智能攻击建议 | `ai_suggest_attack` | 基于目标特征推荐最优攻击路径 |
+| 🔗 攻击链规划 | `ai_attack_chain` | 生成多条可能的攻击路径 |
+| 📝 结果记录 | `ai_record_result` | 记录攻击结果用于AI学习 |
+| 🧠 智能渗透 | `smart_pentest` | 集成AI决策的智能渗透测试 |
+
+### 📈 性能监控 (Performance) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 📊 性能摘要 | `perf_summary` | 获取性能监控摘要 |
+| 🔍 瓶颈识别 | `perf_bottlenecks` | 识别性能瓶颈 |
+| 📋 工具统计 | `perf_tool_stats` | 获取工具执行统计 |
+| 📜 执行记录 | `perf_recent` | 获取最近执行记录 |
+
+### 💾 智能缓存 (Smart Cache) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 📊 缓存统计 | `cache_stats` | 获取缓存统计信息 |
+| 🧹 清理缓存 | `cache_cleanup` | 清理过期缓存 |
+| 🗑️ 清空缓存 | `cache_clear` | 清空指定类型缓存 |
 
 ---
 
@@ -404,6 +434,14 @@ AutoRedTeam-Orchestrator/
 │   │
 │   ├── mega_payloads.py        # 🆕 超级Payload库 (2000+)
 │   ├── smart_payload_selector.py  # 🆕 智能Payload选择器
+│   ├── ai_decision_engine.py   # 🆕 AI决策引擎
+│   ├── async_scanner.py        # 🆕 异步扫描引擎
+│   ├── adaptive_payload_engine.py  # 🆕 自适应Payload引擎
+│   ├── vuln_correlation_engine.py  # 🆕 漏洞关联分析
+│   ├── smart_cache.py          # 🆕 智能缓存系统
+│   ├── performance_monitor.py  # 🆕 性能监控
+│   ├── async_http_pool.py      # 🆕 异步HTTP连接池
+│   ├── optimization_tools.py   # 🆕 优化模块MCP集成
 │   ├── nuclei_integration.py   # Nuclei 集成
 │   └── vuln_verifier.py        # 漏洞验证
 │
@@ -479,7 +517,7 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 
 ## 🗺️ 路线图
 
-- [x] 52+ 安全工具集成
+- [x] 60+ 安全工具集成
 - [x] Nuclei 11997+ 模板支持
 - [x] 2000+ Payload 库
 - [x] 智能侦察引擎
@@ -490,6 +528,11 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 - [x] 🆕 NoSQL/GraphQL/JSON 注入支持
 - [x] 🆕 任务队列系统 (后台异步执行)
 - [x] 🆕 PDF 报告格式 (支持中文)
+- [x] 🆕 AI 决策引擎 (智能攻击推荐)
+- [x] 🆕 异步扫描引擎 (性能提升 5-10x)
+- [x] 🆕 漏洞关联分析 (利用链推荐)
+- [x] 🆕 智能缓存系统
+- [x] 🆕 性能监控模块
 - [ ] Web UI 界面
 - [ ] 分布式扫描支持
 - [ ] 更多云平台支持 (GCP/Alibaba Cloud)
@@ -498,6 +541,66 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 ---
 
 ## 📝 更新日志
+
+### v2.3.0 (2026-01-05)
+
+#### 🆕 性能优化与智能化增强
+
+- **AI 决策引擎** (`modules/ai_decision_engine.py`)
+  - 智能攻击推荐：基于目标特征自动推荐最优攻击路径
+  - 攻击链规划：生成多条可能的攻击路径
+  - 历史学习：记录攻击结果，持续优化推荐算法
+  - 新增 MCP 工具: `ai_suggest_attack`, `ai_attack_chain`, `ai_record_result`
+
+- **异步扫描引擎** (`modules/async_scanner.py`)
+  - 异步端口扫描：性能提升 5-10 倍
+  - 异步目录扫描：并发 HTTP 请求
+  - 异步子域名扫描：批量 DNS 解析
+  - 异步漏洞扫描：并发漏洞检测
+
+- **自适应 Payload 引擎** (`modules/adaptive_payload_engine.py`)
+  - 基于反馈学习的 Payload 选择
+  - WAF 绕过变异：8 种变异方法
+  - 成功率统计与排序
+  - 探索-利用平衡算法
+
+- **漏洞关联分析引擎** (`modules/vuln_correlation_engine.py`)
+  - 漏洞关联图谱：定义漏洞间因果关系
+  - 利用链推荐：自动匹配可用利用链
+  - 风险评分：综合评估目标风险等级
+  - 下一步测试建议
+
+- **智能缓存系统** (`modules/smart_cache.py`)
+  - 多层 LRU 缓存：DNS/技术栈/CVE/Payload/侦察结果
+  - TTL 管理：自动过期清理
+  - 持久化存储：跨会话缓存复用
+  - 新增 MCP 工具: `cache_stats`, `cache_cleanup`, `cache_clear`
+
+- **性能监控模块** (`modules/performance_monitor.py`)
+  - 执行统计：工具调用次数、成功率、耗时
+  - 瓶颈识别：自动识别慢速和不可靠工具
+  - 性能报告：实时监控摘要
+  - 新增 MCP 工具: `perf_summary`, `perf_bottlenecks`, `perf_tool_stats`
+
+- **异步 HTTP 连接池** (`modules/async_http_pool.py`)
+  - 连接复用：减少连接建立开销
+  - 速率限制：令牌桶算法防止触发 WAF
+  - 自动重试：失败请求自动重试
+  - 域名级别统计
+
+#### 📦 文件变更
+- 新增: `modules/ai_decision_engine.py` (~390行)
+- 新增: `modules/async_scanner.py` (~440行)
+- 新增: `modules/adaptive_payload_engine.py` (~380行)
+- 新增: `modules/vuln_correlation_engine.py` (~410行)
+- 新增: `modules/smart_cache.py` (~340行)
+- 新增: `modules/performance_monitor.py` (~350行)
+- 新增: `modules/async_http_pool.py` (~390行)
+- 新增: `modules/optimization_tools.py` (~480行)
+- 新增: `test_optimization.py` (~300行)
+- 修改: `mcp_stdio_server.py` (+优化模块集成)
+
+---
 
 ### v2.2.0 (2025-01-05)
 
