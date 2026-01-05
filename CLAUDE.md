@@ -18,7 +18,7 @@ pip install -r requirements.txt
 # Just ask: "对 example.com 进行渗透测试"
 ```
 
-## MCP Tools (46+ Pure Python)
+## MCP Tools (67+ Pure Python)
 
 ### Core Tools (全自动)
 - `auto_pentest(target, deep_scan=True)` - 全自动渗透测试 (带超时保护)
@@ -72,6 +72,39 @@ pip install -r requirements.txt
 - `xss_payloads` - XSS Payload
 - `reverse_shell_gen` - 反向Shell生成
 - `google_dorks` - Google Dork生成
+
+### Red Team Tools - 横向移动 (v2.3)
+- `lateral_smb_exec(target, username, password, command)` - SMB远程命令执行 (Pass-the-Hash)
+- `lateral_smb_upload(target, username, password, local_file, remote_path)` - SMB文件上传
+- `lateral_ssh_exec(target, username, password, command)` - SSH远程命令执行
+- `lateral_ssh_tunnel(target, username, password, tunnel_type, local_port)` - SSH隧道
+- `lateral_wmi_exec(target, username, password, command)` - WMI远程命令执行
+- `lateral_wmi_query(target, username, password, query)` - WMI系统查询
+
+### Red Team Tools - C2通信 (v2.3)
+- `c2_beacon_start(server_url, interval, jitter)` - 启动C2 Beacon客户端
+- `c2_dns_tunnel(domain, data, xor_key)` - DNS隧道数据外传
+- `c2_http_tunnel(url, data, method)` - HTTP隧道数据外传
+
+### Red Team Tools - 混淆免杀 (v2.3)
+- `evasion_obfuscate_payload(payload, encoding, key)` - Payload混淆 (XOR/AES/Base64)
+- `evasion_obfuscate_python(code, rename_vars, add_junk)` - Python代码混淆
+- `evasion_shellcode_loader(shellcode_hex, xor_encrypt)` - Shellcode加载器生成
+
+### Red Team Tools - 隐蔽通信 (v2.3)
+- `stealth_request(url, method, humanize, spoof_fingerprint)` - 隐蔽HTTP请求 (JA3伪造)
+- `stealth_proxy_pool(action, proxy)` - 代理池管理
+
+### Red Team Tools - 纯Python漏洞利用 (v2.3)
+- `exploit_sqli_detect(url, param)` - 纯Python SQL注入检测 (无需sqlmap)
+- `exploit_sqli_extract(url, param, db_type, extract)` - SQL注入数据提取
+- `exploit_port_scan(target, ports, threads)` - 纯Python端口扫描 (无需nmap)
+- `exploit_service_detect(target, port)` - 服务指纹识别
+- `exploit_network_scan(network, ports)` - 网络扫描
+
+### Red Team Tools - 综合工具 (v2.3)
+- `redteam_recon(target, scan_ports, detect_waf, stealth)` - 综合侦察
+- `redteam_lateral_chain(targets, username, password, command)` - 批量横向移动
 
 ## OWASP Top 10 Coverage
 
@@ -134,15 +167,20 @@ python test_server.py
 
 ## Key Components
 
-- **mcp_stdio_server.py**: MCP stdio server with 46+ pure Python tools (recommended)
+- **mcp_stdio_server.py**: MCP stdio server with 67+ pure Python tools (recommended)
 - **utils/task_queue.py**: Lightweight task queue for async execution
 - **modules/oob_detector.py**: OOB detection with Interactsh/DNSLog
 - **modules/smart_payload_engine.py**: Payload mutation for WAF bypass
 - **modules/vuln_verifier.py**: Statistical vulnerability verification
+- **modules/redteam_tools.py**: Red Team工具MCP集成 (横向移动/C2/混淆)
 - **core/session_manager.py**: HTTP session management with auth support
+- **core/lateral/**: 横向移动模块 (SMB/SSH/WMI)
+- **core/c2/**: C2通信模块 (Beacon/DNS隧道/ICMP隧道)
+- **core/evasion/**: 混淆免杀模块 (XOR/AES/Shellcode加载器)
+- **core/stealth/**: 隐蔽通信模块 (流量混淆/代理池/指纹伪造)
+- **core/exploit/**: 纯Python漏洞利用 (SQLi/端口扫描)
 - **main.py**: Legacy Flask HTTP server
 - **auto_recon.py**: Standalone auto reconnaissance engine
-- **core/**: Legacy HTTP server components
 
 ## Configuration
 

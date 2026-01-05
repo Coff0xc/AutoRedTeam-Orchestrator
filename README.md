@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/Platform-Kali%20Linux-557C94?style=for-the-badge&logo=kalilinux&logoColor=white" alt="Kali Linux"/>
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/MCP-Protocol-00ADD8?style=for-the-badge" alt="MCP"/>
-  <img src="https://img.shields.io/badge/Tools-60+-FF6B6B?style=for-the-badge" alt="Tools"/>
+  <img src="https://img.shields.io/badge/Tools-70+-FF6B6B?style=for-the-badge" alt="Tools"/>
   <img src="https://img.shields.io/badge/Payloads-2000+-orange?style=for-the-badge" alt="Payloads"/>
   <img src="https://img.shields.io/badge/AI-Powered-blueviolet?style=for-the-badge" alt="AI Powered"/>
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License"/>
@@ -20,7 +20,7 @@
 
 ## 📖 简介
 
-**AutoRedTeam-Orchestrator** 是一个集成了 **60+ 安全工具** 和 **2000+ Payload** 的智能化渗透测试平台。通过 MCP 协议与 AI 编辑器（Windsurf / Cursor / Claude Desktop / Kiro）无缝集成，实现 **AI 驱动的自动化红队作业**。
+**AutoRedTeam-Orchestrator** 是一个集成了 **70+ 安全工具** 和 **2000+ Payload** 的智能化渗透测试平台。通过 MCP 协议与 AI 编辑器（Windsurf / Cursor / Claude Desktop / Kiro）无缝集成，实现 **AI 驱动的自动化红队作业**。
 
 只需用自然语言描述目标，AI 就能自动选择工具、执行侦察、发现漏洞、推荐攻击路径。
 
@@ -205,6 +205,57 @@
 | 📊 缓存统计 | `cache_stats` | 获取缓存统计信息 |
 | 🧹 清理缓存 | `cache_cleanup` | 清理过期缓存 |
 | 🗑️ 清空缓存 | `cache_clear` | 清空指定类型缓存 |
+
+### 🔴 Red Team 横向移动 (Lateral Movement) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🖥️ SMB执行 | `lateral_smb_exec` | SMB远程命令执行 (Pass-the-Hash) |
+| 📤 SMB上传 | `lateral_smb_upload` | SMB文件上传到远程主机 |
+| 🐧 SSH执行 | `lateral_ssh_exec` | SSH远程命令执行 |
+| 🔗 SSH隧道 | `lateral_ssh_tunnel` | SSH端口转发/SOCKS代理 |
+| 🪟 WMI执行 | `lateral_wmi_exec` | WMI远程命令执行 |
+| 📋 WMI查询 | `lateral_wmi_query` | WMI系统信息查询 |
+
+### 📡 Red Team C2通信 (Command & Control) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 📶 Beacon启动 | `c2_beacon_start` | 启动C2 Beacon客户端 |
+| 🌐 DNS隧道 | `c2_dns_tunnel` | DNS隧道数据外传 |
+| 🔒 HTTP隧道 | `c2_http_tunnel` | HTTP隧道数据外传 |
+
+### 🎭 Red Team 混淆免杀 (Evasion) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🔐 Payload混淆 | `evasion_obfuscate_payload` | XOR/AES/Base64 Payload混淆 |
+| 🐍 Python混淆 | `evasion_obfuscate_python` | Python代码变量/字符串混淆 |
+| 💉 Shellcode加载 | `evasion_shellcode_loader` | 生成Shellcode加载器 |
+
+### 🥷 Red Team 隐蔽通信 (Stealth) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🌐 隐蔽请求 | `stealth_request` | JA3指纹伪造/浏览器模拟 |
+| 🔄 代理池 | `stealth_proxy_pool` | 代理池管理和轮换 |
+
+### ⚔️ Red Team 纯Python漏洞利用 (Pure Python Exploit) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 💉 SQLi检测 | `exploit_sqli_detect` | 纯Python SQL注入检测 (无需sqlmap) |
+| 📊 SQLi提取 | `exploit_sqli_extract` | SQL注入数据库数据提取 |
+| 🔍 端口扫描 | `exploit_port_scan` | 纯Python端口扫描 (无需nmap) |
+| 🎯 服务识别 | `exploit_service_detect` | 服务指纹识别 |
+| 🌐 网络扫描 | `exploit_network_scan` | 网段存活主机发现 |
+
+### 🎯 Red Team 综合工具 (Combined Tools) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🔍 综合侦察 | `redteam_recon` | 端口+WAF+指纹综合侦察 |
+| 🔗 横向链 | `redteam_lateral_chain` | 批量横向移动执行 |
 
 ---
 
@@ -517,7 +568,7 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 
 ## 🗺️ 路线图
 
-- [x] 60+ 安全工具集成
+- [x] 70+ 安全工具集成
 - [x] Nuclei 11997+ 模板支持
 - [x] 2000+ Payload 库
 - [x] 智能侦察引擎
@@ -533,6 +584,11 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 - [x] 🆕 漏洞关联分析 (利用链推荐)
 - [x] 🆕 智能缓存系统
 - [x] 🆕 性能监控模块
+- [x] 🆕 Red Team 横向移动 (SMB/SSH/WMI)
+- [x] 🆕 C2 通信模块 (Beacon/DNS隧道/HTTP隧道)
+- [x] 🆕 混淆免杀模块 (XOR/AES/Shellcode)
+- [x] 🆕 隐蔽通信模块 (JA3指纹/代理池)
+- [x] 🆕 纯Python漏洞利用 (无需外部工具)
 - [ ] Web UI 界面
 - [ ] 分布式扫描支持
 - [ ] 更多云平台支持 (GCP/Alibaba Cloud)
@@ -541,6 +597,70 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 ---
 
 ## 📝 更新日志
+
+### v2.4.0 (2026-01-06)
+
+#### 🆕 Red Team 高级功能 (真实攻防对抗增强)
+
+- **横向移动模块** (`core/lateral/`)
+  - SMB横向移动: Pass-the-Hash、文件上传下载、psexec/smbexec
+  - SSH横向移动: 密码/密钥认证、端口转发、SOCKS代理
+  - WMI横向移动: 远程命令执行、WQL系统查询
+  - 新增 MCP 工具: `lateral_smb_exec`, `lateral_ssh_exec`, `lateral_wmi_exec` 等
+
+- **C2通信模块** (`core/c2/`)
+  - 轻量级Beacon: HTTP/HTTPS回连、任务分发、结果上报
+  - DNS隧道: 数据外传、XOR加密、分块传输
+  - ICMP隧道: 隐蔽通道通信
+  - HTTP隧道: Body/Cookie/Header隐写
+  - 新增 MCP 工具: `c2_beacon_start`, `c2_dns_tunnel`, `c2_http_tunnel`
+
+- **混淆免杀模块** (`core/evasion/`)
+  - Payload混淆: XOR/AES/Base64/ROT13/Unicode编码
+  - Python代码混淆: 变量重命名、字符串混淆、垃圾代码
+  - Shellcode加载器: Windows/Linux加载器生成
+  - PowerShell混淆: Base64编码、字符串拼接、反引号混淆
+  - 新增 MCP 工具: `evasion_obfuscate_payload`, `evasion_obfuscate_python`, `evasion_shellcode_loader`
+
+- **隐蔽通信模块** (`core/stealth/`)
+  - 流量混淆: 请求人性化、Header变异、参数混淆
+  - 代理池管理: 多协议支持、自动验证、智能轮换
+  - 指纹伪造: JA3/TLS指纹、浏览器Profile模拟
+  - 新增 MCP 工具: `stealth_request`, `stealth_proxy_pool`
+
+- **纯Python漏洞利用** (`core/exploit/`)
+  - SQL注入引擎: Union/Error/Blind检测、WAF绕过、数据提取
+  - 端口扫描器: 异步扫描、服务指纹识别
+  - 网络扫描: 存活主机发现、批量扫描
+  - 新增 MCP 工具: `exploit_sqli_detect`, `exploit_port_scan`, `exploit_network_scan`
+
+- **综合工具**
+  - Red Team侦察: 端口+WAF+指纹综合检测
+  - 横向移动链: 批量目标命令执行
+  - 新增 MCP 工具: `redteam_recon`, `redteam_lateral_chain`
+
+#### 📦 文件变更
+- 新增: `core/lateral/smb_lateral.py` (~600行)
+- 新增: `core/lateral/ssh_lateral.py` (~550行)
+- 新增: `core/lateral/wmi_lateral.py` (~520行)
+- 新增: `core/c2/beacon.py` (~500行)
+- 新增: `core/c2/tunnels.py` (~450行)
+- 新增: `core/evasion/payload_obfuscator.py` (~750行)
+- 新增: `core/stealth/traffic_mutator.py` (~550行)
+- 新增: `core/stealth/proxy_pool.py` (~650行)
+- 新增: `core/stealth/fingerprint_spoofer.py` (~500行)
+- 新增: `core/exploit/pure_sqli.py` (~700行)
+- 新增: `core/exploit/pure_scanner.py` (~600行)
+- 新增: `modules/redteam_tools.py` (~1100行)
+- 修改: `mcp_stdio_server.py` (+Red Team工具注册)
+- 修改: `CLAUDE.md` (+新工具文档)
+
+#### ⚠️ 可选依赖
+- `impacket`: SMB/WMI高级功能 (Pass-the-Hash)
+- `paramiko`: SSH高级功能 (隧道)
+- `pycryptodome`: AES加密支持
+
+---
 
 ### v2.3.0 (2026-01-05)
 

@@ -4527,5 +4527,16 @@ except Exception as e:
     logger.warning(f"优化模块注册失败: {e}")
 
 
+# ========== 注册Red Team高级工具 ==========
+try:
+    from modules.redteam_tools import register_redteam_tools
+    redteam_tools = register_redteam_tools(mcp)
+    logger.info(f"Red Team工具已注册: {redteam_tools}")
+except ImportError as e:
+    logger.warning(f"Red Team模块加载失败 (可选): {e}")
+except Exception as e:
+    logger.warning(f"Red Team模块注册失败: {e}")
+
+
 if __name__ == "__main__":
     mcp.run()
