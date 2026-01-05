@@ -38,11 +38,17 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Bandit
-        run: pip install bandit
+      - name: Install security tools
+        run: pip install bandit pip-audit safety
 
       - name: Security scan with Bandit
         run: bandit -r . -x ./tests,./venv --severity-level medium || true
+
+      - name: Dependency vulnerability scan with pip-audit
+        run: pip-audit -r requirements.txt || true
+
+      - name: Dependency check with Safety
+        run: safety check -r requirements.txt --full-report || true
 
   test:
     runs-on: ubuntu-latest

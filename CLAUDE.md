@@ -21,7 +21,8 @@ pip install -r requirements.txt
 ## MCP Tools (46+ Pure Python)
 
 ### Core Tools (全自动)
-- `auto_pentest(target, deep_scan=True)` - 全自动渗透测试
+- `auto_pentest(target, deep_scan=True)` - 全自动渗透测试 (带超时保护)
+- `pentest_phase(target, phase)` - 分阶段渗透测试 (recon/vuln_basic/vuln_advanced)
 - `generate_report(target, format)` - 生成渗透测试报告 (markdown/json/html/pdf)
 - `smart_analyze(target)` - 智能分析目标
 

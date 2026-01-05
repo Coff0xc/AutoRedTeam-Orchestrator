@@ -184,7 +184,7 @@ def run_cmd(cmd: list, timeout: int = 300) -> dict:
         return {"success": False, "error": f"工具 {tool} 未安装。Windows用户请安装对应工具或使用WSL。"}
 
     # 安全检查：禁止危险字符
-    dangerous_chars = [';', '|', '&', '`', '$', '>', '<', '\n', '\r']
+    dangerous_chars = [';', '|', '&', '`', '$', '>', '<', '\n', '\r', '\x00', '\t', '\x0b', '\x0c']  # 增强版
     for arg in cmd:
         if any(c in str(arg) for c in dangerous_chars):
             return {"success": False, "error": f"检测到危险字符，拒绝执行: {arg}"}
@@ -273,7 +273,7 @@ def http_probe(url: str) -> dict:
         return {"success": False, "error": "需要安装 requests: pip install requests"}
 
     try:
-        resp = requests.get(url, timeout=10, verify=False, allow_redirects=True)
+        resp = requests.get(url, timeout=10, verify=get_verify_ssl(), allow_redirects=True)
         return {
             "success": True,
             "url": url,
@@ -522,7 +522,7 @@ def dir_bruteforce(url: str, threads: int = 10) -> dict:
     def check_path(path):
         try:
             test_url = urljoin(base_url + "/", path)
-            resp = requests.get(test_url, timeout=5, verify=False, allow_redirects=False)
+            resp = requests.get(test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
             if resp.status_code in [200, 301, 302, 403]:
                 return {"path": path, "url": test_url, "status": resp.status_code, "size": len(resp.content)}
         except:
@@ -580,7 +580,7 @@ def sensitive_scan(url: str, threads: int = 10) -> dict:
     def check_file(path):
         try:
             test_url = urljoin(base_url + "/", path)
-            resp = requests.get(test_url, timeout=5, verify=False, allow_redirects=False)
+            resp = requests.get(test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
             if resp.status_code == 200:
                 # 检查是否真的有内容
                 content = resp.text[:500]
@@ -611,7 +611,7 @@ def tech_detect(url: str) -> dict:
         return {"success": False, "error": "需要安装 requests: pip install requests"}
 
     try:
-        resp = requests.get(url, timeout=10, verify=False)
+        resp = requests.get(url, timeout=10, verify=get_verify_ssl())
         headers = resp.headers
         html = resp.text.lower()
 
@@ -778,7 +778,7 @@ def vuln_check(url: str) -> dict:
     # 1. 检测目录遍历
     try:
         test_url = url.rstrip('/') + "/../../../etc/passwd"
-        resp = requests.get(test_url, timeout=5, verify=False)
+        resp = requests.get(test_url, timeout=5, verify=get_verify_ssl())
         if "root:" in resp.text:
             vulns.append({"type": "Path Traversal", "severity": "HIGH", "url": test_url})
     except:
@@ -789,7 +789,7 @@ def vuln_check(url: str) -> dict:
     for path in info_paths:
         try:
             test_url = url.rstrip('/') + "/" + path
-            resp = requests.get(test_url, timeout=5, verify=False)
+            resp = requests.get(test_url, timeout=5, verify=get_verify_ssl())
             if resp.status_code == 200 and len(resp.content) > 100:
                 vulns.append({"type": "Information Disclosure", "severity": "MEDIUM", "url": test_url, "path": path})
         except:
@@ -797,7 +797,7 @@ def vuln_check(url: str) -> dict:
 
     # 3. 检测CORS配置
     try:
-        resp = requests.get(url, headers={"Origin": "https://evil.com"}, timeout=5, verify=False)
+        resp = requests.get(url, headers={"Origin": "https://evil.com"}, timeout=5, verify=get_verify_ssl())
         if "access-control-allow-origin" in resp.headers:
             origin = resp.headers.get("access-control-allow-origin")
             if origin == "*" or origin == "https://evil.com":
@@ -807,7 +807,7 @@ def vuln_check(url: str) -> dict:
 
     # 4. 检测安全头缺失
     try:
-        resp = requests.get(url, timeout=5, verify=False)
+        resp = requests.get(url, timeout=5, verify=get_verify_ssl())
         missing_headers = []
         if "x-frame-options" not in resp.headers:
             missing_headers.append("X-Frame-Options")
@@ -822,7 +822,7 @@ def vuln_check(url: str) -> dict:
 
     # 5. 检测HTTP方法
     try:
-        resp = requests.options(url, timeout=5, verify=False)
+        resp = requests.options(url, timeout=5, verify=get_verify_ssl())
         if "allow" in resp.headers:
             methods = resp.headers["allow"]
             dangerous = [m for m in ["PUT", "DELETE", "TRACE"] if m in methods.upper()]
@@ -982,7 +982,7 @@ def xss_detect(url: str, param: str = None) -> dict:
                 else:
                     test_url = f"{base_url}?{p}={requests.utils.quote(payload)}"
 
-                resp = requests.get(test_url, timeout=10, verify=False)
+                resp = requests.get(test_url, timeout=10, verify=get_verify_ssl())
 
                 # 检查payload是否被反射
                 if payload in resp.text or payload.replace('"', '&quot;') in resp.text:
@@ -1007,7 +1007,7 @@ def csrf_detect(url: str) -> dict:
 
     vulns = []
     try:
-        resp = requests.get(url, timeout=10, verify=False)
+        resp = requests.get(url, timeout=10, verify=get_verify_ssl())
         html = resp.text.lower()
         headers = resp.headers
 
@@ -1048,7 +1048,7 @@ def csrf_detect(url: str) -> dict:
             })
 
         # 检查Referer验证
-        resp2 = requests.get(url, headers={"Referer": "https://evil.com"}, timeout=10, verify=False)
+        resp2 = requests.get(url, headers={"Referer": "https://evil.com"}, timeout=10, verify=get_verify_ssl())
         if resp2.status_code == resp.status_code:
             vulns.append({
                 "type": "No Referer Validation",
@@ -1092,7 +1092,7 @@ def ssrf_detect(url: str, param: str = None) -> dict:
                 else:
                     test_url = f"{url}?{p}={requests.utils.quote(payload)}"
 
-                resp = requests.get(test_url, timeout=10, verify=False, allow_redirects=False)
+                resp = requests.get(test_url, timeout=10, verify=get_verify_ssl(), allow_redirects=False)
 
                 # 检测SSRF特征
                 indicators = [
@@ -1150,7 +1150,7 @@ def cmd_inject_detect(url: str, param: str = None) -> dict:
                 else:
                     test_url = f"{url}?{p}={requests.utils.quote(payload)}"
 
-                resp = requests.get(test_url, timeout=15, verify=False)
+                resp = requests.get(test_url, timeout=15, verify=get_verify_ssl())
 
                 for indicator in indicators:
                     if indicator in resp.text:
@@ -1186,7 +1186,7 @@ def xxe_detect(url: str) -> dict:
 
     for payload in payloads:
         try:
-            resp = requests.post(url, data=payload, headers=headers, timeout=10, verify=False)
+            resp = requests.post(url, data=payload, headers=headers, timeout=10, verify=get_verify_ssl())
 
             indicators = ["root:", "daemon:", "extensions", "for 16-bit"]
             for indicator in indicators:
@@ -1230,7 +1230,7 @@ def idor_detect(url: str, param: str = "id") -> dict:
             else:
                 test_url = f"{url}?{param}={test_id}"
 
-            resp = requests.get(test_url, timeout=10, verify=False)
+            resp = requests.get(test_url, timeout=10, verify=get_verify_ssl())
 
             if resp.status_code == 200 and len(resp.content) > 100:
                 findings.append({
@@ -1277,7 +1277,7 @@ def file_upload_detect(url: str) -> dict:
 
     # 查找上传表单
     try:
-        resp = requests.get(url, timeout=10, verify=False)
+        resp = requests.get(url, timeout=10, verify=get_verify_ssl())
         html = resp.text.lower()
 
         # 检查是否有文件上传表单
@@ -1344,7 +1344,7 @@ def auth_bypass_detect(url: str) -> dict:
     for path in bypass_paths:
         try:
             test_url = base_url + path
-            resp = requests.get(test_url, timeout=5, verify=False, allow_redirects=False)
+            resp = requests.get(test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
 
             if resp.status_code == 200:
                 vulns.append({
@@ -1359,7 +1359,7 @@ def auth_bypass_detect(url: str) -> dict:
     # 头部绕过测试
     for headers in bypass_headers:
         try:
-            resp = requests.get(base_url + "/admin", headers=headers, timeout=5, verify=False, allow_redirects=False)
+            resp = requests.get(base_url + "/admin", headers=headers, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
 
             if resp.status_code == 200:
                 vulns.append({
@@ -1383,7 +1383,7 @@ def logic_vuln_check(url: str) -> dict:
     recommendations = []
 
     try:
-        resp = requests.get(url, timeout=10, verify=False)
+        resp = requests.get(url, timeout=10, verify=get_verify_ssl())
         html = resp.text.lower()
 
         # 1. 检测价格/数量参数
@@ -1498,7 +1498,7 @@ def deserialize_detect(url: str, param: str = None) -> dict:
     ]
 
     try:
-        resp = requests.get(url, timeout=10, verify=False)
+        resp = requests.get(url, timeout=10, verify=get_verify_ssl())
         content = resp.text
         cookies = resp.cookies.get_dict()
 
@@ -1534,7 +1534,7 @@ def deserialize_detect(url: str, param: str = None) -> dict:
         base_url = url.rstrip('/')
         for endpoint in deser_endpoints:
             try:
-                r = requests.get(f"{base_url}{endpoint}", timeout=5, verify=False)
+                r = requests.get(f"{base_url}{endpoint}", timeout=5, verify=get_verify_ssl())
                 if r.status_code != 404:
                     findings.append({
                         "type": "Dangerous Endpoint",
@@ -1554,7 +1554,7 @@ def deserialize_detect(url: str, param: str = None) -> dict:
             for payload, lang in test_payloads:
                 try:
                     test_url = f"{url}?{param}={payload}"
-                    r = requests.get(test_url, timeout=5, verify=False)
+                    r = requests.get(test_url, timeout=5, verify=get_verify_ssl())
                     if r.status_code == 500 or "exception" in r.text.lower():
                         findings.append({
                             "type": "Parameter Injection",
@@ -1614,7 +1614,7 @@ def weak_password_detect(url: str, username: str = None) -> dict:
         login_found = []
         for endpoint in login_endpoints:
             try:
-                r = requests.get(f"{base_url}{endpoint}", timeout=5, verify=False)
+                r = requests.get(f"{base_url}{endpoint}", timeout=5, verify=get_verify_ssl())
                 if r.status_code == 200 and any(x in r.text.lower() for x in ["password", "login", "密码", "登录"]):
                     login_found.append(endpoint)
             except:
@@ -1626,7 +1626,7 @@ def weak_password_detect(url: str, username: str = None) -> dict:
 
             # 尝试识别登录表单
             try:
-                r = requests.get(login_url, timeout=5, verify=False)
+                r = requests.get(login_url, timeout=5, verify=get_verify_ssl())
 
                 # 简单的表单字段识别
                 user_fields = ["username", "user", "login", "email", "account"]
@@ -1640,7 +1640,7 @@ def weak_password_detect(url: str, username: str = None) -> dict:
                         for pf in pass_fields:
                             try:
                                 data = {uf: user, pf: pwd}
-                                resp = requests.post(login_url, data=data, timeout=5, verify=False, allow_redirects=False)
+                                resp = requests.post(login_url, data=data, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
 
                                 # 检测登录成功特征
                                 if resp.status_code in [302, 303] or \
@@ -1673,7 +1673,7 @@ def weak_password_detect(url: str, username: str = None) -> dict:
 
         for panel, creds in admin_panels.items():
             try:
-                r = requests.get(f"{base_url}{panel}", timeout=5, verify=False)
+                r = requests.get(f"{base_url}{panel}", timeout=5, verify=get_verify_ssl())
                 if r.status_code == 200:
                     findings.append({
                         "type": "Admin Panel Found",
@@ -1758,7 +1758,7 @@ def security_headers_check(url: str) -> dict:
     }
 
     try:
-        resp = requests.get(url, timeout=10, verify=False)
+        resp = requests.get(url, timeout=10, verify=get_verify_ssl())
         headers = {k.lower(): v for k, v in resp.headers.items()}
 
         missing = []
@@ -1885,7 +1885,7 @@ def jwt_vuln_detect(url: str, token: str = None) -> dict:
     try:
         # 如果没有提供token，尝试从响应中获取
         if not token:
-            resp = requests.get(url, timeout=10, verify=False)
+            resp = requests.get(url, timeout=10, verify=get_verify_ssl())
 
             # 检查响应头
             auth_header = resp.headers.get("Authorization", "")
@@ -1996,7 +1996,7 @@ def jwt_vuln_detect(url: str, token: str = None) -> dict:
                     none_token = f"{none_header}.{none_payload}."
 
                     # 测试none算法是否被接受
-                    test_resp = requests.get(url, headers={"Authorization": f"Bearer {none_token}"}, timeout=5, verify=False)
+                    test_resp = requests.get(url, headers={"Authorization": f"Bearer {none_token}"}, timeout=5, verify=get_verify_ssl())
                     if test_resp.status_code != 401:
                         findings.append({
                             "type": "Algorithm Confusion",
@@ -2088,7 +2088,7 @@ def ssti_detect(url: str, param: str = None) -> dict:
                 for payload, expected in tests:
                     try:
                         test_url = f"{base_url}?{p}={requests.utils.quote(payload)}"
-                        resp = requests.get(test_url, timeout=10, verify=False)
+                        resp = requests.get(test_url, timeout=10, verify=get_verify_ssl())
 
                         if expected in resp.text:
                             findings.append({
@@ -2166,7 +2166,7 @@ def lfi_detect(url: str, param: str = None) -> dict:
             for payload, indicator in lfi_payloads:
                 try:
                     test_url = f"{base_url}?{p}={requests.utils.quote(payload)}"
-                    resp = requests.get(test_url, timeout=10, verify=False)
+                    resp = requests.get(test_url, timeout=10, verify=get_verify_ssl())
 
                     if indicator in resp.text:
                         findings.append({
@@ -2184,7 +2184,7 @@ def lfi_detect(url: str, param: str = None) -> dict:
             for payload in rfi_payloads:
                 try:
                     test_url = f"{base_url}?{p}={requests.utils.quote(payload)}"
-                    resp = requests.get(test_url, timeout=5, verify=False)
+                    resp = requests.get(test_url, timeout=5, verify=get_verify_ssl())
 
                     # 检测错误信息中是否包含远程URL
                     if "evil.com" in resp.text or "failed to open stream" in resp.text:
@@ -2278,7 +2278,7 @@ def waf_detect(url: str) -> dict:
 
     try:
         # 正常请求
-        normal_resp = requests.get(url, timeout=10, verify=False)
+        normal_resp = requests.get(url, timeout=10, verify=get_verify_ssl())
         test_results["normal"] = {
             "status": normal_resp.status_code,
             "headers": dict(normal_resp.headers)
@@ -2294,7 +2294,7 @@ def waf_detect(url: str) -> dict:
 
         for payload in malicious_payloads:
             try:
-                mal_resp = requests.get(url + payload, timeout=10, verify=False)
+                mal_resp = requests.get(url + payload, timeout=10, verify=get_verify_ssl())
                 test_results[f"malicious_{payload[:20]}"] = mal_resp.status_code
             except:
                 pass
@@ -2333,7 +2333,7 @@ def waf_detect(url: str) -> dict:
         if normal_resp.status_code == 200:
             for payload in malicious_payloads:
                 try:
-                    mal_resp = requests.get(url + payload, timeout=10, verify=False)
+                    mal_resp = requests.get(url + payload, timeout=10, verify=get_verify_ssl())
                     if mal_resp.status_code in [403, 406, 429, 503]:
                         if not detected_wafs:
                             detected_wafs.append({
@@ -2388,12 +2388,12 @@ def cors_deep_check(url: str) -> dict:
 
     try:
         # 基础请求
-        base_resp = requests.get(url, timeout=10, verify=False)
+        base_resp = requests.get(url, timeout=10, verify=get_verify_ssl())
 
         for origin in test_origins:
             try:
                 headers = {"Origin": origin}
-                resp = requests.get(url, headers=headers, timeout=10, verify=False)
+                resp = requests.get(url, headers=headers, timeout=10, verify=get_verify_ssl())
 
                 acao = resp.headers.get("Access-Control-Allow-Origin", "")
                 acac = resp.headers.get("Access-Control-Allow-Credentials", "")
@@ -2547,13 +2547,13 @@ def http_request(url: str, method: str = "GET", headers: dict = None, data: str 
         req_headers = headers or {}
 
         if method.upper() == "GET":
-            resp = requests.get(url, headers=req_headers, proxies=proxies, timeout=30, verify=False)
+            resp = requests.get(url, headers=req_headers, proxies=proxies, timeout=30, verify=get_verify_ssl())
         elif method.upper() == "POST":
-            resp = requests.post(url, headers=req_headers, data=data, proxies=proxies, timeout=30, verify=False)
+            resp = requests.post(url, headers=req_headers, data=data, proxies=proxies, timeout=30, verify=get_verify_ssl())
         elif method.upper() == "PUT":
-            resp = requests.put(url, headers=req_headers, data=data, proxies=proxies, timeout=30, verify=False)
+            resp = requests.put(url, headers=req_headers, data=data, proxies=proxies, timeout=30, verify=get_verify_ssl())
         elif method.upper() == "DELETE":
-            resp = requests.delete(url, headers=req_headers, proxies=proxies, timeout=30, verify=False)
+            resp = requests.delete(url, headers=req_headers, proxies=proxies, timeout=30, verify=get_verify_ssl())
         else:
             return {"success": False, "error": f"不支持的方法: {method}"}
 

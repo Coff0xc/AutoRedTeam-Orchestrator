@@ -16,6 +16,12 @@ import shutil
 from typing import Dict, List, Optional
 from datetime import datetime
 
+# SSL验证配置
+import os
+VERIFY_SSL = os.getenv("VERIFY_SSL", "true").lower() == "true"
+def get_verify_ssl(): return VERIFY_SSL
+
+
 # 全局配置
 ENABLE_TERMINAL_DISPLAY = True  # 是否启用终端进度显示
 DEFAULT_TIMEOUT = 300  # 默认超时时间(秒)
@@ -1661,7 +1667,7 @@ def _js_source_analysis(args: Dict) -> Dict:
         return {"success": False, "error": "需要指定目标URL"}
     
     try:
-        resp = requests.get(target, timeout=10, verify=False)
+        resp = requests.get(target, timeout=10, verify=get_verify_ssl())
         
         # 提取JS文件
         js_files = re.findall(r'<script[^>]+src=["\']([^"\']+\.js[^"\']*)["\']', resp.text)
@@ -1683,7 +1689,7 @@ def _js_source_analysis(args: Dict) -> Dict:
                 else:
                     js_url = js_file
                 
-                js_resp = requests.get(js_url, timeout=5, verify=False)
+                js_resp = requests.get(js_url, timeout=5, verify=get_verify_ssl())
                 if js_resp.status_code == 200:
                     content = js_resp.text
                     
@@ -1760,7 +1766,7 @@ def _waf_bypass_test(args: Dict) -> Dict:
     
     try:
         # 检测WAF
-        resp = requests.get(target, timeout=10, verify=False)
+        resp = requests.get(target, timeout=10, verify=get_verify_ssl())
         headers = resp.headers
         
         waf_detected = None
