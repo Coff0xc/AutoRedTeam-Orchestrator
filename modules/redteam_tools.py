@@ -719,7 +719,7 @@ def register_redteam_tools(mcp):
                         "valid": resp.status_code == 200,
                         "external_ip": resp.json().get("origin", "unknown")
                     })
-                except:
+                except Exception:
                     return json.dumps({
                         "success": True,
                         "proxy": proxy,

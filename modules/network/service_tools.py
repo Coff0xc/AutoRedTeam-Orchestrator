@@ -66,7 +66,7 @@ class FTPCheckTool(BaseTool):
                         files = []
                         ftp.retrlines('LIST', files.append)
                         result["files"] = files[:20]  # 限制数量
-                    except:
+                    except Exception:
                         pass
                     
                     ftp.quit()

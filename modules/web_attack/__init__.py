@@ -4,8 +4,7 @@ Web攻击模块 - Web Attack Tools
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from core.mcp_server import MCPServer
+# TYPE_CHECKING imports removed (legacy)
 
 from modules.web_attack.sqli_tools import SQLMapTool, SQLiPayloadTool
 from modules.web_attack.xss_tools import XSStrikeTool, DalfoxTool

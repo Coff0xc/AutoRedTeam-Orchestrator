@@ -343,12 +343,12 @@ class SMBConnection:
             if HAS_IMPACKET:
                 try:
                     self._conn.close()
-                except:
+                except Exception:
                     pass
             else:
                 try:
                     self._conn.close()
-                except:
+                except Exception:
                     pass
         self._authenticated = False
 
@@ -565,7 +565,7 @@ class SMBLateral:
             # 启动服务
             try:
                 scmr.hRStartServiceW(dce, service_handle)
-            except:
+            except Exception:
                 pass
 
             # 删除服务

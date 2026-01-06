@@ -96,9 +96,9 @@ class EnhancedScanner:
                             for t in data.get("tech", []):
                                 if t not in assets["technologies"]:
                                     assets["technologies"].append(t)
-                        except:
+                        except Exception:
                             pass
-            except:
+            except Exception:
                 pass
         print(f"    ✓ 发现 {len(assets['urls'])} 个活跃URL")
         
@@ -205,7 +205,7 @@ class EnhancedScanner:
                             "template": v.get("template-id", ""),
                             "verified": True
                         })
-                    except:
+                    except Exception:
                         pass
         print(f"    ✓ Nuclei发现 {len(vulns)} 个漏洞")
         

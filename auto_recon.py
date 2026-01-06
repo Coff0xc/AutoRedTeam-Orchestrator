@@ -309,7 +309,7 @@ class AutoReconEngine:
                                 "severity": vuln.get("info", {}).get("severity", "info"),
                                 "detail": vuln.get("info", {}).get("name", "Unknown")
                             })
-                        except:
+                        except Exception:
                             pass
         
         # SSH审计
@@ -428,10 +428,9 @@ class AutoReconEngine:
         
         # 生成建议
         self.results["recommendations"] = self._generate_recommendations()
-        
-import tempfile
 
         # 保存报告
+        import tempfile
         report_file = os.path.join(tempfile.gettempdir(), f"recon_report_{self.target.replace('.', '_')}_{int(time.time())}.json")
         with open(report_file, 'w', encoding='utf-8') as f:
             json.dump(self.results, f, indent=2, ensure_ascii=False)

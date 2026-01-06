@@ -110,10 +110,9 @@ class NucleiScanner:
             "tags": "takeover"
         }
     }
-    
-import tempfile
 
     def __init__(self, output_dir: str = None):
+        import tempfile
         self.output_dir = output_dir or os.path.join(tempfile.gettempdir(), "nuclei_results")
         os.makedirs(self.output_dir, exist_ok=True)
         self.results = []

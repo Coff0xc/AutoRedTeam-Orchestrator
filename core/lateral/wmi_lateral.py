@@ -300,7 +300,7 @@ class WMIConnection:
         if self._dcom:
             try:
                 self._dcom.disconnect()
-            except:
+            except Exception:
                 pass
         self._connected = False
 

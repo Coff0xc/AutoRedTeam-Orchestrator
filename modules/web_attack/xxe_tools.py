@@ -156,7 +156,7 @@ class XXEScannerTool(BaseTool):
             try:
                 import json
                 headers.update(json.loads(custom_headers))
-            except:
+            except Exception:
                 pass
         
         # 1. 测试基础XXE (文件读取)
@@ -274,7 +274,7 @@ class XXEScannerTool(BaseTool):
             else:
                 requests.get(url, params={"xml": payload}, headers=headers,
                             timeout=timeout, verify=False)
-        except:
+        except Exception:
             pass
 
 

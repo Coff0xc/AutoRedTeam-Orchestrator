@@ -228,7 +228,7 @@ class KubeSecretsTool(BaseTool):
                         try:
                             decoded = base64.b64decode(value).decode('utf-8', errors='ignore')
                             secret_info["data"][key] = decoded[:100] + "..." if len(decoded) > 100 else decoded
-                        except:
+                        except Exception:
                             secret_info["data"][key] = "[无法解码]"
                     else:
                         secret_info["data"][key] = value[:50] + "..." if len(value) > 50 else value

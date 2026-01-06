@@ -413,7 +413,7 @@ class SimpleLDAPClient:
                                         value = data[offset:offset + val_len]
                                         try:
                                             values.append(value.decode('utf-8'))
-                                        except:
+                                        except Exception:
                                             values.append(base64.b64encode(value).decode('ascii'))
                                         offset += val_len
                                     else:
@@ -437,7 +437,7 @@ class SimpleLDAPClient:
                 # 发送Unbind
                 message = bytes([0x30, 0x05, 0x02, 0x01, self.message_id, 0x42, 0x00])
                 self.sock.send(message)
-            except:
+            except Exception:
                 pass
             finally:
                 self.sock.close()
@@ -505,11 +505,11 @@ class ADEnumerator:
                 try:
                     result = socket.gethostbyname(name.replace('_ldap._tcp.', ''))
                     return result
-                except:
+                except Exception:
                     continue
 
             return self.domain  # 返回域名让后续解析
-        except:
+        except Exception:
             return self.domain
 
     def connect(self) -> bool:
