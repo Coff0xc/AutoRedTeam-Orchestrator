@@ -4531,33 +4531,33 @@ def verify_vuln(url: str, param: str, vuln_type: str, payload: str = "", rounds:
 try:
     from modules.optimization_tools import register_optimization_tools
     registered_tools = register_optimization_tools(mcp)
-    logger.info(f"优化模块工具已注册: {registered_tools}")
+    print(f"[INFO] 优化模块工具已注册: {registered_tools}", file=sys.stderr)
 except ImportError as e:
-    logger.warning(f"优化模块加载失败 (可选): {e}")
+    print(f"[WARN] 优化模块加载失败 (可选): {e}", file=sys.stderr)
 except Exception as e:
-    logger.warning(f"优化模块注册失败: {e}")
+    print(f"[WARN] 优化模块注册失败: {e}", file=sys.stderr)
 
 
 # ========== 注册Red Team高级工具 ==========
 try:
     from modules.redteam_tools import register_redteam_tools
     redteam_tools = register_redteam_tools(mcp)
-    logger.info(f"Red Team工具已注册: {redteam_tools}")
+    print(f"[INFO] Red Team工具已注册: {redteam_tools}", file=sys.stderr)
 except ImportError as e:
-    logger.warning(f"Red Team模块加载失败 (可选): {e}")
+    print(f"[WARN] Red Team模块加载失败 (可选): {e}", file=sys.stderr)
 except Exception as e:
-    logger.warning(f"Red Team模块注册失败: {e}")
+    print(f"[WARN] Red Team模块注册失败: {e}", file=sys.stderr)
 
 
 # ========== 注册v2.5新增工具 ==========
 try:
     from modules.v25_tools import register_v25_tools
     v25_tools = register_v25_tools(mcp)
-    logger.info(f"v2.5新增工具已注册: {v25_tools}")
+    print(f"[INFO] v2.5新增工具已注册: {v25_tools}", file=sys.stderr)
 except ImportError as e:
-    logger.warning(f"v2.5模块加载失败 (可选): {e}")
+    print(f"[WARN] v2.5模块加载失败 (可选): {e}", file=sys.stderr)
 except Exception as e:
-    logger.warning(f"v2.5模块注册失败: {e}")
+    print(f"[WARN] v2.5模块注册失败: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
