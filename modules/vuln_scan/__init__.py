@@ -4,8 +4,7 @@
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from core.mcp_server import MCPServer
+# TYPE_CHECKING imports removed (legacy)
 
 from modules.vuln_scan.nuclei_tools import NucleiScanTool, NucleiTemplateScanTool
 from modules.vuln_scan.nikto_tools import NiktoScanTool

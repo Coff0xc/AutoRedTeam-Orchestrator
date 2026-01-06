@@ -163,7 +163,7 @@ class AdaptivePayloadEngine:
                     data = json.load(f)
                     for k, v in data.items():
                         self.payload_stats[k].update(v)
-            except:
+            except Exception:
                 pass
 
     def _save_history(self):
@@ -173,7 +173,7 @@ class AdaptivePayloadEngine:
                 self.history_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(self.history_file, 'w', encoding='utf-8') as f:
                     json.dump(dict(self.payload_stats), f, indent=2)
-            except:
+            except Exception:
                 pass
 
     def _get_payload_key(self, vuln_type: str, payload: str) -> str:

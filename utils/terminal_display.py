@@ -285,7 +285,7 @@ def check_tool_availability(tools: List[str]) -> Dict[str, bool]:
                 timeout=5
             )
             results[tool] = result.returncode == 0
-        except:
+        except Exception:
             results[tool] = False
     return results
 

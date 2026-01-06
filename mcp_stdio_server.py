@@ -167,7 +167,18 @@ SENSITIVE_FILES = [
     "elmah.axd", "trace.axd", "Elmah.axd",
     "actuator/env", "actuator/health", "actuator/info", "actuator/mappings",
     "swagger.json", "swagger-ui.html", "api-docs", "v2/api-docs",
-    ".DS_Store", "Thumbs.db", "desktop.ini"
+    ".DS_Store", "Thumbs.db", "desktop.ini",
+    # Source Map泄露 (v2.5新增)
+    "main.js.map", "bundle.js.map", "app.js.map", "vendor.js.map",
+    "runtime.js.map", "webpack.js.map", "polyfills.js.map", "chunk.js.map",
+    "static/js/main.js.map", "assets/js/app.js.map", "_next/static/chunks/main.js.map",
+    "dist/main.js.map", "build/static/js/main.js.map",
+    # Webpack/前端构建配置泄露
+    "webpack.config.js", "webpack.mix.js", "vue.config.js", "vite.config.js",
+    "next.config.js", "nuxt.config.js", ".babelrc", "tsconfig.json",
+    # API文档泄露
+    "openapi.json", "openapi.yaml", "api/swagger.json", "docs/api.json",
+    "graphql", "graphiql", "playground", "altair"
 ]
 
 def check_tool(name: str) -> bool:
@@ -229,7 +240,7 @@ def port_scan(target: str, ports: str = "21,22,23,25,53,80,110,143,443,445,3306,
             result = sock.connect_ex((target, port))
             sock.close()
             return (port, result == 0)
-        except:
+        except Exception:
             return (port, False)
 
     start_time = time.time()
@@ -525,7 +536,7 @@ def dir_bruteforce(url: str, threads: int = 10) -> dict:
             resp = requests.get(test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
             if resp.status_code in [200, 301, 302, 403]:
                 return {"path": path, "url": test_url, "status": resp.status_code, "size": len(resp.content)}
-        except:
+        except Exception:
             pass
         return None
 
@@ -552,7 +563,7 @@ def subdomain_bruteforce(domain: str, threads: int = 10) -> dict:
             full_domain = f"{sub}.{domain}"
             ip = socket.gethostbyname(full_domain)
             return {"subdomain": full_domain, "ip": ip}
-        except:
+        except Exception:
             return None
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
@@ -591,7 +602,7 @@ def sensitive_scan(url: str, threads: int = 10) -> dict:
                     "size": len(resp.content),
                     "preview": content[:200] if len(content) > 0 else ""
                 }
-        except:
+        except Exception:
             pass
         return None
 
@@ -719,50 +730,50 @@ def full_recon(target: str) -> dict:
     # 1. DNS查询
     try:
         results["dns"] = dns_lookup(domain)
-    except:
+    except Exception:
         pass
 
     # 2. HTTP探测
     try:
         results["http"] = http_probe(url)
-    except:
+    except Exception:
         pass
 
     # 3. SSL信息
     try:
         results["ssl"] = ssl_info(domain)
-    except:
+    except Exception:
         pass
 
     # 4. 技术栈识别
     try:
         results["tech"] = tech_detect(url)
-    except:
+    except Exception:
         pass
 
     # 5. 子域名枚举 (限制数量)
     try:
         results["subdomains"] = subdomain_bruteforce(domain, threads=5)
-    except:
+    except Exception:
         pass
 
     # 6. 目录扫描
     try:
         results["directories"] = dir_bruteforce(url, threads=5)
-    except:
+    except Exception:
         pass
 
     # 7. 敏感文件
     try:
         results["sensitive_files"] = sensitive_scan(url, threads=5)
-    except:
+    except Exception:
         pass
 
     # 8. 端口扫描
     try:
         ip = socket.gethostbyname(domain)
         results["ports"] = port_scan(ip)
-    except:
+    except Exception:
         pass
 
     return {"success": True, "results": results}
@@ -781,7 +792,7 @@ def vuln_check(url: str) -> dict:
         resp = requests.get(test_url, timeout=5, verify=get_verify_ssl())
         if "root:" in resp.text:
             vulns.append({"type": "Path Traversal", "severity": "HIGH", "url": test_url})
-    except:
+    except Exception:
         pass
 
     # 2. 检测信息泄露
@@ -792,7 +803,7 @@ def vuln_check(url: str) -> dict:
             resp = requests.get(test_url, timeout=5, verify=get_verify_ssl())
             if resp.status_code == 200 and len(resp.content) > 100:
                 vulns.append({"type": "Information Disclosure", "severity": "MEDIUM", "url": test_url, "path": path})
-        except:
+        except Exception:
             pass
 
     # 3. 检测CORS配置
@@ -802,7 +813,7 @@ def vuln_check(url: str) -> dict:
             origin = resp.headers.get("access-control-allow-origin")
             if origin == "*" or origin == "https://evil.com":
                 vulns.append({"type": "CORS Misconfiguration", "severity": "MEDIUM", "detail": f"ACAO: {origin}"})
-    except:
+    except Exception:
         pass
 
     # 4. 检测安全头缺失
@@ -817,7 +828,7 @@ def vuln_check(url: str) -> dict:
             missing_headers.append("X-XSS-Protection")
         if missing_headers:
             vulns.append({"type": "Missing Security Headers", "severity": "LOW", "headers": missing_headers})
-    except:
+    except Exception:
         pass
 
     # 5. 检测HTTP方法
@@ -828,7 +839,7 @@ def vuln_check(url: str) -> dict:
             dangerous = [m for m in ["PUT", "DELETE", "TRACE"] if m in methods.upper()]
             if dangerous:
                 vulns.append({"type": "Dangerous HTTP Methods", "severity": "MEDIUM", "methods": dangerous})
-    except:
+    except Exception:
         pass
 
     return {"success": True, "url": url, "vulnerabilities": vulns, "total": len(vulns)}
@@ -856,7 +867,7 @@ def sqli_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
         baseline_resp = requests.get(base_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
         baseline_length = len(baseline_resp.text)
         baseline_time = baseline_resp.elapsed.total_seconds()
-    except:
+    except Exception:
         baseline_length = 0
         baseline_time = 0
 
@@ -883,7 +894,7 @@ def sqli_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
                             "url": test_url
                         })
                         break
-            except:
+            except Exception:
                 pass
 
         if not deep_scan:
@@ -917,7 +928,7 @@ def sqli_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
                         "url": test_url
                     })
                     break
-            except:
+            except Exception:
                 pass
 
         # 3. 布尔盲注检测
@@ -950,7 +961,7 @@ def sqli_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
                         "url": true_url
                     })
                     break
-            except:
+            except Exception:
                 pass
 
     return {"success": True, "url": url, "sqli_vulns": vulns, "total": len(vulns), "deep_scan": deep_scan}
@@ -994,7 +1005,7 @@ def xss_detect(url: str, param: str = None) -> dict:
                         "url": test_url
                     })
                     break
-            except:
+            except Exception:
                 pass
 
     return {"success": True, "url": url, "xss_vulns": vulns, "total": len(vulns)}
@@ -1112,7 +1123,7 @@ def ssrf_detect(url: str, param: str = None) -> dict:
                             "url": test_url
                         })
                         break
-            except:
+            except Exception:
                 pass
 
     return {"success": True, "url": url, "ssrf_vulns": vulns, "total": len(vulns)}
@@ -1163,7 +1174,7 @@ def cmd_inject_detect(url: str, param: str = None) -> dict:
                             "url": test_url
                         })
                         break
-            except:
+            except Exception:
                 pass
 
     return {"success": True, "url": url, "cmd_vulns": vulns, "total": len(vulns)}
@@ -1206,7 +1217,7 @@ def xxe_detect(url: str) -> dict:
                     "severity": "MEDIUM",
                     "detail": "XML解析错误信息泄露"
                 })
-        except:
+        except Exception:
             pass
 
     return {"success": True, "url": url, "xxe_vulns": vulns, "total": len(vulns)}
@@ -1238,7 +1249,7 @@ def idor_detect(url: str, param: str = "id") -> dict:
                     "status": resp.status_code,
                     "size": len(resp.content)
                 })
-        except:
+        except Exception:
             pass
 
     # 分析结果
@@ -1353,7 +1364,7 @@ def auth_bypass_detect(url: str) -> dict:
                     "path": path,
                     "status": resp.status_code
                 })
-        except:
+        except Exception:
             pass
 
     # 头部绕过测试
@@ -1368,7 +1379,7 @@ def auth_bypass_detect(url: str) -> dict:
                     "headers": headers,
                     "status": resp.status_code
                 })
-        except:
+        except Exception:
             pass
 
     return {"success": True, "url": url, "auth_bypass_vulns": vulns, "total": len(vulns)}
@@ -1542,7 +1553,7 @@ def deserialize_detect(url: str, param: str = None) -> dict:
                         "status_code": r.status_code,
                         "severity": "HIGH"
                     })
-            except:
+            except Exception:
                 pass
 
         # 测试参数注入
@@ -1563,7 +1574,7 @@ def deserialize_detect(url: str, param: str = None) -> dict:
                             "severity": "CRITICAL",
                             "detail": "参数可能存在反序列化漏洞"
                         })
-                except:
+                except Exception:
                     pass
 
     except Exception as e:
@@ -1617,7 +1628,7 @@ def weak_password_detect(url: str, username: str = None) -> dict:
                 r = requests.get(f"{base_url}{endpoint}", timeout=5, verify=get_verify_ssl())
                 if r.status_code == 200 and any(x in r.text.lower() for x in ["password", "login", "密码", "登录"]):
                     login_found.append(endpoint)
-            except:
+            except Exception:
                 pass
 
         # 测试默认凭证
@@ -1655,13 +1666,13 @@ def weak_password_detect(url: str, username: str = None) -> dict:
                                         "severity": "CRITICAL"
                                     })
                                     break
-                            except:
+                            except Exception:
                                 pass
                         if findings:
                             break
                     if findings:
                         break
-            except:
+            except Exception:
                 pass
 
         # 检测常见管理后台默认凭证
@@ -1682,7 +1693,7 @@ def weak_password_detect(url: str, username: str = None) -> dict:
                         "severity": "MEDIUM",
                         "detail": "发现管理面板，建议测试默认凭证"
                     })
-            except:
+            except Exception:
                 pass
 
     except Exception as e:
@@ -1879,7 +1890,7 @@ def jwt_vuln_detect(url: str, token: str = None) -> dict:
             payload = json.loads(b64_decode(parts[1]))
 
             return {"header": header, "payload": payload, "signature": parts[2]}
-        except:
+        except Exception:
             return None
 
     try:
@@ -2003,7 +2014,7 @@ def jwt_vuln_detect(url: str, token: str = None) -> dict:
                             "severity": "CRITICAL",
                             "description": "服务器接受none算法JWT，存在认证绕过"
                         })
-                except:
+                except Exception:
                     pass
 
     except Exception as e:
@@ -2100,7 +2111,7 @@ def ssti_detect(url: str, param: str = None) -> dict:
                                 "detail": f"检测到{engine}模板注入"
                             })
                             break
-                    except:
+                    except Exception:
                         pass
 
     except Exception as e:
@@ -2177,7 +2188,7 @@ def lfi_detect(url: str, param: str = None) -> dict:
                             "detail": "本地文件包含漏洞"
                         })
                         break
-                except:
+                except Exception:
                     pass
 
             # RFI测试 (检测是否尝试外连)
@@ -2196,7 +2207,7 @@ def lfi_detect(url: str, param: str = None) -> dict:
                             "detail": "可能存在远程文件包含漏洞"
                         })
                         break
-                except:
+                except Exception:
                     pass
 
     except Exception as e:
@@ -2296,7 +2307,7 @@ def waf_detect(url: str) -> dict:
             try:
                 mal_resp = requests.get(url + payload, timeout=10, verify=get_verify_ssl())
                 test_results[f"malicious_{payload[:20]}"] = mal_resp.status_code
-            except:
+            except Exception:
                 pass
 
         # 检测WAF特征
@@ -2342,7 +2353,7 @@ def waf_detect(url: str) -> dict:
                                 "evidence": f"恶意请求被拦截 (HTTP {mal_resp.status_code})"
                             })
                         break
-                except:
+                except Exception:
                     pass
 
     except Exception as e:
@@ -2423,7 +2434,7 @@ def cors_deep_check(url: str) -> dict:
                         "detail": "允许null来源，可通过iframe沙箱利用"
                     })
 
-            except:
+            except Exception:
                 pass
 
     except Exception as e:
@@ -2676,7 +2687,7 @@ def cve_search(keyword: str, year: str = None, source: str = "all") -> dict:
     def get_cvss(x):
         try:
             return float(x.get("cvss", 0))
-        except:
+        except Exception:
             return 0
     results.sort(key=get_cvss, reverse=True)
 
@@ -2967,7 +2978,7 @@ def smart_exploit_suggest(target: str) -> dict:
                         "cvss": cve.get("cvss"),
                         "summary": cve.get("summary", "")[:100]
                     })
-        except:
+        except Exception:
             pass
 
         # 匹配利用建议
@@ -3860,7 +3871,7 @@ def _generate_pdf_report(report_data: dict, cve_info: list) -> dict:
     if font_path:
         try:
             pdfmetrics.registerFont(TTFont(font_name, font_path))
-        except:
+        except Exception:
             font_name = "Helvetica"
     else:
         font_name = "Helvetica"
@@ -3971,7 +3982,7 @@ def generate_report(target: str, format: str = "markdown", include_cve: bool = T
                                 "cvss": cve.get("cvss"),
                                 "summary": cve.get("summary", "")[:100]
                             })
-                except:
+                except Exception:
                     pass
 
     report_data["related_cves"] = cve_info
@@ -4117,7 +4128,7 @@ def smart_analyze(target: str) -> dict:
                 if tech_info.get("cdn"):
                     analysis["has_cdn"] = True
                     analysis["notes"] = ["检测到CDN，可能需要绕过或寻找真实IP"]
-    except:
+    except Exception:
         pass
 
     return {"success": True, "analysis": analysis}
@@ -4536,6 +4547,17 @@ except ImportError as e:
     logger.warning(f"Red Team模块加载失败 (可选): {e}")
 except Exception as e:
     logger.warning(f"Red Team模块注册失败: {e}")
+
+
+# ========== 注册v2.5新增工具 ==========
+try:
+    from modules.v25_tools import register_v25_tools
+    v25_tools = register_v25_tools(mcp)
+    logger.info(f"v2.5新增工具已注册: {v25_tools}")
+except ImportError as e:
+    logger.warning(f"v2.5模块加载失败 (可选): {e}")
+except Exception as e:
+    logger.warning(f"v2.5模块注册失败: {e}")
 
 
 if __name__ == "__main__":

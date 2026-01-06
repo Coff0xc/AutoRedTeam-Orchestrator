@@ -374,7 +374,7 @@ class LightBeacon:
             ip = s.getsockname()[0]
             s.close()
             return ip
-        except:
+        except Exception:
             return "127.0.0.1"
 
     def run(self):

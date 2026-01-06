@@ -42,7 +42,7 @@ def register_optimization_tools(mcp):
             # 解析参数
             try:
                 tech = json.loads(tech_stack) if tech_stack else {}
-            except:
+            except Exception:
                 tech = {}
 
             ports = [int(p.strip()) for p in open_ports.split(",") if p.strip().isdigit()]

@@ -160,7 +160,7 @@ class SSHConnection:
         for key_class in key_classes:
             try:
                 return key_class.from_private_key_file(key_file, password=passphrase)
-            except:
+            except Exception:
                 continue
 
         return None
@@ -176,7 +176,7 @@ class SSHConnection:
             try:
                 key_file.seek(0)
                 return key_class.from_private_key(key_file, password=passphrase)
-            except:
+            except Exception:
                 continue
 
         return None
@@ -474,7 +474,7 @@ class SSHConnection:
         finally:
             try:
                 client_sock.close()
-            except:
+            except Exception:
                 pass
 
     def _forward_data(self, sock: socket.socket, channel):
@@ -500,11 +500,11 @@ class SSHConnection:
         finally:
             try:
                 channel.close()
-            except:
+            except Exception:
                 pass
             try:
                 sock.close()
-            except:
+            except Exception:
                 pass
 
     def close(self):
@@ -512,7 +512,7 @@ class SSHConnection:
         if self._client:
             try:
                 self._client.close()
-            except:
+            except Exception:
                 pass
         self._connected = False
 

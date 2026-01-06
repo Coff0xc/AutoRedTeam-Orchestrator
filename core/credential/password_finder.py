@@ -206,7 +206,7 @@ class PasswordFinder:
         try:
             if file_path.stat().st_size > self.max_file_size:
                 return True
-        except:
+        except Exception:
             return True
 
         # 检查是否为二进制文件
@@ -221,7 +221,7 @@ class PasswordFinder:
                     chunk = f.read(512)
                     if b'\x00' in chunk:  # 包含null字节,可能是二进制
                         return True
-        except:
+        except Exception:
             pass
 
         return False

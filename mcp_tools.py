@@ -681,7 +681,7 @@ def _httpx_probe(args: Dict) -> Dict:
             if line:
                 try:
                     results.append(json.loads(line))
-                except:
+                except Exception:
                     pass
         return {"success": True, "results": results, "count": len(results)}
     except Exception as e:
@@ -724,7 +724,7 @@ def _nuclei_scan(args: Dict) -> Dict:
                     v = json.loads(line)
                     vulns.append(v)
                     terminal.finding(f"[{v.get('info', {}).get('severity', 'unknown')}] {v.get('info', {}).get('name', 'N/A')}", v.get('matched-at', ''))
-                except:
+                except Exception:
                     pass
         result["vulnerabilities"] = vulns
         result["count"] = len(vulns)
@@ -1398,7 +1398,7 @@ def _system_check(args: Dict) -> Dict:
                 terminal.header("运行中的扫描任务")
                 for scan in running_scans:
                     terminal.info(f"[{scan['tool_name']}] {scan['target']} - {scan['progress']}% ({scan['elapsed_seconds']:.0f}s/{scan['timeout']}s)")
-        except:
+        except Exception:
             pass
     
     # 检查终端输出模块状态
@@ -1718,7 +1718,7 @@ def _js_source_analysis(args: Dict) -> Dict:
                     if '.map' in content or 'sourceMappingURL' in content:
                         results["sourcemap_found"] = True
                         results["sourcemap_url"] = js_url + ".map"
-            except:
+            except Exception:
                 continue
         
         results["api_endpoints"] = list(set(results["api_endpoints"]))[:50]

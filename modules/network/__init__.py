@@ -4,8 +4,7 @@
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from core.mcp_server import MCPServer
+# TYPE_CHECKING imports removed (legacy)
 
 from modules.network.brute_force import HydraTool, MedusaTool, CrackMapExecTool
 from modules.network.smb_tools import SMBEnumTool, SMBClientTool

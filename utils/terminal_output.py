@@ -25,12 +25,12 @@ def get_tty():
         # 始终写入日志文件，方便用户用 tail -f 查看
         log_file = open(LOG_FILE, 'a', buffering=1, encoding='utf-8')  # 行缓冲
         return log_file
-    except:
+    except Exception:
         try:
             # 跨平台：仅在 Unix 系统尝试打开 /dev/tty
             if sys.platform != 'win32':
                 return open('/dev/tty', 'w')
-        except:
+        except Exception:
             pass
         return sys.stderr
 
@@ -55,7 +55,7 @@ class TerminalLogger:
         # 尝试打开日志文件
         try:
             self.log_file = open(LOG_FILE, 'a', buffering=1, encoding='utf-8')
-        except:
+        except Exception:
             self.log_file = None
             
         self.lock = threading.Lock()
@@ -66,7 +66,7 @@ class TerminalLogger:
         if sys.platform != 'win32':
             try:
                 self.real_tty = open('/dev/tty', 'w')
-            except:
+            except Exception:
                 pass
     
     def _write(self, msg: str):
@@ -79,14 +79,14 @@ class TerminalLogger:
                 try:
                     self.log_file.write(msg)
                     self.log_file.flush()
-                except:
+                except Exception:
                     pass
             
             # 2. 写入标准错误 (MCP兼容方式)
             try:
                 sys.stderr.write(msg)
                 sys.stderr.flush()
-            except:
+            except Exception:
                 pass
                 
             # 3. 写入真实终端 (如果可用)
@@ -94,7 +94,7 @@ class TerminalLogger:
                 try:
                     self.real_tty.write(msg)
                     self.real_tty.flush()
-                except:
+                except Exception:
                     pass
     
     def print(self, msg: str, color: str = None, bold: bool = False):

@@ -295,7 +295,7 @@ class AsyncPortScanner:
             writer.close()
             await writer.wait_closed()
             return port
-        except:
+        except Exception:
             return None
 
     async def scan(self, host: str, ports: List[int]) -> List[int]:
@@ -338,9 +338,9 @@ class AsyncDNSResolver:
                     timeout=self.timeout
                 )
                 return list(set(r[4][0] for r in result))
-            except:
+            except Exception:
                 return []
-        except:
+        except Exception:
             return []
 
     async def batch_resolve(
@@ -380,11 +380,11 @@ async def async_request(method: str, url: str, **kwargs) -> Dict[str, Any]:
 
 # 同步包装器（兼容现有代码）
 def sync_request(method: str, url: str, **kwargs) -> Dict[str, Any]:
-    """同步请求包装器"""
+    """同步请求包装器 (Python 3.10+ 兼容)"""
     try:
-        loop = asyncio.get_event_loop()
+        asyncio.get_running_loop()
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            return pool.submit(asyncio.run, async_request(method, url, **kwargs)).result()
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    return loop.run_until_complete(async_request(method, url, **kwargs))
+        return asyncio.run(async_request(method, url, **kwargs))

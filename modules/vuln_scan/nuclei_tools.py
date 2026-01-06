@@ -86,14 +86,14 @@ class NucleiScanTool(BaseTool):
                                 if isinstance(data, list):
                                     for vuln in data:
                                         vulnerabilities.append(self._parse_vuln_item(vuln))
-                            except:
+                            except Exception:
                                 # 尝试逐行解析
                                 for line in content.split('\n'):
                                     if line.strip():
                                         try:
                                             vuln = json.loads(line)
                                             vulnerabilities.append(self._parse_vuln_item(vuln))
-                                        except:
+                                        except Exception:
                                             pass
                 except Exception as e:
                     logger.error(f"解析Nuclei JSON失败: {e}")

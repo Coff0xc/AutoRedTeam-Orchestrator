@@ -69,7 +69,7 @@ class VulnerabilityVerifier:
             elapsed = time.time() - start
             try:
                 body = e.read().decode('utf-8', errors='ignore')
-            except:
+            except Exception:
                 body = ""
             return body, e.code, elapsed, len(body)
         except Exception:

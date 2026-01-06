@@ -4,8 +4,7 @@
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from core.mcp_server import MCPServer
+# TYPE_CHECKING imports removed (legacy)
 
 from modules.cloud.aws_tools import AWSEnumTool, S3ScannerTool
 from modules.cloud.azure_tools import AzureEnumTool

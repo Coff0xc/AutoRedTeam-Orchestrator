@@ -448,7 +448,7 @@ class KerberosClient:
                     length, offset = self._decode_length(data, i + 1)
                     if 50 < length < len(data) - offset:
                         return data[offset:offset + length]
-                except:
+                except Exception:
                     continue
         return b''
 

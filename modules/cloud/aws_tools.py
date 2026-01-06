@@ -95,7 +95,7 @@ class AWSEnumTool(BaseTool):
                     )
                     info["acl"] = acl.get("Grants", [])
                     info["public"] = self._check_public_acl(acl)
-                except:
+                except Exception:
                     info["acl"] = "无法获取"
                 
                 bucket_info.append(info)
@@ -282,7 +282,7 @@ class S3ScannerTool(BaseTool):
             cmd = ["aws", "s3", "ls", f"s3://{bucket}", "--no-sign-request"]
             result = subprocess.run(cmd, capture_output=True, timeout=10)
             permissions["read"] = result.returncode == 0
-        except:
+        except Exception:
             pass
         
         # 测试上传权限 (创建测试文件)
@@ -300,7 +300,7 @@ class S3ScannerTool(BaseTool):
                         ["aws", "s3", "rm", f"s3://{bucket}/.test", "--no-sign-request"],
                         capture_output=True, timeout=10
                     )
-        except:
+        except Exception:
             pass
         
         return permissions

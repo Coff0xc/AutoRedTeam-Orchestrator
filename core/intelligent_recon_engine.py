@@ -417,7 +417,7 @@ class IntelligentReconEngine:
                             recommendation="删除或保护敏感文件",
                             confidence=0.95
                         )
-                except:
+                except Exception:
                     pass
         
         logger.info(f"  发现 {len(found_files)} 个敏感文件")
@@ -471,7 +471,7 @@ class IntelligentReconEngine:
                     confidence=0.5
                 )
                 break  # 只添加一次建议
-            except:
+            except Exception:
                 pass
         
         # SQL注入检测（基础）
@@ -480,7 +480,7 @@ class IntelligentReconEngine:
             try:
                 # 这里只是标记可能性，不实际测试
                 pass
-            except:
+            except Exception:
                 pass
     
     def _framework_vuln_detection(self):

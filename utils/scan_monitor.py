@@ -139,10 +139,10 @@ class ScanMonitor:
             try:
                 task.process.kill()
                 task.process.wait(timeout=5)
-            except:
+            except Exception:
                 try:
                     os.kill(task.process.pid, signal.SIGKILL)
-                except:
+                except Exception:
                     pass
         
         task.status = ScanStatus.TIMEOUT
@@ -226,7 +226,7 @@ class ScanMonitor:
                         elif output_count[0] == 1000:
                             terminal.warning("... 输出过多，后续隐藏")
                             output_count[0] += 1
-                except:
+                except Exception:
                     pass
             
             stdout_thread = threading.Thread(
@@ -309,7 +309,7 @@ class ScanMonitor:
             if task.process:
                 try:
                     task.process.kill()
-                except:
+                except Exception:
                     pass
             
             task.status = ScanStatus.CANCELLED
