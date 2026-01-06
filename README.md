@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/Platform-Kali%20Linux-557C94?style=for-the-badge&logo=kalilinux&logoColor=white" alt="Kali Linux"/>
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/MCP-Protocol-00ADD8?style=for-the-badge" alt="MCP"/>
-  <img src="https://img.shields.io/badge/Tools-80+-FF6B6B?style=for-the-badge" alt="Tools"/>
+  <img src="https://img.shields.io/badge/Tools-100+-FF6B6B?style=for-the-badge" alt="Tools"/>
   <img src="https://img.shields.io/badge/Payloads-2000+-orange?style=for-the-badge" alt="Payloads"/>
   <img src="https://img.shields.io/badge/AI-Powered-blueviolet?style=for-the-badge" alt="AI Powered"/>
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License"/>
@@ -20,7 +20,7 @@
 
 ## 📖 简介
 
-**AutoRedTeam-Orchestrator** 是一个集成了 **80+ 安全工具** 和 **2000+ Payload** 的智能化渗透测试平台。通过 MCP 协议与 AI 编辑器（Windsurf / Cursor / Claude Desktop / Kiro）无缝集成，实现 **AI 驱动的自动化红队作业**。
+**AutoRedTeam-Orchestrator** 是一个集成了 **100+ 安全工具** 和 **2000+ Payload** 的智能化渗透测试平台。通过 MCP 协议与 AI 编辑器（Windsurf / Cursor / Claude Desktop / Kiro）无缝集成，实现 **AI 驱动的自动化红队作业**。
 
 只需用自然语言描述目标，AI 就能自动选择工具、执行侦察、发现漏洞、推荐攻击路径。
 
@@ -279,6 +279,32 @@
 | 📋 AD枚举 | `ad_enumerate` | 用户/组/计算机/GPO/信任关系 |
 | ⚔️ Kerberos攻击 | `ad_kerberos_attack` | AS-REP Roasting/密码喷洒 |
 | 🎯 SPN扫描 | `ad_spn_scan` | Kerberoasting目标发现 |
+
+### 🆕 v2.5 CVE情报系统 (CVE Intelligence) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🔄 CVE同步 | `cve_sync` | NVD/Nuclei/Exploit-DB 多源同步 |
+| 🔍 CVE搜索 | `cve_search_advanced` | 关键词/严重性/CVSS 高级搜索 |
+| 📊 CVE统计 | `cve_stats` | CVE数据库统计信息 |
+| ☢️ PoC执行 | `poc_execute` | YAML PoC漏洞验证 |
+| 📋 PoC列表 | `poc_list` | 列出可用PoC模板 |
+
+### 🔗 v2.5 隐蔽隧道 (Covert Tunnels) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🌐 WebSocket隧道 | `tunnel_websocket_create` | XOR/AES加密WebSocket隧道 |
+| 📦 分块传输 | `chunked_split` | 数据分块传输/重组 |
+
+### 📜 v2.5 JS安全分析 (JS Security) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🔍 JS分析 | `js_analyze` | URL JS文件深度分析 |
+| 🔗 API提取 | `js_extract_apis` | 提取API端点和路由 |
+| 🔑 敏感信息 | `js_extract_secrets` | 提取密钥/Token/凭证 |
+
 
 ---
 

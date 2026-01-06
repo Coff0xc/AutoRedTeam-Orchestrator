@@ -55,3 +55,7 @@ pydantic>=2.6.0
 # Uncomment to enable full functionality
 # impacket>=0.11.0          # SMB/WMI Pass-the-Hash, lateral movement
 # pycryptodome>=3.20.0      # AES encryption for payload obfuscation
+
+# v2.5 New Dependencies
+websockets>=12.0
+cryptography>=42.0.0
