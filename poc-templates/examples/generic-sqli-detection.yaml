@@ -1,0 +1,34 @@
+id: generic-sqli-detection
+info:
+  author: AutoRedTeam
+  description: 通用SQL注入检测模板
+  name: Generic SQL Injection Detection
+  severity: high
+  tags:
+  - sqli
+  - injection
+  - database
+requests:
+- matchers:
+  - case-insensitive: true
+    condition: or
+    part: body
+    type: word
+    words:
+    - SQL syntax
+    - mysql_fetch
+    - 'Warning: mysql'
+    - MySQLSyntaxErrorException
+    - PostgreSQL.*ERROR
+    - ORA-[0-9][0-9][0-9][0-9]
+  - status:
+    - 200
+    - 500
+    type: status
+  matchers-condition: or
+  method: GET
+  path:
+  - '{{BaseURL}}?id=1'' OR ''1''=''1'
+  - '{{BaseURL}}?id=1" OR "1"="1'
+  - '{{BaseURL}}?id=1 AND 1=1'
+  - '{{BaseURL}}?id=1 AND 1=2'

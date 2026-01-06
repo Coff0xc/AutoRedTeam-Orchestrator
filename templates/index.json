@@ -1,0 +1,58 @@
+{
+  "version": "2.5.0",
+  "last_updated": "2025-01-06",
+  "templates": {
+    "builtin": [
+      {
+        "id": "CVE-2021-44228",
+        "name": "Log4j RCE (Log4Shell)",
+        "severity": "critical",
+        "tags": ["rce", "jndi", "log4j"],
+        "products": ["apache-log4j"],
+        "file": "builtin/cve-2021-44228-log4j.yaml"
+      },
+      {
+        "id": "CVE-2021-41773",
+        "name": "Apache Path Traversal",
+        "severity": "critical",
+        "tags": ["apache", "lfi", "rce"],
+        "products": ["apache-httpd"],
+        "file": "builtin/cve-2021-41773-apache.yaml"
+      },
+      {
+        "id": "CVE-2022-22947",
+        "name": "Spring Cloud Gateway SpEL RCE",
+        "severity": "critical",
+        "tags": ["spring", "rce", "spel"],
+        "products": ["spring-cloud-gateway"],
+        "file": "builtin/cve-2022-22947-spring-cloud.yaml"
+      },
+      {
+        "id": "CVE-2023-22515",
+        "name": "Confluence Auth Bypass",
+        "severity": "critical",
+        "tags": ["confluence", "auth-bypass"],
+        "products": ["atlassian-confluence"],
+        "file": "builtin/cve-2023-22515-confluence.yaml"
+      }
+    ],
+    "synced": [],
+    "custom": []
+  },
+  "sources": {
+    "nuclei-templates": {
+      "repo": "projectdiscovery/nuclei-templates",
+      "path": "cves/",
+      "last_sync": null
+    },
+    "poc-in-github": {
+      "repo": "nomi-sec/PoC-in-GitHub",
+      "path": ".",
+      "last_sync": null
+    }
+  },
+  "subscriptions": {
+    "enabled": false,
+    "rules": []
+  }
+}
