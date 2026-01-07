@@ -1,12 +1,12 @@
 {
   "mcpServers": {
     "ai-redteam": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "/home/kali/Desktop/ai-recon-mcp/mcp_server_full.py"
+        "E:/A-2026-project/Github-project/AutoRedTeam-Orchestrator/mcp_stdio_server.py"
       ],
       "env": {
-        "PYTHONPATH": "/home/kali/Desktop/ai-recon-mcp"
+        "PYTHONIOENCODING": "utf-8"
       }
     }
   }

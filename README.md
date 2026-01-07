@@ -1,18 +1,18 @@
 # 🔥 AutoRedTeam-Orchestrator
 [English](README_EN.md)
 
-> AI 驱动的自动化红队编排框架，跨平台支持 Linux / Windows，集成 100+ 安全工具与 2000+ Payload。原生 MCP，可在 Windsurf / Cursor / Claude Desktop / Kiro 中直接调用。
+> AI 驱动的自动化红队编排框架，跨平台支持 Linux / Windows，集成 130+ 安全工具与 2000+ Payload。原生 MCP，可在 Windsurf / Cursor / Claude Desktop / Kiro 中直接调用。
 
 <p align="center">
   <img src="https://img.shields.io/badge/OS-Linux%20%26%20Windows-557C94?style=for-the-badge&logo=linux&logoColor=white" alt="Cross Platform"/>
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=for-the-badge" alt="MCP"/>
-  <img src="https://img.shields.io/badge/Tools-100+-FF6B6B?style=for-the-badge" alt="Tools"/>
+  <img src="https://img.shields.io/badge/Tools-130+-FF6B6B?style=for-the-badge" alt="Tools"/>
   <img src="https://img.shields.io/badge/Payloads-2000+-orange?style=for-the-badge" alt="Payloads"/>
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License"/>
 </p>
 
-> 当前版本：2.5.0（详见 CHANGELOG 与 VERSION）
+> 当前版本：2.6.0（详见 CHANGELOG 与 VERSION）
 
 ---
 
@@ -108,9 +108,12 @@ python core/cve/ai_poc_generator.py --help          # AI PoC 生成
 # Cursor/Claude/Kiro 可参照 MCP_CONFIG_GUIDE.md 配置 mcp_stdio_server.py
 ```
 在编辑器对话中直接下发自然语言：
-- “对 example.com 做完整侦察并输出报告”
-- “扫描 192.168.1.0/24 开放端口并识别服务”
-- “检查 https://target.com 是否存在 Log4j/Shiro”
+- "对 example.com 做完整侦察并输出报告"
+- "扫描 192.168.1.0/24 开放端口并识别服务"
+- "检查 https://target.com 是否存在 Log4j/Shiro"
+- "对目标 API 执行 JWT 安全扫描"
+- "生成项目的 SBOM 并扫描依赖漏洞"
+- "检测 K8s 集群中的特权容器"
 
 ### 独立 HTTP 服务
 ```bash
@@ -140,12 +143,24 @@ main.py / mcp_stdio_server.py / auto_recon.py / mcp_tools.py
 core/
   attack_chain.py, tool_chain.py, intelligent_recon_engine.py, complete_recon_toolkit.py
   response_filter.py, session_manager.py, mega_payload_library.py, tool_registry.py
-  c2/, lateral/, evasion/, stealth/, persistence/, credential/, ad/, cve/, exploit/
+  c2/          - C2通信 (Beacon/DNS/HTTP/WebSocket隧道)
+  lateral/     - 横向移动 (SMB/SSH/WMI)
+  evasion/     - 混淆免杀
+  stealth/     - 隐蔽通信
+  persistence/ - 持久化
+  credential/  - 凭证获取
+  ad/          - AD域渗透
+  cve/         - CVE情报与PoC引擎
+  exploit/     - 漏洞利用
 modules/
   async_scanner.py, async_http_pool.py, ai_decision_engine.py, adaptive_payload_engine.py
   performance_monitor.py, smart_cache.py, optimization_tools.py
-  recon/, vuln_scan/, web_attack/, exploit/, api_security/, cloud_security/, supply_chain/
-  mega_payloads.py, smart_payload_selector.py, smart_payload_engine.py
+  api_security/    - JWT/CORS/GraphQL/WebSocket安全
+  supply_chain/    - SBOM/依赖扫描/CI-CD安全
+  cloud_security/  - K8s/gRPC安全
+  enhanced_detectors/ - 高级漏洞检测器
+  recon/, vuln_scan/, web_attack/, exploit/, network/, post_exploit/
+  mega_payloads.py, smart_payload_selector.py, smart_payload_engine.py, js_analyzer.py
 payloads/complete_payload_db.json
 utils/ (report_generator.py, task_queue.py, tool_checker.py, terminal_output.py)
 config/, templates/, poc-templates/, scripts/, tests/
@@ -153,7 +168,26 @@ config/, templates/, poc-templates/, scripts/, tests/
 
 ---
 
-## ✨ 版本亮点（2.5.0，2026-01-06）
+## ✨ 版本亮点
+
+### v2.6.0（2026-01-07）- API安全与云原生安全增强
+- **API安全增强**：
+  - JWT 高级测试：None算法/算法混淆/弱密钥/KID注入
+  - CORS 深度检测：30+ Origin 绕过技术
+  - 安全头评分：基于 OWASP 指南的加权评分系统
+  - GraphQL 安全：内省/批量DoS/深层嵌套/别名重载检测
+  - WebSocket 安全：Origin绕过/CSWSH/认证绕过/压缩攻击
+- **供应链安全**：
+  - SBOM 生成：支持 CycloneDX/SPDX 标准格式
+  - 依赖漏洞扫描：集成 OSV API，支持 PyPI/npm/Go/Maven
+  - CI/CD 安全扫描：检测 GitHub Actions/GitLab CI/Jenkins 配置风险
+- **云原生安全**：
+  - K8s 安全审计：特权容器/hostPath/RBAC/NetworkPolicy/Secrets 检测
+  - K8s Manifest 扫描：YAML 配置文件安全分析
+  - gRPC 安全测试：反射API/TLS配置/认证绕过检测
+- **工具总数**：130+（新增 40+ API/供应链/云原生工具）
+
+### v2.5.0（2026-01-06）
 - CVE 情报与 PoC：多源同步（NVD/Nuclei/Exploit-DB）、订阅过滤、AI PoC 生成、YAML PoC 引擎，新增多项 MCP 工具。
 - C2 隐蔽通信：WebSocket 隧道、分块传输、代理链。
 - 前端安全：JS 分析、Source Map 泄露检测。
@@ -181,6 +215,6 @@ config/, templates/, poc-templates/, scripts/, tests/
 
 ## 🤝 贡献与联系
 - 欢迎提交 Issue / PR（见 CONTRIBUTING.md、CODE_OF_CONDUCT.md）。
+- Discord: https://discord.gg/PtVyrMvB
 - Email: Coff0xc@protonmail.com
 - Issues: https://github.com/Coff0xc/AutoRedTeam-Orchestrator/issues
-```
