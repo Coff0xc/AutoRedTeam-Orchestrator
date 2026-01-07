@@ -1,13 +1,14 @@
-# CVE 多源同步管理器
+# CVE 多源同步管理器 / AI PoC 工厂
 
-支持从 NVD / Nuclei Templates / Exploit-DB 自动拉取、去重与索引，提供本地搜索与 PoC 关联，预留订阅过滤。
+> 负责 CVE 情报同步、索引、订阅过滤与 AI PoC 生成。跨平台：Windows / Linux / macOS。
 
-## 🎯 能力
-- 多源同步：NVD API 2.0、Nuclei 模板、Exploit-DB CSV。
-- 增量更新：速率自适应，临时缓存减少重复下载。
-- 本地 SQLite 索引：按关键字/严重度/CVSS/PoC 快速检索。
-- PoC 关联：标注可用 PoC/Exploit 路径，便于后续利用。
-- 跨平台：Windows / Linux / macOS。
+## 🎯 组成
+- `update_manager.py`：多源同步（NVD API 2.0、Nuclei Templates、Exploit-DB CSV），增量更新，速率自适应，临时缓存。
+- `subscription_manager.py`：订阅过滤（关键字/严重度/产品/CVSS），预留通知能力。
+- `ai_poc_generator.py` / `example_ai_poc_generator.py`：基于 CVE 描述生成 PoC 模板。
+- `poc_engine.py`：YAML PoC 解析与执行（兼容 Nuclei 模板格式）。
+- `mcp_integration.py`：MCP 工具封装。
+- 相关文档：`QUICKSTART.py`、`QUICKSTART_SUBSCRIPTION.md`、`QUICKREF.md`、`USAGE_AI_POC_GENERATOR.md`。
 
 ## ⚡ 快速开始
 ```bash
@@ -26,15 +27,16 @@ print(m.get_stats())
 
 ### CLI
 ```bash
-python core/cve/update_manager.py sync
-python core/cve/update_manager.py search "SQL injection"
-python core/cve/update_manager.py stats
+python core/cve/update_manager.py sync                 # 同步
+python core/cve/update_manager.py search "SQL injection"  # 检索
+python core/cve/update_manager.py stats                # 统计
+python core/cve/ai_poc_generator.py --help             # AI PoC
 ```
 
 ## 🔗 数据源与限额
 - **NVD**：5 req/30s（无 key）或 50 req/30s（有 key），建议申请 API Key。
 - **Nuclei Templates**：GitHub Token 可将 60 提升至 5000 req/h。
-- **Exploit-DB**：每日 CSV，同步后本地解析。
+- **Exploit-DB**：每日 CSV，本地解析。
 
 ## 🧰 API 速览
 - 同步：`sync_nvd(days_back=7)`, `sync_nuclei_templates()`, `sync_exploit_db()`, `sync_all(days_back=7)`
