@@ -45,6 +45,7 @@ nul
 # Claude / AI
 .claude/
 .iflow/
+CLAUDE.md
 
 # Test & Coverage
 .pytest_cache/
