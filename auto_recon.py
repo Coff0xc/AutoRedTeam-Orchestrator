@@ -429,9 +429,10 @@ class AutoReconEngine:
         # 生成建议
         self.results["recommendations"] = self._generate_recommendations()
 
-        # 保存报告
+        # 保存报告 (安全: 清理target防止路径遍历)
         import tempfile
-        report_file = os.path.join(tempfile.gettempdir(), f"recon_report_{self.target.replace('.', '_')}_{int(time.time())}.json")
+        safe_target = re.sub(r'[^\w\-.]', '_', self.target)[:50]  # 只保留安全字符，限制长度
+        report_file = os.path.join(tempfile.gettempdir(), f"recon_report_{safe_target}_{int(time.time())}.json")
         with open(report_file, 'w', encoding='utf-8') as f:
             json.dump(self.results, f, indent=2, ensure_ascii=False)
         

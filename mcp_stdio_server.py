@@ -185,6 +185,23 @@ def check_tool(name: str) -> bool:
     """检查外部工具是否可用"""
     return shutil.which(name) is not None
 
+def validate_cli_target(target: str) -> tuple:
+    """验证CLI目标参数，防止选项注入
+
+    Returns:
+        (is_valid, error_message)
+    """
+    if not target:
+        return False, "目标不能为空"
+    # 防止CLI选项注入: 禁止以 - 或 -- 开头
+    if target.startswith('-'):
+        return False, f"目标不能以'-'开头 (防止CLI选项注入): {target}"
+    # 检查危险字符
+    dangerous = [';', '|', '&', '`', '$', '>', '<', '\n', '\r', '\x00']
+    if any(c in target for c in dangerous):
+        return False, f"目标包含危险字符: {target}"
+    return True, None
+
 def run_cmd(cmd: list, timeout: int = 300) -> dict:
     """跨平台命令执行 - 安全版本，避免命令注入"""
     if not cmd or not isinstance(cmd, list):
@@ -578,28 +595,54 @@ def subdomain_bruteforce(domain: str, threads: int = 10) -> dict:
 
 @mcp.tool()
 def sensitive_scan(url: str, threads: int = 10) -> dict:
-    """敏感文件探测 - 扫描常见敏感文件和目录"""
+    """敏感文件探测 - 扫描常见敏感文件和目录 (带SPA误报过滤)"""
     if not HAS_REQUESTS:
         return {"success": False, "error": "需要安装 requests: pip install requests"}
 
     import concurrent.futures
     from urllib.parse import urljoin
 
+    # 导入响应过滤器
+    try:
+        from core.response_filter import get_response_filter
+        resp_filter = get_response_filter()
+        # 校准基线
+        resp_filter.calibrate(url)
+    except ImportError:
+        resp_filter = None
+
     base_url = url.rstrip('/')
     found = []
+    filtered_count = 0
 
     def check_file(path):
+        nonlocal filtered_count
         try:
             test_url = urljoin(base_url + "/", path)
             resp = requests.get(test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
             if resp.status_code == 200:
-                # 检查是否真的有内容
-                content = resp.text[:500]
+                content = resp.text
+                content_type = resp.headers.get('Content-Type', '')
+
+                # 使用响应过滤器验证
+                if resp_filter:
+                    validation = resp_filter.validate_sensitive_file(
+                        test_url, content, path, resp.status_code, content_type
+                    )
+                    if not validation["valid"]:
+                        filtered_count += 1
+                        return None
+                    confidence = validation["confidence"]
+                else:
+                    confidence = 0.5
+
                 return {
                     "path": path,
                     "url": test_url,
                     "status": resp.status_code,
                     "size": len(resp.content),
+                    "content_type": content_type,
+                    "confidence": confidence,
                     "preview": content[:200] if len(content) > 0 else ""
                 }
         except Exception:
@@ -613,7 +656,16 @@ def sensitive_scan(url: str, threads: int = 10) -> dict:
             if result:
                 found.append(result)
 
-    return {"success": True, "url": base_url, "sensitive_files": found, "total_checked": len(SENSITIVE_FILES)}
+    # 按置信度排序
+    found.sort(key=lambda x: x.get("confidence", 0), reverse=True)
+
+    return {
+        "success": True,
+        "url": base_url,
+        "sensitive_files": found,
+        "total_checked": len(SENSITIVE_FILES),
+        "filtered_spa_fallback": filtered_count
+    }
 
 @mcp.tool()
 def tech_detect(url: str) -> dict:
@@ -1323,11 +1375,20 @@ def file_upload_detect(url: str) -> dict:
 
 @mcp.tool()
 def auth_bypass_detect(url: str) -> dict:
-    """认证绕过检测 - 检测常见认证绕过漏洞"""
+    """认证绕过检测 - 检测常见认证绕过漏洞 (带SPA误报过滤)"""
     if not HAS_REQUESTS:
         return {"success": False, "error": "需要安装 requests: pip install requests"}
 
+    # 导入响应过滤器
+    try:
+        from core.response_filter import get_response_filter
+        resp_filter = get_response_filter()
+        resp_filter.calibrate(url)
+    except ImportError:
+        resp_filter = None
+
     vulns = []
+    filtered_count = 0
 
     # 测试路径
     bypass_paths = [
@@ -1351,6 +1412,16 @@ def auth_bypass_detect(url: str) -> dict:
 
     base_url = url.rstrip('/')
 
+    # 获取基线响应 (正常访问/admin)
+    baseline_html = ""
+    baseline_status = 0
+    try:
+        baseline_resp = requests.get(base_url + "/admin", timeout=5, verify=get_verify_ssl(), allow_redirects=False)
+        baseline_html = baseline_resp.text
+        baseline_status = baseline_resp.status_code
+    except Exception:
+        pass
+
     # 路径绕过测试
     for path in bypass_paths:
         try:
@@ -1358,11 +1429,27 @@ def auth_bypass_detect(url: str) -> dict:
             resp = requests.get(test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
 
             if resp.status_code == 200:
+                # 使用响应过滤器验证
+                if resp_filter:
+                    validation = resp_filter.validate_auth_bypass(
+                        test_url, resp.text, baseline_html, resp.status_code
+                    )
+                    if not validation["valid"]:
+                        filtered_count += 1
+                        continue
+                    confidence = validation["confidence"]
+                    reason = validation["reason"]
+                else:
+                    confidence = 0.5
+                    reason = "Basic check passed"
+
                 vulns.append({
                     "type": "Path Bypass",
-                    "severity": "HIGH",
+                    "severity": "HIGH" if confidence > 0.7 else "MEDIUM",
                     "path": path,
-                    "status": resp.status_code
+                    "status": resp.status_code,
+                    "confidence": confidence,
+                    "evidence": reason
                 })
         except Exception:
             pass
@@ -1373,16 +1460,42 @@ def auth_bypass_detect(url: str) -> dict:
             resp = requests.get(base_url + "/admin", headers=headers, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
 
             if resp.status_code == 200:
+                # 使用响应过滤器验证
+                if resp_filter:
+                    validation = resp_filter.validate_auth_bypass(
+                        base_url + "/admin", resp.text, baseline_html, resp.status_code
+                    )
+                    if not validation["valid"]:
+                        filtered_count += 1
+                        continue
+                    confidence = validation["confidence"]
+                    reason = validation["reason"]
+                else:
+                    confidence = 0.5
+                    reason = "Basic check passed"
+
                 vulns.append({
                     "type": "Header Bypass",
-                    "severity": "HIGH",
+                    "severity": "HIGH" if confidence > 0.7 else "MEDIUM",
                     "headers": headers,
-                    "status": resp.status_code
+                    "status": resp.status_code,
+                    "confidence": confidence,
+                    "evidence": reason
                 })
         except Exception:
             pass
 
-    return {"success": True, "url": url, "auth_bypass_vulns": vulns, "total": len(vulns)}
+    # 按置信度排序
+    vulns.sort(key=lambda x: x.get("confidence", 0), reverse=True)
+
+    return {
+        "success": True,
+        "url": url,
+        "auth_bypass_vulns": vulns,
+        "total": len(vulns),
+        "filtered_spa_fallback": filtered_count,
+        "baseline_status": baseline_status
+    }
 
 @mcp.tool()
 def logic_vuln_check(url: str) -> dict:
@@ -4138,6 +4251,14 @@ def smart_analyze(target: str) -> dict:
 @mcp.tool()
 def nmap_scan(target: str, ports: str = "1-1000", scan_type: str = "quick") -> dict:
     """Nmap端口扫描 - 需要安装nmap"""
+    # 安全验证: 防止CLI选项注入
+    valid, err = validate_cli_target(target)
+    if not valid:
+        return {"success": False, "error": err}
+    # 验证ports参数
+    if ports.startswith('-'):
+        return {"success": False, "error": "ports参数不能以'-'开头"}
+
     if HAS_NMAP:
         try:
             nm = nmap.PortScanner()
@@ -4162,6 +4283,14 @@ def nmap_scan(target: str, ports: str = "1-1000", scan_type: str = "quick") -> d
 @mcp.tool()
 def nuclei_scan(target: str, severity: str = None) -> dict:
     """Nuclei漏洞扫描 - 需要安装nuclei"""
+    # 安全验证: 防止CLI选项注入
+    valid, err = validate_cli_target(target)
+    if not valid:
+        return {"success": False, "error": err}
+    # 验证severity参数
+    if severity and severity.startswith('-'):
+        return {"success": False, "error": "severity参数不能以'-'开头"}
+
     if not check_tool("nuclei"):
         return {"success": False, "error": "nuclei未安装。请从 https://github.com/projectdiscovery/nuclei 下载安装。"}
 
@@ -4173,6 +4302,11 @@ def nuclei_scan(target: str, severity: str = None) -> dict:
 @mcp.tool()
 def sqlmap_scan(url: str, level: int = 1, risk: int = 1) -> dict:
     """SQLMap扫描 - 需要安装sqlmap"""
+    # 安全验证: 防止CLI选项注入
+    valid, err = validate_cli_target(url)
+    if not valid:
+        return {"success": False, "error": err}
+
     if not check_tool("sqlmap"):
         return {"success": False, "error": "sqlmap未安装。请从 https://sqlmap.org 下载安装。"}
 
@@ -4182,6 +4316,16 @@ def sqlmap_scan(url: str, level: int = 1, risk: int = 1) -> dict:
 @mcp.tool()
 def gobuster_scan(url: str, wordlist: str) -> dict:
     """Gobuster目录扫描 - 需要安装gobuster"""
+    # 安全验证: 防止CLI选项注入
+    valid, err = validate_cli_target(url)
+    if not valid:
+        return {"success": False, "error": err}
+    # 验证wordlist路径
+    if wordlist.startswith('-'):
+        return {"success": False, "error": "wordlist参数不能以'-'开头"}
+    if not os.path.isfile(wordlist):
+        return {"success": False, "error": f"字典文件不存在: {wordlist}"}
+
     if not check_tool("gobuster"):
         return {"success": False, "error": "gobuster未安装。请从 https://github.com/OJ/gobuster 下载安装。"}
 
@@ -4191,6 +4335,11 @@ def gobuster_scan(url: str, wordlist: str) -> dict:
 @mcp.tool()
 def subfinder_enum(domain: str) -> dict:
     """子域名枚举 - 需要安装subfinder"""
+    # 安全验证: 防止CLI选项注入
+    valid, err = validate_cli_target(domain)
+    if not valid:
+        return {"success": False, "error": err}
+
     if not check_tool("subfinder"):
         return {"success": False, "error": "subfinder未安装。请从 https://github.com/projectdiscovery/subfinder 下载安装。"}
 
@@ -4472,6 +4621,32 @@ def session_request(session_id: str, url: str, method: str = "GET", data: str = 
     Returns:
         响应结果
     """
+    # SSRF防护: 验证URL不指向内网
+    from urllib.parse import urlparse
+    import socket
+    import ipaddress
+
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return {"success": False, "error": "无效的URL"}
+
+        # 解析IP地址
+        try:
+            ip = socket.gethostbyname(hostname)
+            ip_obj = ipaddress.ip_address(ip)
+            # 阻止私有IP、回环地址、链路本地地址
+            if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local:
+                return {"success": False, "error": f"SSRF防护: 禁止访问内网地址 {ip}"}
+            # 阻止云元数据端点
+            if ip == "169.254.169.254":
+                return {"success": False, "error": "SSRF防护: 禁止访问云元数据端点"}
+        except socket.gaierror:
+            pass  # 无法解析的域名，让后续请求处理
+    except Exception:
+        return {"success": False, "error": "URL解析失败"}
+
     from core.session_manager import get_http_session_manager
     import json
     mgr = get_http_session_manager()
@@ -4558,6 +4733,50 @@ except ImportError as e:
     print(f"[WARN] v2.5模块加载失败 (可选): {e}", file=sys.stderr)
 except Exception as e:
     print(f"[WARN] v2.5模块注册失败: {e}", file=sys.stderr)
+
+
+# ========== 注册增强检测器工具 (JWT/CORS/SecurityHeaders) ==========
+try:
+    from modules.enhanced_detector_tools import register_enhanced_detector_tools
+    enhanced_tools = register_enhanced_detector_tools(mcp)
+    print(f"[INFO] 增强检测器工具已注册: {enhanced_tools}", file=sys.stderr)
+except ImportError as e:
+    print(f"[WARN] 增强检测器模块加载失败 (可选): {e}", file=sys.stderr)
+except Exception as e:
+    print(f"[WARN] 增强检测器模块注册失败: {e}", file=sys.stderr)
+
+
+# ========== 注册API安全工具 (GraphQL/WebSocket) ==========
+try:
+    from modules.api_security_tools import register_api_security_tools
+    api_security_tools = register_api_security_tools(mcp)
+    print(f"[INFO] API安全工具已注册: {api_security_tools}", file=sys.stderr)
+except ImportError as e:
+    print(f"[WARN] API安全模块加载失败 (可选): {e}", file=sys.stderr)
+except Exception as e:
+    print(f"[WARN] API安全模块注册失败: {e}", file=sys.stderr)
+
+
+# ========== 注册供应链安全工具 (SBOM/依赖扫描/CI-CD) ==========
+try:
+    from modules.supply_chain_tools import register_supply_chain_tools
+    supply_chain_tools = register_supply_chain_tools(mcp)
+    print(f"[INFO] 供应链安全工具已注册: {supply_chain_tools}", file=sys.stderr)
+except ImportError as e:
+    print(f"[WARN] 供应链安全模块加载失败 (可选): {e}", file=sys.stderr)
+except Exception as e:
+    print(f"[WARN] 供应链安全模块注册失败: {e}", file=sys.stderr)
+
+
+# ========== 注册云安全工具 (K8s/gRPC) ==========
+try:
+    from modules.cloud_security_tools import register_cloud_security_tools
+    cloud_security_tools = register_cloud_security_tools(mcp)
+    print(f"[INFO] 云安全工具已注册: {cloud_security_tools}", file=sys.stderr)
+except ImportError as e:
+    print(f"[WARN] 云安全模块加载失败 (可选): {e}", file=sys.stderr)
+except Exception as e:
+    print(f"[WARN] 云安全模块注册失败: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
