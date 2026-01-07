@@ -102,12 +102,87 @@ python core/cve/ai_poc_generator.py --help          # AI PoC 生成
 ---
 
 ## 🚀 使用方式
-### MCP（推荐，跨平台）
-```bash
-./setup_windsurf_mcp.sh   # 自动写入 Windsurf MCP 配置
-# Cursor/Claude/Kiro 可参照 MCP_CONFIG_GUIDE.md 配置 mcp_stdio_server.py
+
+### MCP 配置（推荐，跨平台）
+
+#### Claude Desktop / Claude Code
+配置文件路径：
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json` 或 `~/.claude/mcp.json`
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Linux**: `~/.config/claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "redteam": {
+      "command": "python",
+      "args": ["E:/path/to/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
 ```
-在编辑器对话中直接下发自然语言：
+
+#### Cursor
+配置文件路径：`~/.cursor/mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "redteam": {
+      "command": "python",
+      "args": ["/path/to/AutoRedTeam-Orchestrator/mcp_stdio_server.py"]
+    }
+  }
+}
+```
+
+#### Windsurf
+配置文件路径：`~/.codeium/windsurf/mcp_config.json`
+
+```json
+{
+  "mcpServers": {
+    "redteam": {
+      "command": "python",
+      "args": ["/path/to/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+
+或运行自动配置脚本：
+```bash
+./setup_windsurf_mcp.sh
+```
+
+#### Kiro
+配置文件路径：`~/.kiro/mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "redteam": {
+      "command": "python",
+      "args": ["/path/to/AutoRedTeam-Orchestrator/mcp_stdio_server.py"]
+    }
+  }
+}
+```
+
+#### 验证配置
+配置完成后，在编辑器对话中输入以下命令测试：
+```
+帮我检查 redteam MCP 服务器是否可用
+```
+
+### 自然语言使用示例
+在编辑器对话中直接下发：
 - "对 example.com 做完整侦察并输出报告"
 - "扫描 192.168.1.0/24 开放端口并识别服务"
 - "检查 https://target.com 是否存在 Log4j/Shiro"
