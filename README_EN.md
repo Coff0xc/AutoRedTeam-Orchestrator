@@ -1,105 +1,94 @@
 # 🔥 AutoRedTeam-Orchestrator
 
-[中文](README.md)
+<div align="center">
 
-> AI-driven automated red-team orchestration framework, cross-platform (Linux / Windows), integrating 130+ security tools and 2000+ payloads. MCP-native for Windsurf / Cursor / Claude Desktop / Kiro.
+[简体中文](README.md) | English
 
-<p align="center">
-  <img src="https://img.shields.io/badge/OS-Linux%20%26%20Windows-557C94?style=for-the-badge&logo=linux&logoColor=white" alt="Cross Platform"/>
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
-  <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=for-the-badge" alt="MCP"/>
-  <img src="https://img.shields.io/badge/Tools-130+-FF6B6B?style=for-the-badge" alt="Tools"/>
-  <img src="https://img.shields.io/badge/Payloads-2000+-orange?style=for-the-badge" alt="Payloads"/>
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License"/>
-</p>
+**AI-Driven Automated Red Team Orchestration Framework**
 
-> Current version: 2.6.0 (see CHANGELOG and VERSION)
+*Cross-platform support for Linux / Windows / macOS, with 130+ security tools and 2000+ payloads*
 
----
+[![OS](https://img.shields.io/badge/OS-Linux%20%7C%20Windows%20%7C%20macOS-557C94?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/Coff0xc/AutoRedTeam-Orchestrator)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![MCP](https://img.shields.io/badge/MCP-Native-00ADD8?style=for-the-badge)](https://modelcontextprotocol.io/)
+[![Tools](https://img.shields.io/badge/Tools-130+-FF6B6B?style=for-the-badge)](https://github.com/Coff0xc/AutoRedTeam-Orchestrator)
+[![Payloads](https://img.shields.io/badge/Payloads-2000+-orange?style=for-the-badge)](https://github.com/Coff0xc/AutoRedTeam-Orchestrator)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-2.7.0-blue?style=for-the-badge)](CHANGELOG.md)
 
-## 🧭 Overview
-
-- **AI-first**: Intelligent fingerprinting, attack-chain planning, history-aware recommendations, auto payload/tool selection via `modules/ai_decision_engine.py`, `core/attack_chain.py`.
-- **End-to-end automation**: Subdomain/port/WAF/fingerprint → vulnerability discovery/verification → reporting (`core/recon/standard.py`, `modules/async_scanner.py`).
-- **Red-team modules**: Lateral movement (SMB/SSH/WMI), C2 (Beacon/DNS/HTTP/WebSocket), obfuscation/evasion, stealth traffic, persistence, credentials, AD attacks.
-- **Security extensions**: API security (JWT/CORS/Headers/GraphQL/WebSocket), supply chain (CycloneDX/SPDX SBOM, OSV audit, CI/CD scan), cloud native (K8s/gRPC).
-- **Performance**: Async scanner, HTTP pool, task queue, multi-layer cache, performance monitor, response filter.
-- **Rich resources**: Nuclei 11997+ templates, 2000+ payloads, JS analyzer, AI PoC generator, CVE multi-source sync.
+</div>
 
 ---
 
-## 🛠️ Capability Matrix
+## 🎯 Key Features
 
-### Recon
+<table>
+<tr>
+<td width="50%">
 
-- Auto/Deep recon: `core/recon/standard.py`, `modules/recon/web_recon_tools.py`
-- Port/Service: `modules/recon/nmap_tools.py`, `modules/network/service_tools.py`
-- Subdomain/DNS/OSINT: `modules/recon/subdomain_tools.py`, `modules/recon/dns_tools.py`
-- WAF/Fingerprint: `modules/component_fingerprint.py`
-- JS/Frontend: `modules/js_analyzer.py`
+### 🤖 AI Native
+- Intelligent fingerprinting & attack chain planning
+- Historical feedback learning
+- Auto tool & payload selection
+- AI PoC generation engine
 
-### Vulnerability Scanning
+</td>
+<td width="50%">
 
-- Nuclei/Nikto/SSL: `modules/vuln_scan/nuclei_tools.py`, `modules/vuln_scan/ssl_tools.py`
-- Deep vulns (Shiro/Log4j/SQLi/XSS): `modules/enhanced_detector_tools.py`, `modules/web_attack/*`
+### ⚡ Full Automation
+- Subdomain/Port/WAF/Fingerprint scanning
+- Vulnerability discovery & verification
+- One-click professional reports
+- 10-phase standard recon workflow
 
-### API / Supply Chain / Cloud
+</td>
+</tr>
+<tr>
+<td width="50%">
 
-- API security: `modules/api_security_tools.py`, `modules/api_security/graphql_security.py`, `modules/api_security/websocket_security.py`
-- Supply chain: `modules/supply_chain_tools.py`, `modules/supply_chain/sbom_generator.py`, `modules/supply_chain/dependency_scanner.py`
-- Cloud: `modules/cloud_security_tools.py`, `modules/cloud_security/kubernetes_enhanced.py`, `modules/cloud_security/grpc_security.py`
+### 🔴 Red Team Enhanced
+- Lateral movement (SMB/SSH/WMI)
+- C2 communication (Beacon/DNS/HTTP/WebSocket)
+- Obfuscation & evasion
+- Persistence/Credential/AD attacks
 
-### Red Team / Post-exploitation
+</td>
+<td width="50%">
 
-- Lateral movement: `core/lateral/smb_lateral.py`, `core/lateral/ssh_lateral.py`, `core/lateral/wmi_lateral.py`
-- C2 & stealth: `core/c2/beacon.py`, `core/c2/tunnels.py`, `core/c2/websocket_tunnel.py`
-- Evasion: `core/evasion/payload_obfuscator.py`
-- Persistence: `core/persistence/windows_persistence.py`, `core/persistence/linux_persistence.py`
-- Credentials & AD: `core/credential/credential_dumper.py`, `core/ad/ad_enum.py`, `core/ad/kerberos_attack.py`
+### 🛡️ Security Extensions
+- API Security (JWT/CORS/GraphQL/WebSocket)
+- Supply Chain (SBOM/OSV/CI-CD)
+- Cloud Native (K8s/gRPC)
+- CVE intelligence multi-source sync
 
-### CVE Subsystem
-
-- Multi-source sync: `core/cve/update_manager.py` (NVD/Nuclei/Exploit-DB)
-- AI PoC generation: `core/cve/ai_poc_generator.py`
+</td>
+</tr>
+</table>
 
 ---
 
-## ⚡ Quick Start
+## 📦 Quick Start
 
-### 1) Clone & Install
+### Installation
 
 ```bash
 git clone https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git
 cd AutoRedTeam-Orchestrator
-
-# Install Python dependencies
 pip install -r requirements.txt
-cp config/config.yaml.example config/config.yaml
 ```
 
-**External Tools:**
-
-- Linux/WSL: Use package manager to install `nmap`, `nuclei`, `subfinder`, etc.
-- Windows: Manual install or use WSL; MCP server runs natively.
-
-### 2) Quick Test
+### Run MCP Server
 
 ```bash
 python mcp_stdio_server.py
-python core/cve/update_manager.py sync
 ```
 
----
+### MCP Configuration
 
-## 🚀 MCP Configuration
+<details>
+<summary><b>Claude Desktop / Claude Code</b></summary>
 
-### Claude Desktop / Claude Code
-
-Config path:
-
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json` or `~/.claude/mcp.json`
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Linux**: `~/.config/claude/claude_desktop_config.json`
+Config file: `~/.claude/mcp.json` or `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -107,17 +96,17 @@ Config path:
     "redteam": {
       "command": "python",
       "args": ["/path/to/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
-      "env": {
-        "PYTHONIOENCODING": "utf-8"
-      }
+      "env": { "PYTHONIOENCODING": "utf-8" }
     }
   }
 }
 ```
+</details>
 
-### Cursor
+<details>
+<summary><b>Cursor</b></summary>
 
-Config path: `~/.cursor/mcp.json`
+Config file: `~/.cursor/mcp.json`
 
 ```json
 {
@@ -129,10 +118,12 @@ Config path: `~/.cursor/mcp.json`
   }
 }
 ```
+</details>
 
-### Windsurf
+<details>
+<summary><b>Windsurf</b></summary>
 
-Config path: `~/.codeium/windsurf/mcp_config.json`
+Config file: `~/.codeium/windsurf/mcp_config.json`
 
 ```json
 {
@@ -140,17 +131,17 @@ Config path: `~/.codeium/windsurf/mcp_config.json`
     "redteam": {
       "command": "python",
       "args": ["/path/to/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
-      "env": {
-        "PYTHONIOENCODING": "utf-8"
-      }
+      "env": { "PYTHONIOENCODING": "utf-8" }
     }
   }
 }
 ```
+</details>
 
-### Kiro
+<details>
+<summary><b>Kiro</b></summary>
 
-Config path: `~/.kiro/mcp.json`
+Config file: `~/.kiro/mcp.json`
 
 ```json
 {
@@ -162,73 +153,98 @@ Config path: `~/.kiro/mcp.json`
   }
 }
 ```
-
-### Usage Examples
-
-Natural language commands in editor:
-
-- "Perform full recon on example.com and generate a report"
-- "Scan 192.168.1.0/24 for open ports"
-- "Check <https://target.com> for Log4j/Shiro vulnerabilities"
-- "Run JWT security scan on the target API"
-- "Generate SBOM and scan dependencies for vulnerabilities"
-- "Detect privileged containers in K8s cluster"
+</details>
 
 ---
 
-## 🗂️ Directory Structure
+## 🛠️ Tool Matrix
+
+| Category | Count | Features |
+|----------|-------|----------|
+| **Recon** | 12+ | Port scan, subdomain enum, DNS query, WAF detection, fingerprinting, JS analysis |
+| **Vuln Detection** | 19+ | SQLi, XSS, SSRF, XXE, SSTI, LFI, CSRF, command injection, deserialization |
+| **API Security** | 11+ | JWT testing, CORS bypass, GraphQL security, WebSocket security, security headers |
+| **Supply Chain** | 9+ | SBOM generation, dependency audit, CI/CD scanning |
+| **Cloud Native** | 11+ | K8s audit, gRPC testing, container security |
+| **Red Team** | 29+ | Lateral movement, C2, obfuscation, persistence, credential, AD attacks |
+| **CVE Intel** | 6+ | Multi-source sync, PoC execution, AI generation |
+| **Payload** | 4+ | Smart mutation, WAF bypass, 2000+ payload library |
+
+---
+
+## 💬 Usage Examples
+
+Chat directly in AI editors:
 
 ```
-mcp_stdio_server.py              # MCP server entry
-core/
-  recon/       - Recon engine (StandardReconEngine)
-  c2/          - C2 (Beacon/DNS/HTTP/WebSocket tunnel)
-  lateral/     - Lateral movement (SMB/SSH/WMI)
-  evasion/     - Obfuscation/evasion
-  stealth/     - Stealth communication
-  persistence/ - Persistence
-  credential/  - Credential harvesting
-  ad/          - AD attacks
-  cve/         - CVE intel & PoC engine
-  exploit/     - Exploitation
-modules/
-  api_security/    - JWT/CORS/GraphQL/WebSocket security
-  supply_chain/    - SBOM/dependency scan/CI-CD security
-  cloud_security/  - K8s/gRPC security
-  enhanced_detectors/ - Advanced vulnerability detectors
-  recon/, vuln_scan/, web_attack/, exploit/
-tools/           - MCP tool definitions
-utils/, config/, templates/, tests/
+🔍 "Perform full recon on example.com and generate report"
+🔍 "Scan 192.168.1.0/24 for open ports and identify services"
+🔍 "Check target for Log4j/Shiro vulnerabilities"
+🔍 "Run JWT security scan on target API"
+🔍 "Generate SBOM and scan for dependency vulnerabilities"
+🔍 "Detect privileged containers in K8s cluster"
 ```
 
 ---
 
-## ✨ Version Highlights
+## 📁 Project Structure
 
-### v2.6.0 (2026-01-07) - API & Cloud Native Security
+```
+AutoRedTeam-Orchestrator/
+├── mcp_stdio_server.py      # MCP server entry
+├── tools/                   # MCP tool definitions (12 modules)
+│   ├── recon_tools.py       # Recon tools
+│   ├── vuln_tools.py        # Vuln detection
+│   ├── ai_tools.py          # AI decision
+│   ├── pentest_tools.py     # Pentest tools
+│   └── pipeline_tools.py    # Pipeline tools
+├── core/
+│   ├── recon/               # Recon engine (StandardReconEngine)
+│   ├── pipeline.py          # Vulnerability pipeline
+│   ├── c2/                  # C2 communication
+│   ├── lateral/             # Lateral movement
+│   ├── evasion/             # Obfuscation
+│   ├── persistence/         # Persistence
+│   ├── credential/          # Credential harvesting
+│   ├── ad/                  # AD attacks
+│   └── cve/                 # CVE intelligence
+├── modules/
+│   ├── api_security/        # API security
+│   ├── supply_chain/        # Supply chain security
+│   ├── cloud_security/      # Cloud native security
+│   └── smart_cache.py       # Smart cache
+└── utils/                   # Utilities
+```
 
-- **API Security**:
-  - JWT: None algorithm / algorithm confusion / weak secret / KID injection
-  - CORS: 30+ Origin bypass techniques
-  - Security headers: OWASP-based weighted scoring system
-  - GraphQL: Introspection / batch DoS / deep nesting / alias overload
-  - WebSocket: Origin bypass / CSWSH / auth bypass / compression attack
-- **Supply Chain Security**:
-  - SBOM: CycloneDX/SPDX format support
-  - Dependency scan: OSV API integration (PyPI/npm/Go/Maven)
-  - CI/CD scan: GitHub Actions/GitLab CI/Jenkins risk detection
-- **Cloud Native Security**:
-  - K8s audit: Privileged containers / hostPath / RBAC / NetworkPolicy / Secrets
-  - K8s manifest scan: YAML config security analysis
-  - gRPC: Reflection API / TLS config / auth bypass
-- **Total tools**: 130+ (40+ new API/supply chain/cloud tools)
+---
+
+## 📋 Changelog
+
+### v2.7.0 (2026-01-09) - Architecture Refactoring
+
+- **Modular refactoring**: Split mcp_stdio_server.py into 12 independent tool modules
+- **Unified registration**: ToolRegistry for centralized tool management
+- **Recon engine**: Merged into StandardReconEngine (10 phases)
+- **Pipeline mechanism**: Fingerprint→POC→Weak password→Attack chain automation
+- **Cache optimization**: CacheType enum with backward compatibility
+- **Code cleanup**: Removed 4,351 lines of redundant code
+
+### v2.6.0 (2026-01-07) - API/Supply Chain/Cloud Security
+
+- JWT/CORS/GraphQL/WebSocket security testing
+- SBOM generation (CycloneDX/SPDX)
+- K8s/gRPC security audit
+- 130+ tools
+
+<details>
+<summary>View more versions</summary>
 
 ### v2.5.0 (2026-01-06)
+- CVE multi-source sync & AI PoC generation
+- Enhanced C2 covert communication
+- 100+ tools
 
-- CVE intel & PoC: Multi-source sync, AI PoC generation, YAML PoC engine
-- C2 stealth: WebSocket tunnel, chunked transfer, proxy chain
-- Frontend security: JS analyzer, source map leak detection
-- 100+ tools, async scan optimization
+</details>
 
 ---
 
@@ -236,23 +252,29 @@ utils/, config/, templates/, tests/
 
 - [ ] Web UI
 - [ ] Distributed scanning
-- [ ] More clouds (GCP/Alibaba Cloud)
+- [ ] More cloud platforms (GCP/Alibaba Cloud)
 - [ ] AI automated exploitation
-- [x] Red-team modules (lateral/C2/evasion/persistence/creds/AD)
-- [x] CVE multi-source sync & AI PoC
-- [x] API / supply chain / cloud extensions
+- [x] Full Red Team toolkit
+- [x] CVE intelligence & AI PoC
+- [x] API/Supply Chain/Cloud security
+- [x] Modular architecture refactoring
 
 ---
 
-## ⚖️ Legal
+## ⚖️ Disclaimer
 
-Authorized security testing/research only. Obtain written consent, follow local law and ethics. Misuse is prohibited.
+> This tool is for **authorized security testing and research only**. Obtain written authorization before testing any target. Comply with local laws and professional ethics. Misuse is at your own risk.
 
 ---
 
-## 🤝 Contributing & Contact
+## 🤝 Contact
 
-- PRs/Issues welcome (see CONTRIBUTING.md, CODE_OF_CONDUCT.md)
-- Discord: <https://discord.gg/PtVyrMvB>
-- Email: <Coff0xc@protonmail.com>
-- Issues: <https://github.com/Coff0xc/AutoRedTeam-Orchestrator/issues>
+<div align="center">
+
+[![Discord](https://img.shields.io/badge/Discord-Join-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/PtVyrMvB)
+[![Email](https://img.shields.io/badge/Email-Contact-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:Coff0xc@protonmail.com)
+[![Issues](https://img.shields.io/badge/Issues-Report-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Coff0xc/AutoRedTeam-Orchestrator/issues)
+
+**Made with ❤️ by [Coff0xc](https://github.com/Coff0xc)**
+
+</div>
