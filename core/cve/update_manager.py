@@ -13,6 +13,8 @@ import asyncio
 import aiohttp
 import hashlib
 import tempfile
+import atexit
+import shutil
 from typing import List, Dict, Optional, Set, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -145,6 +147,66 @@ class CVEUpdateManager:
 
         # NVD API Key (可选,提高速率限制到50 req/30s)
         self.nvd_api_key = os.getenv("NVD_API_KEY")
+
+        # 清理过期缓存文件
+        self._cleanup_old_cache()
+
+        # 注册退出时的清理函数
+        atexit.register(self._cleanup_on_exit)
+
+    def _cleanup_old_cache(self, max_age_days: int = 7):
+        """清理过期的缓存文件
+
+        Args:
+            max_age_days: 最大缓存天数 (默认7天)
+        """
+        if not self.cache_dir.exists():
+            return
+
+        try:
+            now = datetime.now()
+            cutoff = now - timedelta(days=max_age_days)
+            cleaned_count = 0
+            cleaned_size = 0
+
+            for cache_file in self.cache_dir.iterdir():
+                if cache_file.is_file():
+                    # 获取文件修改时间
+                    mtime = datetime.fromtimestamp(cache_file.stat().st_mtime)
+                    if mtime < cutoff:
+                        file_size = cache_file.stat().st_size
+                        cache_file.unlink()
+                        cleaned_count += 1
+                        cleaned_size += file_size
+
+            if cleaned_count > 0:
+                logger.info(f"清理过期缓存: {cleaned_count} 个文件, {cleaned_size / 1024:.1f} KB")
+
+        except Exception as e:
+            logger.warning(f"清理缓存文件失败: {e}")
+
+    def _cleanup_on_exit(self):
+        """程序退出时的清理函数"""
+        try:
+            # 清理空的缓存目录
+            if self.cache_dir.exists() and not any(self.cache_dir.iterdir()):
+                self.cache_dir.rmdir()
+                logger.debug(f"清理空缓存目录: {self.cache_dir}")
+
+            # 清理临时下载文件
+            temp_pattern = "cve_temp_*"
+            temp_dir = Path(tempfile.gettempdir())
+            for temp_file in temp_dir.glob(temp_pattern):
+                try:
+                    if temp_file.is_file():
+                        temp_file.unlink()
+                    elif temp_file.is_dir():
+                        shutil.rmtree(temp_file)
+                except Exception:
+                    pass
+
+        except Exception as e:
+            logger.debug(f"退出清理失败 (可忽略): {e}")
 
     def _init_database(self):
         """初始化SQLite数据库"""

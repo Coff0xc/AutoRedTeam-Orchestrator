@@ -1,4 +1,5 @@
 # 🔥 AutoRedTeam-Orchestrator
+
 [中文](README.md)
 
 > AI-driven automated red-team orchestration framework, cross-platform (Linux / Windows), integrating 130+ security tools and 2000+ payloads. MCP-native for Windsurf / Cursor / Claude Desktop / Kiro.
@@ -17,8 +18,9 @@
 ---
 
 ## 🧭 Overview
+
 - **AI-first**: Intelligent fingerprinting, attack-chain planning, history-aware recommendations, auto payload/tool selection via `modules/ai_decision_engine.py`, `core/attack_chain.py`.
-- **End-to-end automation**: Subdomain/port/WAF/fingerprint → vulnerability discovery/verification → reporting (`auto_recon.py`, `core/complete_recon_toolkit.py`, `modules/async_scanner.py`).
+- **End-to-end automation**: Subdomain/port/WAF/fingerprint → vulnerability discovery/verification → reporting (`core/recon/standard.py`, `modules/async_scanner.py`).
 - **Red-team modules**: Lateral movement (SMB/SSH/WMI), C2 (Beacon/DNS/HTTP/WebSocket), obfuscation/evasion, stealth traffic, persistence, credentials, AD attacks.
 - **Security extensions**: API security (JWT/CORS/Headers/GraphQL/WebSocket), supply chain (CycloneDX/SPDX SBOM, OSV audit, CI/CD scan), cloud native (K8s/gRPC).
 - **Performance**: Async scanner, HTTP pool, task queue, multi-layer cache, performance monitor, response filter.
@@ -29,22 +31,26 @@
 ## 🛠️ Capability Matrix
 
 ### Recon
-- Auto/Deep recon: `auto_recon.py`, `core/complete_recon_toolkit.py`
+
+- Auto/Deep recon: `core/recon/standard.py`, `modules/recon/web_recon_tools.py`
 - Port/Service: `modules/recon/nmap_tools.py`, `modules/network/service_tools.py`
 - Subdomain/DNS/OSINT: `modules/recon/subdomain_tools.py`, `modules/recon/dns_tools.py`
 - WAF/Fingerprint: `modules/component_fingerprint.py`
 - JS/Frontend: `modules/js_analyzer.py`
 
 ### Vulnerability Scanning
+
 - Nuclei/Nikto/SSL: `modules/vuln_scan/nuclei_tools.py`, `modules/vuln_scan/ssl_tools.py`
 - Deep vulns (Shiro/Log4j/SQLi/XSS): `modules/enhanced_detector_tools.py`, `modules/web_attack/*`
 
 ### API / Supply Chain / Cloud
+
 - API security: `modules/api_security_tools.py`, `modules/api_security/graphql_security.py`, `modules/api_security/websocket_security.py`
 - Supply chain: `modules/supply_chain_tools.py`, `modules/supply_chain/sbom_generator.py`, `modules/supply_chain/dependency_scanner.py`
 - Cloud: `modules/cloud_security_tools.py`, `modules/cloud_security/kubernetes_enhanced.py`, `modules/cloud_security/grpc_security.py`
 
 ### Red Team / Post-exploitation
+
 - Lateral movement: `core/lateral/smb_lateral.py`, `core/lateral/ssh_lateral.py`, `core/lateral/wmi_lateral.py`
 - C2 & stealth: `core/c2/beacon.py`, `core/c2/tunnels.py`, `core/c2/websocket_tunnel.py`
 - Evasion: `core/evasion/payload_obfuscator.py`
@@ -52,6 +58,7 @@
 - Credentials & AD: `core/credential/credential_dumper.py`, `core/ad/ad_enum.py`, `core/ad/kerberos_attack.py`
 
 ### CVE Subsystem
+
 - Multi-source sync: `core/cve/update_manager.py` (NVD/Nuclei/Exploit-DB)
 - AI PoC generation: `core/cve/ai_poc_generator.py`
 
@@ -60,24 +67,24 @@
 ## ⚡ Quick Start
 
 ### 1) Clone & Install
+
 ```bash
 git clone https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git
 cd AutoRedTeam-Orchestrator
 
-# Linux / WSL
-chmod +x setup.sh
-sudo ./setup.sh
+# Install Python dependencies
 pip install -r requirements.txt
 cp config/config.yaml.example config/config.yaml
 ```
 
-Windows:
-- Run `pip install -r requirements.txt`
-- External tools (nmap/nuclei) need manual install or WSL; MCP server runs natively.
+**External Tools:**
+
+- Linux/WSL: Use package manager to install `nmap`, `nuclei`, `subfinder`, etc.
+- Windows: Manual install or use WSL; MCP server runs natively.
 
 ### 2) Quick Test
+
 ```bash
-python auto_recon.py https://example.com
 python mcp_stdio_server.py
 python core/cve/update_manager.py sync
 ```
@@ -87,7 +94,9 @@ python core/cve/update_manager.py sync
 ## 🚀 MCP Configuration
 
 ### Claude Desktop / Claude Code
+
 Config path:
+
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json` or `~/.claude/mcp.json`
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Linux**: `~/.config/claude/claude_desktop_config.json`
@@ -107,6 +116,7 @@ Config path:
 ```
 
 ### Cursor
+
 Config path: `~/.cursor/mcp.json`
 
 ```json
@@ -121,6 +131,7 @@ Config path: `~/.cursor/mcp.json`
 ```
 
 ### Windsurf
+
 Config path: `~/.codeium/windsurf/mcp_config.json`
 
 ```json
@@ -138,6 +149,7 @@ Config path: `~/.codeium/windsurf/mcp_config.json`
 ```
 
 ### Kiro
+
 Config path: `~/.kiro/mcp.json`
 
 ```json
@@ -152,10 +164,12 @@ Config path: `~/.kiro/mcp.json`
 ```
 
 ### Usage Examples
+
 Natural language commands in editor:
+
 - "Perform full recon on example.com and generate a report"
 - "Scan 192.168.1.0/24 for open ports"
-- "Check https://target.com for Log4j/Shiro vulnerabilities"
+- "Check <https://target.com> for Log4j/Shiro vulnerabilities"
 - "Run JWT security scan on the target API"
 - "Generate SBOM and scan dependencies for vulnerabilities"
 - "Detect privileged containers in K8s cluster"
@@ -163,9 +177,11 @@ Natural language commands in editor:
 ---
 
 ## 🗂️ Directory Structure
+
 ```
-main.py / mcp_stdio_server.py / auto_recon.py
+mcp_stdio_server.py              # MCP server entry
 core/
+  recon/       - Recon engine (StandardReconEngine)
   c2/          - C2 (Beacon/DNS/HTTP/WebSocket tunnel)
   lateral/     - Lateral movement (SMB/SSH/WMI)
   evasion/     - Obfuscation/evasion
@@ -181,6 +197,7 @@ modules/
   cloud_security/  - K8s/gRPC security
   enhanced_detectors/ - Advanced vulnerability detectors
   recon/, vuln_scan/, web_attack/, exploit/
+tools/           - MCP tool definitions
 utils/, config/, templates/, tests/
 ```
 
@@ -189,6 +206,7 @@ utils/, config/, templates/, tests/
 ## ✨ Version Highlights
 
 ### v2.6.0 (2026-01-07) - API & Cloud Native Security
+
 - **API Security**:
   - JWT: None algorithm / algorithm confusion / weak secret / KID injection
   - CORS: 30+ Origin bypass techniques
@@ -206,6 +224,7 @@ utils/, config/, templates/, tests/
 - **Total tools**: 130+ (40+ new API/supply chain/cloud tools)
 
 ### v2.5.0 (2026-01-06)
+
 - CVE intel & PoC: Multi-source sync, AI PoC generation, YAML PoC engine
 - C2 stealth: WebSocket tunnel, chunked transfer, proxy chain
 - Frontend security: JS analyzer, source map leak detection
@@ -214,6 +233,7 @@ utils/, config/, templates/, tests/
 ---
 
 ## 🛤️ Roadmap
+
 - [ ] Web UI
 - [ ] Distributed scanning
 - [ ] More clouds (GCP/Alibaba Cloud)
@@ -225,12 +245,14 @@ utils/, config/, templates/, tests/
 ---
 
 ## ⚖️ Legal
+
 Authorized security testing/research only. Obtain written consent, follow local law and ethics. Misuse is prohibited.
 
 ---
 
 ## 🤝 Contributing & Contact
+
 - PRs/Issues welcome (see CONTRIBUTING.md, CODE_OF_CONDUCT.md)
-- Discord: https://discord.gg/PtVyrMvB
-- Email: Coff0xc@protonmail.com
-- Issues: https://github.com/Coff0xc/AutoRedTeam-Orchestrator/issues
+- Discord: <https://discord.gg/PtVyrMvB>
+- Email: <Coff0xc@protonmail.com>
+- Issues: <https://github.com/Coff0xc/AutoRedTeam-Orchestrator/issues>

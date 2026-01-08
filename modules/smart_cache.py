@@ -9,13 +9,24 @@ import hashlib
 import json
 import threading
 import logging
-from typing import Any, Dict, Optional, Callable, TypeVar, Generic
+from enum import Enum
+from typing import Any, Dict, Optional, Callable, TypeVar, Generic, Union
 from dataclasses import dataclass, field
 from collections import OrderedDict
 from pathlib import Path
 from functools import wraps
 
 logger = logging.getLogger(__name__)
+
+
+class CacheType(str, Enum):
+    """缓存类型枚举 - 继承str实现向后兼容"""
+    DNS = "dns"
+    TECH = "tech"
+    CVE = "cve"
+    PAYLOAD = "payload"
+    RECON = "recon"
+    VULN = "vuln"
 
 T = TypeVar('T')
 
@@ -192,30 +203,33 @@ class SmartCache:
         except Exception as e:
             logger.warning(f"保存持久化缓存失败: {e}")
 
-    def get(self, cache_type: str, key: str) -> Optional[Any]:
+    def get(self, cache_type: Union[CacheType, str], key: str) -> Optional[Any]:
         """获取缓存"""
-        if cache_type not in self._caches:
+        ct = str(cache_type)
+        if ct not in self._caches:
             return None
-        return self._caches[cache_type].get(key)
+        return self._caches[ct].get(key)
 
-    def set(self, cache_type: str, key: str, value: Any, ttl: Optional[float] = None):
+    def set(self, cache_type: Union[CacheType, str], key: str, value: Any, ttl: Optional[float] = None):
         """设置缓存"""
-        if cache_type not in self._caches:
-            # 动态创建缓存
-            self._caches[cache_type] = LRUCache(maxsize=500, default_ttl=ttl or 300)
-        self._caches[cache_type].set(key, value, ttl)
+        ct = str(cache_type)
+        if ct not in self._caches:
+            self._caches[ct] = LRUCache(maxsize=500, default_ttl=ttl or 300)
+        self._caches[ct].set(key, value, ttl)
 
-    def delete(self, cache_type: str, key: str) -> bool:
+    def delete(self, cache_type: Union[CacheType, str], key: str) -> bool:
         """删除缓存"""
-        if cache_type not in self._caches:
+        ct = str(cache_type)
+        if ct not in self._caches:
             return False
-        return self._caches[cache_type].delete(key)
+        return self._caches[ct].delete(key)
 
-    def clear(self, cache_type: Optional[str] = None):
+    def clear(self, cache_type: Optional[Union[CacheType, str]] = None):
         """清空缓存"""
         if cache_type:
-            if cache_type in self._caches:
-                self._caches[cache_type].clear()
+            ct = str(cache_type)
+            if ct in self._caches:
+                self._caches[ct].clear()
         else:
             for cache in self._caches.values():
                 cache.clear()
@@ -258,38 +272,34 @@ class SmartCache:
         return self.get("cve", keyword)
 
 
-def cached(cache_type: str, key_func: Optional[Callable] = None, ttl: Optional[float] = None):
+def cached(cache_type: Union[CacheType, str], key_func: Optional[Callable] = None, ttl: Optional[float] = None):
     """缓存装饰器"""
+    ct = str(cache_type)
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # 生成缓存键
             if key_func:
                 cache_key = key_func(*args, **kwargs)
             else:
-                # 默认使用参数哈希
                 key_data = json.dumps({"args": args, "kwargs": kwargs}, sort_keys=True, default=str)
                 cache_key = hashlib.md5(key_data.encode()).hexdigest()
 
-            # 尝试从缓存获取
             cache = get_smart_cache()
-            cached_value = cache.get(cache_type, cache_key)
+            cached_value = cache.get(ct, cache_key)
             if cached_value is not None:
                 return cached_value
 
-            # 执行函数
             result = func(*args, **kwargs)
-
-            # 存入缓存
-            cache.set(cache_type, cache_key, result, ttl)
+            cache.set(ct, cache_key, result, ttl)
             return result
 
         return wrapper
     return decorator
 
 
-def async_cached(cache_type: str, key_func: Optional[Callable] = None, ttl: Optional[float] = None):
+def async_cached(cache_type: Union[CacheType, str], key_func: Optional[Callable] = None, ttl: Optional[float] = None):
     """异步缓存装饰器"""
+    ct = str(cache_type)
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -300,12 +310,12 @@ def async_cached(cache_type: str, key_func: Optional[Callable] = None, ttl: Opti
                 cache_key = hashlib.md5(key_data.encode()).hexdigest()
 
             cache = get_smart_cache()
-            cached_value = cache.get(cache_type, cache_key)
+            cached_value = cache.get(ct, cache_key)
             if cached_value is not None:
                 return cached_value
 
             result = await func(*args, **kwargs)
-            cache.set(cache_type, cache_key, result, ttl)
+            cache.set(ct, cache_key, result, ttl)
             return result
 
         return wrapper
