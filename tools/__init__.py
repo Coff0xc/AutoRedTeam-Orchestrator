@@ -122,6 +122,15 @@ def register_all_tools(mcp) -> List[str]:
     except ImportError as e:
         print(f"[-] 流水线工具注册失败: {e}")
 
+    # 12. Web 扫描工具 (攻面发现 + 编排式扫描)
+    try:
+        from .web_scan_tools import register_web_scan_tools
+        tools = register_web_scan_tools(mcp)
+        all_tools.extend(tools if tools else [])
+        print(f"[+] Web扫描工具已注册: {len(tools) if tools else 0} 个")
+    except ImportError as e:
+        print(f"[-] Web扫描工具注册失败: {e}")
+
     print(f"\n[*] 工具注册完成，共 {len(all_tools)} 个工具")
     return all_tools
 

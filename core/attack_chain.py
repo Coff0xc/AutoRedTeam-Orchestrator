@@ -62,37 +62,37 @@ class AttackChainEngine:
     # 技术到工具的映射
     TECHNIQUE_TOOLS = {
         # 侦察阶段
-        "active_scanning": ["nmap_scan", "masscan"],
+        "active_scanning": ["nmap_scan", "port_scan"],
         "passive_recon": ["shodan_lookup", "censys_lookup"],
-        "subdomain_enum": ["subfinder", "amass", "assetfinder"],
-        "dns_recon": ["dns_enum", "dnsrecon"],
-        "web_fingerprint": ["whatweb", "wappalyzer"],
-        
+        "subdomain_enum": ["subfinder_enum", "subdomain_bruteforce"],
+        "dns_recon": ["dns_lookup"],
+        "web_fingerprint": ["whatweb_scan", "tech_detect"],
+
         # 漏洞发现
-        "vuln_scan": ["nuclei_scan", "nikto_scan"],
-        "ssl_analysis": ["sslscan", "testssl"],
-        "web_vuln_scan": ["zap_scan", "nikto_scan"],
-        
+        "vuln_scan": ["nuclei_scan", "vuln_check"],
+        "ssl_analysis": ["sslscan_scan", "ssl_info"],
+        "web_vuln_scan": ["vuln_check", "sqli_detect", "xss_detect"],
+
         # 初始访问
-        "exploit_public_app": ["sqlmap", "xsstrike"],
-        "brute_force": ["hydra", "medusa"],
-        "default_creds": ["crackmapexec"],
-        
+        "exploit_public_app": ["sqlmap_scan", "sqli_detect"],
+        "brute_force": ["hydra_scan", "weak_password_detect"],
+        "default_creds": ["weak_password_detect"],
+
         # 执行
-        "command_injection": ["commix"],
-        "script_execution": ["reverse_shell"],
-        
+        "command_injection": ["cmd_inject_detect"],
+        "script_execution": ["reverse_shell_gen"],
+
         # 权限提升
-        "linux_privesc": ["linpeas", "linux_exploit_suggester"],
-        "windows_privesc": ["winpeas", "powerup"],
-        
+        "linux_privesc": ["credential_find_secrets"],
+        "windows_privesc": ["credential_find_secrets"],
+
         # 凭证访问
-        "credential_dump": ["mimikatz", "secretsdump"],
-        "password_crack": ["hashcat", "john"],
-        
+        "credential_dump": ["credential_dump"],
+        "password_crack": ["weak_password_detect"],
+
         # 横向移动
-        "smb_lateral": ["crackmapexec", "psexec"],
-        "ssh_lateral": ["ssh_bruteforce"],
+        "smb_lateral": ["lateral_smb_exec"],
+        "ssh_lateral": ["lateral_ssh_exec"],
     }
     
     # 攻击阶段流程

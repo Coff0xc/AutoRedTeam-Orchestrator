@@ -201,6 +201,148 @@ def register_external_tools(mcp):
         return run_cmd(cmd, 300)
 
     @mcp.tool()
+    def whatweb_scan(url: str, aggression: int = 1) -> dict:
+        """WhatWeb Web指纹识别 - 需要安装whatweb
+
+        Args:
+            url: 目标URL
+            aggression: 扫描强度 1(安静)-4(激进)
+        """
+        valid, err = validate_cli_target(url)
+        if not valid:
+            return {"success": False, "error": err}
+        if aggression not in [1, 2, 3, 4]:
+            return {"success": False, "error": "aggression必须是1-4之间的整数"}
+
+        if not check_tool("whatweb"):
+            return {"success": False, "error": "whatweb未安装。Linux: apt install whatweb | macOS: brew install whatweb"}
+
+        cmd = ["whatweb", "-a", str(aggression), "--color=never", "-q", url]
+        return run_cmd(cmd, 60)
+
+    @mcp.tool()
+    def wafw00f_scan(url: str) -> dict:
+        """WAF检测 - 需要安装wafw00f
+
+        Args:
+            url: 目标URL
+        """
+        valid, err = validate_cli_target(url)
+        if not valid:
+            return {"success": False, "error": err}
+
+        if not check_tool("wafw00f"):
+            return {"success": False, "error": "wafw00f未安装。安装: pip install wafw00f 或 https://github.com/EnableSecurity/wafw00f"}
+
+        cmd = ["wafw00f", "-a", url]
+        return run_cmd(cmd, 60)
+
+    @mcp.tool()
+    def dirsearch_scan(url: str, extensions: str = "php,asp,aspx,jsp,html,js", threads: int = 10) -> dict:
+        """目录扫描 - 需要安装dirsearch
+
+        Args:
+            url: 目标URL
+            extensions: 文件扩展名，逗号分隔
+            threads: 并发线程数
+        """
+        valid, err = validate_cli_target(url)
+        if not valid:
+            return {"success": False, "error": err}
+        if extensions.startswith('-'):
+            return {"success": False, "error": "extensions参数不能以'-'开头"}
+
+        if not check_tool("dirsearch"):
+            return {"success": False, "error": "dirsearch未安装。安装: pip install dirsearch 或 https://github.com/maurosoria/dirsearch"}
+
+        cmd = ["dirsearch", "-u", url, "-e", extensions, "-t", str(threads), "--format=plain", "-q"]
+        return run_cmd(cmd, 300)
+
+    @mcp.tool()
+    def ffuf_scan(url: str, wordlist: str, method: str = "GET", threads: int = 40) -> dict:
+        """Ffuf模糊测试 - 需要安装ffuf
+
+        Args:
+            url: 目标URL，使用FUZZ标记模糊位置 (如 http://target.com/FUZZ)
+            wordlist: 字典文件路径
+            method: HTTP方法
+            threads: 并发线程数
+        """
+        valid, err = validate_cli_target(url)
+        if not valid:
+            return {"success": False, "error": err}
+        if wordlist.startswith('-'):
+            return {"success": False, "error": "wordlist参数不能以'-'开头"}
+        if not os.path.isfile(wordlist):
+            return {"success": False, "error": f"字典文件不存在: {wordlist}"}
+        if method.upper() not in ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"]:
+            return {"success": False, "error": f"不支持的HTTP方法: {method}"}
+
+        if not check_tool("ffuf"):
+            return {"success": False, "error": "ffuf未安装。安装: https://github.com/ffuf/ffuf 或 go install github.com/ffuf/ffuf@latest"}
+
+        cmd = ["ffuf", "-u", url, "-w", wordlist, "-X", method.upper(), "-t", str(threads), "-s"]
+        return run_cmd(cmd, 300)
+
+    @mcp.tool()
+    def hydra_scan(target: str, service: str, userlist: str, passlist: str, port: int = None, threads: int = 16) -> dict:
+        """Hydra密码爆破 - 需要安装hydra
+
+        Args:
+            target: 目标主机
+            service: 服务类型 (ssh, ftp, mysql, rdp, smb, http-get等)
+            userlist: 用户名字典文件路径
+            passlist: 密码字典文件路径
+            port: 服务端口 (默认使用服务标准端口)
+            threads: 并发线程数
+        """
+        valid, err = validate_cli_target(target)
+        if not valid:
+            return {"success": False, "error": err}
+
+        # 验证服务类型
+        allowed_services = ["ssh", "ftp", "mysql", "rdp", "smb", "http-get", "http-post",
+                          "http-form-get", "http-form-post", "telnet", "vnc", "postgres",
+                          "mssql", "oracle", "ldap", "imap", "pop3", "smtp"]
+        if service.lower() not in allowed_services:
+            return {"success": False, "error": f"不支持的服务类型: {service}. 支持: {', '.join(allowed_services)}"}
+
+        # 验证字典文件
+        if userlist.startswith('-') or passlist.startswith('-'):
+            return {"success": False, "error": "字典路径不能以'-'开头"}
+        if not os.path.isfile(userlist):
+            return {"success": False, "error": f"用户名字典不存在: {userlist}"}
+        if not os.path.isfile(passlist):
+            return {"success": False, "error": f"密码字典不存在: {passlist}"}
+
+        if not check_tool("hydra"):
+            return {"success": False, "error": "hydra未安装。Linux: apt install hydra | macOS: brew install hydra"}
+
+        cmd = ["hydra", "-L", userlist, "-P", passlist, "-t", str(threads)]
+        if port:
+            cmd.extend(["-s", str(port)])
+        cmd.extend([target, service.lower()])
+        return run_cmd(cmd, 600)
+
+    @mcp.tool()
+    def sslscan_scan(target: str, port: int = 443) -> dict:
+        """SSL/TLS安全扫描 - 需要安装sslscan
+
+        Args:
+            target: 目标主机
+            port: HTTPS端口
+        """
+        valid, err = validate_cli_target(target)
+        if not valid:
+            return {"success": False, "error": err}
+
+        if not check_tool("sslscan"):
+            return {"success": False, "error": "sslscan未安装。Linux: apt install sslscan | macOS: brew install sslscan"}
+
+        cmd = ["sslscan", "--no-colour", f"{target}:{port}"]
+        return run_cmd(cmd, 60)
+
+    @mcp.tool()
     def check_tools() -> dict:
         """检查所有安全工具可用性"""
         tools = {
@@ -214,7 +356,10 @@ def register_external_tools(mcp):
             "wafw00f": "WAF检测",
             "nikto": "Web漏洞扫描",
             "hydra": "密码爆破",
-            "whois": "域名查询"
+            "whois": "域名查询",
+            "dirsearch": "目录扫描(Python)",
+            "ffuf": "模糊测试",
+            "sslscan": "SSL/TLS扫描"
         }
 
         result = {}
@@ -323,4 +468,5 @@ def register_external_tools(mcp):
         }
 
     return ["nmap_scan", "nuclei_scan", "sqlmap_scan", "gobuster_scan",
-            "subfinder_enum", "check_tools", "help_info"]
+            "subfinder_enum", "whatweb_scan", "wafw00f_scan", "dirsearch_scan",
+            "ffuf_scan", "hydra_scan", "sslscan_scan", "check_tools", "help_info"]

@@ -6,7 +6,10 @@ PoC引擎测试脚本
 
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pathlib import Path
+
+# 确保项目根目录在路径中（与 tests/test_v25_integration.py 保持一致）
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.cve import PoCEngine, SeverityLevel
 

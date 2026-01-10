@@ -14,14 +14,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
-def test_header(title: str):
+def print_header(title: str):
     """打印测试标题"""
     print(f"\n{'='*60}")
     print(f"  {title}")
     print(f"{'='*60}\n")
 
 
-def test_result(name: str, success: bool, message: str = ""):
+def print_result(name: str, success: bool, message: str = ""):
     """打印测试结果"""
     status = "[PASS]" if success else "[FAIL]"
     print(f"  {status} {name}")
@@ -41,31 +41,34 @@ class TestV25Integration:
             result = test_func()
             if result:
                 self.results["passed"] += 1
-                test_result(name, True)
+                print_result(name, True)
             else:
                 self.results["failed"] += 1
-                test_result(name, False)
+                print_result(name, False)
         except Exception as e:
             self.results["failed"] += 1
-            test_result(name, False, str(e))
+            print_result(name, False, str(e))
 
     # ========== Phase 1 测试 ==========
 
     def test_source_map_detection(self):
         """测试Source Map泄露检测"""
         try:
-            from mcp_stdio_server import SENSITIVE_FILES
+            # SENSITIVE_FILES 定义在 tools/_common.py 中
+            from tools._common import SENSITIVE_FILES
 
             # 检查是否包含.map文件
             map_files = [f for f in SENSITIVE_FILES if ".map" in f.lower()]
             return len(map_files) >= 5
         except Exception as e:
-            # 直接导入可能因logger问题失败，直接读取文件检查
+            # 如果导入失败，直接读取文件检查
             import re
-            mcp_file = Path(__file__).parent.parent / "mcp_stdio_server.py"
-            content = mcp_file.read_text(encoding='utf-8')
-            map_files = re.findall(r'["\']([\w./]+\.map)["\']', content)
-            return len(map_files) >= 5
+            common_file = Path(__file__).parent.parent / "tools" / "_common.py"
+            if common_file.exists():
+                content = common_file.read_text(encoding='utf-8')
+                map_files = re.findall(r'["\']([\\w./]+\\.map)["\']', content)
+                return len(map_files) >= 5
+            return False
 
     def test_file_upload_payloads(self):
         """测试文件上传Payload增强"""
@@ -203,7 +206,7 @@ class TestV25Integration:
 
     def run_all_tests(self):
         """运行所有测试"""
-        test_header("v2.5 集成测试")
+        print_header("v2.5 集成测试")
 
         # Phase 1 测试
         print("Phase 1: 基础增强")
@@ -248,7 +251,7 @@ class TestV25Integration:
             self.run_test("代理链", lambda: result)
 
         # 打印总结
-        test_header("测试总结")
+        print_header("测试总结")
         print(f"  通过: {self.results['passed']}")
         print(f"  失败: {self.results['failed']}")
         print(f"  跳过: {self.results['skipped']}")
