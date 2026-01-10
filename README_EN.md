@@ -14,7 +14,7 @@
 [![Tools](https://img.shields.io/badge/Tools-130+-FF6B6B?style=for-the-badge)](https://github.com/Coff0xc/AutoRedTeam-Orchestrator)
 [![Payloads](https://img.shields.io/badge/Payloads-2000+-orange?style=for-the-badge)](https://github.com/Coff0xc/AutoRedTeam-Orchestrator)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.7.0-blue?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.7.1-blue?style=for-the-badge)](CHANGELOG.md)
 
 </div>
 
@@ -163,6 +163,7 @@ Config file: `~/.kiro/mcp.json`
 |----------|-------|----------|
 | **Recon** | 12+ | Port scan, subdomain enum, DNS query, WAF detection, fingerprinting, JS analysis |
 | **Vuln Detection** | 19+ | SQLi, XSS, SSRF, XXE, SSTI, LFI, CSRF, command injection, deserialization |
+| **Web Scanner** | 2+ | Attack surface discovery, injection point extraction, orchestrated scanning |
 | **API Security** | 11+ | JWT testing, CORS bypass, GraphQL security, WebSocket security, security headers |
 | **Supply Chain** | 9+ | SBOM generation, dependency audit, CI/CD scanning |
 | **Cloud Native** | 11+ | K8s audit, gRPC testing, container security |
@@ -183,6 +184,8 @@ Chat directly in AI editors:
 🔍 "Run JWT security scan on target API"
 🔍 "Generate SBOM and scan for dependency vulnerabilities"
 🔍 "Detect privileged containers in K8s cluster"
+🔍 "Discover attack surface and extract injection points from example.com"
+🔍 "Run web vulnerability scan (SQLi/XSS/SSRF) on target"
 ```
 
 ---
@@ -192,12 +195,13 @@ Chat directly in AI editors:
 ```
 AutoRedTeam-Orchestrator/
 ├── mcp_stdio_server.py      # MCP server entry
-├── tools/                   # MCP tool definitions (12 modules)
+├── tools/                   # MCP tool definitions (13 modules)
 │   ├── recon_tools.py       # Recon tools
 │   ├── vuln_tools.py        # Vuln detection
 │   ├── ai_tools.py          # AI decision
 │   ├── pentest_tools.py     # Pentest tools
-│   └── pipeline_tools.py    # Pipeline tools
+│   ├── pipeline_tools.py    # Pipeline tools
+│   └── web_scan_tools.py    # Web scan orchestration
 ├── core/
 │   ├── recon/               # Recon engine (StandardReconEngine)
 │   ├── pipeline.py          # Vulnerability pipeline
@@ -212,13 +216,23 @@ AutoRedTeam-Orchestrator/
 │   ├── api_security/        # API security
 │   ├── supply_chain/        # Supply chain security
 │   ├── cloud_security/      # Cloud native security
+│   ├── web_scanner/         # Web scanner engine (attack surface/injection point)
 │   └── smart_cache.py       # Smart cache
+├── wordlists/               # Security testing dictionaries (dirs/passwords/usernames/subdomains)
 └── utils/                   # Utilities
 ```
 
 ---
 
 ## 📋 Changelog
+
+### v2.7.1 (2026-01-10) - Web Scanner Engine
+
+- **Web Scanner module**: Attack surface discovery & injection point modeling
+  - `web_discover`: Auto-discover forms, links, JS API endpoints
+  - `web_scan`: Orchestrated vulnerability scanning (SQLi/XSS/SSRF)
+- **Built-in wordlists**: Added wordlists directory (directories/passwords/usernames/subdomains)
+- **Tool module**: Added `tools/web_scan_tools.py`
 
 ### v2.7.0 (2026-01-09) - Architecture Refactoring
 

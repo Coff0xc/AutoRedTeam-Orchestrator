@@ -14,7 +14,7 @@
 [![Tools](https://img.shields.io/badge/Tools-130+-FF6B6B?style=for-the-badge)](https://github.com/Coff0xc/AutoRedTeam-Orchestrator)
 [![Payloads](https://img.shields.io/badge/Payloads-2000+-orange?style=for-the-badge)](https://github.com/Coff0xc/AutoRedTeam-Orchestrator)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.7.0-blue?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.7.1-blue?style=for-the-badge)](CHANGELOG.md)
 
 </div>
 
@@ -163,6 +163,7 @@ python mcp_stdio_server.py
 |------|--------|------|
 | **侦察 Recon** | 12+ | 端口扫描、子域枚举、DNS查询、WAF检测、指纹识别、JS分析 |
 | **漏洞检测** | 19+ | SQLi、XSS、SSRF、XXE、SSTI、LFI、CSRF、命令注入、反序列化 |
+| **Web 扫描** | 2+ | 攻面发现、注入点抽取、编排式漏洞扫描 |
 | **API 安全** | 11+ | JWT测试、CORS绕过、GraphQL安全、WebSocket安全、安全头评分 |
 | **供应链安全** | 9+ | SBOM生成、依赖审计、CI/CD扫描 |
 | **云原生安全** | 11+ | K8s审计、gRPC测试、容器安全 |
@@ -183,6 +184,8 @@ python mcp_stdio_server.py
 🔍 "对目标 API 执行 JWT 安全扫描"
 🔍 "生成项目的 SBOM 并扫描依赖漏洞"
 🔍 "检测 K8s 集群中的特权容器"
+🔍 "发现 example.com 的攻击面并提取注入点"
+🔍 "对目标执行 Web 漏洞扫描 (SQLi/XSS/SSRF)"
 ```
 
 ---
@@ -192,12 +195,13 @@ python mcp_stdio_server.py
 ```
 AutoRedTeam-Orchestrator/
 ├── mcp_stdio_server.py      # MCP 服务器入口
-├── tools/                   # MCP 工具定义 (12 模块)
+├── tools/                   # MCP 工具定义 (13 模块)
 │   ├── recon_tools.py       # 侦察工具
 │   ├── vuln_tools.py        # 漏洞检测
 │   ├── ai_tools.py          # AI 决策
 │   ├── pentest_tools.py     # 渗透测试
-│   └── pipeline_tools.py    # 流水线工具
+│   ├── pipeline_tools.py    # 流水线工具
+│   └── web_scan_tools.py    # Web 扫描编排
 ├── core/
 │   ├── recon/               # 侦察引擎 (StandardReconEngine)
 │   ├── pipeline.py          # 漏洞检测流水线
@@ -212,13 +216,23 @@ AutoRedTeam-Orchestrator/
 │   ├── api_security/        # API 安全
 │   ├── supply_chain/        # 供应链安全
 │   ├── cloud_security/      # 云原生安全
+│   ├── web_scanner/         # Web 扫描引擎 (攻面发现/注入点建模)
 │   └── smart_cache.py       # 智能缓存
+├── wordlists/               # 安全测试字典 (目录/密码/用户名/子域名)
 └── utils/                   # 工具函数
 ```
 
 ---
 
 ## 📋 更新日志
+
+### v2.7.1 (2026-01-10) - Web 扫描引擎
+
+- **Web Scanner 模块**: 攻面发现与注入点建模引擎
+  - `web_discover`: 自动发现表单、链接、JS API 端点
+  - `web_scan`: 编排式漏洞扫描，支持 SQLi/XSS/SSRF 等
+- **内置字典**: 新增 wordlists 目录 (目录/密码/用户名/子域名)
+- **工具模块**: 新增 `tools/web_scan_tools.py`
 
 ### v2.7.0 (2026-01-09) - 架构重构
 
