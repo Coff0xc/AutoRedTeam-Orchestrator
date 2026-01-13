@@ -1,18 +1,76 @@
 #!/usr/bin/env python3
 """
 配置管理器 - 统一配置加载和管理
-优化点: 统一配置管理，支持环境变量覆盖
+优化点: 统一配置管理，支持环境变量覆盖，跨平台路径支持
 """
 
 import os
+import sys
 import yaml
 import logging
+import tempfile
 from typing import Any, Dict, Optional
 from pathlib import Path
 from dataclasses import dataclass, field
 
 
 logger = logging.getLogger(__name__)
+
+
+def _get_project_root() -> Path:
+    """获取项目根目录"""
+    return Path(__file__).parent.parent
+
+
+def _get_default_wordlist_dir() -> Path:
+    """获取默认字典目录 (跨平台)"""
+    # 优先使用项目内的 wordlists 目录
+    project_wordlists = _get_project_root() / "wordlists"
+    if project_wordlists.exists():
+        return project_wordlists
+
+    # Linux/macOS 系统字典路径
+    if sys.platform != "win32":
+        linux_paths = [
+            Path("/usr/share/wordlists"),
+            Path("/usr/share/seclists"),
+            Path.home() / "wordlists",
+        ]
+        for path in linux_paths:
+            if path.exists():
+                return path
+
+    # Windows 或找不到时，使用项目目录
+    return project_wordlists
+
+
+def _get_platform_wordlist_path(filename: str, subdir: str = "") -> str:
+    """获取跨平台字典文件路径"""
+    base_dir = _get_default_wordlist_dir()
+
+    if subdir:
+        full_path = base_dir / subdir / filename
+    else:
+        full_path = base_dir / filename
+
+    # 如果文件存在，返回绝对路径
+    if full_path.exists():
+        return str(full_path)
+
+    # 否则返回相对路径（允许用户后续配置）
+    return str(full_path)
+
+
+def _get_default_output_dir() -> str:
+    """获取默认输出目录 (跨平台)"""
+    # 优先使用项目内的 reports 目录
+    project_reports = _get_project_root() / "reports"
+    return str(project_reports)
+
+
+def _get_temp_dir() -> str:
+    """获取跨平台临时目录"""
+    return tempfile.gettempdir()
 
 
 @dataclass
@@ -63,11 +121,11 @@ class ScanningConfig:
 
 @dataclass
 class WordlistsConfig:
-    """字典配置"""
-    directories: str = "/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt"
-    passwords: str = "/usr/share/wordlists/rockyou.txt"
-    usernames: str = "/usr/share/seclists/Usernames/top-usernames-shortlist.txt"
-    subdomains: str = "/usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt"
+    """字典配置 (跨平台支持)"""
+    directories: str = field(default_factory=lambda: _get_platform_wordlist_path("directory-list-2.3-medium.txt", "dirbuster"))
+    passwords: str = field(default_factory=lambda: _get_platform_wordlist_path("rockyou.txt"))
+    usernames: str = field(default_factory=lambda: _get_platform_wordlist_path("top-usernames-shortlist.txt", "usernames"))
+    subdomains: str = field(default_factory=lambda: _get_platform_wordlist_path("subdomains-top1million-5000.txt", "dns"))
 
 
 @dataclass
@@ -81,8 +139,8 @@ class APIKeysConfig:
 
 @dataclass
 class ReportingConfig:
-    """报告配置"""
-    output_dir: str = "reports"
+    """报告配置 (跨平台支持)"""
+    output_dir: str = field(default_factory=_get_default_output_dir)
     default_format: str = "html"
     include_raw_output: bool = False
 

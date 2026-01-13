@@ -277,15 +277,70 @@ class AIDecisionEngine:
                             ["nikto", "sslscan", "sqlmap"], ["端口443开放"], 0.5),
             445: AttackVector("SMB攻击", "SMB/CIFS服务攻击", RiskLevel.HIGH,
                             ["smbclient", "enum4linux", "eternal_blue"], ["端口445开放"], 0.7),
+            1433: AttackVector("MSSQL攻击", "MSSQL数据库攻击", RiskLevel.HIGH,
+                             ["hydra", "mssqlclient"], ["端口1433开放"], 0.5),
+            1521: AttackVector("Oracle攻击", "Oracle数据库攻击", RiskLevel.HIGH,
+                             ["hydra", "odat"], ["端口1521开放"], 0.4),
             3306: AttackVector("MySQL攻击", "MySQL数据库攻击", RiskLevel.HIGH,
                              ["hydra", "sqlmap"], ["端口3306开放"], 0.5),
             3389: AttackVector("RDP攻击", "远程桌面攻击", RiskLevel.MEDIUM,
                              ["hydra", "rdp_check"], ["端口3389开放"], 0.4),
+            5432: AttackVector("PostgreSQL攻击", "PostgreSQL数据库攻击", RiskLevel.HIGH,
+                             ["hydra", "psql"], ["端口5432开放"], 0.5),
+            5900: AttackVector("VNC攻击", "VNC远程桌面攻击", RiskLevel.MEDIUM,
+                             ["hydra", "vnc_scanner"], ["端口5900开放"], 0.5),
+            6379: AttackVector("Redis未授权访问", "Redis服务攻击", RiskLevel.CRITICAL,
+                             ["redis-cli", "redis_rce"], ["端口6379开放"], 0.8),
+            8080: AttackVector("Web代理/应用服务器攻击", "应用服务器攻击", RiskLevel.MEDIUM,
+                             ["nikto", "nuclei"], ["端口8080开放"], 0.5),
+            9200: AttackVector("Elasticsearch未授权访问", "ES服务攻击", RiskLevel.HIGH,
+                             ["curl", "es_scanner"], ["端口9200开放"], 0.7),
+            27017: AttackVector("MongoDB未授权访问", "MongoDB服务攻击", RiskLevel.HIGH,
+                              ["mongo", "nosql_scanner"], ["端口27017开放"], 0.7),
         }
         
         for port in ports:
             if port in port_vectors:
                 vectors.append(port_vectors[port])
+        
+        # 基于技术栈的攻击向量
+        tech_vectors = {
+            "wordpress": AttackVector("WordPress攻击", "WP插件/主题漏洞利用", RiskLevel.MEDIUM,
+                                     ["wpscan", "nuclei"], ["WordPress CMS"], 0.6),
+            "spring": AttackVector("Spring框架攻击", "Spring漏洞利用(SPEL/RCE)", RiskLevel.HIGH,
+                                  ["nuclei", "spring_scanner"], ["Spring框架"], 0.7),
+            "struts": AttackVector("Struts2攻击", "Struts2 RCE漏洞利用", RiskLevel.CRITICAL,
+                                  ["struts_scanner", "nuclei"], ["Struts2框架"], 0.8),
+            "thinkphp": AttackVector("ThinkPHP攻击", "ThinkPHP RCE漏洞利用", RiskLevel.CRITICAL,
+                                    ["thinkphp_scanner", "nuclei"], ["ThinkPHP框架"], 0.8),
+            "weblogic": AttackVector("WebLogic攻击", "WebLogic反序列化利用", RiskLevel.CRITICAL,
+                                    ["weblogic_scanner", "nuclei"], ["WebLogic服务器"], 0.8),
+            "tomcat": AttackVector("Tomcat攻击", "Tomcat管理接口攻击", RiskLevel.HIGH,
+                                  ["tomcat_scanner", "nuclei"], ["Tomcat服务器"], 0.6),
+            "jenkins": AttackVector("Jenkins攻击", "Jenkins未授权访问/RCE", RiskLevel.CRITICAL,
+                                   ["jenkins_scanner", "nuclei"], ["Jenkins CI/CD"], 0.7),
+            "gitlab": AttackVector("GitLab攻击", "GitLab CVE漏洞利用", RiskLevel.HIGH,
+                                  ["gitlab_scanner", "nuclei"], ["GitLab"], 0.6),
+            "confluence": AttackVector("Confluence攻击", "Confluence OGNL注入", RiskLevel.CRITICAL,
+                                      ["confluence_scanner", "nuclei"], ["Confluence"], 0.8),
+            "jira": AttackVector("Jira攻击", "Jira SSRF/模板注入", RiskLevel.HIGH,
+                                ["jira_scanner", "nuclei"], ["Jira"], 0.6),
+            "exchange": AttackVector("Exchange攻击", "ProxyLogon/ProxyShell利用", RiskLevel.CRITICAL,
+                                    ["exchange_scanner", "nuclei"], ["Exchange服务器"], 0.7),
+            "vcenter": AttackVector("vCenter攻击", "vCenter RCE漏洞利用", RiskLevel.CRITICAL,
+                                   ["vcenter_scanner", "nuclei"], ["VMware vCenter"], 0.7),
+            "kubernetes": AttackVector("K8s攻击", "K8s API未授权访问", RiskLevel.CRITICAL,
+                                      ["kubectl", "kube_hunter"], ["Kubernetes集群"], 0.6),
+            "docker": AttackVector("Docker攻击", "Docker API未授权访问", RiskLevel.CRITICAL,
+                                  ["docker_scanner", "nuclei"], ["Docker服务"], 0.7),
+        }
+        
+        for tech in technologies:
+            tech_lower = tech.lower()
+            for key, vector in tech_vectors.items():
+                if key in tech_lower:
+                    vectors.append(vector)
+                    break
         
         # 基于漏洞的攻击向量
         for vuln in vulnerabilities:

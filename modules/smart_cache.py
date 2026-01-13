@@ -143,13 +143,42 @@ class SmartCache:
         "payload": {"maxsize": 200, "ttl": 86400}, # Payload: 24小时
         "recon": {"maxsize": 100, "ttl": 1800},    # 侦察结果: 30分钟
         "vuln": {"maxsize": 200, "ttl": 3600},     # 漏洞结果: 1小时
+        "fingerprint": {"maxsize": 500, "ttl": 7200}, # 组件指纹: 2小时
+        "response": {"maxsize": 300, "ttl": 600},  # 响应缓存: 10分钟
+    }
+    
+    # 预热配置
+    PREHEAT_CONFIG = {
+        "dns": ["google.com", "cloudflare.com", "github.com"],
+        "cve": ["apache", "nginx", "spring", "log4j"],
     }
 
-    def __init__(self, persist_path: Optional[Path] = None):
+    def __init__(self, persist_path: Optional[Path] = None, redis_url: Optional[str] = None):
         self._caches: Dict[str, LRUCache] = {}
         self.persist_path = persist_path
+        self._redis_client = None
+        self._use_redis = False
+        self._bloom_filters: Dict[str, set] = {}  # 简化版布隆过滤器
+        
+        # 初始化Redis分布式缓存
+        if redis_url:
+            self._init_redis(redis_url)
+            
         self._init_caches()
         self._load_persistent()
+
+    def _init_redis(self, redis_url: str):
+        """初始化Redis分布式缓存"""
+        try:
+            import redis
+            self._redis_client = redis.from_url(redis_url, decode_responses=True)
+            self._redis_client.ping()
+            self._use_redis = True
+            logger.info("Redis分布式缓存初始化成功")
+        except ImportError:
+            logger.warning("Redis模块未安装，使用本地缓存")
+        except Exception as e:
+            logger.warning(f"Redis连接失败: {e}，使用本地缓存")
 
     def _init_caches(self):
         """初始化各类型缓存"""
@@ -158,6 +187,7 @@ class SmartCache:
                 maxsize=config["maxsize"],
                 default_ttl=config["ttl"]
             )
+            self._bloom_filters[cache_type] = set()  # 初始化布隆过滤器
 
     def _load_persistent(self):
         """加载持久化缓存"""
@@ -204,18 +234,57 @@ class SmartCache:
             logger.warning(f"保存持久化缓存失败: {e}")
 
     def get(self, cache_type: Union[CacheType, str], key: str) -> Optional[Any]:
-        """获取缓存"""
+        """获取缓存 - 支持L1本地+L2 Redis两级缓存"""
         ct = str(cache_type)
         if ct not in self._caches:
             return None
-        return self._caches[ct].get(key)
+            
+        # 布隆过滤器快速判断（避免无效查询）
+        key_hash = hashlib.md5(key.encode()).hexdigest()[:16]
+        if key_hash not in self._bloom_filters.get(ct, set()):
+            return None
+            
+        # L1: 本地缓存
+        value = self._caches[ct].get(key)
+        if value is not None:
+            return value
+            
+        # L2: Redis分布式缓存
+        if self._use_redis and self._redis_client:
+            try:
+                redis_key = f"autored:{ct}:{key}"
+                redis_value = self._redis_client.get(redis_key)
+                if redis_value:
+                    value = json.loads(redis_value)
+                    # 回填本地缓存
+                    self._caches[ct].set(key, value)
+                    return value
+            except Exception as e:
+                logger.debug(f"Redis读取失败: {e}")
+                
+        return None
 
     def set(self, cache_type: Union[CacheType, str], key: str, value: Any, ttl: Optional[float] = None):
-        """设置缓存"""
+        """设置缓存 - 双写L1+L2"""
         ct = str(cache_type)
         if ct not in self._caches:
             self._caches[ct] = LRUCache(maxsize=500, default_ttl=ttl or 300)
+            
+        # L1: 本地缓存
         self._caches[ct].set(key, value, ttl)
+        
+        # 更新布隆过滤器
+        key_hash = hashlib.md5(key.encode()).hexdigest()[:16]
+        self._bloom_filters.setdefault(ct, set()).add(key_hash)
+        
+        # L2: Redis分布式缓存
+        if self._use_redis and self._redis_client:
+            try:
+                redis_key = f"autored:{ct}:{key}"
+                cache_ttl = int(ttl or self.CACHE_CONFIG.get(ct, {}).get("ttl", 300))
+                self._redis_client.setex(redis_key, cache_ttl, json.dumps(value, default=str))
+            except Exception as e:
+                logger.debug(f"Redis写入失败: {e}")
 
     def delete(self, cache_type: Union[CacheType, str], key: str) -> bool:
         """删除缓存"""
@@ -270,6 +339,99 @@ class SmartCache:
 
     def get_cve(self, keyword: str) -> Optional[list]:
         return self.get("cve", keyword)
+    
+    def preheat(self, cache_type: Optional[str] = None, data_loader: Optional[Callable] = None):
+        """缓存预热 - 提前加载常用数据"""
+        if cache_type:
+            types_to_preheat = [cache_type]
+        else:
+            types_to_preheat = list(self.PREHEAT_CONFIG.keys())
+            
+        preheated = 0
+        for ct in types_to_preheat:
+            if ct not in self.PREHEAT_CONFIG:
+                continue
+                
+            for key in self.PREHEAT_CONFIG[ct]:
+                if self.get(ct, key) is None and data_loader:
+                    try:
+                        value = data_loader(ct, key)
+                        if value:
+                            self.set(ct, key, value)
+                            preheated += 1
+                    except Exception as e:
+                        logger.debug(f"预热失败 {ct}:{key}: {e}")
+                        
+        logger.info(f"缓存预热完成，加载 {preheated} 条数据")
+        return preheated
+    
+    def batch_get(self, cache_type: str, keys: List[str]) -> Dict[str, Any]:
+        """批量获取缓存"""
+        result = {}
+        missing_keys = []
+        
+        # 本地缓存批量获取
+        for key in keys:
+            value = self._caches.get(cache_type, LRUCache()).get(key)
+            if value is not None:
+                result[key] = value
+            else:
+                missing_keys.append(key)
+                
+        # Redis批量获取缺失的key
+        if missing_keys and self._use_redis and self._redis_client:
+            try:
+                redis_keys = [f"autored:{cache_type}:{k}" for k in missing_keys]
+                redis_values = self._redis_client.mget(redis_keys)
+                for key, value in zip(missing_keys, redis_values):
+                    if value:
+                        parsed = json.loads(value)
+                        result[key] = parsed
+                        # 回填本地缓存
+                        self._caches[cache_type].set(key, parsed)
+            except Exception as e:
+                logger.debug(f"Redis批量读取失败: {e}")
+                
+        return result
+    
+    def batch_set(self, cache_type: str, data: Dict[str, Any], ttl: Optional[float] = None):
+        """批量设置缓存"""
+        for key, value in data.items():
+            self.set(cache_type, key, value, ttl)
+            
+        # Redis管道批量写入
+        if self._use_redis and self._redis_client:
+            try:
+                pipe = self._redis_client.pipeline()
+                cache_ttl = int(ttl or self.CACHE_CONFIG.get(cache_type, {}).get("ttl", 300))
+                for key, value in data.items():
+                    redis_key = f"autored:{cache_type}:{key}"
+                    pipe.setex(redis_key, cache_ttl, json.dumps(value, default=str))
+                pipe.execute()
+            except Exception as e:
+                logger.debug(f"Redis批量写入失败: {e}")
+    
+    def get_or_set(self, cache_type: str, key: str, loader: Callable, ttl: Optional[float] = None) -> Any:
+        """获取缓存，不存在则通过loader加载并设置"""
+        value = self.get(cache_type, key)
+        if value is not None:
+            return value
+            
+        value = loader()
+        if value is not None:
+            self.set(cache_type, key, value, ttl)
+        return value
+    
+    async def async_get_or_set(self, cache_type: str, key: str, loader: Callable, ttl: Optional[float] = None) -> Any:
+        """异步获取缓存，不存在则通过loader加载并设置"""
+        value = self.get(cache_type, key)
+        if value is not None:
+            return value
+            
+        value = await loader()
+        if value is not None:
+            self.set(cache_type, key, value, ttl)
+        return value
 
 
 def cached(cache_type: Union[CacheType, str], key_func: Optional[Callable] = None, ttl: Optional[float] = None):

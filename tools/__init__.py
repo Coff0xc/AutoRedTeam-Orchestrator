@@ -171,8 +171,43 @@ def register_tools_silent(mcp) -> List[str]:
     return all_tools
 
 
+# 导出模块化检测器 (新架构)
+try:
+    from .detectors import (
+        # 基类
+        BaseDetector, Vulnerability,
+        # 检测器类
+        SQLiDetector, XSSDetector, RCEDetector,
+        SSRFDetector, CSRFDetector, CORSDetector,
+        LFIDetector, FileUploadDetector,
+        AuthBypassDetector, WeakPasswordDetector,
+        # 工具函数
+        get_detector, list_detectors,
+        DETECTOR_REGISTRY,
+    )
+    HAS_DETECTORS = True
+except ImportError:
+    HAS_DETECTORS = False
+
+
 # 导出公共接口
 __all__ = [
     'register_all_tools',
     'register_tools_silent',
+    # 检测器 (新架构)
+    'BaseDetector',
+    'Vulnerability',
+    'SQLiDetector',
+    'XSSDetector',
+    'RCEDetector',
+    'SSRFDetector',
+    'CSRFDetector',
+    'CORSDetector',
+    'LFIDetector',
+    'FileUploadDetector',
+    'AuthBypassDetector',
+    'WeakPasswordDetector',
+    'get_detector',
+    'list_detectors',
+    'DETECTOR_REGISTRY',
 ]

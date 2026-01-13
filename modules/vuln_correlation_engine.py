@@ -111,10 +111,61 @@ class VulnCorrelationEngine:
             "leads_to": ["rce"],
             "severity": VulnSeverity.CRITICAL,
             "impact": "远程代码执行"
+        },
+        # 新增漏洞类型
+        "prototype_pollution": {
+            "leads_to": ["xss", "rce", "auth_bypass"],
+            "severity": VulnSeverity.HIGH,
+            "impact": "原型链污染可导致XSS/RCE"
+        },
+        "race_condition": {
+            "leads_to": ["privilege_escalation", "data_corruption"],
+            "severity": VulnSeverity.MEDIUM,
+            "impact": "竞态条件利用"
+        },
+        "jwt_vuln": {
+            "leads_to": ["auth_bypass", "privilege_escalation"],
+            "severity": VulnSeverity.HIGH,
+            "impact": "JWT伪造、权限提升"
+        },
+        "graphql_vuln": {
+            "leads_to": ["data_leak", "dos", "sqli"],
+            "severity": VulnSeverity.MEDIUM,
+            "impact": "GraphQL注入、信息泄露"
+        },
+        "cors_misconfig": {
+            "leads_to": ["data_theft", "csrf"],
+            "severity": VulnSeverity.MEDIUM,
+            "impact": "跨域数据窃取"
+        },
+        "open_redirect": {
+            "leads_to": ["phishing", "ssrf", "oauth_bypass"],
+            "severity": VulnSeverity.LOW,
+            "impact": "钓鱼攻击、OAuth绕过"
+        },
+        "cache_poisoning": {
+            "leads_to": ["xss", "dos", "phishing"],
+            "severity": VulnSeverity.HIGH,
+            "impact": "缓存投毒攻击"
+        },
+        "request_smuggling": {
+            "leads_to": ["cache_poisoning", "auth_bypass", "xss"],
+            "severity": VulnSeverity.CRITICAL,
+            "impact": "请求走私攻击"
+        },
+        "log4j": {
+            "leads_to": ["rce"],
+            "severity": VulnSeverity.CRITICAL,
+            "impact": "Log4Shell RCE"
+        },
+        "spring4shell": {
+            "leads_to": ["rce"],
+            "severity": VulnSeverity.CRITICAL,
+            "impact": "Spring RCE"
         }
     }
 
-    # 预定义利用链
+    # 预定义利用链 - 扩展版
     EXPLOIT_CHAINS = [
         ExploitChain(
             name="SQL注入到RCE",
@@ -133,6 +184,14 @@ class VulnCorrelationEngine:
             success_rate=0.5
         ),
         ExploitChain(
+            name="LFI + PHP Wrapper到RCE",
+            steps=["lfi", "php_wrapper", "code_injection", "rce"],
+            vulns_required=["lfi"],
+            impact="通过PHP伪协议实现RCE",
+            difficulty="easy",
+            success_rate=0.7
+        ),
+        ExploitChain(
             name="SSRF到云凭证",
             steps=["ssrf", "cloud_metadata", "credential_leak"],
             vulns_required=["ssrf"],
@@ -141,12 +200,28 @@ class VulnCorrelationEngine:
             success_rate=0.8
         ),
         ExploitChain(
+            name="SSRF到K8s接管",
+            steps=["ssrf", "k8s_api", "service_account_token", "cluster_admin"],
+            vulns_required=["ssrf"],
+            impact="Kubernetes集群接管",
+            difficulty="medium",
+            success_rate=0.6
+        ),
+        ExploitChain(
             name="XSS到账户接管",
             steps=["xss", "session_hijack", "account_takeover"],
             vulns_required=["xss"],
             impact="用户账户接管",
             difficulty="easy",
             success_rate=0.7
+        ),
+        ExploitChain(
+            name="XSS + CSRF组合攻击",
+            steps=["xss", "csrf_token_steal", "admin_action"],
+            vulns_required=["xss", "csrf"],
+            impact="以管理员身份执行操作",
+            difficulty="medium",
+            success_rate=0.65
         ),
         ExploitChain(
             name="文件上传到Webshell",
@@ -165,6 +240,14 @@ class VulnCorrelationEngine:
             success_rate=0.55
         ),
         ExploitChain(
+            name="XXE到文件读取",
+            steps=["xxe", "file_read", "credential_leak", "lateral_movement"],
+            vulns_required=["xxe"],
+            impact="敏感文件读取和横向移动",
+            difficulty="easy",
+            success_rate=0.75
+        ),
+        ExploitChain(
             name="IDOR到数据泄露",
             steps=["idor", "enum_users", "data_leak"],
             vulns_required=["idor"],
@@ -179,7 +262,72 @@ class VulnCorrelationEngine:
             impact="管理员权限",
             difficulty="easy",
             success_rate=0.9
-        )
+        ),
+        # 新增利用链
+        ExploitChain(
+            name="JWT伪造到权限提升",
+            steps=["jwt_vuln", "token_forge", "privilege_escalation"],
+            vulns_required=["jwt_vuln"],
+            impact="任意用户身份伪造",
+            difficulty="easy",
+            success_rate=0.85
+        ),
+        ExploitChain(
+            name="开放重定向到OAuth劫持",
+            steps=["open_redirect", "oauth_callback_hijack", "token_steal"],
+            vulns_required=["open_redirect"],
+            impact="OAuth令牌窃取",
+            difficulty="medium",
+            success_rate=0.5
+        ),
+        ExploitChain(
+            name="GraphQL批量查询到数据泄露",
+            steps=["graphql_vuln", "introspection", "batch_query", "data_exfil"],
+            vulns_required=["graphql_vuln"],
+            impact="大规模数据导出",
+            difficulty="easy",
+            success_rate=0.8
+        ),
+        ExploitChain(
+            name="请求走私到缓存投毒",
+            steps=["request_smuggling", "cache_poisoning", "mass_xss"],
+            vulns_required=["request_smuggling"],
+            impact="大规模用户攻击",
+            difficulty="hard",
+            success_rate=0.4
+        ),
+        ExploitChain(
+            name="CORS + XSS跨站数据窃取",
+            steps=["cors_misconfig", "xss", "cross_origin_data_theft"],
+            vulns_required=["cors_misconfig", "xss"],
+            impact="跨域敏感数据窃取",
+            difficulty="medium",
+            success_rate=0.7
+        ),
+        ExploitChain(
+            name="原型链污染到RCE",
+            steps=["prototype_pollution", "gadget_chain", "rce"],
+            vulns_required=["prototype_pollution"],
+            impact="Node.js RCE",
+            difficulty="hard",
+            success_rate=0.35
+        ),
+        ExploitChain(
+            name="Log4j到反弹Shell",
+            steps=["log4j", "jndi_injection", "reverse_shell", "rce"],
+            vulns_required=["log4j"],
+            impact="完全控制服务器",
+            difficulty="easy",
+            success_rate=0.9
+        ),
+        ExploitChain(
+            name="SSTI到RCE",
+            steps=["ssti", "sandbox_escape", "rce"],
+            vulns_required=["ssti"],
+            impact="模板注入RCE",
+            difficulty="medium",
+            success_rate=0.7
+        ),
     ]
 
     def __init__(self):

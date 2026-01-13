@@ -2,6 +2,9 @@
 """
 漏洞检测工具模块 - Web漏洞扫描相关功能
 包含: SQL注入、XSS、CSRF、SSRF、命令注入、XXE、IDOR、文件上传、认证绕过等
+
+注意: 此模块正在逐步迁移到 tools.detectors 模块化架构
+新代码应优先使用 tools.detectors 中的检测器类
 """
 
 import time
@@ -11,12 +14,25 @@ import json
 from urllib.parse import urlparse
 
 from ._common import (
-    GLOBAL_CONFIG, HAS_REQUESTS, get_verify_ssl
+    GLOBAL_CONFIG, HAS_REQUESTS, get_verify_ssl, validate_target_host
 )
 
 # 可选依赖
 if HAS_REQUESTS:
     import requests
+
+# 导入新的模块化检测器 (用于渐进式迁移)
+try:
+    from .detectors import (
+        SQLiDetector, XSSDetector, RCEDetector,
+        SSRFDetector, CSRFDetector, CORSDetector,
+        LFIDetector, FileUploadDetector,
+        AuthBypassDetector, WeakPasswordDetector,
+        get_detector, list_detectors
+    )
+    HAS_DETECTORS = True
+except ImportError:
+    HAS_DETECTORS = False
 
 
 def register_vuln_tools(mcp):
@@ -90,28 +106,55 @@ def register_vuln_tools(mcp):
 
     @mcp.tool()
     def sqli_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
-        """SQL注入检测 - 增强版，支持时间盲注和布尔盲注"""
+        """SQL注入检测 - 增强版，支持时间盲注、布尔盲注和更多数据库指纹"""
         if not HAS_REQUESTS:
             return {"success": False, "error": "需要安装 requests: pip install requests"}
 
         vulns = []
-        error_payloads = ["'", "\"", "' OR '1'='1", "\" OR \"1\"=\"1", "1' AND '1'='1", "1 AND 1=1", "' UNION SELECT NULL--"]
+        # 扩展payload列表
+        error_payloads = [
+            "'", "\"", "' OR '1'='1", "\" OR \"1\"=\"1", 
+            "1' AND '1'='1", "1 AND 1=1", "' UNION SELECT NULL--",
+            "1'1", "1 AND 1=1--", "' OR ''='", "') OR ('1'='1",
+            "1' ORDER BY 1--", "1' ORDER BY 100--",  # 用于探测列数
+        ]
+        # 扩展数据库错误特征 - 更全面的指纹库
         error_patterns = [
-            "sql syntax", "mysql", "sqlite", "postgresql", "oracle", "sqlserver",
-            "syntax error", "unclosed quotation", "quoted string not properly terminated",
-            "warning: mysql", "valid mysql result", "mysqlclient", "mysqli",
-            "pg_query", "pg_exec", "ora-", "microsoft ole db provider for sql server"
+            # MySQL
+            r"sql syntax.*mysql", r"warning.*mysql_", r"mysqlclient", r"mysqli",
+            r"valid mysql result", r"mysql_fetch", r"mysql_num_rows",
+            # PostgreSQL
+            r"postgresql.*error", r"pg_query", r"pg_exec", r"pgsql",
+            r"unterminated quoted string", r"invalid input syntax for",
+            # Oracle
+            r"ora-\d{5}", r"oracle.*driver", r"oracle.*error",
+            r"quoted string not properly terminated", r"sql command not properly ended",
+            # SQL Server
+            r"microsoft.*sql.*server", r"sqlserver", r"odbc.*driver",
+            r"unclosed quotation mark", r"incorrect syntax near",
+            r"sql server.*error", r"mssql", r"sqlsrv",
+            # SQLite
+            r"sqlite.*error", r"sqlite3\.operationalerror", r"sqlite_",
+            r"unrecognized token", r"unable to open database",
+            # 通用
+            r"syntax error", r"sql syntax", r"query failed",
+            r"you have an error in your sql", r"supplied argument is not a valid",
+            r"division by zero", r"invalid column name", r"unknown column",
+            r"column.*not found", r"table.*doesn't exist", r"no such table",
         ]
 
         base_url = url
-        test_params = [param] if param else ["id", "page", "cat", "search", "q", "query", "user", "name"]
+        test_params = [param] if param else ["id", "page", "cat", "search", "q", "query", "user", "name", "item", "product"]
 
-        # 1. 获取基线响应
-        try:
-            baseline_resp = requests.get(base_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
-            baseline_length = len(baseline_resp.text)
-        except Exception:
-            baseline_length = 0
+        # 1. 获取基线响应 - 多次请求取平均
+        baseline_lengths = []
+        for _ in range(3):
+            try:
+                baseline_resp = requests.get(base_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
+                baseline_lengths.append(len(baseline_resp.text))
+            except Exception:
+                pass
+        baseline_length = sum(baseline_lengths) / len(baseline_lengths) if baseline_lengths else 0
 
         for p in test_params:
             # 错误型注入检测
@@ -126,7 +169,7 @@ def register_vuln_tools(mcp):
                     resp_lower = resp.text.lower()
 
                     for pattern in error_patterns:
-                        if pattern in resp_lower:
+                        if re.search(pattern, resp_lower, re.IGNORECASE):
                             vulns.append({
                                 "type": "Error-based SQLi",
                                 "severity": "CRITICAL",
@@ -142,12 +185,14 @@ def register_vuln_tools(mcp):
             if not deep_scan:
                 continue
 
-            # 2. 时间盲注检测
+            # 2. 时间盲注检测 - 增强版：多轮基线测量 + 统计验证 + 网络抖动补偿
             time_payloads = [
-                ("' AND SLEEP(3)--", 3),
-                ("' AND (SELECT * FROM (SELECT(SLEEP(3)))a)--", 3),
-                ("'; WAITFOR DELAY '0:0:3'--", 3),
-                ("' AND pg_sleep(3)--", 3),
+                ("' AND SLEEP(5)--", 5),
+                ("' AND (SELECT * FROM (SELECT(SLEEP(5)))a)--", 5),
+                ("'; WAITFOR DELAY '0:0:5'--", 5),
+                ("' AND pg_sleep(5)--", 5),
+                ("' AND DBMS_PIPE.RECEIVE_MESSAGE('a',5)--", 5),  # Oracle
+                ("' AND BENCHMARK(5000000,SHA1('test'))--", 5),   # MySQL alternative
             ]
             for payload, delay in time_payloads:
                 try:
@@ -156,28 +201,77 @@ def register_vuln_tools(mcp):
                     else:
                         test_url = f"{base_url}?{p}={payload}"
 
-                    start = time.time()
-                    requests.get(test_url, timeout=delay + 5, verify=get_verify_ssl())
-                    elapsed = time.time() - start
+                    # 多轮基线测量 - 取中位数减少网络抖动影响
+                    baseline_times = []
+                    for _ in range(3):
+                        try:
+                            base_start = time.time()
+                            requests.get(base_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
+                            baseline_times.append(time.time() - base_start)
+                        except Exception:
+                            pass
 
-                    if elapsed >= delay:
-                        vulns.append({
-                            "type": "Time-based Blind SQLi",
-                            "severity": "CRITICAL",
-                            "param": p,
-                            "payload": payload,
-                            "evidence": f"响应延迟 {elapsed:.2f}s (预期 {delay}s)",
-                            "url": test_url
-                        })
-                        break
+                    if len(baseline_times) < 2:
+                        continue  # 基线测量失败，跳过
+
+                    # 使用中位数作为基线，更稳定
+                    baseline_times.sort()
+                    base_elapsed = baseline_times[len(baseline_times) // 2]
+                    # 计算基线标准差用于抖动补偿
+                    baseline_avg = sum(baseline_times) / len(baseline_times)
+                    baseline_variance = sum((t - baseline_avg) ** 2 for t in baseline_times) / len(baseline_times)
+                    baseline_std = baseline_variance ** 0.5
+
+                    # 网络抖动补偿：允许的误差 = 2倍标准差，最小0.5秒
+                    jitter_tolerance = max(baseline_std * 2, 0.5)
+
+                    # 第一次测试
+                    start = time.time()
+                    requests.get(test_url, timeout=delay + 10, verify=get_verify_ssl())
+                    first_elapsed = time.time() - start
+
+                    # 严格判断：响应时间必须 >= 基线 + 延迟 - 抖动容差
+                    # 且响应时间必须 >= 延迟的90%（更严格的阈值）
+                    min_expected = base_elapsed + delay - jitter_tolerance
+                    if first_elapsed >= min_expected and first_elapsed >= delay * 0.90:
+                        # 三轮验证 - 提高置信度
+                        verify_times = []
+                        for _ in range(2):
+                            try:
+                                start_v = time.time()
+                                requests.get(test_url, timeout=delay + 10, verify=get_verify_ssl())
+                                verify_times.append(time.time() - start_v)
+                            except Exception:
+                                pass
+
+                        # 至少2次验证都延迟才确认
+                        if len(verify_times) >= 2:
+                            valid_delays = sum(1 for t in verify_times if t >= delay * 0.85)
+                            if valid_delays >= 2:
+                                avg_delay = sum(verify_times) / len(verify_times)
+                                confidence = min(100, int((avg_delay / delay) * 80))
+                                vulns.append({
+                                    "type": "Time-based Blind SQLi",
+                                    "severity": "CRITICAL",
+                                    "param": p,
+                                    "payload": payload,
+                                    "evidence": f"响应延迟 {first_elapsed:.2f}s, 验证: {[f'{t:.2f}s' for t in verify_times]} (预期 {delay}s)",
+                                    "url": test_url,
+                                    "verified": True,
+                                    "confidence": confidence,
+                                    "baseline": f"{base_elapsed:.2f}s (±{baseline_std:.2f}s)"
+                                })
+                                break
                 except Exception:
                     pass
 
-            # 3. 布尔盲注检测
+            # 3. 布尔盲注检测 - 增强版，增加更多验证条件
             bool_payloads = [
                 ("' AND '1'='1", "' AND '1'='2"),
                 ("' AND 1=1--", "' AND 1=2--"),
                 ("\" AND \"1\"=\"1", "\" AND \"1\"=\"2"),
+                ("') AND ('1'='1", "') AND ('1'='2"),
+                ("1 AND 1=1", "1 AND 1=2"),
             ]
             for true_payload, false_payload in bool_payloads:
                 try:
@@ -192,16 +286,36 @@ def register_vuln_tools(mcp):
                     false_resp = requests.get(false_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
 
                     len_diff = abs(len(true_resp.text) - len(false_resp.text))
-                    if len_diff > baseline_length * 0.1 and len_diff > 50:
-                        vulns.append({
-                            "type": "Boolean-based Blind SQLi",
-                            "severity": "HIGH",
-                            "param": p,
-                            "payload": f"TRUE: {true_payload} | FALSE: {false_payload}",
-                            "evidence": f"响应长度差异: {len_diff} bytes",
-                            "url": true_url
-                        })
-                        break
+                    true_len = len(true_resp.text)
+                    false_len = len(false_resp.text)
+                    
+                    # 增强判断条件
+                    # 1. 长度差异足够大
+                    len_diff_significant = len_diff > max(baseline_length * 0.1, 50)
+                    # 2. True响应应与原始基线相似
+                    true_vs_baseline = abs(true_len - baseline_length)
+                    true_matches_baseline = true_vs_baseline < baseline_length * 0.15 if baseline_length > 0 else True
+                    # 3. 状态码差异
+                    status_diff = true_resp.status_code != false_resp.status_code
+                    
+                    if (len_diff_significant and true_matches_baseline) or status_diff:
+                        # 二次验证
+                        verify_true = requests.get(true_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
+                        verify_false = requests.get(false_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
+                        verify_diff = abs(len(verify_true.text) - len(verify_false.text))
+                        
+                        # 两次结果一致才确认
+                        if verify_diff > 30:
+                            vulns.append({
+                                "type": "Boolean-based Blind SQLi",
+                                "severity": "HIGH",
+                                "param": p,
+                                "payload": f"TRUE: {true_payload} | FALSE: {false_payload}",
+                                "evidence": f"响应长度差异: {len_diff}/{verify_diff} bytes (已验证)",
+                                "url": true_url,
+                                "verified": True
+                            })
+                            break
                 except Exception:
                     pass
 
@@ -2530,10 +2644,15 @@ def register_vuln_tools(mcp):
         def send_raw_request(raw_request: bytes, timeout_sec: int = 10) -> tuple:
             """发送原始 HTTP 请求并返回响应时间和内容"""
             try:
+                # SSRF 防护: 验证目标主机
+                is_safe, error_msg = validate_target_host(host, port)
+                if not is_safe:
+                    return -1, f"SSRF protection: {error_msg}"
+
                 start_time = time.time()
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(timeout_sec)
-                
+
                 if use_ssl:
                     import ssl
                     context = ssl.create_default_context()
@@ -2541,7 +2660,7 @@ def register_vuln_tools(mcp):
                         context.check_hostname = False
                         context.verify_mode = ssl.CERT_NONE
                     sock = context.wrap_socket(sock, server_hostname=host)
-                
+
                 sock.connect((host, port))
                 sock.sendall(raw_request)
                 
