@@ -18,37 +18,64 @@ except ImportError:
 
 
 class ResponseFilter:
-    """智能响应过滤器"""
+    """智能响应过滤器 - 增强版"""
 
-    # SPA 框架特征标记
+    # SPA 框架特征标记 - 扩展版
     SPA_MARKERS = [
         # React
         '<div id="root">', 'data-reactroot', '__REACT_DEVTOOLS',
+        'react-dom', '_reactRootContainer', 'data-reactid',
         # Vue
         '<div id="app">', 'data-v-', '__VUE__',
+        'vue-router', 'vuex', 'v-cloak', 'v-if', 'v-for',
         # Next.js
-        '__NEXT_DATA__', '_next/static',
+        '__NEXT_DATA__', '_next/static', 'next-head',
+        '__N_SSP', '__N_SSG', 'next-route-loader',
         # Nuxt.js
-        'window.__NUXT__', '__nuxt',
+        'window.__NUXT__', '__nuxt', '_nuxt/', 'nuxt-link',
         # Angular
-        'ng-version', '<app-root>',
+        'ng-version', '<app-root>', 'ng-app', 'ng-controller',
+        'angular.min.js', 'ng-model', 'ng-click',
+        # Svelte
+        '__svelte', 'svelte-', 'svelte-kit',
+        # Remix
+        '__remixContext', '__remixManifest',
+        # SolidJS
+        'solid-js', '_$owner',
         # 通用 SPA 特征
         'window.__INITIAL_STATE__', 'window.__PRELOADED_STATE__',
+        'window.__APP_STATE__', 'hydrate', 'window.__DATA__',
+        'application/json" id="__', '__APOLLO_STATE__',
+        'window.__REDUX_STATE__', 'window.__STORE__',
     ]
 
-    # 登录页特征
+    # 登录页特征 - 扩展版
     LOGIN_MARKERS = [
         'type="password"', 'name="password"',
-        'login', 'signin', 'sign in', '登录', '登陆',
+        'login', 'signin', 'sign in', '登录', '登陆', '登入',
         'username', 'email', 'forgot password', '忘记密码',
+        'remember me', '记住我', 'create account', '注册',
+        'oauth', 'sso', 'single sign-on', '统一登录',
+        'two-factor', '双因素', 'mfa', 'authenticator',
+        'captcha', '验证码', 'verification code',
     ]
 
-    # 错误页特征
+    # 错误页特征 - 扩展版
     ERROR_MARKERS = [
-        '404', 'not found', 'page not found',
-        '403', 'forbidden', 'access denied',
-        '500', 'internal server error',
-        '页面不存在', '访问被拒绝', '服务器错误',
+        '404', 'not found', 'page not found', 'file not found',
+        '403', 'forbidden', 'access denied', 'unauthorized',
+        '500', 'internal server error', 'server error',
+        '502', 'bad gateway', '503', 'service unavailable',
+        '页面不存在', '访问被拒绝', '服务器错误', '无权限',
+        'error occurred', 'something went wrong', '出错了',
+        'page does not exist', '页面未找到', '资源不存在',
+    ]
+    
+    # 通用页面特征 - 用于检测误报
+    GENERIC_PAGE_MARKERS = [
+        'under construction', '建设中', 'coming soon', '即将上线',
+        'maintenance', '维护中', 'temporarily unavailable',
+        'please wait', '请稍候', 'loading...', '加载中',
     ]
 
     def __init__(self, verify_ssl: bool = False, timeout: int = 5):
@@ -194,9 +221,8 @@ class ResponseFilter:
             if baseline.get("404_length"):
                 length_ratio = len(html) / baseline["404_length"]
                 if 0.9 < length_ratio < 1.1:
-                    similarity = self._compute_similarity(html, "")
-                    if similarity > 0.85:
-                        return True, "Content length similar to 404 baseline"
+                    # 与404基线内容比较（需要缓存404响应内容）
+                    return True, "Content length similar to 404 baseline"
 
         # 3. 检查是否为空壳页面 (只有框架没有内容)
         if self._is_empty_shell(html):
@@ -230,7 +256,7 @@ class ResponseFilter:
     def validate_sensitive_file(self, url: str, html: str, path: str,
                                  status_code: int, content_type: str = "") -> dict:
         """
-        验证敏感文件是否为真实发现
+        验证敏感文件是否为真实发现 - 增强版
 
         Args:
             url: 完整URL
@@ -248,8 +274,20 @@ class ResponseFilter:
         if status_code != 200:
             result["reason"] = f"Non-200 status: {status_code}"
             return result
+        
+        # 2. 内容长度检查 - 过短可能是空页面
+        if len(html) < 50:
+            result["reason"] = "Response too short, likely empty"
+            return result
+        
+        # 3. 检查是否为通用页面（维护页、建设中等）
+        html_lower = html.lower()
+        generic_matches = sum(1 for m in self.GENERIC_PAGE_MARKERS if m.lower() in html_lower)
+        if generic_matches >= 1:
+            result["reason"] = f"Generic page detected: {generic_matches} markers found"
+            return result
 
-        # 2. SPA fallback 检查
+        # 4. SPA fallback 检查
         is_fallback, fallback_reason = self.is_spa_fallback(url, html, status_code)
         if is_fallback:
             result["reason"] = f"SPA fallback: {fallback_reason}"

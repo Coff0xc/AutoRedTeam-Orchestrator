@@ -53,7 +53,8 @@ GLOBAL_CONFIG = {
 # 全局代理配置
 PROXY_CONFIG = {
     "enabled": False,
-    "url": None,
+    "http": None,
+    "https": None,
 }
 
 # 全局失败计数器
@@ -350,6 +351,80 @@ def validate_cli_target(target: str) -> tuple:
     if any(c in target for c in dangerous):
         return False, f"目标包含危险字符: {target}"
     return True, None
+
+
+def is_private_ip(ip_str: str) -> bool:
+    """检查 IP 地址是否为私有/保留地址 (防止 SSRF)
+
+    Args:
+        ip_str: IP 地址字符串
+
+    Returns:
+        True 如果是私有/保留地址，False 否则
+    """
+    import ipaddress
+    try:
+        ip = ipaddress.ip_address(ip_str)
+        # 检查各种私有/保留地址范围
+        return (
+            ip.is_private or           # 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+            ip.is_loopback or          # 127.0.0.0/8, ::1
+            ip.is_link_local or        # 169.254.0.0/16, fe80::/10
+            ip.is_multicast or         # 224.0.0.0/4, ff00::/8
+            ip.is_reserved or          # 保留地址
+            ip.is_unspecified or       # 0.0.0.0, ::
+            str(ip).startswith('0.')   # 0.x.x.x
+        )
+    except ValueError:
+        return True  # 无效 IP 视为不安全
+
+
+def validate_target_host(hostname: str, port: int = 80, allow_private: bool = False) -> tuple:
+    """验证目标主机是否安全 (防止 SSRF 攻击)
+
+    Args:
+        hostname: 主机名或 IP 地址
+        port: 端口号
+        allow_private: 是否允许私有 IP (默认 False)
+
+    Returns:
+        (is_safe, error_message) 元组
+    """
+    if not hostname:
+        return False, "主机名不能为空"
+
+    # 检查端口范围
+    if not (1 <= port <= 65535):
+        return False, f"无效端口: {port}"
+
+    # 危险主机名黑名单
+    dangerous_hosts = [
+        'localhost', 'localhost.localdomain',
+        'metadata.google.internal',  # GCP 元数据
+        '169.254.169.254',           # AWS/Azure 元数据
+        'metadata.internal',
+    ]
+    if hostname.lower() in dangerous_hosts:
+        return False, f"禁止访问的主机: {hostname}"
+
+    # 解析主机名到 IP
+    try:
+        resolved_ips = socket.getaddrinfo(hostname, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        if not resolved_ips:
+            return False, f"无法解析主机: {hostname}"
+
+        # 检查所有解析的 IP
+        for family, socktype, proto, canonname, sockaddr in resolved_ips:
+            ip_str = sockaddr[0]
+            if not allow_private and is_private_ip(ip_str):
+                return False, f"目标解析到私有/保留 IP: {hostname} -> {ip_str}"
+
+        return True, None
+
+    except socket.gaierror as e:
+        return False, f"DNS 解析失败: {hostname} - {e}"
+    except Exception as e:
+        return False, f"主机验证失败: {e}"
 
 
 def run_cmd(cmd: list, timeout: int = 300) -> dict:

@@ -184,12 +184,22 @@ FINGERPRINTS = {
         "payloads": ["nexus_rce"],
         "cves": ["CVE-2020-10199", "CVE-2020-10204"]
     },
+    "argocd": {
+        "patterns": [r"argocd", r"Argo CD", r"argocd-server"],
+        "payloads": ["argocd_auth_bypass", "argocd_path_traversal"],
+        "cves": ["CVE-2024-21661", "CVE-2022-24348", "CVE-2022-24904"]
+    },
+    "kubernetes": {
+        "patterns": [r"kubernetes", r"kubectl", r"/api/v1/", r"kube-system"],
+        "payloads": ["k8s_unauth_api", "k8s_etcd_leak", "k8s_rbac_bypass"],
+        "cves": ["CVE-2018-1002105", "CVE-2020-8554", "CVE-2021-25741"]
+    },
     
     # ============ 网络设备 ============
     "cisco": {
         "patterns": [r"cisco", r"Cisco"],
         "payloads": ["cisco_smart_install", "cisco_default_creds"],
-        "cves": ["CVE-2018-0171"]
+        "cves": ["CVE-2018-0171", "CVE-2023-20198"]
     },
     "huawei": {
         "patterns": [r"huawei", r"Huawei"],
@@ -198,13 +208,28 @@ FINGERPRINTS = {
     },
     "fortinet": {
         "patterns": [r"FortiOS", r"fortinet", r"FortiGate"],
-        "payloads": ["fortinet_auth_bypass", "fortinet_rce"],
-        "cves": ["CVE-2022-40684", "CVE-2023-27997"]
+        "payloads": ["fortinet_auth_bypass", "fortinet_rce", "fortinet_sslvpn"],
+        "cves": ["CVE-2022-40684", "CVE-2023-27997", "CVE-2024-21762", "CVE-2024-23113"]
+    },
+    "paloalto": {
+        "patterns": [r"paloalto", r"PAN-OS", r"GlobalProtect"],
+        "payloads": ["paloalto_rce", "globalprotect_rce"],
+        "cves": ["CVE-2024-3400", "CVE-2020-2021"]
+    },
+    "ivanti": {
+        "patterns": [r"ivanti", r"Pulse Secure", r"Connect Secure"],
+        "payloads": ["ivanti_auth_bypass", "ivanti_rce"],
+        "cves": ["CVE-2023-46805", "CVE-2024-21887", "CVE-2024-21893"]
+    },
+    "citrix": {
+        "patterns": [r"citrix", r"NetScaler", r"Citrix Gateway"],
+        "payloads": ["citrix_rce", "citrix_path_traversal"],
+        "cves": ["CVE-2023-4966", "CVE-2023-3519", "CVE-2019-19781"]
     },
     
     # ============ 安全设备 ============
     "sangfor": {
-        "patterns": [r"sangfor", r"深信服"],
+        "patterns": [r"sangfor", r"深信服", r"SANGFOR"],
         "payloads": ["sangfor_rce", "sangfor_arbitrary_login"],
         "cves": []
     },
@@ -212,6 +237,88 @@ FINGERPRINTS = {
         "patterns": [r"qianxin", r"奇安信", r"天擎"],
         "payloads": [],
         "cves": []
+    },
+    "hillstone": {
+        "patterns": [r"hillstone", r"山石网科"],
+        "payloads": ["hillstone_auth_bypass"],
+        "cves": []
+    },
+    
+    # ============ 2024-2025新增热门漏洞组件 ============
+    "atlassian_confluence": {
+        "patterns": [r"confluence", r"Atlassian Confluence", r"/wiki/"],
+        "payloads": ["confluence_ognl", "confluence_rce", "confluence_ssti"],
+        "cves": ["CVE-2023-22527", "CVE-2023-22515", "CVE-2022-26134", "CVE-2021-26084"]
+    },
+    "atlassian_jira": {
+        "patterns": [r"jira", r"Atlassian Jira", r"/jira/"],
+        "payloads": ["jira_ssrf", "jira_template_injection"],
+        "cves": ["CVE-2022-0540", "CVE-2019-11581"]
+    },
+    "vmware_vcenter": {
+        "patterns": [r"vCenter", r"vmware", r"vsphere"],
+        "payloads": ["vcenter_rce", "vcenter_file_upload"],
+        "cves": ["CVE-2021-21985", "CVE-2021-22005", "CVE-2023-34048"]
+    },
+    "solarwinds": {
+        "patterns": [r"SolarWinds", r"Orion"],
+        "payloads": ["solarwinds_rce"],
+        "cves": ["CVE-2021-35211", "CVE-2020-10148"]
+    },
+    "progress_moveit": {
+        "patterns": [r"MOVEit", r"Progress"],
+        "payloads": ["moveit_sqli", "moveit_rce"],
+        "cves": ["CVE-2023-34362", "CVE-2023-35036"]
+    },
+    "zabbix": {
+        "patterns": [r"zabbix", r"Zabbix"],
+        "payloads": ["zabbix_sqli", "zabbix_rce"],
+        "cves": ["CVE-2022-23131", "CVE-2022-23134"]
+    },
+    "nagios": {
+        "patterns": [r"nagios", r"Nagios"],
+        "payloads": ["nagios_sqli", "nagios_rce"],
+        "cves": ["CVE-2021-37394"]
+    },
+    "grafana": {
+        "patterns": [r"grafana", r"Grafana"],
+        "payloads": ["grafana_path_traversal", "grafana_ssrf"],
+        "cves": ["CVE-2021-43798", "CVE-2022-21703"]
+    },
+    "apache_superset": {
+        "patterns": [r"superset", r"Apache Superset"],
+        "payloads": ["superset_auth_bypass", "superset_sqli"],
+        "cves": ["CVE-2023-27524", "CVE-2023-27523"]
+    },
+    "metabase": {
+        "patterns": [r"metabase", r"Metabase"],
+        "payloads": ["metabase_rce"],
+        "cves": ["CVE-2023-38646"]
+    },
+    "papercut": {
+        "patterns": [r"PaperCut", r"papercut"],
+        "payloads": ["papercut_rce", "papercut_auth_bypass"],
+        "cves": ["CVE-2023-27350", "CVE-2023-27351"]
+    },
+    "minio": {
+        "patterns": [r"minio", r"MinIO"],
+        "payloads": ["minio_info_disclosure"],
+        "cves": ["CVE-2023-28432"]
+    },
+    "openfire": {
+        "patterns": [r"Openfire", r"openfire"],
+        "payloads": ["openfire_path_traversal", "openfire_auth_bypass"],
+        "cves": ["CVE-2023-32315"]
+    },
+    "rocketchat": {
+        "patterns": [r"Rocket.Chat", r"rocketchat"],
+        "payloads": ["rocketchat_nosql", "rocketchat_rce"],
+        "cves": ["CVE-2021-22911"]
+    },
+    "gitlab_runner": {
+        "patterns": [r"gitlab-runner"],
+        "payloads": [],
+        "cves": ["CVE-2022-2992"]
     }
 }
 

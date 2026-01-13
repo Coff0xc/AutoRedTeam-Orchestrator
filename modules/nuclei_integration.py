@@ -108,7 +108,50 @@ class NucleiScanner:
             "rate_limit": 100,
             "timeout": 15,
             "tags": "takeover"
+        },
+        "api": {
+            "severity": "low,medium,high,critical",
+            "rate_limit": 100,
+            "timeout": 15,
+            "tags": "api,graphql,swagger,openapi,jwt"
+        },
+        "cloud": {
+            "severity": "medium,high,critical",
+            "rate_limit": 100,
+            "timeout": 20,
+            "tags": "aws,azure,gcp,cloud,s3,kubernetes"
+        },
+        "auth": {
+            "severity": "medium,high,critical",
+            "rate_limit": 80,
+            "timeout": 15,
+            "tags": "auth-bypass,default-login,unauth,brute-force"
+        },
+        "2024_cves": {
+            "severity": "high,critical",
+            "rate_limit": 100,
+            "timeout": 15,
+            "tags": "cve2024,cve2023"
         }
+    }
+    
+    # 智能模板映射 - 根据技术栈选择最佳模板
+    SMART_TEMPLATE_MAP = {
+        "wordpress": ["wordpress", "wp-plugin", "wp-theme", "php"],
+        "spring": ["spring", "springboot", "java", "log4j"],
+        "laravel": ["laravel", "php", "blade"],
+        "django": ["django", "python"],
+        "express": ["express", "nodejs", "javascript"],
+        "nginx": ["nginx", "misconfig"],
+        "apache": ["apache", "httpd"],
+        "tomcat": ["tomcat", "java"],
+        "jenkins": ["jenkins", "ci-cd"],
+        "gitlab": ["gitlab", "git"],
+        "elasticsearch": ["elasticsearch", "elastic"],
+        "redis": ["redis", "cache"],
+        "mongodb": ["mongodb", "nosql"],
+        "aws": ["aws", "s3", "ec2", "cloud"],
+        "kubernetes": ["kubernetes", "k8s", "helm"],
     }
 
     def __init__(self, output_dir: str = None):
@@ -303,6 +346,167 @@ class NucleiScanner:
         if tech_lower in self.TECH_TAGS:
             return self.scan(target, tags=tech_lower)
         return {"success": False, "error": f"Unknown tech: {tech}"}
+    
+    def smart_scan(self, target: str, detected_tech: List[str] = None) -> Dict:
+        """
+        智能扫描 - 根据检测到的技术栈自动选择最佳模板
+        
+        Args:
+            target: 目标URL
+            detected_tech: 检测到的技术栈列表
+        """
+        if not detected_tech:
+            # 如果没有提供技术栈，使用quick预设
+            return self.scan(target, preset="quick")
+        
+        # 收集相关标签
+        tags = set()
+        for tech in detected_tech:
+            tech_lower = tech.lower()
+            if tech_lower in self.SMART_TEMPLATE_MAP:
+                tags.update(self.SMART_TEMPLATE_MAP[tech_lower])
+            elif tech_lower in self.TECH_TAGS:
+                tags.add(tech_lower)
+        
+        if tags:
+            print(f"[*] 智能扫描: 基于技术栈 {detected_tech} 选择模板标签: {list(tags)}")
+            return self.scan(target, tags=",".join(tags), severity="medium,high,critical")
+        
+        return self.scan(target, preset="quick")
+    
+    def verify_vulnerability(self, vuln: Dict, retry: bool = True) -> Dict:
+        """
+        验证漏洞 - 重新扫描以确认漏洞存在
+        
+        Args:
+            vuln: 漏洞信息字典
+            retry: 是否重试验证
+        """
+        template_id = vuln.get("template_id", "")
+        matched_at = vuln.get("matched_at", vuln.get("host", ""))
+        
+        if not template_id or not matched_at:
+            return {"verified": False, "error": "缺少模板ID或目标"}
+        
+        # 构建验证命令
+        cmd = [
+            "nuclei", "-u", matched_at,
+            "-t", template_id,
+            "-silent", "-json"
+        ]
+        
+        result = self._run_nuclei(cmd, timeout=30, retries=2 if retry else 0)
+        
+        if result["success"] and result.get("stdout", "").strip():
+            try:
+                verify_result = json.loads(result["stdout"].strip().split('\n')[0])
+                return {
+                    "verified": True,
+                    "template_id": template_id,
+                    "matched_at": matched_at,
+                    "details": verify_result
+                }
+            except json.JSONDecodeError:
+                pass
+        
+        return {"verified": False, "template_id": template_id, "matched_at": matched_at}
+    
+    def batch_verify(self, vulns: List[Dict], sample_size: int = 10) -> Dict:
+        """
+        批量验证漏洞 - 抽样验证以确认扫描质量
+        
+        Args:
+            vulns: 漏洞列表
+            sample_size: 抽样数量
+        """
+        import random
+        
+        # 优先验证高危漏洞
+        high_critical = [v for v in vulns if v.get("severity", "").lower() in ("high", "critical")]
+        others = [v for v in vulns if v.get("severity", "").lower() not in ("high", "critical")]
+        
+        # 选择样本
+        sample = high_critical[:sample_size//2] + random.sample(
+            others, min(sample_size//2, len(others))
+        )
+        
+        verified = []
+        failed = []
+        
+        for vuln in sample:
+            result = self.verify_vulnerability(vuln)
+            if result.get("verified"):
+                verified.append(vuln)
+            else:
+                failed.append(vuln)
+        
+        return {
+            "total_sampled": len(sample),
+            "verified_count": len(verified),
+            "failed_count": len(failed),
+            "verification_rate": len(verified) / max(len(sample), 1),
+            "verified": verified,
+            "failed": failed
+        }
+    
+    def get_remediation(self, vuln: Dict) -> Dict:
+        """获取漏洞修复建议"""
+        severity = vuln.get("severity", "").lower()
+        vuln_type = vuln.get("type", "")
+        tags = vuln.get("tags", [])
+        template_id = vuln.get("template_id", "")
+        
+        remediation = {
+            "priority": {"critical": 1, "high": 2, "medium": 3, "low": 4, "info": 5}.get(severity, 5),
+            "timeline": {"critical": "立即", "high": "24小时内", "medium": "1周内", "low": "1月内"}.get(severity, "计划中"),
+            "actions": []
+        }
+        
+        # 根据漏洞类型生成修复建议
+        if "sqli" in template_id.lower() or "sql" in str(tags).lower():
+            remediation["actions"] = [
+                "使用参数化查询或预编译语句",
+                "实施输入验证和过滤",
+                "最小化数据库账户权限",
+                "部署WAF规则"
+            ]
+        elif "xss" in template_id.lower() or "xss" in str(tags).lower():
+            remediation["actions"] = [
+                "实施输出编码(HTML/JS/URL)",
+                "使用Content-Security-Policy头",
+                "启用HttpOnly和Secure Cookie标志",
+                "实施输入验证"
+            ]
+        elif "rce" in template_id.lower() or "rce" in str(tags).lower():
+            remediation["actions"] = [
+                "立即升级到最新版本",
+                "禁用危险函数(eval, exec等)",
+                "实施严格的输入验证",
+                "使用沙箱或容器隔离"
+            ]
+        elif "ssrf" in template_id.lower() or "ssrf" in str(tags).lower():
+            remediation["actions"] = [
+                "实施URL白名单验证",
+                "禁止访问内网IP和元数据服务",
+                "使用代理隔离外部请求",
+                "限制出站网络访问"
+            ]
+        elif "lfi" in template_id.lower() or "file" in str(tags).lower():
+            remediation["actions"] = [
+                "实施路径规范化",
+                "使用白名单验证文件路径",
+                "限制文件访问权限",
+                "禁用动态文件包含"
+            ]
+        else:
+            remediation["actions"] = [
+                "审查相关代码和配置",
+                "应用供应商安全补丁",
+                "实施纵深防御措施",
+                "加强监控和日志记录"
+            ]
+        
+        return remediation
     
     def _parse_results(self, output_file: str) -> List[Dict]:
         """解析扫描结果 (带去重)"""

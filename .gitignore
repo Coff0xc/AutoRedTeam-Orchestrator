@@ -46,6 +46,7 @@ nul
 .claude/
 .iflow/
 CLAUDE.md
+tmpclaude-*
 
 # Test & Coverage
 .pytest_cache/
@@ -59,3 +60,11 @@ htmlcov/
 id_rsa*
 *.secret
 credentials.json
+
+# 敏感信息
+*.enc
+data/secrets/
+data/auth/
+data/admin_key.txt
+# 密钥文件
+.master_key
