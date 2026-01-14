@@ -47,12 +47,12 @@ scanning:
   # 速率限制
   rate_limit: 150
 
-# 字典路径
+# 字典路径 (跨平台兼容 - 使用项目内置字典)
 wordlists:
-  directories: "/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt"
-  passwords: "/usr/share/wordlists/rockyou.txt"
-  usernames: "/usr/share/seclists/Usernames/top-usernames-shortlist.txt"
-  subdomains: "/usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt"
+  directories: "wordlists/directories.txt"
+  passwords: "wordlists/passwords.txt"
+  usernames: "wordlists/usernames.txt"
+  subdomains: "wordlists/subdomains.txt"
 
 # API密钥 (建议使用环境变量)
 api_keys:
