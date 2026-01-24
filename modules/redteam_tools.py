@@ -593,8 +593,12 @@ def register_redteam_tools(mcp):
             import requests
             from core.stealth import TrafficMutator, FingerprintSpoofer, BrowserType
 
-            # 创建Session
-            session = requests.Session()
+            # 创建Session - 优先使用统一 HTTP 客户端工厂
+            try:
+                from core.http import get_sync_client
+                session = get_sync_client(proxy=proxy, force_new=True)
+            except ImportError:
+                session = requests.Session()
 
             # 应用浏览器指纹
             if spoof_fingerprint:

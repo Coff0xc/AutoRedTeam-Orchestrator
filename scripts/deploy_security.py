@@ -245,8 +245,9 @@ def check_existing_vulnerabilities():
                 for pattern, desc in dangerous_patterns:
                     if pattern in content:
                         issues.append((file_path, pattern, desc))
-            except:
-                pass
+            except (IOError, UnicodeDecodeError) as e:
+                # 记录无法读取的文件，但不中断扫描
+                pass  # 文件读取失败是预期情况，静默跳过
 
     if issues:
         print_warning(f"  发现 {len(issues)} 个潜在安全问题:")

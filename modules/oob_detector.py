@@ -21,6 +21,13 @@ try:
 except ImportError:
     HAS_REQUESTS = False
 
+# 统一 HTTP 客户端工厂
+try:
+    from core.http import get_sync_client
+    HAS_HTTP_FACTORY = True
+except ImportError:
+    HAS_HTTP_FACTORY = False
+
 
 @dataclass
 class OOBInteraction:
@@ -136,7 +143,13 @@ class DNSLogClient:
         self.platform = platform
         self.token = token or os.getenv("CEYE_TOKEN", "")
         self.domain = None
-        self.session = requests.Session() if HAS_REQUESTS else None
+        # 优先使用统一 HTTP 客户端工厂
+        if HAS_HTTP_FACTORY:
+            self.session = get_sync_client(force_new=True)
+        elif HAS_REQUESTS:
+            self.session = requests.Session()
+        else:
+            self.session = None
         self._init_domain()
 
     def _init_domain(self):

@@ -31,6 +31,7 @@ from tools._common import (
 # 尝试导入 requests
 try:
     import requests
+    from core.http.client_factory import HTTPClientFactory
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -103,16 +104,12 @@ class BaseDetector(ABC):
 
         # 创建 Session 用于连接复用
         if HAS_REQUESTS:
-            self.session = requests.Session()
-            self.session.headers.update({"User-Agent": self.user_agent})
-            # 配置连接池
-            adapter = requests.adapters.HTTPAdapter(
-                pool_connections=20,
-                pool_maxsize=20,
-                max_retries=max_retries
+            self.session = HTTPClientFactory.get_sync_client(
+                verify_ssl=self.verify_ssl,
+                headers={"User-Agent": self.user_agent},
+                max_retries=max_retries,
+                force_new=True
             )
-            self.session.mount('http://', adapter)
-            self.session.mount('https://', adapter)
         else:
             self.session = None
 

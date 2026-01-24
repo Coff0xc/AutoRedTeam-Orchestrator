@@ -19,6 +19,13 @@ from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
 
+# 统一 HTTP 客户端工厂
+try:
+    from core.http import get_sync_client
+    HAS_HTTP_FACTORY = True
+except ImportError:
+    HAS_HTTP_FACTORY = False
+
 
 class OOBProvider(ABC):
     """OOB提供者基类"""
@@ -77,12 +84,16 @@ class InteractshProvider(OOBProvider):
 
 class DNSLogProvider(OOBProvider):
     """DNSLog.cn OOB平台"""
-    
+
     def __init__(self, domain: str = None, api_key: str = None):
         self.domain = domain
         self.api_key = api_key
-        self.session = requests.Session()
-        
+        # 优先使用统一 HTTP 客户端工厂
+        if HAS_HTTP_FACTORY:
+            self.session = get_sync_client(force_new=True)
+        else:
+            self.session = requests.Session()
+
         if not domain:
             self._get_domain()
     
@@ -131,11 +142,15 @@ class DNSLogProvider(OOBProvider):
 
 class CustomOOBServer(OOBProvider):
     """自建OOB服务器"""
-    
+
     def __init__(self, server_url: str, api_key: str = None):
         self.server_url = server_url.rstrip("/")
         self.api_key = api_key
-        self.session = requests.Session()
+        # 优先使用统一 HTTP 客户端工厂
+        if HAS_HTTP_FACTORY:
+            self.session = get_sync_client(force_new=True)
+        else:
+            self.session = requests.Session()
         if api_key:
             self.session.headers["Authorization"] = f"Bearer {api_key}"
     

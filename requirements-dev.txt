@@ -1,0 +1,35 @@
+# 开发依赖清单
+# 用于代码质量检查、测试、文档生成等
+
+# 测试框架
+pytest>=7.4.0
+pytest-cov>=4.1.0        # 覆盖率
+pytest-xdist>=3.3.0      # 并行测试
+pytest-mock>=3.11.0      # Mock 支持
+pytest-asyncio>=0.21.0   # 异步测试
+
+# 代码质量
+black>=23.12.0           # 代码格式化
+isort>=5.13.0            # 导入排序
+pylint>=3.0.0            # 代码检查
+flake8>=7.0.0            # 风格检查
+mypy>=1.7.0              # 类型检查
+bandit>=1.7.6            # 安全检查
+radon>=6.0.1             # 复杂度分析
+
+# Pre-commit 钩子
+pre-commit>=3.6.0
+
+# 文档生成
+sphinx>=7.2.0
+sphinx-rtd-theme>=2.0.0
+pdoc3>=0.10.0
+
+# 打包与发布
+build>=1.0.0
+twine>=4.0.0
+wheel>=0.42.0
+
+# 实用工具
+ipython>=8.18.0          # 交互式 Shell
+ipdb>=0.13.13            # 调试器

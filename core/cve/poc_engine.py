@@ -1,32 +1,41 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-YAML PoC 引擎 - 轻量级漏洞验证引擎
-功能: 解析和执行YAML格式的PoC模板，类似Nuclei但纯Python实现
-支持: HTTP请求、变量替换、Matchers、Extractors、条件逻辑
+PoC 执行引擎
+兼容 Nuclei YAML 格式，支持漏洞验证
+
 作者: AutoRedTeam-Orchestrator
 """
 
 import re
-import asyncio
-import logging
-from typing import Dict, List, Optional, Any, Tuple, Union
-from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
-import yaml
-import time
 import random
 import string
+import logging
+import time
+import threading
+from dataclasses import dataclass, field
+from typing import List, Optional, Dict, Any, Tuple
+from pathlib import Path
 from urllib.parse import urljoin, urlparse
+
+from .models import PoCTemplate, PoCMatcher, PoCExtractor, Severity
 
 logger = logging.getLogger(__name__)
 
-# HTTP 请求库
+# YAML 支持
 try:
-    import httpx
-    HAS_HTTPX = True
+    import yaml
+    HAS_YAML = True
 except ImportError:
-    HAS_HTTPX = False
+    HAS_YAML = False
+    logger.warning("yaml 库未安装，无法加载 YAML 格式的 PoC 模板")
+
+# HTTP 客户端
+try:
+    from core.http import get_client
+    HAS_HTTP_FACTORY = True
+except ImportError:
+    HAS_HTTP_FACTORY = False
 
 try:
     import requests
@@ -35,122 +44,49 @@ except ImportError:
     HAS_REQUESTS = False
 
 
-class SeverityLevel(Enum):
-    """漏洞严重性级别"""
-    INFO = "info"
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
-
-
-class MatcherType(Enum):
-    """匹配器类型"""
-    WORD = "word"           # 关键字匹配
-    REGEX = "regex"         # 正则表达式匹配
-    STATUS = "status"       # HTTP状态码匹配
-    SIZE = "size"           # 响应大小匹配
-    BINARY = "binary"       # 二进制匹配
-    DSL = "dsl"            # DSL表达式
-
-
-class ExtractorType(Enum):
-    """提取器类型"""
-    REGEX = "regex"         # 正则表达式提取
-    JSON = "json"           # JSON路径提取
-    XPATH = "xpath"         # XPath提取
-    KVAL = "kval"          # Key-Value提取
-
-
-class MatcherCondition(Enum):
-    """匹配条件"""
-    AND = "and"
-    OR = "or"
-
-
-@dataclass
-class PoCInfo:
-    """PoC 信息"""
-    id: str
-    name: str
-    author: str = ""
-    severity: SeverityLevel = SeverityLevel.INFO
-    description: str = ""
-    reference: List[str] = field(default_factory=list)
-    tags: List[str] = field(default_factory=list)
-    classification: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class HTTPRequest:
-    """HTTP 请求定义"""
-    method: str = "GET"
-    path: List[str] = field(default_factory=list)
-    headers: Dict[str, str] = field(default_factory=dict)
-    body: str = ""
-    raw: str = ""
-    payloads: Dict[str, List[str]] = field(default_factory=dict)
-
-
-@dataclass
-class Matcher:
-    """匹配器"""
-    type: MatcherType
-    part: str = "body"                          # body, header, status, all
-    words: List[str] = field(default_factory=list)
-    regex: List[str] = field(default_factory=list)
-    status: List[int] = field(default_factory=list)
-    size: List[int] = field(default_factory=list)
-    binary: List[str] = field(default_factory=list)
-    dsl: List[str] = field(default_factory=list)
-    condition: str = "or"                       # and, or
-    negative: bool = False
-    case_insensitive: bool = False
-
-
-@dataclass
-class Extractor:
-    """提取器"""
-    type: ExtractorType
-    part: str = "body"
-    regex: List[str] = field(default_factory=list)
-    json: List[str] = field(default_factory=list)
-    xpath: List[str] = field(default_factory=list)
-    kval: List[str] = field(default_factory=list)
-    group: int = 1
-    internal: bool = False
-    name: str = ""
-
-
-@dataclass
-class PoCTemplate:
-    """PoC 模板"""
-    info: PoCInfo
-    requests: List[HTTPRequest] = field(default_factory=list)
-    matchers: List[List[Matcher]] = field(default_factory=list)
-    extractors: List[List[Extractor]] = field(default_factory=list)
-    matchers_condition: MatcherCondition = MatcherCondition.OR
-
-
 @dataclass
 class PoCResult:
     """PoC 执行结果"""
-    vulnerable: bool
-    template_id: str
-    template_name: str
-    severity: SeverityLevel
-    matched_at: str = ""
-    matcher_name: str = ""
-    extracted_results: Dict[str, List[str]] = field(default_factory=dict)
-    evidence: str = ""
-    curl_command: str = ""
-    timestamp: str = ""
-    request: str = ""
-    response: str = ""
+    success: bool                              # 执行是否成功
+    vulnerable: bool                           # 是否存在漏洞
+    template_id: str                           # 模板 ID
+    template_name: str = ''                    # 模板名称
+    target: str = ''                           # 目标地址
+    matched: bool = False                      # 是否匹配成功
+    matcher_name: str = ''                     # 匹配的 Matcher 名称
+    extracted: Dict[str, Any] = field(default_factory=dict)  # 提取的数据
+    evidence: str = ''                         # 证据
+    request: Optional[Dict[str, Any]] = None   # 请求详情
+    response: Optional[Dict[str, Any]] = None  # 响应详情
+    error: Optional[str] = None                # 错误信息
+    execution_time_ms: float = 0               # 执行时间 (毫秒)
+    timestamp: str = ''                        # 时间戳
+
+    def to_dict(self) -> Dict[str, Any]:
+        """转换为字典"""
+        return {
+            'success': self.success,
+            'vulnerable': self.vulnerable,
+            'template_id': self.template_id,
+            'template_name': self.template_name,
+            'target': self.target,
+            'matched': self.matched,
+            'matcher_name': self.matcher_name,
+            'extracted': self.extracted,
+            'evidence': self.evidence,
+            'request': self.request,
+            'response': self.response,
+            'error': self.error,
+            'execution_time_ms': self.execution_time_ms,
+            'timestamp': self.timestamp,
+        }
 
 
 class VariableReplacer:
     """变量替换器"""
+
+    # 内置变量模式
+    VARIABLE_PATTERN = re.compile(r'\{\{([^}]+)\}\}')
 
     @staticmethod
     def generate_random_string(length: int = 8) -> str:
@@ -158,161 +94,122 @@ class VariableReplacer:
         return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
     @staticmethod
+    def generate_random_int(min_val: int = 1, max_val: int = 999999) -> int:
+        """生成随机整数"""
+        return random.randint(min_val, max_val)
+
+    @staticmethod
     def generate_interactsh_url() -> str:
         """生成 Interactsh URL (模拟)"""
         random_id = VariableReplacer.generate_random_string(20)
         return f"{random_id}.oast.fun"
 
-    @staticmethod
-    def replace_variables(text: str, base_url: str,
-                         custom_vars: Optional[Dict[str, str]] = None) -> str:
+    @classmethod
+    def replace(
+        cls,
+        text: str,
+        base_url: str,
+        custom_vars: Optional[Dict[str, str]] = None
+    ) -> str:
         """
         替换文本中的变量
 
         支持的变量:
-        - {{BaseURL}}: 目标基础URL
+        - {{BaseURL}}: 完整的基础 URL
+        - {{RootURL}}: 根 URL (不含路径)
         - {{Hostname}}: 主机名
-        - {{RootURL}}: 根URL
+        - {{Host}}: 主机 (可能含端口)
+        - {{Port}}: 端口
         - {{Path}}: 路径
+        - {{Scheme}}: 协议 (http/https)
         - {{randstr}}: 随机字符串
+        - {{rand_int(min, max)}}: 随机整数
         - {{interactsh-url}}: Interactsh URL
+
+        Args:
+            text: 原始文本
+            base_url: 基础 URL
+            custom_vars: 自定义变量
+
+        Returns:
+            替换后的文本
         """
+        if not text:
+            return text
+
         custom_vars = custom_vars or {}
 
-        # 解析URL
+        # 解析 URL
         parsed = urlparse(base_url)
-        hostname = parsed.netloc
-        root_url = f"{parsed.scheme}://{parsed.netloc}"
-        path = parsed.path or "/"
+        hostname = parsed.hostname or ''
+        host = parsed.netloc or ''
+        port = str(parsed.port) if parsed.port else ('443' if parsed.scheme == 'https' else '80')
+        path = parsed.path or '/'
+        scheme = parsed.scheme or 'http'
+        root_url = f"{scheme}://{host}"
 
-        # 内置变量
-        variables = {
-            "BaseURL": base_url,
-            "Hostname": hostname,
-            "RootURL": root_url,
-            "Path": path,
-            "randstr": VariableReplacer.generate_random_string(),
-            "interactsh-url": VariableReplacer.generate_interactsh_url(),
+        # 内置变量映射
+        builtin_vars = {
+            'BaseURL': base_url.rstrip('/'),
+            'RootURL': root_url,
+            'Hostname': hostname,
+            'Host': host,
+            'Port': port,
+            'Path': path,
+            'Scheme': scheme,
+            'randstr': cls.generate_random_string(),
+            'interactsh-url': cls.generate_interactsh_url(),
         }
 
-        # 合并自定义变量
-        variables.update(custom_vars)
+        # 合并自定义变量 (优先级更高)
+        variables = {**builtin_vars, **custom_vars}
+
+        result = text
 
         # 替换所有变量
-        result = text
-        for key, value in variables.items():
-            result = result.replace(f"{{{{{key}}}}}", value)
+        def replacer(match):
+            var_name = match.group(1).strip()
+
+            # 处理 rand_int 函数
+            rand_int_match = re.match(r'rand_int\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)', var_name)
+            if rand_int_match:
+                min_val = int(rand_int_match.group(1))
+                max_val = int(rand_int_match.group(2))
+                return str(cls.generate_random_int(min_val, max_val))
+
+            # 普通变量替换
+            return variables.get(var_name, match.group(0))
+
+        result = cls.VARIABLE_PATTERN.sub(replacer, result)
 
         return result
 
 
-class YAMLPoCParser:
-    """YAML PoC 解析器"""
+class PoCEngine:
+    """
+    PoC 执行引擎 - 兼容 Nuclei 格式
 
-    @staticmethod
-    def parse_file(file_path: str) -> Optional[PoCTemplate]:
-        """从文件解析 PoC 模板"""
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = yaml.safe_load(f)
-            return YAMLPoCParser.parse_dict(data)
-        except Exception as e:
-            logger.error(f"解析 PoC 文件失败: {file_path}, 错误: {e}")
-            return None
+    特性:
+    - 支持 YAML 格式的 PoC 模板
+    - 变量替换
+    - 多种 Matcher 类型 (word, regex, status, size)
+    - Extractor 支持
+    - 并发执行
+    """
 
-    @staticmethod
-    def parse_dict(data: Dict[str, Any]) -> Optional[PoCTemplate]:
-        """从字典解析 PoC 模板"""
-        try:
-            # 解析 Info
-            info_data = data.get("info", {})
-            info = PoCInfo(
-                id=data.get("id", "unknown"),
-                name=info_data.get("name", "Unknown PoC"),
-                author=info_data.get("author", ""),
-                severity=SeverityLevel(info_data.get("severity", "info")),
-                description=info_data.get("description", ""),
-                reference=info_data.get("reference", []),
-                tags=info_data.get("tags", []),
-                classification=info_data.get("classification", {})
-            )
-
-            # 解析 Requests
-            requests = []
-            requests_data = data.get("requests", [])
-            for req_data in requests_data:
-                req = HTTPRequest(
-                    method=req_data.get("method", "GET"),
-                    path=req_data.get("path", []),
-                    headers=req_data.get("headers", {}),
-                    body=req_data.get("body", ""),
-                    raw=req_data.get("raw", ""),
-                    payloads=req_data.get("payloads", {})
-                )
-                requests.append(req)
-
-                # 解析 Matchers
-                matchers = []
-                matchers_data = req_data.get("matchers", [])
-                for m_data in matchers_data:
-                    matcher = Matcher(
-                        type=MatcherType(m_data.get("type", "word")),
-                        part=m_data.get("part", "body"),
-                        words=m_data.get("words", []),
-                        regex=m_data.get("regex", []),
-                        status=m_data.get("status", []),
-                        size=m_data.get("size", []),
-                        binary=m_data.get("binary", []),
-                        dsl=m_data.get("dsl", []),
-                        condition=m_data.get("condition", "or"),
-                        negative=m_data.get("negative", False),
-                        case_insensitive=m_data.get("case-insensitive", False)
-                    )
-                    matchers.append(matcher)
-
-                # 解析 Extractors
-                extractors = []
-                extractors_data = req_data.get("extractors", [])
-                for e_data in extractors_data:
-                    extractor = Extractor(
-                        type=ExtractorType(e_data.get("type", "regex")),
-                        part=e_data.get("part", "body"),
-                        regex=e_data.get("regex", []),
-                        json=e_data.get("json", []),
-                        xpath=e_data.get("xpath", []),
-                        kval=e_data.get("kval", []),
-                        group=e_data.get("group", 1),
-                        internal=e_data.get("internal", False),
-                        name=e_data.get("name", "")
-                    )
-                    extractors.append(extractor)
-
-            template = PoCTemplate(
-                info=info,
-                requests=requests,
-                matchers_condition=MatcherCondition(
-                    data.get("requests", [{}])[0].get("matchers-condition", "or")
-                ) if requests else MatcherCondition.OR
-            )
-
-            return template
-
-        except Exception as e:
-            logger.error(f"解析 PoC 数据失败: {e}")
-            return None
-
-
-class PoCExecutor:
-    """PoC 执行器"""
-
-    def __init__(self, timeout: float = 10.0, verify_ssl: bool = False,
-                 proxy: Optional[str] = None, max_redirects: int = 10):
+    def __init__(
+        self,
+        timeout: int = 10,
+        verify_ssl: bool = False,
+        proxy: Optional[str] = None,
+        max_redirects: int = 10
+    ):
         """
-        初始化执行器
+        初始化 PoC 引擎
 
         Args:
-            timeout: HTTP 请求超时时间
-            verify_ssl: 是否验证SSL证书
+            timeout: 请求超时时间 (秒)
+            verify_ssl: 是否验证 SSL 证书
             proxy: 代理地址
             max_redirects: 最大重定向次数
         """
@@ -320,439 +217,715 @@ class PoCExecutor:
         self.verify_ssl = verify_ssl
         self.proxy = proxy
         self.max_redirects = max_redirects
+
+        # 模板缓存
+        self._templates: Dict[str, PoCTemplate] = {}
+        self._templates_lock = threading.Lock()
+
+        # HTTP 会话
         self._session = None
 
+        logger.info("[PoCEngine] 初始化完成")
+
     def _get_session(self):
-        """获取 HTTP Session"""
+        """获取 HTTP 会话"""
         if self._session is None:
-            if HAS_REQUESTS:
+            if HAS_HTTP_FACTORY:
+                self._session = get_client()
+            elif HAS_REQUESTS:
                 import requests
                 self._session = requests.Session()
                 self._session.verify = self.verify_ssl
                 if self.proxy:
                     self._session.proxies = {
-                        "http": self.proxy,
-                        "https": self.proxy,
+                        'http': self.proxy,
+                        'https': self.proxy
                     }
+
         return self._session
 
-    def execute(self, template: PoCTemplate, target: str,
-                custom_vars: Optional[Dict[str, str]] = None) -> List[PoCResult]:
+    def load_template(self, path: str) -> Optional[PoCTemplate]:
         """
-        执行 PoC 模板
+        从文件加载 PoC 模板
 
         Args:
-            template: PoC 模板
-            target: 目标URL
-            custom_vars: 自定义变量
+            path: 模板文件路径
 
         Returns:
-            执行结果列表
+            PoC 模板或 None
         """
-        results = []
-
-        for req_idx, request in enumerate(template.requests):
-            # 执行每个请求
-            for path in request.path:
-                # 替换变量
-                full_path = VariableReplacer.replace_variables(
-                    path, target, custom_vars
-                )
-
-                # 构建完整URL
-                if full_path.startswith("http"):
-                    url = full_path
-                else:
-                    url = urljoin(target, full_path)
-
-                # 替换Headers中的变量
-                headers = {}
-                for k, v in request.headers.items():
-                    headers[k] = VariableReplacer.replace_variables(
-                        v, target, custom_vars
-                    )
-
-                # 替换Body中的变量
-                body = VariableReplacer.replace_variables(
-                    request.body, target, custom_vars
-                ) if request.body else None
-
-                # 发送请求
-                try:
-                    response = self._send_request(
-                        request.method, url, headers, body
-                    )
-
-                    # 检查 Matchers
-                    matched, matcher_name, evidence = self._check_matchers(
-                        template, req_idx, response
-                    )
-
-                    if matched:
-                        # 提取数据
-                        extracted = self._extract_data(
-                            template, req_idx, response
-                        )
-
-                        result = PoCResult(
-                            vulnerable=True,
-                            template_id=template.info.id,
-                            template_name=template.info.name,
-                            severity=template.info.severity,
-                            matched_at=url,
-                            matcher_name=matcher_name,
-                            extracted_results=extracted,
-                            evidence=evidence,
-                            curl_command=self._generate_curl(
-                                request.method, url, headers, body
-                            ),
-                            timestamp=time.strftime("%Y-%m-%d %H:%M:%S"),
-                            request=self._format_request(
-                                request.method, url, headers, body
-                            ),
-                            response=self._format_response(response)
-                        )
-                        results.append(result)
-
-                except Exception as e:
-                    logger.debug(f"请求失败: {url}, 错误: {e}")
-                    continue
-
-        return results
-
-    def _send_request(self, method: str, url: str,
-                     headers: Dict[str, str],
-                     body: Optional[str]) -> Tuple[int, str, Dict[str, str]]:
-        """
-        发送 HTTP 请求
-
-        Returns:
-            (status_code, body, headers)
-        """
-        session = self._get_session()
-        if not session:
-            logger.error("没有可用的HTTP库")
-            return (0, "", {})
+        if not HAS_YAML:
+            logger.error("[PoCEngine] 需要安装 pyyaml 库")
+            return None
 
         try:
-            if method.upper() == "GET":
-                resp = session.get(
-                    url, headers=headers, timeout=self.timeout,
-                    allow_redirects=True
-                )
-            elif method.upper() == "POST":
-                resp = session.post(
-                    url, headers=headers, data=body,
-                    timeout=self.timeout, allow_redirects=True
-                )
-            elif method.upper() == "PUT":
-                resp = session.put(
-                    url, headers=headers, data=body,
-                    timeout=self.timeout, allow_redirects=True
-                )
-            elif method.upper() == "DELETE":
-                resp = session.delete(
-                    url, headers=headers, timeout=self.timeout,
-                    allow_redirects=True
-                )
-            else:
-                return (0, "", {})
+            with open(path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f)
 
-            return (resp.status_code, resp.text, dict(resp.headers))
+            template = PoCTemplate.from_dict(data)
+
+            # 缓存模板
+            with self._templates_lock:
+                self._templates[template.id] = template
+
+            logger.debug(f"[PoCEngine] 加载模板: {template.id}")
+            return template
 
         except Exception as e:
-            logger.debug(f"HTTP请求异常: {e}")
-            return (0, "", {})
-
-    def _check_matchers(self, template: PoCTemplate, req_idx: int,
-                       response: Tuple[int, str, Dict[str, str]]) -> Tuple[bool, str, str]:
-        """
-        检查匹配器
-
-        Returns:
-            (matched, matcher_name, evidence)
-        """
-        status_code, body, headers = response
-
-        # 获取对应请求的 matchers
-        if req_idx >= len(template.requests):
-            return (False, "", "")
-
-        # 简化处理: 直接从 YAML 获取 matchers
-        # 这里需要改进以支持多个 matcher
-        # 暂时使用简单的逻辑
-
-        # 模拟匹配逻辑
-        matcher_results = []
-        evidence_parts = []
-
-        # 假设 matchers 在第一个 request 中
-        # 实际应该更复杂的逻辑
-
-        # 简单实现: 检查状态码和关键字
-        # 状态码匹配
-        if status_code == 200:
-            matcher_results.append(True)
-
-        # 关键字匹配 (简化版)
-        if "error" in body.lower() or "exception" in body.lower():
-            matcher_results.append(True)
-            evidence_parts.append("Found error keywords")
-
-        # 条件判断
-        if template.matchers_condition == MatcherCondition.OR:
-            matched = any(matcher_results) if matcher_results else False
-        else:
-            matched = all(matcher_results) if matcher_results else False
-
-        evidence = "; ".join(evidence_parts) if evidence_parts else f"Status: {status_code}"
-
-        return (matched, "default_matcher", evidence)
-
-    def _extract_data(self, template: PoCTemplate, req_idx: int,
-                     response: Tuple[int, str, Dict[str, str]]) -> Dict[str, List[str]]:
-        """提取数据"""
-        extracted = {}
-
-        # 简化实现: 提取正则匹配
-        status_code, body, headers = response
-
-        # 示例: 提取版本号
-        version_pattern = r'\d+\.\d+\.\d+'
-        matches = re.findall(version_pattern, body)
-        if matches:
-            extracted["version"] = matches
-
-        return extracted
-
-    def _generate_curl(self, method: str, url: str,
-                      headers: Dict[str, str],
-                      body: Optional[str]) -> str:
-        """生成 curl 命令"""
-        parts = [f"curl -X {method}"]
-
-        for k, v in headers.items():
-            parts.append(f'-H "{k}: {v}"')
-
-        if body:
-            parts.append(f'-d "{body}"')
-
-        parts.append(f'"{url}"')
-
-        return " ".join(parts)
-
-    def _format_request(self, method: str, url: str,
-                       headers: Dict[str, str],
-                       body: Optional[str]) -> str:
-        """格式化请求"""
-        lines = [f"{method} {url}"]
-        for k, v in headers.items():
-            lines.append(f"{k}: {v}")
-        if body:
-            lines.append("")
-            lines.append(body)
-        return "\n".join(lines)
-
-    def _format_response(self, response: Tuple[int, str, Dict[str, str]]) -> str:
-        """格式化响应"""
-        status_code, body, headers = response
-        lines = [f"Status: {status_code}"]
-        for k, v in headers.items():
-            lines.append(f"{k}: {v}")
-        lines.append("")
-        lines.append(body[:500])  # 只显示前500字符
-        return "\n".join(lines)
-
-    def close(self):
-        """关闭 Session"""
-        if self._session:
-            self._session.close()
-
-
-class PoCEngine:
-    """
-    YAML PoC 引擎 - 主引擎
-
-    Usage:
-        engine = PoCEngine()
-
-        # 从文件加载模板
-        template = engine.load_template("cve-2021-44228.yaml")
-
-        # 执行PoC
-        results = engine.run(template, "http://target.com")
-
-        for result in results:
-            if result.vulnerable:
-                print(f"[+] 发现漏洞: {result.template_name}")
-                print(f"    严重性: {result.severity.value}")
-                print(f"    URL: {result.matched_at}")
-    """
-
-    def __init__(self, timeout: float = 10.0, verify_ssl: bool = False,
-                 proxy: Optional[str] = None):
-        """
-        初始化引擎
-
-        Args:
-            timeout: 请求超时时间
-            verify_ssl: 是否验证SSL
-            proxy: 代理地址
-        """
-        self.executor = PoCExecutor(
-            timeout=timeout,
-            verify_ssl=verify_ssl,
-            proxy=proxy
-        )
-        self.parser = YAMLPoCParser()
-
-    def load_template(self, file_path: str) -> Optional[PoCTemplate]:
-        """加载 PoC 模板"""
-        return self.parser.parse_file(file_path)
+            logger.error(f"[PoCEngine] 加载模板失败 {path}: {e}")
+            return None
 
     def load_template_from_dict(self, data: Dict[str, Any]) -> Optional[PoCTemplate]:
-        """从字典加载模板"""
-        return self.parser.parse_dict(data)
+        """
+        从字典加载 PoC 模板
 
-    def run(self, template: PoCTemplate, target: str,
-            custom_vars: Optional[Dict[str, str]] = None) -> List[PoCResult]:
+        Args:
+            data: 模板数据
+
+        Returns:
+            PoC 模板或 None
+        """
+        try:
+            template = PoCTemplate.from_dict(data)
+
+            with self._templates_lock:
+                self._templates[template.id] = template
+
+            return template
+
+        except Exception as e:
+            logger.error(f"[PoCEngine] 解析模板失败: {e}")
+            return None
+
+    def load_template_from_yaml(self, yaml_str: str) -> Optional[PoCTemplate]:
+        """
+        从 YAML 字符串加载模板
+
+        Args:
+            yaml_str: YAML 字符串
+
+        Returns:
+            PoC 模板或 None
+        """
+        if not HAS_YAML:
+            logger.error("[PoCEngine] 需要安装 pyyaml 库")
+            return None
+
+        try:
+            data = yaml.safe_load(yaml_str)
+            return self.load_template_from_dict(data)
+
+        except Exception as e:
+            logger.error(f"[PoCEngine] 解析 YAML 失败: {e}")
+            return None
+
+    def get_template(self, template_id: str) -> Optional[PoCTemplate]:
+        """获取缓存的模板"""
+        with self._templates_lock:
+            return self._templates.get(template_id)
+
+    def list_templates(self) -> List[str]:
+        """列出所有已加载的模板"""
+        with self._templates_lock:
+            return list(self._templates.keys())
+
+    def execute(
+        self,
+        target: str,
+        template: PoCTemplate,
+        variables: Optional[Dict[str, str]] = None
+    ) -> PoCResult:
         """
         执行 PoC
 
         Args:
+            target: 目标 URL
             template: PoC 模板
-            target: 目标URL
-            custom_vars: 自定义变量
+            variables: 自定义变量
+
+        Returns:
+            执行结果
+        """
+        start_time = time.time()
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+
+        try:
+            # 获取要测试的路径
+            paths = template.paths if template.paths else [template.path]
+
+            for path in paths:
+                # 变量替换
+                replaced_path = VariableReplacer.replace(path, target, variables)
+
+                # 构建完整 URL
+                if replaced_path.startswith('http'):
+                    url = replaced_path
+                else:
+                    url = urljoin(target.rstrip('/') + '/', replaced_path.lstrip('/'))
+
+                # 替换请求头中的变量
+                headers = {}
+                for key, value in template.headers.items():
+                    headers[key] = VariableReplacer.replace(value, target, variables)
+
+                # 替换请求体中的变量
+                body = None
+                if template.body:
+                    body = VariableReplacer.replace(template.body, target, variables)
+
+                # 发送请求
+                response = self._send_request(
+                    method=template.method,
+                    url=url,
+                    headers=headers,
+                    body=body,
+                    redirect=template.redirect
+                )
+
+                if response is None:
+                    continue
+
+                status_code, resp_body, resp_headers = response
+
+                # 检查 Matchers
+                matched, matcher_name, evidence = self._check_matchers(
+                    template.matchers,
+                    template.matchers_condition,
+                    status_code,
+                    resp_body,
+                    resp_headers
+                )
+
+                if matched:
+                    # 运行 Extractors
+                    extracted = self._run_extractors(
+                        template.extractors,
+                        resp_body,
+                        resp_headers
+                    )
+
+                    execution_time = (time.time() - start_time) * 1000
+
+                    return PoCResult(
+                        success=True,
+                        vulnerable=True,
+                        template_id=template.id,
+                        template_name=template.name,
+                        target=target,
+                        matched=True,
+                        matcher_name=matcher_name,
+                        extracted=extracted,
+                        evidence=evidence[:500],  # 限制长度
+                        request={
+                            'method': template.method,
+                            'url': url,
+                            'headers': headers,
+                            'body': body
+                        },
+                        response={
+                            'status_code': status_code,
+                            'headers': dict(resp_headers),
+                            'body_length': len(resp_body)
+                        },
+                        execution_time_ms=execution_time,
+                        timestamp=timestamp
+                    )
+
+                # 如果设置了 stop_at_first_match，继续检查其他路径
+                if not template.stop_at_first_match:
+                    continue
+
+            # 所有路径都未匹配
+            execution_time = (time.time() - start_time) * 1000
+
+            return PoCResult(
+                success=True,
+                vulnerable=False,
+                template_id=template.id,
+                template_name=template.name,
+                target=target,
+                matched=False,
+                execution_time_ms=execution_time,
+                timestamp=timestamp
+            )
+
+        except Exception as e:
+            execution_time = (time.time() - start_time) * 1000
+            logger.error(f"[PoCEngine] 执行失败: {e}")
+
+            return PoCResult(
+                success=False,
+                vulnerable=False,
+                template_id=template.id,
+                template_name=template.name,
+                target=target,
+                error=str(e),
+                execution_time_ms=execution_time,
+                timestamp=timestamp
+            )
+
+    def execute_batch(
+        self,
+        targets: List[str],
+        template: PoCTemplate,
+        variables: Optional[Dict[str, str]] = None,
+        concurrency: int = 10
+    ) -> List[PoCResult]:
+        """
+        批量执行 PoC
+
+        Args:
+            targets: 目标 URL 列表
+            template: PoC 模板
+            variables: 自定义变量
+            concurrency: 并发数
 
         Returns:
             执行结果列表
         """
-        return self.executor.execute(template, target, custom_vars)
+        import concurrent.futures
 
-    async def run_async(self, template: PoCTemplate, targets: List[str],
-                       custom_vars: Optional[Dict[str, str]] = None,
-                       concurrency: int = 10) -> List[PoCResult]:
+        results = []
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
+            futures = {
+                executor.submit(self.execute, target, template, variables): target
+                for target in targets
+            }
+
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    result = future.result()
+                    results.append(result)
+                except Exception as e:
+                    target = futures[future]
+                    results.append(PoCResult(
+                        success=False,
+                        vulnerable=False,
+                        template_id=template.id,
+                        template_name=template.name,
+                        target=target,
+                        error=str(e),
+                        timestamp=time.strftime('%Y-%m-%d %H:%M:%S')
+                    ))
+
+        return results
+
+    def _send_request(
+        self,
+        method: str,
+        url: str,
+        headers: Dict[str, str],
+        body: Optional[str],
+        redirect: bool = True
+    ) -> Optional[Tuple[int, str, Dict[str, str]]]:
         """
-        异步执行 PoC (批量目标)
+        发送 HTTP 请求
 
         Args:
-            template: PoC 模板
-            targets: 目标URL列表
-            custom_vars: 自定义变量
-            concurrency: 并发数
+            method: HTTP 方法
+            url: URL
+            headers: 请求头
+            body: 请求体
+            redirect: 是否跟随重定向
 
         Returns:
-            所有结果
+            (状态码, 响应体, 响应头) 或 None
         """
-        semaphore = asyncio.Semaphore(concurrency)
+        session = self._get_session()
+        if not session:
+            logger.error("[PoCEngine] 无可用的 HTTP 客户端")
+            return None
 
-        async def limited_run(target: str):
-            async with semaphore:
-                # 在线程池中执行同步函数
-                loop = asyncio.get_event_loop()
-                return await loop.run_in_executor(
-                    None, self.run, template, target, custom_vars
+        try:
+            method = method.upper()
+
+            if HAS_HTTP_FACTORY:
+                # 使用统一 HTTP 客户端
+                response = session.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    data=body,
+                    timeout=self.timeout,
+                    allow_redirects=redirect
+                )
+                return (
+                    response.status_code,
+                    response.text,
+                    dict(response.headers)
                 )
 
-        tasks = [limited_run(target) for target in targets]
-        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+            elif HAS_REQUESTS:
+                # 使用 requests
+                response = session.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    data=body,
+                    timeout=self.timeout,
+                    allow_redirects=redirect
+                )
+                return (
+                    response.status_code,
+                    response.text,
+                    dict(response.headers)
+                )
 
-        # 展平结果
-        all_results = []
-        for results in results_list:
-            if isinstance(results, list):
-                all_results.extend(results)
+        except Exception as e:
+            logger.debug(f"[PoCEngine] 请求失败 {url}: {e}")
+            return None
 
-        return all_results
+    def _check_matchers(
+        self,
+        matchers: List[PoCMatcher],
+        condition: str,
+        status_code: int,
+        body: str,
+        headers: Dict[str, str]
+    ) -> Tuple[bool, str, str]:
+        """
+        检查 Matchers
+
+        Args:
+            matchers: Matcher 列表
+            condition: 条件 (and/or)
+            status_code: 状态码
+            body: 响应体
+            headers: 响应头
+
+        Returns:
+            (是否匹配, Matcher 名称, 证据)
+        """
+        if not matchers:
+            return (False, '', '')
+
+        results = []
+        matched_name = ''
+        evidence = ''
+
+        for matcher in matchers:
+            matched, ev = self._check_single_matcher(
+                matcher, status_code, body, headers
+            )
+
+            if matcher.negative:
+                matched = not matched
+
+            results.append(matched)
+
+            if matched:
+                matched_name = matcher.type
+                evidence = ev
+
+        # 条件判断
+        if condition.lower() == 'and':
+            final_matched = all(results) if results else False
+        else:  # or
+            final_matched = any(results) if results else False
+
+        return (final_matched, matched_name, evidence)
+
+    def _check_single_matcher(
+        self,
+        matcher: PoCMatcher,
+        status_code: int,
+        body: str,
+        headers: Dict[str, str]
+    ) -> Tuple[bool, str]:
+        """
+        检查单个 Matcher
+
+        Args:
+            matcher: Matcher
+            status_code: 状态码
+            body: 响应体
+            headers: 响应头
+
+        Returns:
+            (是否匹配, 证据)
+        """
+        # 确定检查的内容
+        if matcher.part == 'header':
+            content = '\n'.join(f'{k}: {v}' for k, v in headers.items())
+        elif matcher.part == 'status':
+            content = str(status_code)
+        elif matcher.part == 'all':
+            header_str = '\n'.join(f'{k}: {v}' for k, v in headers.items())
+            content = f"Status: {status_code}\n{header_str}\n\n{body}"
+        else:  # body
+            content = body
+
+        # 是否忽略大小写
+        if matcher.case_insensitive:
+            content = content.lower()
+
+        matcher_type = matcher.type.lower() if isinstance(matcher.type, str) else matcher.type
+
+        # Word 匹配
+        if matcher_type == 'word':
+            words = matcher.words
+            if matcher.case_insensitive:
+                words = [w.lower() for w in words]
+
+            if matcher.condition.lower() == 'and':
+                matched = all(w in content for w in words)
+            else:
+                matched = any(w in content for w in words)
+
+            if matched:
+                matched_words = [w for w in words if w in content]
+                return (True, f"Matched words: {', '.join(matched_words[:3])}")
+
+        # Regex 匹配
+        elif matcher_type == 'regex':
+            for pattern in matcher.regex:
+                flags = re.IGNORECASE if matcher.case_insensitive else 0
+                match = re.search(pattern, content, flags)
+                if match:
+                    return (True, f"Regex matched: {match.group(0)[:100]}")
+
+        # Status 匹配
+        elif matcher_type == 'status':
+            if status_code in matcher.status:
+                return (True, f"Status code: {status_code}")
+
+        return (False, '')
+
+    def _run_extractors(
+        self,
+        extractors: List[PoCExtractor],
+        body: str,
+        headers: Dict[str, str]
+    ) -> Dict[str, Any]:
+        """
+        运行 Extractors
+
+        Args:
+            extractors: Extractor 列表
+            body: 响应体
+            headers: 响应头
+
+        Returns:
+            提取的数据
+        """
+        extracted = {}
+
+        for extractor in extractors:
+            if extractor.internal:
+                continue
+
+            name = extractor.name or f"extractor_{len(extracted)}"
+
+            # 确定内容
+            if extractor.part == 'header':
+                content = '\n'.join(f'{k}: {v}' for k, v in headers.items())
+            else:
+                content = body
+
+            extractor_type = extractor.type.lower() if isinstance(extractor.type, str) else extractor.type
+
+            # Regex 提取
+            if extractor_type == 'regex':
+                for pattern in extractor.regex:
+                    match = re.search(pattern, content)
+                    if match:
+                        if match.groups():
+                            extracted[name] = match.group(extractor.group) if len(match.groups()) >= extractor.group else match.group(0)
+                        else:
+                            extracted[name] = match.group(0)
+                        break
+
+            # JSON 提取
+            elif extractor_type == 'json':
+                try:
+                    import json
+                    data = json.loads(body)
+                    for json_path in extractor.json_path:
+                        value = self._extract_json_path(data, json_path)
+                        if value is not None:
+                            extracted[name] = value
+                            break
+                except (ValueError, TypeError):
+                    pass
+
+        return extracted
+
+    def _extract_json_path(self, data: Any, path: str) -> Any:
+        """
+        简单的 JSON 路径提取
+
+        Args:
+            data: JSON 数据
+            path: 路径 (如 .data.user.name)
+
+        Returns:
+            提取的值或 None
+        """
+        if not path or not data:
+            return None
+
+        parts = path.lstrip('.').split('.')
+        current = data
+
+        for part in parts:
+            if not part:
+                continue
+
+            # 数组索引
+            array_match = re.match(r'(\w+)\[(\d+)\]', part)
+            if array_match:
+                key = array_match.group(1)
+                index = int(array_match.group(2))
+                if isinstance(current, dict) and key in current:
+                    current = current[key]
+                    if isinstance(current, list) and len(current) > index:
+                        current = current[index]
+                    else:
+                        return None
+                else:
+                    return None
+            else:
+                if isinstance(current, dict) and part in current:
+                    current = current[part]
+                else:
+                    return None
+
+        return current
 
     def close(self):
         """关闭引擎"""
-        self.executor.close()
+        if self._session and HAS_REQUESTS and hasattr(self._session, 'close'):
+            self._session.close()
+            self._session = None
+
+        logger.debug("[PoCEngine] 已关闭")
+
+
+# 全局引擎实例
+_engine: Optional[PoCEngine] = None
+_engine_lock = threading.Lock()
+
+
+def get_poc_engine(
+    timeout: int = 10,
+    verify_ssl: bool = False,
+    proxy: Optional[str] = None
+) -> PoCEngine:
+    """
+    获取全局 PoC 引擎
+
+    Args:
+        timeout: 超时时间
+        verify_ssl: 是否验证 SSL
+        proxy: 代理地址
+
+    Returns:
+        PoC 引擎实例
+    """
+    global _engine
+
+    with _engine_lock:
+        if _engine is None:
+            _engine = PoCEngine(
+                timeout=timeout,
+                verify_ssl=verify_ssl,
+                proxy=proxy
+            )
+
+    return _engine
+
+
+def reset_poc_engine():
+    """重置全局 PoC 引擎"""
+    global _engine
+
+    with _engine_lock:
+        if _engine:
+            _engine.close()
+            _engine = None
 
 
 # 便捷函数
-def load_poc(file_path: str) -> Optional[PoCTemplate]:
-    """加载 PoC 模板 (便捷函数)"""
-    engine = PoCEngine()
-    return engine.load_template(file_path)
+def load_poc(path: str) -> Optional[PoCTemplate]:
+    """加载 PoC 模板"""
+    engine = get_poc_engine()
+    return engine.load_template(path)
 
 
-def execute_poc(template: PoCTemplate, target: str,
-                timeout: float = 10.0) -> List[PoCResult]:
-    """执行 PoC (便捷函数)"""
-    engine = PoCEngine(timeout=timeout)
-    try:
-        return engine.run(template, target)
-    finally:
-        engine.close()
+def execute_poc(
+    target: str,
+    template: PoCTemplate,
+    variables: Optional[Dict[str, str]] = None
+) -> PoCResult:
+    """执行 PoC"""
+    engine = get_poc_engine()
+    return engine.execute(target, template, variables)
 
 
-def execute_poc_batch(template: PoCTemplate, targets: List[str],
-                     concurrency: int = 10,
-                     timeout: float = 10.0) -> List[PoCResult]:
-    """批量执行 PoC (便捷函数)"""
-    engine = PoCEngine(timeout=timeout)
-    try:
-        return asyncio.run(
-            engine.run_async(template, targets, concurrency=concurrency)
-        )
-    finally:
-        engine.close()
+def execute_poc_batch(
+    targets: List[str],
+    template: PoCTemplate,
+    variables: Optional[Dict[str, str]] = None,
+    concurrency: int = 10
+) -> List[PoCResult]:
+    """批量执行 PoC"""
+    engine = get_poc_engine()
+    return engine.execute_batch(targets, template, variables, concurrency)
 
 
-if __name__ == "__main__":
-    # 测试示例
-    print("YAML PoC Engine Test")
+# CLI 入口
+if __name__ == '__main__':
+    import sys
+
+    print("PoC Engine Test")
     print("=" * 50)
 
-    # 示例模板 (字典格式)
-    sample_template = {
-        "id": "CVE-2021-XXXXX",
-        "info": {
-            "name": "Sample Vulnerability Detection",
-            "author": "test",
-            "severity": "high",
-            "description": "Sample PoC for testing",
-            "tags": ["cve", "rce"]
+    # 示例模板
+    sample_template_data = {
+        'id': 'test-poc',
+        'info': {
+            'name': 'Test PoC Template',
+            'author': 'test',
+            'severity': 'medium',
+            'description': 'A test PoC template',
         },
-        "requests": [
+        'method': 'GET',
+        'path': '/',
+        'matchers': [
             {
-                "method": "GET",
-                "path": ["{{BaseURL}}/test"],
-                "headers": {
-                    "User-Agent": "Mozilla/5.0"
-                },
-                "matchers": [
-                    {
-                        "type": "word",
-                        "words": ["error", "exception"]
-                    },
-                    {
-                        "type": "status",
-                        "status": [200, 500]
-                    }
-                ],
-                "matchers-condition": "or"
+                'type': 'status',
+                'status': [200, 301, 302]
             }
         ]
     }
 
-    # 加载模板
     engine = PoCEngine()
-    template = engine.load_template_from_dict(sample_template)
+    template = engine.load_template_from_dict(sample_template_data)
 
     if template:
-        print(f"\n[+] 加载模板成功:")
-        print(f"    ID: {template.info.id}")
-        print(f"    名称: {template.info.name}")
-        print(f"    严重性: {template.info.severity.value}")
-        print(f"    请求数: {len(template.requests)}")
+        print(f"[+] 加载模板: {template.id}")
+        print(f"    名称: {template.name}")
+        print(f"    严重性: {template.severity.value}")
 
     # 变量替换测试
     print("\n[+] 变量替换测试:")
-    test_text = "URL: {{BaseURL}}/path, Host: {{Hostname}}, Random: {{randstr}}"
-    replaced = VariableReplacer.replace_variables(test_text, "https://example.com/api")
+    test_url = "https://example.com:8443/api/v1"
+    test_text = "URL: {{BaseURL}}, Host: {{Host}}, Random: {{randstr}}"
+    replaced = VariableReplacer.replace(test_text, test_url)
     print(f"    原始: {test_text}")
-    print(f"    替换后: {replaced}")
+    print(f"    替换: {replaced}")
 
-    print("\n" + "=" * 50)
+    # 如果提供了目标，执行测试
+    if len(sys.argv) > 1:
+        target = sys.argv[1]
+        print(f"\n[+] 执行测试: {target}")
+
+        if template:
+            result = engine.execute(target, template)
+            print(f"    成功: {result.success}")
+            print(f"    漏洞: {result.vulnerable}")
+            print(f"    耗时: {result.execution_time_ms:.1f}ms")
+
+            if result.error:
+                print(f"    错误: {result.error}")

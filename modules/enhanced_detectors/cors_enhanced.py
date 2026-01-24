@@ -16,6 +16,13 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+# 统一 HTTP 客户端工厂
+try:
+    from core.http import get_sync_client
+    HAS_HTTP_FACTORY = True
+except ImportError:
+    HAS_HTTP_FACTORY = False
+
 
 class CORSVulnType(Enum):
     """CORS漏洞类型"""
@@ -131,7 +138,11 @@ class CORSEnhancedTester:
         """
         self.timeout = timeout
         self.proxies = {"http": proxy, "https": proxy} if proxy else None
-        self._session = requests.Session()
+        # 优先使用统一 HTTP 客户端工厂
+        if HAS_HTTP_FACTORY:
+            self._session = get_sync_client(proxy=proxy, force_new=True)
+        else:
+            self._session = requests.Session()
         self._session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         })

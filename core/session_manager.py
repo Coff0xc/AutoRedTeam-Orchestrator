@@ -287,6 +287,7 @@ class SessionManager:
 try:
     import requests
     from requests.cookies import RequestsCookieJar
+    from core.http.client_factory import HTTPClientFactory
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -341,8 +342,10 @@ class HTTPSessionManager:
 
         session_id = session_id or str(uuid.uuid4())[:8]
 
-        sess = requests.Session()
-        sess.verify = verify_ssl  # 安全修复: 默认启用 SSL 验证
+        sess = HTTPClientFactory.get_sync_client(
+            verify_ssl=verify_ssl,
+            force_new=True  # 每个会话独立
+        )
         sess.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",

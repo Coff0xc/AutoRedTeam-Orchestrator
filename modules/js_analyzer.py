@@ -12,6 +12,13 @@ from typing import Set, List, Dict, Optional
 from urllib.parse import urljoin, urlparse
 from loguru import logger
 
+# 统一 HTTP 客户端工厂
+try:
+    from core.http import get_async_client
+    HAS_HTTP_FACTORY = True
+except ImportError:
+    HAS_HTTP_FACTORY = False
+
 
 class JSAnalyzer:
     """JavaScript 静态分析器 (正则表达式模式匹配)"""
@@ -187,7 +194,13 @@ class JSAnalyzer:
         }
 
         try:
-            async with aiohttp.ClientSession() as session:
+            # 使用统一 HTTP 客户端工厂或回退到 aiohttp
+            if HAS_HTTP_FACTORY:
+                client_ctx = get_async_client(verify_ssl=False)
+            else:
+                client_ctx = aiohttp.ClientSession()
+
+            async with client_ctx as session:
                 # 1. 获取主页面
                 html_content = await cls._fetch_content(session, url, timeout)
 
