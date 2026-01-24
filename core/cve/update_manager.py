@@ -22,6 +22,13 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 import logging
 
+# 统一 HTTP 客户端工厂
+try:
+    from core.http import get_async_client
+    HAS_HTTP_FACTORY = True
+except ImportError:
+    HAS_HTTP_FACTORY = False
+
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -290,7 +297,13 @@ class CVEUpdateManager:
         if self.nvd_api_key:
             headers["apiKey"] = self.nvd_api_key
 
-        async with aiohttp.ClientSession() as session:
+        # 使用统一 HTTP 客户端工厂或回退到 aiohttp
+        if HAS_HTTP_FACTORY:
+            client_ctx = get_async_client()
+        else:
+            client_ctx = aiohttp.ClientSession()
+
+        async with client_ctx as session:
             # NVD API 2.0 使用分页
             start_index = 0
             results_per_page = 100  # 每页100条(最大2000)
@@ -401,7 +414,13 @@ class CVEUpdateManager:
         if self.github_token:
             headers["Authorization"] = f"Bearer {self.github_token}"
 
-        async with aiohttp.ClientSession() as session:
+        # 使用统一 HTTP 客户端工厂或回退到 aiohttp
+        if HAS_HTTP_FACTORY:
+            client_ctx = get_async_client()
+        else:
+            client_ctx = aiohttp.ClientSession()
+
+        async with client_ctx as session:
             # 获取文件树
             tree_data = await self._fetch_json(session, base_url, "github", headers)
 
@@ -477,7 +496,13 @@ class CVEUpdateManager:
         new_count = 0
         updated_count = 0
 
-        async with aiohttp.ClientSession() as session:
+        # 使用统一 HTTP 客户端工厂或回退到 aiohttp
+        if HAS_HTTP_FACTORY:
+            client_ctx = get_async_client()
+        else:
+            client_ctx = aiohttp.ClientSession()
+
+        async with client_ctx as session:
             await self._rate_limit("exploit_db")
 
             try:

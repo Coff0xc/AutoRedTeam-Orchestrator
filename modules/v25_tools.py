@@ -325,7 +325,8 @@ def register_v25_tools(mcp):
 
     # ========== WebSocket隧道工具 ==========
     try:
-        from core.c2.websocket_tunnel import WebSocketTunnel, WebSocketConfig, EncryptionType
+        # 优先使用新架构
+        from core.c2 import WebSocketTunnel, C2Config, CryptoAlgorithm
 
         @mcp.tool()
         def tunnel_websocket_create(
@@ -344,25 +345,36 @@ def register_v25_tools(mcp):
                 {"tunnel_id": "...", "config": {...}}
             """
             try:
-                # 映射加密类型字符串到枚举
+                # 映射加密类型
                 encryption_map = {
-                    "none": EncryptionType.NONE,
-                    "xor": EncryptionType.XOR,
-                    "aes": EncryptionType.AES
+                    "none": "none",
+                    "xor": "xor",
+                    "aes": "aes256_gcm"
                 }
-                enc_type = encryption_map.get(encryption.lower(), EncryptionType.XOR)
+                enc_algo = encryption_map.get(encryption.lower(), "xor")
 
-                config = WebSocketConfig(
-                    url=server_url,
-                    encryption_type=enc_type
+                # 解析 URL
+                from urllib.parse import urlparse
+                parsed = urlparse(server_url)
+                protocol = 'wss' if parsed.scheme == 'wss' else 'ws'
+                server = parsed.hostname or 'localhost'
+                port = parsed.port or (443 if protocol == 'wss' else 80)
+
+                config = C2Config(
+                    server=server,
+                    port=port,
+                    protocol=protocol,
+                    encryption=enc_algo,
                 )
 
                 return {
                     "success": True,
                     "config": {
-                        "url": config.url,
-                        "encryption_type": config.encryption_type.value,
-                        "heartbeat_interval": config.heartbeat_interval
+                        "url": server_url,
+                        "server": server,
+                        "port": port,
+                        "protocol": protocol,
+                        "encryption": enc_algo,
                     }
                 }
 
@@ -377,7 +389,8 @@ def register_v25_tools(mcp):
 
     # ========== 分块传输工具 ==========
     try:
-        from core.c2.chunked_transfer import ChunkedTransfer
+        # 使用新架构的编码器
+        from core.c2 import C2Encoder, ChunkEncoder
 
         @mcp.tool()
         def chunked_split(
@@ -396,8 +409,16 @@ def register_v25_tools(mcp):
                 {"chunks": [...], "total": N, "checksum": "..."}
             """
             try:
-                transfer = ChunkedTransfer(chunk_size=chunk_size, compress=compress)
-                chunks = transfer.split_data(data.encode('utf-8'))
+                encoder = C2Encoder()
+                data_bytes = data.encode('utf-8')
+
+                # 使用编码器的压缩功能
+                result = encoder.encode(data_bytes, encoding='base64', compress=compress)
+                encoded_data = result.data if isinstance(result.data, str) else result.data.decode()
+
+                # 分块
+                chunk_encoder = ChunkEncoder(chunk_size=chunk_size)
+                chunks = chunk_encoder.encode_chunks(data_bytes, encoding='base64')
 
                 return {
                     "success": True,
@@ -448,15 +469,15 @@ if __name__ == "__main__":
 
     print("\n4. 测试WebSocket隧道:")
     try:
-        from core.c2.websocket_tunnel import WebSocketTunnel
+        from core.c2 import WebSocketTunnel
         print("   [OK] WebSocketTunnel 导入成功")
     except Exception as e:
         print(f"   [FAIL] {e}")
 
     print("\n5. 测试分块传输:")
     try:
-        from core.c2.chunked_transfer import ChunkedTransfer
-        print("   [OK] ChunkedTransfer 导入成功")
+        from core.c2 import ChunkEncoder
+        print("   [OK] ChunkEncoder 导入成功")
     except Exception as e:
         print(f"   [FAIL] {e}")
 

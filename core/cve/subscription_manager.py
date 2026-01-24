@@ -20,6 +20,13 @@ import logging
 
 from .update_manager import CVEUpdateManager, CVEEntry, Severity
 
+# 统一 HTTP 客户端工厂
+try:
+    from core.http import get_async_client
+    HAS_HTTP_FACTORY = True
+except ImportError:
+    HAS_HTTP_FACTORY = False
+
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -689,7 +696,13 @@ class SubscriptionManager:
     async def _post_webhook(self, url: str, payload: Dict):
         """异步POST Webhook"""
         try:
-            async with aiohttp.ClientSession() as session:
+            # 使用统一 HTTP 客户端工厂或回退到 aiohttp
+            if HAS_HTTP_FACTORY:
+                client_ctx = get_async_client(verify_ssl=False)
+            else:
+                client_ctx = aiohttp.ClientSession()
+
+            async with client_ctx as session:
                 async with session.post(
                     url,
                     json=payload,

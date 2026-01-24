@@ -15,6 +15,13 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+# 统一 HTTP 客户端工厂
+try:
+    from core.http import get_sync_client
+    HAS_HTTP_FACTORY = True
+except ImportError:
+    HAS_HTTP_FACTORY = False
+
 
 class VulnSeverity(Enum):
     """漏洞严重性"""
@@ -70,7 +77,11 @@ class DependencyScanner:
             timeout: API请求超时时间
         """
         self.timeout = timeout
-        self._session = requests.Session()
+        # 优先使用统一 HTTP 客户端工厂
+        if HAS_HTTP_FACTORY:
+            self._session = get_sync_client(force_new=True)
+        else:
+            self._session = requests.Session()
         self._session.headers.update({
             "User-Agent": "AutoRedTeam-DependencyScanner/1.0",
             "Content-Type": "application/json"

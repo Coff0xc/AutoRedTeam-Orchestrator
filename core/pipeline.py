@@ -20,6 +20,12 @@ from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
 from datetime import datetime
 import json
+import logging
+
+# 导入统一并发控制管理器
+from core.unified_concurrency import get_unified_manager
+
+logger = logging.getLogger(__name__)
 
 
 class PipelinePhase(Enum):
@@ -77,7 +83,15 @@ class PipelineContext:
 
 
 # CMS/框架专用弱口令字典
-CMS_DEFAULT_CREDENTIALS = {
+# ⚠️ 警告: 这是内置的后备字典，仅包含公开的默认凭据
+# 建议: 生产环境应使用外部字典文件或专业密码库
+FALLBACK_CREDENTIALS = {
+    "_meta": {
+        "data_source": "builtin_fallback",
+        "description": "内置后备凭据字典，仅包含公开的默认密码",
+        "warning": "此字典仅用于检测默认配置，不适合深度弱口令测试",
+        "last_updated": "2026-01-15",
+    },
     "WordPress": {
         "endpoints": ["/wp-login.php", "/wp-admin/"],
         "credentials": [
@@ -86,7 +100,8 @@ CMS_DEFAULT_CREDENTIALS = {
         ],
         "user_field": "log",
         "pass_field": "pwd",
-        "success_indicators": ["dashboard", "wp-admin", "logout"]
+        "success_indicators": ["dashboard", "wp-admin", "logout"],
+        "data_source": "builtin_fallback",
     },
     "Joomla": {
         "endpoints": ["/administrator/", "/administrator/index.php"],
@@ -233,20 +248,26 @@ GENERIC_CREDENTIALS = [
 
 
 class VulnerabilityPipeline:
-    """漏洞检测流水线"""
+    """漏洞检测流水线 - 集成性能监控和智能缓存"""
 
-    def __init__(self, target: str, verify_ssl: bool = True, timeout: int = 10):
+    def __init__(self, target: str, verify_ssl: bool = True, timeout: int = 10, use_unified_manager: bool = True):
         """初始化流水线
 
         Args:
             target: 目标URL
             verify_ssl: 是否验证SSL证书
             timeout: 请求超时时间
+            use_unified_manager: 是否使用统一管理器 (性能监控+缓存)
         """
         self.target = target
         self.verify_ssl = verify_ssl
         self.timeout = timeout
         self.context = PipelineContext(target=target)
+
+        # 统一管理器 (性能监控 + 缓存 + 限流)
+        self.manager = get_unified_manager() if use_unified_manager else None
+        if self.manager and not self.manager._initialized:
+            self.manager.start()
 
         # 尝试导入requests
         try:
@@ -295,9 +316,30 @@ class VulnerabilityPipeline:
         return results
 
     def _run_fingerprint(self) -> Dict[str, Any]:
-        """运行指纹识别"""
+        """运行指纹识别 - 集成缓存和性能监控"""
         if not self._requests:
             return {"success": False, "error": "requests库未安装"}
+
+        # 检查缓存
+        if self.manager:
+            cached = self.manager.get_tech(self.target)
+            if cached:
+                logger.info(f"指纹识别命中缓存: {self.target}")
+                self.context.fingerprint = cached
+                self.context.detected_cms = cached.get("cms", [])
+                self.context.detected_frameworks = cached.get("frameworks", [])
+                self.context.server_info = cached.get("server", "Unknown")
+                return {
+                    "success": True,
+                    "technology": cached,
+                    "detected_count": len(cached.get("cms", [])) + len(cached.get("frameworks", [])),
+                    "from_cache": True
+                }
+
+        # 性能监控埋点
+        exec_id = None
+        if self.manager:
+            exec_id = self.manager.monitor.start_execution("fingerprint_detect")
 
         try:
             resp = self._requests.get(
@@ -366,6 +408,11 @@ class VulnerabilityPipeline:
             self.context.detected_frameworks = tech["frameworks"]
             self.context.server_info = tech["server"]
 
+            # 写入缓存
+            if self.manager:
+                self.manager.cache_tech(self.target, tech)
+                self.manager.monitor.end_execution(exec_id, success=True, result_size=len(str(tech)))
+
             return {
                 "success": True,
                 "technology": tech,
@@ -374,12 +421,19 @@ class VulnerabilityPipeline:
 
         except Exception as e:
             self.context.errors.append(f"指纹识别失败: {str(e)}")
+            if self.manager and exec_id:
+                self.manager.monitor.end_execution(exec_id, success=False, error=str(e))
             return {"success": False, "error": str(e)}
 
     def _run_fingerprint_weak_password(self) -> Dict[str, Any]:
-        """基于指纹的弱口令检测"""
+        """基于指纹的弱口令检测 - 集成性能监控"""
         if not self._requests:
             return {"success": False, "error": "requests库未安装"}
+
+        # 性能监控埋点
+        exec_id = None
+        if self.manager:
+            exec_id = self.manager.monitor.start_execution("weak_password_detect")
 
         results = {
             "success": True,
@@ -487,10 +541,19 @@ class VulnerabilityPipeline:
         # 记录登录页面
         self.context.login_pages = [c["url"] for c in results["weak_credentials"]]
 
+        # 结束性能监控
+        if self.manager and exec_id:
+            self.manager.monitor.end_execution(exec_id, success=True, result_size=len(results["weak_credentials"]))
+
         return results
 
     def _run_targeted_vuln_scan(self) -> Dict[str, Any]:
-        """基于指纹的针对性漏洞扫描"""
+        """基于指纹的针对性漏洞扫描 - 集成性能监控"""
+        # 性能监控埋点
+        exec_id = None
+        if self.manager:
+            exec_id = self.manager.monitor.start_execution("targeted_vuln_scan")
+
         results = {
             "success": True,
             "vulnerabilities": [],
@@ -568,6 +631,10 @@ class VulnerabilityPipeline:
 
                     except Exception:
                         pass
+
+        # 结束性能监控
+        if self.manager and exec_id:
+            self.manager.monitor.end_execution(exec_id, success=True, result_size=len(results["vulnerabilities"]))
 
         return results
 
@@ -659,8 +726,8 @@ class VulnerabilityPipeline:
         return {"success": True, "attack_chain": chain}
 
     def _generate_summary(self) -> Dict[str, Any]:
-        """生成流水线执行摘要"""
-        return {
+        """生成流水线执行摘要 - 包含性能统计"""
+        summary = {
             "target": self.target,
             "fingerprint_count": len(self.context.detected_cms) + len(self.context.detected_frameworks),
             "detected_cms": self.context.detected_cms,
@@ -671,6 +738,15 @@ class VulnerabilityPipeline:
             "errors": self.context.errors,
             "risk_level": self._calculate_risk_level()
         }
+
+        # 添加性能统计
+        if self.manager:
+            summary["performance"] = {
+                "cache_stats": self.manager.get_cache_stats(),
+                "monitor_stats": self.manager.get_monitor_stats(),
+            }
+
+        return summary
 
     def _calculate_risk_level(self) -> str:
         """计算风险等级"""
@@ -737,12 +813,16 @@ def run_pipeline(target: str, **kwargs) -> Dict[str, Any]:
     return pipeline.run_full_pipeline()
 
 
+# 向后兼容别名 (已废弃，请使用 FALLBACK_CREDENTIALS)
+CMS_DEFAULT_CREDENTIALS = FALLBACK_CREDENTIALS
+
 # 导出
 __all__ = [
     'VulnerabilityPipeline',
     'PipelineContext',
     'PipelinePhase',
-    'CMS_DEFAULT_CREDENTIALS',
+    'FALLBACK_CREDENTIALS',
+    'CMS_DEFAULT_CREDENTIALS',  # 向后兼容，已废弃
     'fingerprint_weak_password_detect',
     'run_pipeline'
 ]

@@ -6,15 +6,15 @@
 
 **AI 驱动的自动化红队编排框架**
 
-*跨平台支持 Linux / Windows / macOS，集成 130+ 安全工具与 2000+ Payload*
+*跨平台支持 Linux / Windows / macOS，集成 54 个 MCP 工具与 2000+ Payload*
 
 [![OS](https://img.shields.io/badge/OS-Linux%20%7C%20Windows%20%7C%20macOS-557C94?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/Coff0xc/AutoRedTeam-Orchestrator)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-Native-00ADD8?style=for-the-badge)](https://modelcontextprotocol.io/)
-[![Tools](https://img.shields.io/badge/Tools-130+-FF6B6B?style=for-the-badge)](https://github.com/Coff0xc/AutoRedTeam-Orchestrator)
+[![Tools](https://img.shields.io/badge/Tools-54-FF6B6B?style=for-the-badge)](https://github.com/Coff0xc/AutoRedTeam-Orchestrator)
 [![Payloads](https://img.shields.io/badge/Payloads-2000+-orange?style=for-the-badge)](https://github.com/Coff0xc/AutoRedTeam-Orchestrator)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.7.1-blue?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-3.0.0-blue?style=for-the-badge)](CHANGELOG.md)
 
 </div>
 
@@ -161,15 +161,17 @@ python mcp_stdio_server.py
 
 | 类别 | 工具数 | 功能 |
 |------|--------|------|
-| **侦察 Recon** | 12+ | 端口扫描、子域枚举、DNS查询、WAF检测、指纹识别、JS分析 |
-| **漏洞检测** | 19+ | SQLi、XSS、SSRF、XXE、SSTI、LFI、CSRF、命令注入、反序列化 |
-| **Web 扫描** | 2+ | 攻面发现、注入点抽取、编排式漏洞扫描 |
-| **API 安全** | 11+ | JWT测试、CORS绕过、GraphQL安全、WebSocket安全、安全头评分 |
-| **供应链安全** | 9+ | SBOM生成、依赖审计、CI/CD扫描 |
-| **云原生安全** | 11+ | K8s审计、gRPC测试、容器安全 |
-| **红队工具** | 29+ | 横向移动、C2通信、混淆免杀、持久化、凭证获取、AD攻击 |
-| **CVE 情报** | 6+ | 多源同步、PoC执行、AI生成 |
-| **Payload** | 4+ | 智能变异、WAF绕过、2000+ Payload库 |
+| **侦察 Recon** | 8 | 端口扫描、子域枚举、DNS查询、WAF检测、指纹识别、JS分析 |
+| **漏洞检测** | 12 | SQLi、XSS、SSRF、XXE、SSTI、LFI、CSRF、命令注入、反序列化 |
+| **Web 扫描** | 2 | 攻面发现、注入点抽取、编排式漏洞扫描 |
+| **API 安全** | 7 | JWT测试、CORS绕过、GraphQL安全、WebSocket安全、安全头评分 |
+| **供应链安全** | 3 | SBOM生成、依赖审计、CI/CD扫描 |
+| **云原生安全** | 3 | K8s审计、gRPC测试、容器安全 |
+| **红队工具** | 4 | 横向移动、C2通信、混淆免杀、持久化、凭证获取、AD攻击 |
+| **CVE 情报** | 5 | 多源同步、PoC执行、AI生成 |
+| **会话/报告/AI** | 10 | 会话管理、报告生成、AI决策辅助 |
+
+> ⚠️ **注意**: 实际注册的 MCP 工具为 54 个，之前文档中的 "130+" 为统计错误。
 
 ---
 
@@ -226,6 +228,15 @@ AutoRedTeam-Orchestrator/
 
 ## 📋 更新日志
 
+### v3.0.0 (2026-01-18) - 架构审计与修正
+
+- **文档修正**: 工具数量从 130+ 修正为实际的 54 个
+- **架构审计**: 完成全面代码审计，识别关键缺陷
+- **已知问题**:
+  - 测试覆盖率 <1%，需要补充
+  - 多个核心模块在 v2.8 重构时已删除
+  - `beacon.py` 存在线程安全问题
+
 ### v2.7.1 (2026-01-10) - Web 扫描引擎
 
 - **Web Scanner 模块**: 攻面发现与注入点建模引擎
@@ -248,7 +259,7 @@ AutoRedTeam-Orchestrator/
 - JWT/CORS/GraphQL/WebSocket 安全测试
 - SBOM 生成 (CycloneDX/SPDX)
 - K8s/gRPC 安全审计
-- 130+ 工具
+- 54 个 MCP 工具
 
 <details>
 <summary>查看更多版本</summary>
@@ -264,6 +275,9 @@ AutoRedTeam-Orchestrator/
 
 ## 🛤️ 路线图
 
+- [ ] **P0: 补充测试覆盖率 (>70%)**
+- [ ] **P0: 修复 beacon.py 线程安全问题**
+- [ ] **P1: 完善 CI/CD 流水线**
 - [ ] Web UI 界面
 - [ ] 分布式扫描
 - [ ] 更多云平台 (GCP/阿里云)

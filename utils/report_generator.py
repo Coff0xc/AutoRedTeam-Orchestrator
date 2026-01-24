@@ -223,7 +223,8 @@ class ReportGenerator:
                 hours, remainder = divmod(delta.total_seconds(), 3600)
                 minutes, seconds = divmod(remainder, 60)
                 return f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
-        except:
+        except (TypeError, AttributeError):
+            # 时间计算失败时返回默认值
             pass
         return "N/A"
     

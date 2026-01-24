@@ -1,0 +1,173 @@
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # 排除目录
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | backup
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_gitignore = true
+known_first_party = ["core", "modules", "tools", "utils"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = """
+    --verbose
+    --strict-markers
+    --tb=short
+    --cov-report=term-missing
+    --cov-report=html
+    --cov-report=xml
+"""
+markers = [
+    "slow: 标记慢速测试",
+    "integration: 集成测试",
+    "e2e: 端到端测试",
+    "network: 需要网络的测试",
+]
+
+[tool.coverage.run]
+source = ["core", "modules", "tools", "utils"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/backup/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "mcp.*",
+    "requests.*",
+    "paramiko.*",
+]
+ignore_missing_imports = true
+
+[tool.pylint.main]
+jobs = 0
+fail-under = 7.0
+ignore = ["tests", "backup", "venv", "__pycache__"]
+ignore-patterns = ["test_.*\\.py"]
+
+[tool.pylint.messages_control]
+disable = [
+    "C0111",  # missing-docstring
+    "C0103",  # invalid-name
+    "R0913",  # too-many-arguments
+    "R0914",  # too-many-locals
+    "W0212",  # protected-access
+]
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint.design]
+max-args = 7
+max-attributes = 10
+max-locals = 15
+max-branches = 15
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autoredteam-orchestrator"
+version = "3.0.0"
+description = "AI-driven automated penetration testing framework based on MCP"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["security", "pentest", "red-team", "mcp", "ai"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Security",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "mcp>=1.0.0",
+    "requests>=2.31.0",
+    "aiohttp>=3.9.0",
+    "pyyaml>=6.0.0",
+    "pydantic>=2.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.12.0",
+    "isort>=5.13.0",
+    "pylint>=3.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/your/repo"
+Documentation = "https://your-docs-url"
+Repository = "https://github.com/your/repo"
+Issues = "https://github.com/your/repo/issues"
+
+[project.scripts]
+autoredteam = "mcp_stdio_server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["core*", "modules*", "tools*", "utils*"]
+exclude = ["tests*", "scripts*", "backup*"]

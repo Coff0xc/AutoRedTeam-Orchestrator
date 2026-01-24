@@ -2,15 +2,65 @@
 """
 命令执行器 - 统一的命令执行接口
 优化点: 统一命令执行逻辑，减少重复代码
+
+安全特性:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- shell=False 强制禁用 (防止命令注入)
+- 命令白名单验证
+- 危险命令检测与警告
+- 执行日志审计
+- 超时保护
+
+使用示例:
+    from utils.command_executor import execute_command, safe_execute
+
+    # 推荐: 使用列表形式的命令
+    result = execute_command(["nmap", "-sV", "192.168.1.1"])
+
+    # 安全执行 (带验证)
+    result = safe_execute(["ls", "-la"], allowed_commands=["ls", "cat", "grep"])
 """
 
 import subprocess
 import threading
 import time
 import sys
-from typing import Dict, List, Optional, Callable
-from dataclasses import dataclass
+import logging
+import shutil
+import re
+from typing import Dict, List, Optional, Callable, Set
+from dataclasses import dataclass, field
 from enum import Enum
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# 安全配置
+# ============================================================================
+
+# 危险命令列表 (执行时会记录警告)
+DANGEROUS_COMMANDS: Set[str] = {
+    "rm", "rmdir", "del", "format", "mkfs",
+    "dd", "shred", "wipefs",
+    "chmod", "chown", "chattr",
+    "kill", "killall", "pkill",
+    "shutdown", "reboot", "halt", "poweroff",
+    "iptables", "firewall-cmd", "ufw",
+    "passwd", "useradd", "userdel", "usermod",
+    "visudo", "sudoers",
+}
+
+# 禁止的命令 (完全阻止执行)
+BLOCKED_COMMANDS: Set[str] = {
+    ":(){ :|:& };:",  # Fork bomb
+    ">/dev/sda",
+    "mkfs.ext4",
+}
+
+# Shell 元字符 (用于检测潜在的命令注入)
+SHELL_METACHARACTERS = re.compile(r'[;&|`$(){}[\]<>\\\'"]')
 
 
 class ExecutionMode(Enum):
@@ -30,13 +80,23 @@ class CommandResult:
     command: str
     execution_time: float
     error: Optional[str] = None
+    # 安全审计字段
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    warnings: List[str] = field(default_factory=list)
+    shell_used: bool = False  # 是否使用了 shell=True (应始终为 False)
 
 
 class ProgressBar:
-    """实时进度条 - 优化版"""
-    
+    """
+    实时进度条 - 诚实版
+
+    进度模式:
+    - progress > 0: 显示真实百分比进度条
+    - progress = 0: 显示旋转指示器 (表示"进行中，进度未知")
+    """
+
     SPINNERS = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-    
+
     def __init__(self, tool_name: str, target: str, enable: bool = True):
         self.tool_name = tool_name
         self.target = target
@@ -45,7 +105,7 @@ class ProgressBar:
         self.running = False
         self._thread = None
         self.enable = enable
-    
+
     def start(self):
         if not self.enable:
             return self
@@ -54,28 +114,34 @@ class ProgressBar:
         self._thread = threading.Thread(target=self._animate, daemon=True)
         self._thread.start()
         return self
-    
+
     def _animate(self):
         idx = 0
         while self.running:
             spinner = self.SPINNERS[idx % len(self.SPINNERS)]
             bar = self._make_bar()
-            msg = f"\r{spinner} [{self.tool_name}] {self.target} {bar} {self.progress}% - {self.status}"
+            msg = f"\r{spinner} [{self.tool_name}] {self.target} {bar} - {self.status}"
             sys.stderr.write(msg + " " * 10)
             sys.stderr.flush()
             idx += 1
             time.sleep(0.1)
-    
+
     def _make_bar(self) -> str:
-        filled = int(self.progress / 5)
-        empty = 20 - filled
-        return f"[{'█' * filled}{'░' * empty}]"
-    
+        """生成进度条 (诚实模式)"""
+        if self.progress == 0:
+            # 进度未知时显示旋转动画而非假进度
+            return "[····进行中····]"
+        else:
+            # 有真实进度时显示百分比
+            filled = int(self.progress / 5)
+            empty = 20 - filled
+            return f"[{'█' * filled}{'░' * empty}] {self.progress}%"
+
     def update(self, progress: int, status: str = None):
         self.progress = min(progress, 100)
         if status:
             self.status = status
-    
+
     def complete(self, success: bool = True):
         if not self.enable:
             return
@@ -213,10 +279,10 @@ class CommandExecutor:
         progress = ProgressBar(tool_name, target, self.enable_progress)
         progress.start()
         start_time = time.time()
-        
+
         try:
-            progress.update(10, "启动中...")
-            
+            progress.update(0, "启动中...")
+
             proc = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
@@ -225,16 +291,16 @@ class CommandExecutor:
                 cwd=cwd,
                 env=env
             )
-            
-            progress.update(20, "执行中...")
-            
-            # 模拟进度
+
+            progress.update(0, "执行中...")
+
+            # 诚实进度: 不模拟百分比，只显示状态和已用时间
             while proc.poll() is None:
                 elapsed = time.time() - start_time
-                estimated = min(20 + int(elapsed * 70 / timeout), 90)
-                progress.update(estimated, "扫描中...")
+                # 显示已用时间而非假进度
+                progress.update(0, f"运行中... ({elapsed:.0f}s)")
                 time.sleep(0.5)
-                
+
                 if elapsed > timeout:
                     proc.kill()
                     progress.complete(False)
@@ -380,5 +446,169 @@ def execute_command(
         "returncode": result.returncode,
         "command": result.command,
         "execution_time": result.execution_time,
-        "error": result.error
+        "error": result.error,
+        "warnings": result.warnings,
+        "timestamp": result.timestamp,
     }
+
+
+# ============================================================================
+# 安全验证函数
+# ============================================================================
+
+def validate_command(cmd: List[str]) -> tuple[bool, List[str]]:
+    """
+    验证命令安全性
+
+    Args:
+        cmd: 命令列表
+
+    Returns:
+        tuple: (是否安全, 警告列表)
+    """
+    warnings = []
+
+    if not cmd:
+        return False, ["空命令"]
+
+    base_cmd = cmd[0].split("/")[-1].split("\\")[-1]  # 获取命令名
+
+    # 检查是否为阻止的命令
+    cmd_str = " ".join(cmd)
+    for blocked in BLOCKED_COMMANDS:
+        if blocked in cmd_str:
+            return False, [f"命令被阻止: 包含危险模式 '{blocked}'"]
+
+    # 检查是否为危险命令
+    if base_cmd in DANGEROUS_COMMANDS:
+        warnings.append(f"危险命令警告: '{base_cmd}' 可能造成系统损坏")
+        logger.warning(f"执行危险命令: {cmd_str}")
+
+    # 检查参数中的 shell 元字符
+    for arg in cmd[1:]:
+        if SHELL_METACHARACTERS.search(arg):
+            warnings.append(f"参数包含 shell 元字符: '{arg}'")
+
+    return True, warnings
+
+
+def check_command_exists(cmd: str) -> bool:
+    """检查命令是否存在"""
+    return shutil.which(cmd) is not None
+
+
+def safe_execute(
+    cmd: List[str],
+    allowed_commands: Optional[List[str]] = None,
+    timeout: int = 300,
+    validate: bool = True
+) -> Dict:
+    """
+    安全执行命令 (带验证)
+
+    Args:
+        cmd: 命令列表 (禁止字符串形式)
+        allowed_commands: 允许的命令白名单
+        timeout: 超时时间
+        validate: 是否进行安全验证
+
+    Returns:
+        Dict: 执行结果
+    """
+    warnings = []
+
+    # 类型检查
+    if isinstance(cmd, str):
+        return {
+            "success": False,
+            "error": "安全错误: 禁止使用字符串形式的命令，请使用列表",
+            "warnings": ["shell=True 已被禁用"],
+        }
+
+    if not cmd:
+        return {"success": False, "error": "空命令", "warnings": []}
+
+    base_cmd = cmd[0].split("/")[-1].split("\\")[-1]
+
+    # 白名单检查
+    if allowed_commands and base_cmd not in allowed_commands:
+        return {
+            "success": False,
+            "error": f"命令 '{base_cmd}' 不在白名单中",
+            "warnings": [f"允许的命令: {allowed_commands}"],
+        }
+
+    # 安全验证
+    if validate:
+        is_safe, val_warnings = validate_command(cmd)
+        warnings.extend(val_warnings)
+        if not is_safe:
+            return {
+                "success": False,
+                "error": val_warnings[0] if val_warnings else "命令验证失败",
+                "warnings": warnings,
+            }
+
+    # 检查命令是否存在
+    if not check_command_exists(cmd[0]):
+        return {
+            "success": False,
+            "error": f"命令未找到: {cmd[0]}",
+            "warnings": warnings,
+        }
+
+    # 执行命令
+    result = execute_command(cmd, timeout=timeout)
+    result["warnings"] = warnings + result.get("warnings", [])
+
+    # 记录审计日志
+    logger.info(f"命令执行: {' '.join(cmd)} -> {'成功' if result['success'] else '失败'}")
+
+    return result
+
+
+# ============================================================================
+# 废弃的 shell=True 包装器 (仅用于兼容性，会发出警告)
+# ============================================================================
+
+def execute_shell_command(cmd: str, timeout: int = 300) -> Dict:
+    """
+    ⚠️ 已废弃: 使用 shell=True 执行命令
+
+    警告: 此函数存在命令注入风险，仅用于向后兼容。
+    请迁移到 execute_command() 或 safe_execute()。
+    """
+    import warnings
+    warnings.warn(
+        "execute_shell_command 已废弃，存在命令注入风险。"
+        "请使用 execute_command(cmd_list) 替代。",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
+    logger.warning(f"使用已废弃的 shell=True 执行: {cmd[:50]}...")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            shell=True,  # 危险！
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
+        return {
+            "success": result.returncode == 0,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode,
+            "command": cmd,
+            "warnings": ["⚠️ 使用了 shell=True，存在安全风险"],
+            "shell_used": True,
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "warnings": ["⚠️ 使用了 shell=True，存在安全风险"],
+            "shell_used": True,
+        }
