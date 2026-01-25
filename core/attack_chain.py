@@ -59,40 +59,45 @@ class AttackChain:
 class AttackChainEngine:
     """攻击链推理引擎"""
     
-    # 技术到工具的映射
+    # 技术到工具的映射 (工具名与 MCP handlers 注册名一致)
     TECHNIQUE_TOOLS = {
         # 侦察阶段
-        "active_scanning": ["nmap_scan", "port_scan"],
-        "passive_recon": ["shodan_lookup", "censys_lookup"],
-        "subdomain_enum": ["subfinder_enum", "subdomain_bruteforce"],
+        "active_scanning": ["port_scan"],
+        "passive_recon": ["full_recon"],
+        "subdomain_enum": ["subdomain_enum"],
         "dns_recon": ["dns_lookup"],
-        "web_fingerprint": ["whatweb_scan", "tech_detect"],
+        "web_fingerprint": ["tech_detect", "fingerprint"],
+        "waf_detection": ["waf_detect"],
+        "content_discovery": ["dir_scan"],
 
         # 漏洞发现
-        "vuln_scan": ["nuclei_scan", "vuln_check"],
-        "ssl_analysis": ["sslscan_scan", "ssl_info"],
-        "web_vuln_scan": ["vuln_check", "sqli_detect", "xss_detect"],
+        "vuln_scan": ["vuln_scan"],
+        "ssl_analysis": ["security_headers_scan"],
+        "web_vuln_scan": [
+            "vuln_scan", "sqli_scan", "xss_scan", "ssrf_scan", "rce_scan",
+            "ssti_scan", "xxe_scan", "path_traversal_scan", "idor_scan"
+        ],
 
         # 初始访问
-        "exploit_public_app": ["sqlmap_scan", "sqli_detect"],
-        "brute_force": ["hydra_scan", "weak_password_detect"],
-        "default_creds": ["weak_password_detect"],
+        "exploit_public_app": ["exploit_vulnerability"],
+        "brute_force": [],
+        "default_creds": [],
 
         # 执行
-        "command_injection": ["cmd_inject_detect"],
-        "script_execution": ["reverse_shell_gen"],
+        "command_injection": ["rce_scan"],
+        "script_execution": ["payload_obfuscate"],
 
         # 权限提升
-        "linux_privesc": ["credential_find_secrets"],
-        "windows_privesc": ["credential_find_secrets"],
+        "linux_privesc": ["privilege_escalate"],
+        "windows_privesc": ["privilege_escalate"],
 
         # 凭证访问
-        "credential_dump": ["credential_dump"],
-        "password_crack": ["weak_password_detect"],
+        "credential_dump": ["credential_find"],
+        "password_crack": ["credential_find"],
 
         # 横向移动
-        "smb_lateral": ["lateral_smb_exec"],
-        "ssh_lateral": ["lateral_ssh_exec"],
+        "smb_lateral": ["lateral_smb"],
+        "ssh_lateral": [],
     }
     
     # 攻击阶段流程
@@ -143,8 +148,8 @@ class AttackChainEngine:
                 id=f"node_{node_id}",
                 phase=AttackPhase.RECONNAISSANCE,
                 technique="active_scanning",
-                tool="nmap_scan",
-                params={"target": target, "timing": "T4"}
+                tool="port_scan",
+                params={"target": target, "ports": "1-1000", "timeout": 2.0}
             ))
             node_id += 1
             
@@ -153,16 +158,16 @@ class AttackChainEngine:
                 id=f"node_{node_id}",
                 phase=AttackPhase.RECONNAISSANCE,
                 technique="subdomain_enum",
-                tool="subfinder",
+                tool="subdomain_enum",
                 params={"domain": target}
             ))
             node_id += 1
-            
+
             nodes.append(AttackNode(
                 id=f"node_{node_id}",
                 phase=AttackPhase.RECONNAISSANCE,
                 technique="dns_recon",
-                tool="dns_enum",
+                tool="dns_lookup",  # 修正: 使用 recon_tools 中的 dns_lookup
                 params={"domain": target},
                 dependencies=[f"node_{node_id-1}"]
             ))
@@ -173,18 +178,18 @@ class AttackChainEngine:
                 id=f"node_{node_id}",
                 phase=AttackPhase.RECONNAISSANCE,
                 technique="web_fingerprint",
-                tool="whatweb",
-                params={"target": target}
+                tool="tech_detect",
+                params={"url": target}
             ))
             node_id += 1
-            
+
             # WAF检测
             nodes.append(AttackNode(
                 id=f"node_{node_id}",
                 phase=AttackPhase.RECONNAISSANCE,
                 technique="waf_detection",
-                tool="wafw00f",
-                params={"target": target}
+                tool="waf_detect",
+                params={"url": target}
             ))
             node_id += 1
         
@@ -193,10 +198,9 @@ class AttackChainEngine:
             id=f"node_{node_id}",
             phase=AttackPhase.RECONNAISSANCE,
             technique="vuln_scan",
-            tool="nuclei_scan",
+            tool="vuln_scan",
             params={
-                "target": target if target_type == "url" else f"http://{target}",
-                "severity": "medium,high,critical"
+                "url": target if target_type == "url" else f"http://{target}"
             },
             dependencies=[f"node_{node_id-1}"]
         )
@@ -210,43 +214,29 @@ class AttackChainEngine:
                 id=f"node_{node_id}",
                 phase=AttackPhase.INITIAL_ACCESS,
                 technique="exploit_public_app",
-                tool="sqlmap",
+                tool="exploit_vulnerability",
                 params={
-                    "url": target if target_type == "url" else f"http://{target}",
-                    "batch": True,
-                    "level": 2
+                    "detection_result": {
+                        "vulnerable": False,
+                        "vuln_type": "sqli",
+                        "url": target if target_type == "url" else f"http://{target}"
+                    }
                 },
                 dependencies=[vuln_node.id]
             ))
             node_id += 1
-            
+
             # 目录扫描
             nodes.append(AttackNode(
                 id=f"node_{node_id}",
                 phase=AttackPhase.RECONNAISSANCE,
                 technique="content_discovery",
-                tool="gobuster",
+                tool="dir_scan",
                 params={
                     "url": target if target_type == "url" else f"http://{target}",
-                    "mode": "dir"
+                    "wordlist": "common"
                 },
                 dependencies=[f"node_0"]
-            ))
-            node_id += 1
-        
-        elif target_type == "ip":
-            # 服务爆破 (根据扫描结果动态决定)
-            nodes.append(AttackNode(
-                id=f"node_{node_id}",
-                phase=AttackPhase.INITIAL_ACCESS,
-                technique="brute_force",
-                tool="hydra",
-                params={
-                    "target": target,
-                    "service": "ssh",  # 将根据扫描结果动态调整
-                    "username": "root"
-                },
-                dependencies=["node_0"]
             ))
             node_id += 1
         
@@ -361,24 +351,36 @@ class AttackChainEngine:
         findings = []
         
         if node.technique == "vuln_scan":
-            for vuln in result.get("vulnerabilities", []):
+            vulnerabilities = result.get("vulnerabilities") or result.get("vulns") or []
+            for vuln in vulnerabilities:
+                if not isinstance(vuln, dict):
+                    continue
                 findings.append({
                     "type": "vulnerability",
                     "severity": vuln.get("severity", "unknown"),
-                    "title": vuln.get("template_name", "Unknown"),
+                    "title": vuln.get("template_name") or vuln.get("title") or vuln.get("type", "Unknown"),
                     "source": node.tool
                 })
-        
+
         elif node.technique == "active_scanning":
-            for host in result.get("hosts", []):
-                for port in host.get("ports", []):
-                    if port.get("state") == "open":
-                        findings.append({
-                            "type": "open_port",
-                            "port": port.get("port"),
-                            "service": port.get("service"),
-                            "source": node.tool
-                        })
+            open_ports = []
+            if isinstance(result.get("open_ports"), list):
+                open_ports = result.get("open_ports", [])
+            elif isinstance(result.get("hosts"), list):
+                for host in result.get("hosts", []):
+                    for port in host.get("ports", []):
+                        if port.get("state") == "open":
+                            open_ports.append(port)
+
+            for port in open_ports:
+                if isinstance(port, dict) and port.get("state") not in (None, "open"):
+                    continue
+                findings.append({
+                    "type": "open_port",
+                    "port": port.get("port") if isinstance(port, dict) else None,
+                    "service": port.get("service") if isinstance(port, dict) else None,
+                    "source": node.tool
+                })
         
         elif node.technique == "brute_force":
             for cred in result.get("credentials", []):
@@ -398,13 +400,21 @@ class AttackChainEngine:
         if completed_node.technique == "active_scanning":
             # 根据扫描发现的服务调整后续节点
             open_ports = []
-            for host in result.get("hosts", []):
-                for port in host.get("ports", []):
-                    if port.get("state") == "open":
+            if isinstance(result.get("open_ports"), list):
+                for port in result.get("open_ports", []):
+                    if isinstance(port, dict):
                         open_ports.append({
                             "port": port.get("port"),
                             "service": port.get("service", "")
                         })
+            elif isinstance(result.get("hosts"), list):
+                for host in result.get("hosts", []):
+                    for port in host.get("ports", []):
+                        if port.get("state") == "open":
+                            open_ports.append({
+                                "port": port.get("port"),
+                                "service": port.get("service", "")
+                            })
             
             # 为发现的服务添加针对性攻击节点
             for port_info in open_ports:
@@ -427,17 +437,17 @@ class AttackChainEngine:
         """添加Web攻击节点"""
         target = chain.target
         base_url = f"http://{target}:{port}" if port != 80 else f"http://{target}"
-        
+
         # 检查是否已有相关节点
         existing_tools = [n.tool for n in chain.nodes]
-        
-        if "gobuster" not in existing_tools:
+
+        if "dir_scan" not in existing_tools:
             chain.nodes.append(AttackNode(
                 id=f"node_web_{port}",
                 phase=AttackPhase.RECONNAISSANCE,
                 technique="content_discovery",
-                tool="gobuster",
-                params={"url": base_url, "mode": "dir"},
+                tool="dir_scan",
+                params={"url": base_url, "wordlist": "common"},
                 dependencies=[parent_node.id]
             ))
     

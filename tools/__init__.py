@@ -3,6 +3,8 @@ AutoRedTeam-Orchestrator 工具模块
 
 统一注册接口，将所有工具模块整合到一起。
 
+注意: tools/ 属于 legacy 注册入口，推荐使用 mcp_stdio_server.py + handlers/
+
 使用方式:
     from tools import register_all_tools
     registered = register_all_tools(mcp)
@@ -11,7 +13,11 @@ AutoRedTeam-Orchestrator 工具模块
 
 from typing import List
 
+from utils.mcp_tooling import patch_mcp_tool
+from utils.decorators import deprecated
 
+
+@deprecated(version="3.0.0", replacement="mcp_stdio_server.py + handlers")
 def register_all_tools(mcp) -> List[str]:
     """统一注册所有工具到MCP服务器
 
@@ -21,6 +27,7 @@ def register_all_tools(mcp) -> List[str]:
     Returns:
         已注册的工具名称列表
     """
+    patch_mcp_tool(mcp)
     all_tools = []
 
     # 1. 配置管理工具
@@ -144,6 +151,7 @@ def register_tools_silent(mcp) -> List[str]:
     Returns:
         已注册的工具名称列表
     """
+    patch_mcp_tool(mcp)
     all_tools = []
 
     registrars = [

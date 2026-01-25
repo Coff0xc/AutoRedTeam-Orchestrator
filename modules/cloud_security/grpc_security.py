@@ -225,8 +225,9 @@ class GRPCSecurityTester:
                     if response:
                         result["http2_supported"] = True
 
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
                 finally:
                     sock.close()
 
@@ -287,8 +288,9 @@ class GRPCSecurityTester:
                     result["vulnerable"] = True
                     result["issues"].append("服务器接受明文gRPC连接")
 
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             finally:
                 sock.close()
 
@@ -429,8 +431,8 @@ class GRPCSecurityTester:
                         "metadata": {key: value},
                         "note": "需要已知服务方法进行完整测试"
                     })
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             channel.close()
 

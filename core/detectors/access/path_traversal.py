@@ -92,7 +92,9 @@ class PathTraversalDetector(BaseDetector):
         super().__init__(config)
 
         # 加载 payload
-        self.payloads = get_payloads(PayloadCategory.PATH_TRAVERSAL)
+        self.payloads = self._enhance_payloads(
+            get_payloads(PayloadCategory.PATH_TRAVERSAL)
+        )
 
         # 编译文件签名模式
         self._file_patterns: Dict[str, Dict[str, List[re.Pattern]]] = {}
@@ -193,6 +195,14 @@ class PathTraversalDetector(BaseDetector):
 
                 # 检查文件内容
                 if self._check_file_content(response.text, os_type, target_file):
+                    request_info = self._build_request_info(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        params=test_params if method == 'GET' else None,
+                        data=test_params if method != 'GET' else None
+                    )
+                    response_info = self._build_response_info(response)
                     return self._create_result(
                         url=url,
                         vulnerable=True,
@@ -201,6 +211,8 @@ class PathTraversalDetector(BaseDetector):
                         evidence=self._extract_file_evidence(response.text, os_type, target_file),
                         confidence=0.95,
                         verified=True,
+                        request=request_info,
+                        response=response_info,
                         remediation="使用白名单验证文件路径，避免直接使用用户输入构造文件路径",
                         references=[
                             "https://owasp.org/www-community/attacks/Path_Traversal"

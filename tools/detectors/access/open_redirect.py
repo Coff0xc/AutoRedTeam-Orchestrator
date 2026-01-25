@@ -8,6 +8,7 @@ Open Redirect (开放重定向) 检测器
 - JavaScript 重定向
 - Meta 标签重定向
 """
+import logging
 
 from typing import Dict, List, Any, Optional
 import re
@@ -212,8 +213,8 @@ class OpenRedirectDetector(BaseDetector):
                                 )
                                 vulnerabilities.append(vuln)
 
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
                 if vulnerabilities and not deep_scan:
                     break
@@ -276,8 +277,8 @@ class OpenRedirectDetector(BaseDetector):
                     location = location or response.get("headers", {}).get("location", "")
                     if verify_domain in location:
                         return True
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return False
 

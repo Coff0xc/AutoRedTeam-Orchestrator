@@ -46,7 +46,7 @@ def register_session_tools(mcp):
         Returns:
             会话ID和信息
         """
-        from core.session_manager import get_http_session_manager
+        from core.session import get_http_session_manager
         mgr = get_http_session_manager()
         session_id = mgr.create_session(name)
         return {
@@ -71,7 +71,7 @@ def register_session_tools(mcp):
         Returns:
             登录结果
         """
-        from core.session_manager import get_http_session_manager
+        from core.session import get_http_session_manager
         mgr = get_http_session_manager()
         return mgr.login(session_id, login_url, username, password, username_field, password_field)
 
@@ -110,7 +110,7 @@ def register_session_tools(mcp):
         except Exception:
             return {"success": False, "error": "URL解析失败"}
 
-        from core.session_manager import get_http_session_manager
+        from core.session import get_http_session_manager
         mgr = get_http_session_manager()
         data_dict = json.loads(data) if data else None
         return mgr.request(session_id, url, method, data_dict)
@@ -125,7 +125,7 @@ def register_session_tools(mcp):
         Returns:
             会话上下文信息
         """
-        from core.session_manager import get_http_session_manager
+        from core.session import get_http_session_manager
         return get_http_session_manager().get_context(session_id)
 
     @mcp.tool()

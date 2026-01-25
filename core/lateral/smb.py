@@ -96,6 +96,7 @@ class SMBLateral(BaseLateralModule):
     description = 'SMB/CIFS 横向移动，支持 Pass-the-Hash'
     default_port = 445
     supported_auth = [AuthMethod.PASSWORD, AuthMethod.HASH]
+    supports_file_transfer = True  # 支持 SMB 共享文件传输
 
     def __init__(
         self,
@@ -137,7 +138,7 @@ class SMBLateral(BaseLateralModule):
             self._set_status(LateralStatus.FAILED)
             return False
 
-        except Exception as e:
+        except (socket.error, socket.timeout, OSError) as e:
             self.logger.error(f"SMB 连接失败: {e}")
             self._set_status(LateralStatus.FAILED)
             return False
@@ -182,7 +183,7 @@ class SMBLateral(BaseLateralModule):
             self._use_impacket = True
             return True
 
-        except Exception as e:
+        except (socket.error, socket.timeout, OSError) as e:
             self.logger.debug(f"impacket 连接失败: {e}")
             return False
 
@@ -227,7 +228,7 @@ class SMBLateral(BaseLateralModule):
             sock.close()
             return False
 
-        except Exception as e:
+        except (socket.error, socket.timeout, OSError) as e:
             self.logger.debug(f"纯 Python SMB 连接失败: {e}")
             return False
 
@@ -316,7 +317,7 @@ class SMBLateral(BaseLateralModule):
                     self._conn.close()
                 else:
                     self._conn.close()
-            except Exception as e:
+            except (socket.error, OSError) as e:
                 self.logger.debug(f"断开连接时出错: {e}")
             finally:
                 self._conn = None
@@ -356,11 +357,11 @@ class SMBLateral(BaseLateralModule):
             self._set_status(LateralStatus.CONNECTED)
             return result
 
-        except Exception as e:
+        except (socket.error, OSError) as e:
             self._set_status(LateralStatus.CONNECTED)
             return ExecutionResult(
                 success=False,
-                error=str(e),
+                error=f"网络错误: {e}",
                 duration=time.time() - start_time,
                 method=ExecutionMethod.SMBEXEC.value
             )
@@ -394,7 +395,7 @@ class SMBLateral(BaseLateralModule):
                 )
                 service_handle = resp['lpServiceHandle']
 
-            except Exception as create_err:
+            except (ValueError, KeyError) as create_err:
                 # 服务可能已存在，尝试打开
                 try:
                     resp = scmr.hROpenServiceW(dce, scm_handle, service_name)
@@ -404,13 +405,13 @@ class SMBLateral(BaseLateralModule):
                         dce, service_handle,
                         lpBinaryPathName=binary_path
                     )
-                except Exception:
+                except (ValueError, KeyError):
                     raise create_err
 
             # 启动服务
             try:
                 scmr.hRStartServiceW(dce, service_handle)
-            except Exception as start_err:
+            except (ValueError, OSError) as start_err:
                 # 服务可能立即停止，这是正常的
                 self.logger.debug(f"服务启动: {start_err}")
 
@@ -420,22 +421,22 @@ class SMBLateral(BaseLateralModule):
             # 清理服务
             try:
                 scmr.hRDeleteService(dce, service_handle)
-            except Exception:
-                pass
+            except (ValueError, OSError):
+                pass  # 清理时忽略错误
 
             try:
                 scmr.hRCloseServiceHandle(dce, service_handle)
                 scmr.hRCloseServiceHandle(dce, scm_handle)
-            except Exception:
-                pass
+            except (ValueError, OSError):
+                pass  # 清理时忽略错误
 
             return ExecutionResult(
                 success=True,
                 output='命令已执行 (输出未捕获)',
             )
 
-        except Exception as e:
-            return ExecutionResult(success=False, error=str(e))
+        except (socket.error, OSError, ValueError) as e:
+            return ExecutionResult(success=False, error=f"执行错误: {e}")
 
     def execute_with_output(self, command: str, timeout: Optional[float] = None) -> ExecutionResult:
         """
@@ -468,14 +469,14 @@ class SMBLateral(BaseLateralModule):
             # 读取输出
             try:
                 output = self._read_share_file(self.config.smb_share, output_file)
-            except Exception as e:
+            except (IOError, OSError, socket.error) as e:
                 output = f"无法读取输出: {e}"
 
             # 删除临时文件
             try:
                 self._delete_share_file(self.config.smb_share, output_file)
-            except Exception:
-                pass
+            except (IOError, OSError):
+                pass  # 清理时忽略错误
 
             return ExecutionResult(
                 success=True,
@@ -484,10 +485,10 @@ class SMBLateral(BaseLateralModule):
                 method=ExecutionMethod.SMBEXEC.value
             )
 
-        except Exception as e:
+        except (socket.error, OSError, IOError) as e:
             return ExecutionResult(
                 success=False,
-                error=str(e),
+                error=f"执行错误: {e}",
                 duration=time.time() - start_time
             )
 
@@ -543,13 +544,22 @@ class SMBLateral(BaseLateralModule):
                 duration=time.time() - start_time
             )
 
-        except Exception as e:
+        except FileNotFoundError as e:
             self._set_status(LateralStatus.CONNECTED)
             return FileTransferResult(
                 success=False,
                 source=local_path,
                 destination=remote_path,
-                error=str(e),
+                error=f"文件不存在: {e}",
+                duration=time.time() - start_time
+            )
+        except (IOError, OSError, socket.error) as e:
+            self._set_status(LateralStatus.CONNECTED)
+            return FileTransferResult(
+                success=False,
+                source=local_path,
+                destination=remote_path,
+                error=f"传输错误: {e}",
                 duration=time.time() - start_time
             )
 
@@ -603,13 +613,22 @@ class SMBLateral(BaseLateralModule):
                 duration=time.time() - start_time
             )
 
-        except Exception as e:
+        except FileNotFoundError as e:
             self._set_status(LateralStatus.CONNECTED)
             return FileTransferResult(
                 success=False,
                 source=remote_path,
                 destination=local_path,
-                error=str(e),
+                error=f"远程文件不存在: {e}",
+                duration=time.time() - start_time
+            )
+        except (IOError, OSError, socket.error) as e:
+            self._set_status(LateralStatus.CONNECTED)
+            return FileTransferResult(
+                success=False,
+                source=remote_path,
+                destination=local_path,
+                error=f"传输错误: {e}",
                 duration=time.time() - start_time
             )
 
@@ -630,7 +649,7 @@ class SMBLateral(BaseLateralModule):
                     share_type=share['shi1_type'],
                     remark=share['shi1_remark'][:-1] if share.get('shi1_remark') else ''
                 ))
-        except Exception as e:
+        except (socket.error, OSError, KeyError) as e:
             self.logger.error(f"列出共享失败: {e}")
 
         return shares
@@ -657,15 +676,16 @@ class SMBLateral(BaseLateralModule):
                     modified=str(f.get_mtime()),
                     accessed=str(f.get_atime())
                 ))
-        except Exception as e:
+        except (socket.error, OSError, KeyError) as e:
             self.logger.error(f"列出文件失败: {e}")
 
         return files
 
     def _read_share_file(self, share: str, path: str) -> str:
         """读取共享文件内容"""
-        temp_file = tempfile.mktemp()
+        fd, temp_file = tempfile.mkstemp(prefix='art_smb_')
         try:
+            os.close(fd)
             with open(temp_file, 'wb') as f:
                 self._conn.getFile(share, path, f.write)
 
@@ -680,7 +700,7 @@ class SMBLateral(BaseLateralModule):
         try:
             self._conn.deleteFile(share, path)
             return True
-        except Exception:
+        except (IOError, OSError, socket.error):
             return False
 
 

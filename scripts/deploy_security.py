@@ -188,16 +188,46 @@ def run_security_tests():
     print_info("\n运行安全测试...")
 
     test_file = Path("tests/test_security.py")
-    if not test_file.exists():
-        print_warning("  测试文件不存在，跳过测试")
+    if test_file.exists():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(test_file)],
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+
+            if result.returncode == 0:
+                print_success("  所有测试通过")
+            else:
+                print_error("  部分测试失败")
+                print(result.stdout)
+                print(result.stderr)
+            return
+        except subprocess.TimeoutExpired:
+            print_error("  测试超时")
+            return
+        except Exception as e:
+            print_error(f"  测试失败: {e}")
+            return
+
+    # 回退到当前可用测试
+    fallback_tests = [
+        Path("tests/test_exceptions_redteam.py"),
+        Path("tests/test_performance_integration.py"),
+    ]
+
+    existing = [p for p in fallback_tests if p.exists()]
+    if not existing:
+        print_warning("  未发现可用测试文件，跳过测试")
         return
 
     try:
         result = subprocess.run(
-            [sys.executable, str(test_file)],
+            [sys.executable, "-m", "pytest", *[str(p) for p in existing]],
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=120
         )
 
         if result.returncode == 0:
@@ -312,15 +342,17 @@ def print_summary():
     print("  - core/security/auth_manager.py")
     print("  - core/security/secrets_manager.py")
     print("  - docs/SECURITY_HARDENING.md")
-    print("  - tests/test_security.py")
+    print("  - tests/test_exceptions_redteam.py")
+    print("  - tests/test_performance_integration.py")
     print("  - examples/security_examples.py")
 
     print("\n下一步操作:")
     print("  1. 编辑.env文件，填入实际的API密钥")
     print("  2. 查看管理员密钥: cat data/admin_key.txt")
-    print("  3. 运行测试: python tests/test_security.py")
-    print("  4. 查看示例: python examples/security_examples.py")
-    print("  5. 阅读文档: docs/SECURITY_HARDENING.md")
+    print("  3. 运行测试: pytest tests/test_exceptions_redteam.py")
+    print("  4. 运行集成测试: pytest tests/test_performance_integration.py")
+    print("  5. 查看示例: python examples/security_examples.py")
+    print("  6. 阅读文档: docs/SECURITY_HARDENING.md")
 
     print("\n集成到现有代码:")
     print("  - 参考 docs/SECURITY_HARDENING.md 中的迁移指南")

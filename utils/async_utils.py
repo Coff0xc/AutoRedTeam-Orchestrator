@@ -23,6 +23,7 @@
     async def fetch_data():
         ...
 """
+import logging
 
 import asyncio
 import functools
@@ -508,8 +509,8 @@ async def async_first(
                         for t in pending:
                             t.cancel()
                         return result
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             tasks = list(pending)
 

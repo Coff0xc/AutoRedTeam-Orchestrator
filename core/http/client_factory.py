@@ -204,8 +204,8 @@ class HTTPClientFactory:
         try:
             import urllib3
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     @classmethod
     def cleanup(cls):

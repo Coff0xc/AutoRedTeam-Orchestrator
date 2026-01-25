@@ -1,56 +1,26 @@
-#!/usr/bin/env python3
 """
-隐蔽性模块 - Stealth Module
-提供流量伪装、代理轮换、指纹伪装等功能
-用于真实攻防对抗场景
+规避控制模块
+
+提供实战级规避检测能力:
+- 流量混淆与行为模拟
+- User-Agent 智能轮换
+- 请求延迟与节流
+- 蜜罐/WAF 检测
+- 自适应规避策略
 """
 
-from .traffic_mutator import TrafficMutator, RequestHumanizer, MutationConfig
-from .proxy_pool import ProxyPool, ProxyValidator, Proxy, ProxyChain as LegacyProxyChain
-from .proxy_chain import (
-    ProxyChain,
-    ProxyChainManager,
-    ChainStrategy,
-    LoadBalanceMode,
-    ChainMetrics,
-    create_chain_from_list,
-    create_chain_from_pool,
-)
-from .fingerprint_spoofer import (
-    TLSFingerprint,
-    JA3Spoofer,
-    BrowserProfile,
-    FingerprintSpoofer,
-    BrowserType,
-    BrowserProfileFactory,
+from .controller import (
+    StealthController,
+    StealthLevel,
+    RequestContext,
+    EvasionTechnique,
+    get_stealth_controller,
 )
 
 __all__ = [
-    # Traffic Mutation
-    'TrafficMutator',
-    'RequestHumanizer',
-    'MutationConfig',
-
-    # Proxy Pool (Legacy)
-    'ProxyPool',
-    'ProxyValidator',
-    'Proxy',
-    'LegacyProxyChain',
-
-    # Proxy Chain (Enhanced)
-    'ProxyChain',
-    'ProxyChainManager',
-    'ChainStrategy',
-    'LoadBalanceMode',
-    'ChainMetrics',
-    'create_chain_from_list',
-    'create_chain_from_pool',
-
-    # Fingerprint Spoofing
-    'TLSFingerprint',
-    'JA3Spoofer',
-    'BrowserProfile',
-    'FingerprintSpoofer',
-    'BrowserType',
-    'BrowserProfileFactory',
+    'StealthController',
+    'StealthLevel',
+    'RequestContext',
+    'EvasionTechnique',
+    'get_stealth_controller',
 ]

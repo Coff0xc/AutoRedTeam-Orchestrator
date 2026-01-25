@@ -4,7 +4,7 @@
 
 ## 目录
 
-- [Claude Desktop](#claude-desktop)
+- [通用 MCP 编辑器](#通用-mcp-编辑器)
 - [Cursor](#cursor)
 - [Windsurf](#windsurf)
 - [Kiro CLI](#kiro-cli)
@@ -12,15 +12,17 @@
 
 ---
 
-## Claude Desktop
+## 通用 MCP 编辑器
 
 ### 配置文件位置
 
+大多数支持 MCP 的 AI 编辑器使用以下配置文件位置：
+
 | 系统 | 路径 |
 |------|------|
-| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Linux | `~/.config/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\<EditorName>\config.json` |
+| macOS | `~/Library/Application Support/<EditorName>/config.json` |
+| Linux | `~/.config/<EditorName>/config.json` |
 
 ### 配置示例
 
@@ -29,7 +31,8 @@
   "mcpServers": {
     "redteam": {
       "command": "python",
-      "args": ["/path/to/AutoRedTeam-Orchestrator/mcp_stdio_server.py"]
+      "args": ["/path/to/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
+      "env": { "PYTHONIOENCODING": "utf-8" }
     }
   }
 }
@@ -42,7 +45,8 @@
   "mcpServers": {
     "redteam": {
       "command": "python",
-      "args": ["E:/Projects/AutoRedTeam-Orchestrator/mcp_stdio_server.py"]
+      "args": ["E:/Projects/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
+      "env": { "PYTHONIOENCODING": "utf-8" }
     }
   }
 }
@@ -50,9 +54,9 @@
 
 ### 验证配置
 
-1. 重启 Claude Desktop
+1. 重启 AI 编辑器
 2. 在对话中输入: `使用 port_scan 扫描 127.0.0.1`
-3. 如果配置正确，Claude 会调用 MCP 工具
+3. 如果配置正确，AI 编辑器会调用 MCP 工具
 
 ---
 
@@ -245,7 +249,7 @@ pip install -r requirements.txt
 ### Q: 如何查看 MCP 日志
 
 **A:**
-- Claude Desktop: 查看 `~/Library/Logs/Claude/` (macOS)
+- 各 AI 编辑器: 打开开发者工具查看日志
 - Cursor: 打开开发者工具 (Help > Toggle Developer Tools)
 - 在 `mcp_stdio_server.py` 中添加日志输出到文件
 

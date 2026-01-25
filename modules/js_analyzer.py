@@ -12,6 +12,8 @@ from typing import Set, List, Dict, Optional
 from urllib.parse import urljoin, urlparse
 from loguru import logger
 
+from utils.mcp_tooling import patch_mcp_tool
+
 # 统一 HTTP 客户端工厂
 try:
     from core.http import get_async_client
@@ -289,6 +291,7 @@ class JSAnalyzer:
 
 def register_js_tools(mcp):
     """注册 JS 分析工具到 MCP Server"""
+    patch_mcp_tool(mcp)
 
     @mcp.tool()
     async def js_analyze(url: str) -> dict:

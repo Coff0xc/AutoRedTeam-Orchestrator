@@ -1,7 +1,7 @@
 """
 注入类漏洞检测器模块
 
-包含 SQL 注入、XSS、命令注入、模板注入、XXE、LDAP 注入等检测器
+包含 SQL 注入、XSS、命令注入、模板注入、XXE、LDAP 注入、反序列化等检测器
 """
 
 from .sqli import SQLiDetector
@@ -10,6 +10,7 @@ from .rce import RCEDetector
 from .ssti import SSTIDetector
 from .xxe import XXEDetector
 from .ldap import LDAPiDetector
+from .deserialize import DeserializeDetector, FastjsonDetector
 
 __all__ = [
     'SQLiDetector',
@@ -18,4 +19,6 @@ __all__ = [
     'SSTIDetector',
     'XXEDetector',
     'LDAPiDetector',
+    'DeserializeDetector',
+    'FastjsonDetector',
 ]

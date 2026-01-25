@@ -10,6 +10,7 @@
 - 统一的参数遍历
 - 二次验证机制
 """
+import logging
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -445,8 +446,9 @@ class BaseDetector(ABC):
         if self.session:
             try:
                 self.session.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             self.session = None
         self._baseline_cache.clear()
 

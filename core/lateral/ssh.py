@@ -7,6 +7,7 @@ SSH 横向移动模块 - SSH Lateral Movement
 """
 
 import socket
+import struct
 import os
 import io
 import time
@@ -103,6 +104,7 @@ class SSHLateral(BaseLateralModule):
     description = 'SSH 横向移动，支持密钥认证和端口转发'
     default_port = 22
     supported_auth = [AuthMethod.PASSWORD, AuthMethod.KEY, AuthMethod.AGENT]
+    supports_file_transfer = True  # 支持 SFTP 文件传输
 
     def __init__(
         self,
@@ -132,7 +134,35 @@ class SSHLateral(BaseLateralModule):
 
         try:
             self._client = paramiko.SSHClient()
-            self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            # 根据配置设置主机密钥策略
+            host_key_policy = self.config.ssh_host_key_policy
+            if host_key_policy == 'reject':
+                # 严格模式：仅接受已知主机
+                self._client.set_missing_host_key_policy(paramiko.RejectPolicy())
+            elif host_key_policy == 'warning':
+                # 警告模式：接受但记录警告
+                self._client.set_missing_host_key_policy(paramiko.WarningPolicy())
+            else:
+                # 自动模式：自动接受（不推荐，仅用于测试环境）
+                self.logger.warning(
+                    "SSH 使用 AutoAddPolicy，存在中间人攻击风险。"
+                    "生产环境请设置 ssh_host_key_policy='reject' 或 'warning'"
+                )
+                self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+            # 加载已知主机文件
+            if self.config.ssh_known_hosts_file:
+                try:
+                    self._client.load_host_keys(self.config.ssh_known_hosts_file)
+                except FileNotFoundError:
+                    self.logger.warning(f"已知主机文件不存在: {self.config.ssh_known_hosts_file}")
+            else:
+                # 尝试加载系统默认的 known_hosts
+                try:
+                    self._client.load_system_host_keys()
+                except (IOError, OSError):
+                    pass  # 忽略加载失败（文件不存在或权限问题）
 
             connect_kwargs = {
                 'hostname': self.target,
@@ -201,8 +231,8 @@ class SSHLateral(BaseLateralModule):
                         self.credentials.ssh_key,
                         password=passphrase
                     )
-                except Exception:
-                    continue
+                except (IOError, OSError, SSHException):
+                    continue  # 尝试下一个密钥类型
 
         # 从字符串加载
         if self.credentials.ssh_key_data:
@@ -214,8 +244,8 @@ class SSHLateral(BaseLateralModule):
                         key_file,
                         password=passphrase
                     )
-                except Exception:
-                    continue
+                except (ValueError, SSHException):
+                    continue  # 尝试下一个密钥类型
 
         return None
 
@@ -231,17 +261,19 @@ class SSHLateral(BaseLateralModule):
         if self._sftp:
             try:
                 self._sftp.close()
-            except Exception:
-                pass
-            self._sftp = None
+            except (SSHException, socket.error, OSError) as e:
+                self.logger.debug(f"关闭 SFTP 时出错: {e}")
+            finally:
+                self._sftp = None
 
         # 关闭 SSH 客户端
         if self._client:
             try:
                 self._client.close()
-            except Exception:
-                pass
-            self._client = None
+            except (SSHException, socket.error, OSError) as e:
+                self.logger.debug(f"关闭 SSH 客户端时出错: {e}")
+            finally:
+                self._client = None
 
         self._transport = None
         self._set_status(LateralStatus.DISCONNECTED)
@@ -298,11 +330,19 @@ class SSHLateral(BaseLateralModule):
                 duration=time.time() - start_time,
                 method=ExecutionMethod.SSH.value
             )
-        except Exception as e:
+        except SSHException as e:
             self._set_status(LateralStatus.CONNECTED)
             return ExecutionResult(
                 success=False,
-                error=str(e),
+                error=f"SSH 错误: {e}",
+                duration=time.time() - start_time,
+                method=ExecutionMethod.SSH.value
+            )
+        except socket.error as e:
+            self._set_status(LateralStatus.CONNECTED)
+            return ExecutionResult(
+                success=False,
+                error=f"网络错误: {e}",
                 duration=time.time() - start_time,
                 method=ExecutionMethod.SSH.value
             )
@@ -365,10 +405,10 @@ class SSHLateral(BaseLateralModule):
                 method=ExecutionMethod.SSH.value
             )
 
-        except Exception as e:
+        except (SSHException, socket.error, socket.timeout) as e:
             return ExecutionResult(
                 success=False,
-                error=str(e),
+                error=f"SSH/网络错误: {e}",
                 duration=time.time() - start_time,
                 method=ExecutionMethod.SSH.value
             )
@@ -397,7 +437,7 @@ class SSHLateral(BaseLateralModule):
         if self._sftp is None and self._client:
             try:
                 self._sftp = self._client.open_sftp()
-            except Exception as e:
+            except (SSHException, socket.error) as e:
                 self.logger.error(f"创建 SFTP 失败: {e}")
                 return None
         return self._sftp
@@ -446,13 +486,31 @@ class SSHLateral(BaseLateralModule):
                 duration=time.time() - start_time
             )
 
-        except Exception as e:
+        except FileNotFoundError as e:
             self._set_status(LateralStatus.CONNECTED)
             return FileTransferResult(
                 success=False,
                 source=local_path,
                 destination=remote_path,
-                error=str(e),
+                error=f"文件不存在: {e}",
+                duration=time.time() - start_time
+            )
+        except (IOError, OSError) as e:
+            self._set_status(LateralStatus.CONNECTED)
+            return FileTransferResult(
+                success=False,
+                source=local_path,
+                destination=remote_path,
+                error=f"文件操作错误: {e}",
+                duration=time.time() - start_time
+            )
+        except SSHException as e:
+            self._set_status(LateralStatus.CONNECTED)
+            return FileTransferResult(
+                success=False,
+                source=local_path,
+                destination=remote_path,
+                error=f"SFTP 错误: {e}",
                 duration=time.time() - start_time
             )
 
@@ -500,13 +558,31 @@ class SSHLateral(BaseLateralModule):
                 duration=time.time() - start_time
             )
 
-        except Exception as e:
+        except FileNotFoundError as e:
             self._set_status(LateralStatus.CONNECTED)
             return FileTransferResult(
                 success=False,
                 source=remote_path,
                 destination=local_path,
-                error=str(e),
+                error=f"远程文件不存在: {e}",
+                duration=time.time() - start_time
+            )
+        except (IOError, OSError) as e:
+            self._set_status(LateralStatus.CONNECTED)
+            return FileTransferResult(
+                success=False,
+                source=remote_path,
+                destination=local_path,
+                error=f"文件操作错误: {e}",
+                duration=time.time() - start_time
+            )
+        except SSHException as e:
+            self._set_status(LateralStatus.CONNECTED)
+            return FileTransferResult(
+                success=False,
+                source=remote_path,
+                destination=local_path,
+                error=f"SFTP 错误: {e}",
                 duration=time.time() - start_time
             )
 
@@ -518,7 +594,7 @@ class SSHLateral(BaseLateralModule):
 
         try:
             return sftp.listdir(path)
-        except Exception as e:
+        except (IOError, OSError, SSHException) as e:
             self.logger.error(f"列出目录失败: {e}")
             return []
 
@@ -590,13 +666,13 @@ class SSHLateral(BaseLateralModule):
                         forward_thread.daemon = True
                         forward_thread.start()
 
-                    except Exception as e:
+                    except SSHException as e:
                         self.logger.debug(f"转发错误: {e}")
                         client_sock.close()
 
                 server.close()
 
-            except Exception as e:
+            except (socket.error, OSError) as e:
                 self.logger.error(f"本地转发错误: {e}")
 
         thread = threading.Thread(target=forward_handler)
@@ -632,7 +708,7 @@ class SSHLateral(BaseLateralModule):
             self._tunnels.append(tunnel_info)
             return tunnel_info
 
-        except Exception as e:
+        except (SSHException, socket.error) as e:
             self.logger.error(f"远程转发失败: {e}")
             return None
 
@@ -671,7 +747,7 @@ class SSHLateral(BaseLateralModule):
 
                 server.close()
 
-            except Exception as e:
+            except (socket.error, OSError) as e:
                 self.logger.error(f"SOCKS 代理错误: {e}")
 
         thread = threading.Thread(target=socks_handler)
@@ -725,7 +801,7 @@ class SSHLateral(BaseLateralModule):
                     (addr, port),
                     client_sock.getpeername()
                 )
-            except Exception:
+            except SSHException:
                 client_sock.send(b'\x05\x05\x00\x01\x00\x00\x00\x00\x00\x00')
                 client_sock.close()
                 return
@@ -741,13 +817,13 @@ class SSHLateral(BaseLateralModule):
             # 转发数据
             self._forward_data(client_sock, channel, tunnel_info)
 
-        except Exception as e:
+        except (socket.error, socket.timeout, struct.error) as e:
             self.logger.debug(f"SOCKS 客户端错误: {e}")
         finally:
             try:
                 client_sock.close()
-            except Exception:
-                pass
+            except (socket.error, OSError):
+                pass  # 清理时忽略错误
 
     def _forward_data(
         self,
@@ -772,17 +848,17 @@ class SSHLateral(BaseLateralModule):
                         break
                     sock.send(data)
 
-        except Exception as e:
+        except (socket.error, socket.timeout, SSHException) as e:
             self.logger.debug(f"转发错误: {e}")
         finally:
             try:
                 channel.close()
-            except Exception:
-                pass
+            except (SSHException, socket.error, OSError):
+                pass  # 清理时忽略错误
             try:
                 sock.close()
-            except Exception:
-                pass
+            except (socket.error, OSError):
+                pass  # 清理时忽略错误
 
     def close_tunnel(self, tunnel: TunnelInfo) -> bool:
         """关闭隧道"""

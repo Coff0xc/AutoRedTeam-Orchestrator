@@ -480,8 +480,8 @@ class PortScanner:
             if data:
                 return data.decode("utf-8", errors="replace").strip()[:200]
 
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return None
 

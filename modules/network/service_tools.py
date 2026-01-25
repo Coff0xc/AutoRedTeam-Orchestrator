@@ -66,9 +66,9 @@ class FTPCheckTool(BaseTool):
                         files = []
                         ftp.retrlines('LIST', files.append)
                         result["files"] = files[:20]  # 限制数量
-                    except Exception:
-                        pass
-                    
+                    except Exception as exc:
+                        logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
                     ftp.quit()
                 except ftplib.error_perm:
                     result["anonymous_access"] = False

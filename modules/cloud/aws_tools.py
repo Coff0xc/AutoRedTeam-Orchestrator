@@ -282,9 +282,9 @@ class S3ScannerTool(BaseTool):
             cmd = ["aws", "s3", "ls", f"s3://{bucket}", "--no-sign-request"]
             result = subprocess.run(cmd, capture_output=True, timeout=10)
             permissions["read"] = result.returncode == 0
-        except Exception:
-            pass
-        
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         # 测试上传权限 (创建测试文件)
         try:
             import tempfile
@@ -300,7 +300,7 @@ class S3ScannerTool(BaseTool):
                         ["aws", "s3", "rm", f"s3://{bucket}/.test", "--no-sign-request"],
                         capture_output=True, timeout=10
                     )
-        except Exception:
-            pass
-        
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         return permissions

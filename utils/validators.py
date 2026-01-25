@@ -2,12 +2,15 @@
 """
 输入验证模块 - AutoRedTeam-Orchestrator
 
-提供各种输入验证功能，包括：
+统一的输入验证框架，提供：
 - URL/IP/域名验证
 - 端口验证
 - 路径安全验证（防止路径遍历）
 - 命令安全验证（防止命令注入）
+- 文件名验证
+- HTML清理（防XSS）
 - 通用输入清理
+- 参数验证装饰器
 
 使用示例:
     from utils.validators import validate_url, validate_ip, InputValidator
@@ -19,13 +22,31 @@
     # 验证器类
     validator = InputValidator()
     target_type, normalized = validator.validate_target("192.168.1.1")
+
+    # 使用装饰器
+    @validate_params(url=lambda x: InputValidator.validate_url_strict(x))
+    def scan(url: str):
+        pass
+
+注意:
+    此模块合并了以下旧模块的功能：
+    - utils/input_validator.py (已废弃)
+    - core/security/input_validator.py (已废弃)
+
+    请使用此模块的函数，旧模块将在未来版本移除。
 """
 
 import re
+import os
+import json
 import ipaddress
-from typing import Optional, List, Tuple, Union
+import logging
+from typing import Any, Callable, Optional, List, Tuple, Union, Dict
 from urllib.parse import urlparse, unquote
 from pathlib import Path
+from functools import wraps
+
+logger = logging.getLogger(__name__)
 
 
 class ValidationError(Exception):
@@ -35,6 +56,33 @@ class ValidationError(Exception):
         self.message = message
         self.field = field
         super().__init__(message)
+
+
+# =============================================================================
+# 预定义正则模式
+# =============================================================================
+VALIDATION_PATTERNS = {
+    "alphanumeric": re.compile(r'^[a-zA-Z0-9]+$'),
+    "alphanumeric_dash": re.compile(r'^[a-zA-Z0-9_-]+$'),
+    "domain": re.compile(r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'),
+    "email": re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
+    "ipv4": re.compile(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'),
+    "port": re.compile(r'^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$'),
+    "filename": re.compile(r'^[a-zA-Z0-9_.-]+$'),
+    "session_id": re.compile(r'^[a-zA-Z0-9_-]{8,64}$'),
+    "cve_id": re.compile(r'^CVE-\d{4}-\d{4,}$', re.IGNORECASE),
+}
+
+# =============================================================================
+# 危险字符分类
+# =============================================================================
+DANGEROUS_CHARS = {
+    "path": ['..', '~', '\\', '\x00'],
+    "command": [';', '|', '&', '$', '`', '\n', '\r', '>', '<',
+                "'", '"', '\\', '(', ')', '{', '}', '[', ']',
+                '\x00', '\t', '\x0b', '\x0c'],
+    "sql": ["'", '"', '--', '/*', '*/', 'xp_', 'sp_'],
+}
 
 
 def validate_url(url: str, allowed_schemes: Optional[List[str]] = None) -> bool:

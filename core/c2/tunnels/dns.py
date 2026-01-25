@@ -143,8 +143,8 @@ class DNSTunnel(BaseTunnel):
                 # 发送关闭查询
                 close_query = f"close.{self._session_id}.{self.domain}"
                 self._send_query(close_query)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         self._connected = False
         self._resolver = None
@@ -461,8 +461,8 @@ class StealthDNSTunnel(DNSTunnel):
             domain = random.choice(self._decoy_domains)
             try:
                 socket.gethostbyname(domain)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             time.sleep(random.uniform(0.1, 0.5))
 

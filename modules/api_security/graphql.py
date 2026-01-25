@@ -709,7 +709,8 @@ class GraphQLTester(BaseAPITester):
 
             try:
                 data = response.json()
-            except:
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.debug(f'JSON解析失败: {e}')
                 data = {}
 
             return {
@@ -741,7 +742,8 @@ class GraphQLTester(BaseAPITester):
 
             try:
                 data = response.json()
-            except:
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.debug(f'批量响应JSON解析失败: {e}')
                 data = {}
 
             return {

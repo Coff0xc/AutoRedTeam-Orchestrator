@@ -3,6 +3,7 @@
 终端实时输出模块
 在MCP工具执行时显示实时进度和输出到终端
 """
+import logging
 
 import sys
 import os
@@ -30,8 +31,9 @@ def get_tty():
             # 跨平台：仅在 Unix 系统尝试打开 /dev/tty
             if sys.platform != 'win32':
                 return open('/dev/tty', 'w')
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         return sys.stderr
 
 
@@ -66,9 +68,9 @@ class TerminalLogger:
         if sys.platform != 'win32':
             try:
                 self.real_tty = open('/dev/tty', 'w')
-            except Exception:
-                pass
-    
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
     def _write(self, msg: str):
         """线程安全写入"""
         if not self.enabled:
@@ -79,24 +81,24 @@ class TerminalLogger:
                 try:
                     self.log_file.write(msg)
                     self.log_file.flush()
-                except Exception:
-                    pass
-            
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             # 2. 写入标准错误 (MCP兼容方式)
             try:
                 sys.stderr.write(msg)
                 sys.stderr.flush()
-            except Exception:
-                pass
-                
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             # 3. 写入真实终端 (如果可用)
             if self.real_tty:
                 try:
                     self.real_tty.write(msg)
                     self.real_tty.flush()
-                except Exception:
-                    pass
-    
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
     def print(self, msg: str, color: str = None, bold: bool = False):
         """打印带颜色的消息"""
         prefix = ""
@@ -232,9 +234,9 @@ def run_with_realtime_output(
                             state["output_count"] += 1
             except ValueError:
                 pass  # 文件已关闭
-            except Exception:
-                pass
-        
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         stdout_thread = threading.Thread(target=read_stream, args=(proc.stdout, stdout_lines, False))
         stderr_thread = threading.Thread(target=read_stream, args=(proc.stderr, stderr_lines, True))
         

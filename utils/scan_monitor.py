@@ -6,6 +6,7 @@
 - 任务状态管理
 - 超时自动终止
 """
+import logging
 
 import os
 import sys
@@ -142,9 +143,9 @@ class ScanMonitor:
             except Exception:
                 try:
                     os.kill(task.process.pid, signal.SIGKILL)
-                except Exception:
-                    pass
-        
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         task.status = ScanStatus.TIMEOUT
         task.end_time = datetime.now()
         task.result = {
@@ -226,9 +227,9 @@ class ScanMonitor:
                         elif output_count[0] == 1000:
                             terminal.warning("... 输出过多，后续隐藏")
                             output_count[0] += 1
-                except Exception:
-                    pass
-            
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             stdout_thread = threading.Thread(
                 target=read_output, 
                 args=(task.process.stdout, task.stdout_lines, False),
@@ -309,9 +310,9 @@ class ScanMonitor:
             if task.process:
                 try:
                     task.process.kill()
-                except Exception:
-                    pass
-            
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             task.status = ScanStatus.CANCELLED
             task.end_time = datetime.now()
             terminal.warning(f"任务已取消: {task_id}")

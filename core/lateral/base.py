@@ -207,6 +207,8 @@ class LateralConfig:
     ssh_auth_timeout: float = 10.0
     ssh_allow_agent: bool = False
     ssh_look_for_keys: bool = False
+    ssh_host_key_policy: str = 'warning'  # 'reject', 'warning', 'auto' (不推荐)
+    ssh_known_hosts_file: Optional[str] = None  # 已知主机文件路径
 
     # WMI 配置
     wmi_namespace: str = 'root/cimv2'
@@ -219,6 +221,8 @@ class LateralConfig:
     winrm_transport: str = 'ntlm'  # ntlm, kerberos, basic
     winrm_read_timeout: float = 30.0
     winrm_operation_timeout: float = 20.0
+    winrm_cert_validation: str = 'validate'  # 'validate', 'ignore' (不推荐)
+    winrm_ca_trust_path: Optional[str] = None  # CA 证书路径
 
     # PsExec 配置
     psexec_share: str = 'ADMIN$'
@@ -270,6 +274,7 @@ class BaseLateralModule(ABC):
     description: str = 'Base Lateral Movement Module'
     default_port: int = 0
     supported_auth: List[AuthMethod] = [AuthMethod.PASSWORD]
+    supports_file_transfer: bool = False  # 子类覆盖为 True 以启用文件传输
 
     def __init__(
         self,
@@ -367,29 +372,71 @@ class BaseLateralModule(ABC):
 
     def upload(self, local_path: str, remote_path: str) -> FileTransferResult:
         """
-        上传文件
+        上传文件到远程主机
+
+        这是一个可选方法，子类可以根据协议特性选择是否实现。
+        默认实现返回"不支持"的结果，子类应覆盖此方法以提供实际功能。
 
         Args:
-            local_path: 本地文件路径
+            local_path: 本地文件路径 (绝对路径或相对路径)
             remote_path: 远程文件路径
 
         Returns:
-            FileTransferResult 对象
+            FileTransferResult 对象，包含传输结果
+
+        Example:
+            >>> result = lateral.upload('/tmp/payload.exe', 'C:\\Windows\\Temp\\payload.exe')
+            >>> if result.success:
+            ...     print(f"上传成功: {result.size} bytes")
+            ... else:
+            ...     print(f"上传失败: {result.error}")
+
+        Note:
+            - SSH: 使用 SFTP 协议传输
+            - SMB: 使用 SMB 共享传输
+            - WinRM: 使用 PowerShell Base64 编码传输
+            - WMI: 不支持直接文件传输，需配合 SMB 使用
         """
-        raise NotImplementedError(f"{self.name} 不支持文件上传")
+        return FileTransferResult(
+            success=False,
+            source=local_path,
+            destination=remote_path,
+            error=f"{self.name} 模块不支持文件上传，请使用支持文件传输的模块 (SSH/SMB/WinRM)"
+        )
 
     def download(self, remote_path: str, local_path: str) -> FileTransferResult:
         """
-        下载文件
+        从远程主机下载文件
+
+        这是一个可选方法，子类可以根据协议特性选择是否实现。
+        默认实现返回"不支持"的结果，子类应覆盖此方法以提供实际功能。
 
         Args:
             remote_path: 远程文件路径
-            local_path: 本地文件路径
+            local_path: 本地文件路径 (绝对路径或相对路径)
 
         Returns:
-            FileTransferResult 对象
+            FileTransferResult 对象，包含传输结果
+
+        Example:
+            >>> result = lateral.download('C:\\Windows\\System32\\config\\SAM', '/tmp/SAM')
+            >>> if result.success:
+            ...     print(f"下载成功: {result.size} bytes")
+            ... else:
+            ...     print(f"下载失败: {result.error}")
+
+        Note:
+            - SSH: 使用 SFTP 协议传输
+            - SMB: 使用 SMB 共享传输
+            - WinRM: 使用 PowerShell Base64 编码传输
+            - WMI: 不支持直接文件传输，需配合 SMB 使用
         """
-        raise NotImplementedError(f"{self.name} 不支持文件下载")
+        return FileTransferResult(
+            success=False,
+            source=remote_path,
+            destination=local_path,
+            error=f"{self.name} 模块不支持文件下载，请使用支持文件传输的模块 (SSH/SMB/WinRM)"
+        )
 
     def test_connection(self) -> bool:
         """
@@ -423,6 +470,7 @@ class BaseLateralModule(ABC):
             'connection_duration': self.connection_duration,
             'auth_method': self.credentials.method.value,
             'supported_auth': [m.value for m in self.supported_auth],
+            'supports_file_transfer': self.supports_file_transfer,
         }
 
     def __enter__(self) -> 'BaseLateralModule':

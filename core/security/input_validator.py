@@ -390,10 +390,48 @@ def require_auth(func: Callable) -> Callable:
     """
     认证装饰器（占位，需要配合认证系统使用）
     """
+    def _get_auth_manager():
+        from core.security.auth_manager import AuthManager
+        if not hasattr(_get_auth_manager, "_instance"):
+            _get_auth_manager._instance = AuthManager()
+        return _get_auth_manager._instance
+
+    def _extract_api_key(kwargs: Dict[str, Any]) -> Optional[str]:
+        return kwargs.get("api_key") or os.getenv("AUTOREDTEAM_API_KEY")
+
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # TODO: 实现认证检查
+        api_key = _extract_api_key(kwargs)
+        if not api_key:
+            raise ValidationError("缺少 API Key（请设置 AUTOREDTEAM_API_KEY 或传入 api_key）")
+
+        manager = _get_auth_manager()
+        key_obj = manager.verify_key(api_key)
+        if not key_obj:
+            raise ValidationError("API Key 无效或已过期")
+        if not manager.check_permission(key_obj, func.__name__):
+            raise ValidationError("API Key 权限不足")
+
         return func(*args, **kwargs)
+
+    @wraps(func)
+    async def async_wrapper(*args, **kwargs):
+        api_key = _extract_api_key(kwargs)
+        if not api_key:
+            raise ValidationError("缺少 API Key（请设置 AUTOREDTEAM_API_KEY 或传入 api_key）")
+
+        manager = _get_auth_manager()
+        key_obj = manager.verify_key(api_key)
+        if not key_obj:
+            raise ValidationError("API Key 无效或已过期")
+        if not manager.check_permission(key_obj, func.__name__):
+            raise ValidationError("API Key 权限不足")
+
+        return await func(*args, **kwargs)
+
+    import inspect
+    if inspect.iscoroutinefunction(func):
+        return async_wrapper
     return wrapper
 
 

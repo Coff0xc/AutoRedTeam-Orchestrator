@@ -115,7 +115,9 @@ class SSTIDetector(BaseDetector):
 
         # 加载 payload
         max_payloads = self.config.get('max_payloads', 20)
-        self.payloads = get_payloads(PayloadCategory.SSTI, limit=max_payloads)
+        self.payloads = self._enhance_payloads(
+            get_payloads(PayloadCategory.SSTI, limit=max_payloads)
+        )
 
         # 编译成功模式
         self._rce_patterns = [
@@ -207,14 +209,26 @@ class SSTIDetector(BaseDetector):
                         confidence = 0.95
                         evidence = rce_result
 
+                test_payload = evidence.get('payload', '')
+                test_params = params.copy()
+                if param_name:
+                    test_params[param_name] = test_payload
+                request_info = self._build_request_info(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    params=test_params if method == 'GET' else None,
+                    data=test_params if method != 'GET' else None
+                )
                 results.append(self._create_result(
                     url=url,
                     vulnerable=True,
                     param=param_name,
-                    payload=evidence.get('payload', ''),
+                    payload=test_payload,
                     evidence=evidence.get('evidence', ''),
                     confidence=confidence,
                     verified=rce_possible,
+                    request=request_info,
                     remediation="使用安全的模板引擎配置，禁用危险的函数和对象访问",
                     references=[
                         "https://portswigger.net/research/server-side-template-injection",

@@ -361,17 +361,17 @@ class DOMXSSAnalyzerTool(BaseTool):
                 try:
                     js_resp = requests.get(full_url, timeout=5, verify=False)
                     external_js.append(js_resp.text)
-                except Exception:
-                    pass
-            
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             # 如果指定了JS URL
             if js_url:
                 try:
                     js_resp = requests.get(js_url, timeout=5, verify=False)
                     external_js.append(js_resp.text)
-                except Exception:
-                    pass
-            
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             # 合并所有JS代码
             all_js = "\n".join(inline_scripts + external_js)
             

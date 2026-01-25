@@ -6,6 +6,7 @@ AI决策工具模块
 - attack_chain_plan: 攻击链规划
 - poc_generator: PoC模板生成
 """
+import logging
 
 
 def register_ai_tools(mcp):
@@ -156,8 +157,8 @@ def register_ai_tools(mcp):
                             "cvss": cvss,
                             "summary": desc
                         })
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             # 匹配利用建议
             for key, exploits in exploit_db.items():

@@ -8,6 +8,7 @@ Deserialize (反序列化漏洞) 检测器
 - Python (pickle)
 - .NET (BinaryFormatter, ObjectStateFormatter)
 """
+import logging
 
 from typing import Dict, List, Any, Optional
 import re
@@ -260,8 +261,8 @@ class DeserializeDetector(BaseDetector):
                             details={"endpoint": endpoint, "status_code": status}
                         )
                         vulnerabilities.append(vuln)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 3. 参数注入测试
         payloads = self.get_payloads()
@@ -291,8 +292,8 @@ class DeserializeDetector(BaseDetector):
 
                             if not deep_scan:
                                 break
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
                 if vulnerabilities and not deep_scan:
                     break
@@ -326,8 +327,9 @@ class DeserializeDetector(BaseDetector):
                     response = self.send_request(vuln.url)
                     if response and response.get("success"):
                         return response.get("status_code", 0) != 404
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             return False
 
         # 使用不同的 payload 重新测试
@@ -344,8 +346,8 @@ class DeserializeDetector(BaseDetector):
                 response = self.send_request(url, verify_payloads[lang], vuln.param)
                 if response and response.get("success"):
                     return self.validate_response(response, verify_payloads[lang])
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return False
 

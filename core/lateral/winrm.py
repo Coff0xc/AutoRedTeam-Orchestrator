@@ -6,6 +6,7 @@ WinRM 横向移动模块 - WinRM Lateral Movement
 用于授权安全测试，仅限合法渗透测试使用
 """
 
+import socket
 import time
 import logging
 import base64
@@ -81,6 +82,7 @@ class WinRMLateral(BaseLateralModule):
     description = 'WinRM 横向移动，支持 NTLM 和 Kerberos 认证'
     default_port = 5985
     supported_auth = [AuthMethod.PASSWORD, AuthMethod.HASH, AuthMethod.TICKET]
+    supports_file_transfer = True  # 支持 PowerShell Base64 文件传输
 
     def __init__(
         self,
@@ -146,7 +148,7 @@ class WinRMLateral(BaseLateralModule):
             self.logger.info(f"WinRM 连接成功: {self.credentials.username}@{self.target}")
             return True
 
-        except Exception as e:
+        except (socket.error, socket.timeout, OSError) as e:
             self.logger.error(f"WinRM 连接失败: {e}")
             self._set_status(LateralStatus.FAILED)
             return False
@@ -174,7 +176,17 @@ class WinRMLateral(BaseLateralModule):
         params: Dict[str, Any] = {}
 
         if self.config.winrm_use_ssl:
-            params['server_cert_validation'] = 'ignore'
+            cert_validation = self.config.winrm_cert_validation
+            if cert_validation == 'ignore':
+                self.logger.warning(
+                    "WinRM SSL 证书验证已禁用，存在中间人攻击风险。"
+                    "生产环境请设置 winrm_cert_validation='validate'"
+                )
+                params['server_cert_validation'] = 'ignore'
+            else:
+                params['server_cert_validation'] = 'validate'
+                if self.config.winrm_ca_trust_path:
+                    params['ca_trust_path'] = self.config.winrm_ca_trust_path
 
         return params
 
@@ -224,11 +236,11 @@ class WinRMLateral(BaseLateralModule):
                 method=ExecutionMethod.WINRM.value
             )
 
-        except Exception as e:
+        except (socket.error, socket.timeout, OSError) as e:
             self._set_status(LateralStatus.CONNECTED)
             return ExecutionResult(
                 success=False,
-                error=str(e),
+                error=f"网络错误: {e}",
                 duration=time.time() - start_time,
                 method=ExecutionMethod.WINRM.value
             )
@@ -269,11 +281,11 @@ class WinRMLateral(BaseLateralModule):
                 method=ExecutionMethod.WINRM.value
             )
 
-        except Exception as e:
+        except (socket.error, socket.timeout, OSError) as e:
             self._set_status(LateralStatus.CONNECTED)
             return ExecutionResult(
                 success=False,
-                error=str(e),
+                error=f"网络错误: {e}",
                 duration=time.time() - start_time,
                 method=ExecutionMethod.WINRM.value
             )
@@ -312,8 +324,8 @@ class WinRMLateral(BaseLateralModule):
             try:
                 import json
                 return json.loads(result.output)
-            except Exception:
-                pass
+            except (json.JSONDecodeError, ValueError) as e:
+                self.logger.debug(f"JSON 解析失败: {e}")
 
         return {'error': result.error or '获取失败'}
 
@@ -329,8 +341,8 @@ class WinRMLateral(BaseLateralModule):
                 import json
                 data = json.loads(result.output)
                 return data if isinstance(data, list) else [data]
-            except Exception:
-                pass
+            except (json.JSONDecodeError, ValueError) as e:
+                self.logger.debug(f"JSON 解析失败: {e}")
 
         return []
 
@@ -346,8 +358,8 @@ class WinRMLateral(BaseLateralModule):
                 import json
                 data = json.loads(result.output)
                 return data if isinstance(data, list) else [data]
-            except Exception:
-                pass
+            except (json.JSONDecodeError, ValueError) as e:
+                self.logger.debug(f"JSON 解析失败: {e}")
 
         return []
 
@@ -363,8 +375,8 @@ class WinRMLateral(BaseLateralModule):
                 import json
                 data = json.loads(result.output)
                 return data if isinstance(data, list) else [data]
-            except Exception:
-                pass
+            except (json.JSONDecodeError, ValueError) as e:
+                self.logger.debug(f"JSON 解析失败: {e}")
 
         return []
 
@@ -382,8 +394,8 @@ class WinRMLateral(BaseLateralModule):
                 import json
                 data = json.loads(result.output)
                 return data if isinstance(data, list) else [data]
-            except Exception:
-                pass
+            except (json.JSONDecodeError, ValueError) as e:
+                self.logger.debug(f"JSON 解析失败: {e}")
 
         return []
 
@@ -469,13 +481,31 @@ class WinRMLateral(BaseLateralModule):
                 duration=time.time() - start_time
             )
 
-        except Exception as e:
+        except FileNotFoundError as e:
             self._set_status(LateralStatus.CONNECTED)
             return FileTransferResult(
                 success=False,
                 source=local_path,
                 destination=remote_path,
-                error=str(e),
+                error=f"文件不存在: {e}",
+                duration=time.time() - start_time
+            )
+        except (IOError, OSError) as e:
+            self._set_status(LateralStatus.CONNECTED)
+            return FileTransferResult(
+                success=False,
+                source=local_path,
+                destination=remote_path,
+                error=f"文件操作错误: {e}",
+                duration=time.time() - start_time
+            )
+        except (socket.error, socket.timeout) as e:
+            self._set_status(LateralStatus.CONNECTED)
+            return FileTransferResult(
+                success=False,
+                source=local_path,
+                destination=remote_path,
+                error=f"网络错误: {e}",
                 duration=time.time() - start_time
             )
 
@@ -539,13 +569,22 @@ class WinRMLateral(BaseLateralModule):
                 duration=time.time() - start_time
             )
 
-        except Exception as e:
+        except (IOError, OSError) as e:
             self._set_status(LateralStatus.CONNECTED)
             return FileTransferResult(
                 success=False,
                 source=remote_path,
                 destination=local_path,
-                error=str(e),
+                error=f"文件操作错误: {e}",
+                duration=time.time() - start_time
+            )
+        except (socket.error, socket.timeout) as e:
+            self._set_status(LateralStatus.CONNECTED)
+            return FileTransferResult(
+                success=False,
+                source=remote_path,
+                destination=local_path,
+                error=f"网络错误: {e}",
                 duration=time.time() - start_time
             )
 
@@ -564,8 +603,8 @@ class WinRMLateral(BaseLateralModule):
                 'process_count': len(self.get_processes()),
                 'services': len(self.get_services()),
             }
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
+        except (socket.error, socket.timeout, OSError) as e:
+            return {'success': False, 'error': f"网络错误: {e}"}
 
 
 # 便捷函数

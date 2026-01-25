@@ -11,6 +11,7 @@ import uuid
 import logging
 import tempfile
 import os
+import socket
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
 
@@ -212,8 +213,12 @@ class WMILateral(BaseLateralModule):
             self.logger.info(f"WMI 连接成功: {self.credentials.username}@{self.target}")
             return True
 
-        except Exception as e:
-            self.logger.error(f"WMI 连接失败: {e}")
+        except (socket.error, socket.timeout, OSError) as e:
+            self.logger.error(f"WMI 网络连接失败: {e}")
+            self._set_status(LateralStatus.FAILED)
+            return False
+        except (ValueError, KeyError, AttributeError) as e:
+            self.logger.error(f"WMI 认证/协议错误: {e}")
             self._set_status(LateralStatus.FAILED)
             return False
 
@@ -224,8 +229,8 @@ class WMILateral(BaseLateralModule):
         if self._dcom:
             try:
                 self._dcom.disconnect()
-            except Exception as e:
-                self.logger.debug(f"断开 DCOM 时出错: {e}")
+            except (socket.error, OSError):
+                self.logger.debug("断开 DCOM 时网络错误 (已忽略)")
 
         self._dcom = None
         self._wmi_conn = None
@@ -282,11 +287,19 @@ class WMILateral(BaseLateralModule):
                     method=ExecutionMethod.WMIEXEC.value
                 )
 
-        except Exception as e:
+        except (socket.error, socket.timeout, OSError) as e:
             self._set_status(LateralStatus.CONNECTED)
             return ExecutionResult(
                 success=False,
-                error=str(e),
+                error=f"WMI 网络错误: {e}",
+                duration=time.time() - start_time,
+                method=ExecutionMethod.WMIEXEC.value
+            )
+        except (ValueError, KeyError, AttributeError) as e:
+            self._set_status(LateralStatus.CONNECTED)
+            return ExecutionResult(
+                success=False,
+                error=f"WMI 执行错误: {e}",
                 duration=time.time() - start_time,
                 method=ExecutionMethod.WMIEXEC.value
             )
@@ -338,10 +351,17 @@ class WMILateral(BaseLateralModule):
                 method=ExecutionMethod.WMIEXEC.value
             )
 
-        except Exception as e:
+        except (socket.error, socket.timeout, OSError) as e:
             return ExecutionResult(
                 success=False,
-                error=str(e),
+                error=f"WMI 网络错误: {e}",
+                duration=time.time() - start_time,
+                method=ExecutionMethod.WMIEXEC.value
+            )
+        except (ValueError, KeyError, IOError) as e:
+            return ExecutionResult(
+                success=False,
+                error=f"WMI 输出读取错误: {e}",
                 duration=time.time() - start_time,
                 method=ExecutionMethod.WMIEXEC.value
             )
@@ -362,7 +382,8 @@ class WMILateral(BaseLateralModule):
             remote_path = file_path.replace('C:', '').replace('/', '\\')
 
             # 下载到临时文件
-            temp_file = tempfile.mktemp()
+            fd, temp_file = tempfile.mkstemp(prefix='art_wmi_')
+            os.close(fd)
             result = smb.download(remote_path, temp_file)
             smb.disconnect()
 
@@ -376,8 +397,10 @@ class WMILateral(BaseLateralModule):
 
         except ImportError:
             return "SMB 模块不可用"
-        except Exception as e:
-            return f"读取输出错误: {e}"
+        except (IOError, OSError) as e:
+            return f"文件操作错误: {e}"
+        except (socket.error, socket.timeout) as e:
+            return f"SMB 网络错误: {e}"
 
     def query(self, wql: str) -> WMIQueryResult:
         """
@@ -416,7 +439,10 @@ class WMILateral(BaseLateralModule):
 
                     results.append(row)
 
-                except Exception:
+                except StopIteration:
+                    break
+                except (ValueError, KeyError, AttributeError):
+                    # impacket 枚举结束或属性获取失败
                     break
 
             return WMIQueryResult(
@@ -426,10 +452,17 @@ class WMILateral(BaseLateralModule):
                 duration=time.time() - start_time
             )
 
-        except Exception as e:
+        except (socket.error, socket.timeout, OSError) as e:
             return WMIQueryResult(
                 success=False,
-                error=str(e),
+                error=f"WMI 网络错误: {e}",
+                query=wql,
+                duration=time.time() - start_time
+            )
+        except (ValueError, KeyError, AttributeError) as e:
+            return WMIQueryResult(
+                success=False,
+                error=f"WMI 查询错误: {e}",
                 query=wql,
                 duration=time.time() - start_time
             )
@@ -569,8 +602,10 @@ class WMILateral(BaseLateralModule):
                 'running_services': len(services),
             }
 
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
+        except (socket.error, socket.timeout, OSError) as e:
+            return {'success': False, 'error': f'WMI 网络错误: {e}'}
+        except (ValueError, KeyError, AttributeError) as e:
+            return {'success': False, 'error': f'WMI 查询错误: {e}'}
 
 
 # 便捷函数

@@ -8,11 +8,14 @@ import json
 import logging
 from typing import Optional, Dict, Any, List
 
+from utils.mcp_tooling import patch_mcp_tool
+
 logger = logging.getLogger(__name__)
 
 
 def register_optimization_tools(mcp):
     """注册优化模块的MCP工具"""
+    patch_mcp_tool(mcp)
 
     # ========== AI智能决策工具 ==========
 

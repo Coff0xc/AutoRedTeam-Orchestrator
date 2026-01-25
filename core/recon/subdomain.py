@@ -334,8 +334,8 @@ class SubdomainEnumerator:
             if ips:
                 self._logger.info(f"Wildcard DNS detected for {domain}: {ips}")
                 return set(ips)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return set()
 

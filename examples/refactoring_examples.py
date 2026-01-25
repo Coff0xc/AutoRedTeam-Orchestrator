@@ -97,84 +97,57 @@ async def example_3_async_http_client():
     print("示例3: 使用异步 HTTP 客户端进行高并发扫描")
     print("="*60)
 
-    from core.async_http_client import AsyncHTTPClient
+    from core.http import async_client_context
 
-    async with AsyncHTTPClient(concurrency=100, timeout=10) as client:
+    async with async_client_context() as client:
         # 单个请求
         print("\n发送单个请求...")
-        response = await client.get("https://httpbin.org/get")
-        print(f"✓ 状态码: {response.status}, 耗时: {response.elapsed:.2f}秒")
+        response = await client.async_get("https://httpbin.org/get")
+        print(f"? 状态码: {response.status_code}, 耗时: {response.elapsed:.2f}秒")
 
         # 批量请求
         print("\n发送批量请求 (100个)...")
         urls = [f"https://httpbin.org/delay/{i%3}" for i in range(100)]
-        responses = await client.batch_get(urls)
+        responses = await asyncio.gather(*(client.async_get(url) for url in urls))
 
-        success_count = sum(1 for r in responses if r.success)
-        print(f"✓ 完成: {success_count}/{len(responses)} 成功")
+        success_count = sum(1 for r in responses if r.is_success)
+        avg_time = sum(r.elapsed for r in responses) / len(responses)
+        print(f"? 完成: {success_count}/{len(responses)} 成功")
 
-        # 统计信息
-        stats = client.get_stats()
         print(f"\n统计信息:")
-        print(f"  总请求数: {stats['total_requests']}")
-        print(f"  成功率: {stats['success_rate']:.1%}")
-        print(f"  平均耗时: {stats['average_time']:.2f}秒")
-
+        print(f"  总请求数: {len(responses)}")
+        print(f"  成功率: {success_count / len(responses):.1%}")
+        print(f"  平均耗时: {avg_time:.2f}秒")
 
 async def example_4_async_executor():
-    """示例4: 使用异步执行器"""
+    """示例4: 使用任务队列进行异步编排"""
     print("\n" + "="*60)
-    print("示例4: 使用异步执行器进行任务编排")
+    print("示例4: 使用任务队列进行任务编排")
     print("="*60)
 
-    from core.async_executor import AsyncExecutor
+    from utils.task_queue import TaskQueue
 
-    executor = AsyncExecutor(max_concurrency=10, enable_progress=True)
+    queue = TaskQueue()
 
-    # 定义任务函数
-    async def scan_url(url: str):
-        await asyncio.sleep(0.5)  # 模拟扫描
+    def scan_url(url: str):
+        import time
+        time.sleep(0.3)
         return {"url": url, "status": "scanned"}
 
-    def analyze_result(data: dict):
-        import time
-        time.sleep(0.2)  # 模拟分析
-        return {"analyzed": True, **data}
+    urls = [f"https://example.com/page{i}" for i in range(20)]
+    task_ids = [queue.submit(scan_url, url) for url in urls]
+    print(f"? 已提交 {len(task_ids)} 个任务")
 
-    # 添加异步任务
-    print("\n添加 20 个扫描任务...")
-    for i in range(20):
-        executor.add_task(
-            f"scan_{i}",
-            scan_url,
-            f"https://example.com/page{i}",
-            priority=i % 3
-        )
+    completed = 0
+    while completed < len(task_ids):
+        completed = 0
+        for task_id in task_ids:
+            status = queue.get_status(task_id)
+            if status.get("status") in ("completed", "failed", "cancelled"):
+                completed += 1
+        await asyncio.sleep(0.2)
 
-    # 添加同步任务
-    print("添加 10 个分析任务...")
-    for i in range(10):
-        executor.add_task(
-            f"analyze_{i}",
-            analyze_result,
-            {"id": i},
-            priority=2
-        )
-
-    # 执行所有任务
-    print("\n开始执行任务...")
-    results = await executor.execute_all()
-
-    # 获取结果
-    success_results = executor.get_results(success_only=True)
-    print(f"\n✓ 完成: {len(success_results)}/{len(results)} 成功")
-
-    # 统计信息
-    stats = executor.get_stats()
-    print(f"\n统计信息:")
-    print(f"  总任务数: {stats['total']}")
-    print(f"  成功率: {stats['success_rate']:.1%}")
-
+    print("? 任务全部完成")
 
 async def example_5_result_aggregator():
     """示例5: 使用结果聚合器"""
@@ -245,66 +218,98 @@ async def example_5_result_aggregator():
 async def example_6_complete_workflow():
     """示例6: 完整的扫描工作流"""
     print("\n" + "="*60)
-    print("示例6: 完整的扫描工作流 (工厂+策略+异步+聚合)")
+    print("示例6: 完整的扫描工作流 (工厂+策略+并发+聚合)")
     print("="*60)
 
     from tools.detectors.factory import DetectorFactory
     from tools.strategies.detection_strategy import StrategyFactory, DetectionContext
-    from core.async_executor import AsyncExecutor
     from core.result_aggregator import ResultAggregator
 
-    # 1. 创建执行器和聚合器
-    executor = AsyncExecutor(max_concurrency=5)
     aggregator = ResultAggregator()
+    semaphore = asyncio.Semaphore(5)
 
-    # 2. 定义扫描任务
-    async def scan_with_detector(detector_name: str, url: str):
+    def scan_with_detector(detector_name: str, url: str):
         detector = DetectorFactory.create(detector_name)
         context = DetectionContext(url=url, params=["id", "page"])
         strategy = StrategyFactory.create("quick")
-        result = strategy.execute(detector, context)
-        return result
+        return strategy.execute(detector, context)
 
-    # 3. 添加多个检测任务
+    async def run_task(detector_name: str, url: str):
+        async with semaphore:
+            try:
+                result = await asyncio.to_thread(scan_with_detector, detector_name, url)
+                return {
+                    "success": True,
+                    "result": result,
+                    "task_name": f"{detector_name}_{url}",
+                }
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "task_name": f"{detector_name}_{url}",
+                }
+
     targets = [
         "https://example.com/page1",
         "https://example.com/page2",
-        "https://example.com/page3"
+        "https://example.com/page3",
     ]
 
     detectors_to_use = ["sqli", "xss", "ssrf"]
 
     print(f"\n创建 {len(targets) * len(detectors_to_use)} 个扫描任务...")
-    for target in targets:
-        for detector_name in detectors_to_use:
-            executor.add_task(
-                f"{detector_name}_{target}",
-                scan_with_detector,
-                detector_name,
-                target
-            )
+    tasks = [
+        run_task(detector_name, target)
+        for target in targets
+        for detector_name in detectors_to_use
+    ]
 
-    # 4. 执行所有任务
     print("\n执行扫描任务...")
-    results = await executor.execute_all()
+    results = await asyncio.gather(*tasks)
 
-    # 5. 聚合结果
     print("\n聚合扫描结果...")
     for result in results:
-        if result.success and result.result:
-            scan_result = result.result
-            if scan_result.get("success"):
-                aggregator.add_batch(
-                    scan_result.get("vulnerabilities", []),
-                    source=result.task_name
-                )
+        if not result.get("success"):
+            continue
+        scan_result = result.get("result") or {}
+        if scan_result.get("success"):
+            aggregator.add_batch(
+                scan_result.get("vulnerabilities", []),
+                source=result.get("task_name", "unknown"),
+            )
 
-    # 6. 输出统计
     stats = aggregator.get_statistics()
-    print(f"\n✓ 扫描完成!")
+    print(f"\n? 扫描完成!")
     print(f"  发现漏洞: {stats['total']}")
     print(f"  已验证: {stats['verified_count']}")
     print(f"  高置信度: {stats['high_confidence_count']}")
+
+
+async def example_7_tool_result_schema():
+    """示例7: MCP 工具统一返回格式"""
+    print("\n" + "=" * 60)
+    print("示例7: MCP 工具统一返回格式")
+    print("=" * 60)
+
+    from core.result import ensure_tool_result
+
+    raw_result = {
+        "success": True,
+        "data": {
+            "target": "example.com",
+            "open_ports": [80, 443],
+        },
+        "metadata": {
+            "source": "example",
+        },
+    }
+
+    normalized = ensure_tool_result(raw_result).to_dict()
+    print(f"  success: {normalized.get('success')}")
+    print(f"  status: {normalized.get('status')}")
+    print(f"  data: {normalized.get('data')}")
+    print(f"  metadata: {normalized.get('metadata')}")
 
 
 async def main():
@@ -320,6 +325,7 @@ async def main():
         # await example_3_async_http_client()  # 需要网络连接
         await example_4_async_executor()
         await example_5_result_aggregator()
+        await example_7_tool_result_schema()
         # await example_6_complete_workflow()  # 完整工作流
 
         print("\n" + "="*60)
@@ -332,3 +338,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+

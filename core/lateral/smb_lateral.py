@@ -343,13 +343,15 @@ class SMBConnection:
             if HAS_IMPACKET:
                 try:
                     self._conn.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             else:
                 try:
                     self._conn.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         self._authenticated = False
 
 
@@ -565,8 +567,8 @@ class SMBLateral:
             # 启动服务
             try:
                 scmr.hRStartServiceW(dce, service_handle)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             # 删除服务
             scmr.hRDeleteService(dce, service_handle)

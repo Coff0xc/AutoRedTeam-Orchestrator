@@ -3,6 +3,7 @@
 侦察工具模块 - 信息收集相关功能
 包含: 端口扫描、DNS查询、HTTP探测、子域名枚举、目录扫描、技术栈识别等
 """
+import logging
 
 import socket
 import time
@@ -217,8 +218,9 @@ def register_recon_tools(mcp):
                 resp = requests.get(test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
                 if resp.status_code in [200, 301, 302, 403]:
                     return {"path": path, "url": test_url, "status": resp.status_code, "size": len(resp.content)}
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             return None
 
         with ThreadPoolExecutor(max_workers=threads) as executor:
@@ -302,8 +304,9 @@ def register_recon_tools(mcp):
                         "confidence": confidence,
                         "preview": content[:200] if len(content) > 0 else ""
                     }
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             return None
 
         with ThreadPoolExecutor(max_workers=threads) as executor:
@@ -436,51 +439,51 @@ def register_recon_tools(mcp):
         # 1. DNS查询
         try:
             results["dns"] = dns_lookup(domain)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 2. HTTP探测
         try:
             results["http"] = http_probe(url)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 3. SSL信息
         try:
             results["ssl"] = ssl_info(domain)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 4. 技术栈识别
         try:
             results["tech"] = tech_detect(url)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 5. 子域名枚举
         try:
             results["subdomains"] = subdomain_bruteforce(domain, threads=5)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 6. 目录扫描
         try:
             results["directories"] = dir_bruteforce(url, threads=5)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 7. 敏感文件
         try:
             results["sensitive_files"] = sensitive_scan(url, threads=5)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 8. 端口扫描
         try:
             ip = socket.gethostbyname(domain)
             results["ports"] = port_scan(ip)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return {"success": True, "results": results}
 
@@ -621,8 +624,9 @@ def _dir_bruteforce_impl(url: str, threads: int = 10) -> dict:
             resp = requests.get(test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
             if resp.status_code in [200, 301, 302, 403]:
                 return {"path": path, "url": test_url, "status": resp.status_code, "size": len(resp.content)}
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         return None
     
     with ThreadPoolExecutor(max_workers=threads) as executor:
@@ -655,8 +659,9 @@ def _sensitive_scan_impl(url: str, threads: int = 10) -> dict:
                     "size": len(resp.content),
                     "content_type": resp.headers.get('Content-Type', ''),
                 }
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         return None
     
     with ThreadPoolExecutor(max_workers=threads) as executor:

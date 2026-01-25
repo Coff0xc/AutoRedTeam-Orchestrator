@@ -6,10 +6,13 @@
 
 import json
 import os
+import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from collections import defaultdict
 from jinja2 import Template
+
+logger = logging.getLogger(__name__)
 
 
 class ReportGenerator:
@@ -26,45 +29,75 @@ class ReportGenerator:
             os.path.dirname(os.path.dirname(__file__)),
             "templates"
         )
-    
+
+    def load_source(self, session_id: str) -> Any:
+        """按session_id加载报告来源对象（兼容新旧会话系统）"""
+        return self._load_report_source(session_id)
+
+    def _load_report_source(self, session_id: str) -> Any:
+        """加载报告源数据，优先使用新版会话系统"""
+        # 新版会话管理器
+        try:
+            from core.session import get_session_manager
+
+            manager = get_session_manager()
+            result = manager.get_result(session_id)
+            if result:
+                return result
+            context = manager.get_session(session_id)
+            if context:
+                return context
+        except Exception as exc:  # 兼容缺失模块或初始化失败
+            logger.debug("加载新版会话失败: %s", exc)
+
+        # 旧版会话管理器
+        try:
+            from core.session_manager import SessionManager
+
+            legacy_manager = SessionManager()
+            try:
+                session = legacy_manager.load_session(session_id)
+            except FileNotFoundError:
+                session = legacy_manager.get_session(session_id)
+
+            if session:
+                return session
+        except Exception as exc:
+            logger.debug("加载旧版会话失败: %s", exc)
+
+        raise ValueError(f"会话不存在: {session_id}")
+
     def generate(self, session_id: str, format_type: str = "html") -> str:
         """生成报告"""
-        # 加载会话数据
-        from core.session_manager import SessionManager
-        session_manager = SessionManager()
-        
-        try:
-            session = session_manager.load_session(session_id)
-        except FileNotFoundError:
-            session = session_manager.get_session(session_id)
-        
-        if not session:
-            raise ValueError(f"会话不存在: {session_id}")
-        
-        # 准备报告数据
-        report_data = self._prepare_report_data(session)
-        
-        # 生成报告
+        source = self._load_report_source(session_id)
+        report_data = self._prepare_report_data(source)
+        format_type = (format_type or "html").lower()
+
         if format_type == "html":
             return self._generate_html(report_data, session_id)
-        elif format_type == "json":
+        if format_type == "json":
             return self._generate_json(report_data, session_id)
-        elif format_type == "markdown":
+        if format_type == "markdown":
             return self._generate_markdown(report_data, session_id)
-        elif format_type == "executive":
+        if format_type == "executive":
             return self._generate_executive_summary(report_data, session_id)
-        else:
-            raise ValueError(f"不支持的报告格式: {format_type}")
-    
-    def _prepare_report_data(self, session) -> Dict[str, Any]:
-        """准备报告数据"""
-        findings = session.findings
-        
+        raise ValueError(f"不支持的报告格式: {format_type}")
+
+    def _prepare_report_data(self, source) -> Dict[str, Any]:
+        """准备报告数据（兼容多种会话/结果对象）"""
+        if self._is_legacy_session(source):
+            return self._prepare_report_data_from_legacy_session(source)
+        return self._prepare_report_data_from_scan_source(source)
+
+    def _prepare_report_data_from_legacy_session(self, session) -> Dict[str, Any]:
+        """准备旧版会话报告数据"""
+        findings = self._normalize_findings(session.findings)
+
         return {
             "session_id": session.id,
             "session_name": session.name,
             "created_at": session.created_at.isoformat(),
-            "status": session.status.value,
+            "status": session.status.value if hasattr(session.status, "value") else str(session.status),
             "targets": [
                 {"value": t.value, "type": t.type}
                 for t in session.targets
@@ -77,10 +110,149 @@ class ReportGenerator:
             "cvss_distribution": self._calculate_cvss_distribution(findings),
             "remediation_priority": self._prioritize_remediation(findings),
             "results_count": len(session.results),
-            "notes": session.notes,
+            "notes": self._normalize_notes(session.notes),
             "scan_statistics": self._calculate_scan_stats(session),
             "generated_at": datetime.now().isoformat()
         }
+
+    def _prepare_report_data_from_scan_source(self, source) -> Dict[str, Any]:
+        """准备新版扫描上下文或结果对象的报告数据"""
+        session_id = getattr(source, "session_id", "unknown")
+        target_value = getattr(source, "target", None)
+        if hasattr(target_value, "value"):
+            target_value = target_value.value
+        metadata = getattr(source, "metadata", {})
+        if not isinstance(metadata, dict):
+            metadata = {}
+        if not target_value:
+            target_value = metadata.get("target")
+
+        findings = []
+        vulnerabilities = getattr(source, "vulnerabilities", [])
+        if vulnerabilities:
+            findings = [
+                v.to_dict() if hasattr(v, "to_dict") else v
+                for v in vulnerabilities
+            ]
+        if not findings:
+            metadata_findings = metadata.get("findings", [])
+            if isinstance(metadata_findings, list):
+                findings = metadata_findings
+
+        findings = self._normalize_findings(findings)
+
+        status = getattr(source, "status", "unknown")
+        status_value = status.value if hasattr(status, "value") else str(status)
+        created_at = getattr(source, "started_at", None)
+        created_at_value = created_at.isoformat() if created_at else datetime.now().isoformat()
+
+        session_name = getattr(source, "session_name", None) or target_value or session_id
+        targets = self._build_targets(target_value)
+
+        return {
+            "session_id": session_id,
+            "session_name": session_name,
+            "created_at": created_at_value,
+            "status": status_value,
+            "targets": targets,
+            "findings": findings,
+            "findings_summary": self._summarize_findings(findings),
+            "findings_by_type": self._group_findings_by_type(findings),
+            "findings_by_target": self._group_findings_by_target(findings),
+            "attack_chains": self._analyze_attack_chains(findings),
+            "cvss_distribution": self._calculate_cvss_distribution(findings),
+            "remediation_priority": self._prioritize_remediation(findings),
+            "results_count": getattr(source, "total_requests", len(findings)),
+            "notes": self._normalize_notes(getattr(source, "notes", [])),
+            "scan_statistics": self._calculate_scan_stats(source),
+            "generated_at": datetime.now().isoformat()
+        }
+
+    def to_dict(self, source) -> Dict[str, Any]:
+        """将会话或结果对象转换为报告字典"""
+        return self._prepare_report_data(source)
+
+    def to_html(self, source) -> str:
+        """将会话或结果对象渲染为HTML字符串"""
+        data = self._prepare_report_data(source)
+        return self._render_html(data)
+
+    def to_markdown(self, source) -> str:
+        """将会话或结果对象渲染为Markdown字符串"""
+        data = self._prepare_report_data(source)
+        return self._render_markdown(data)
+
+    def to_executive(self, source) -> str:
+        """将会话或结果对象渲染为执行摘要HTML字符串"""
+        data = self._prepare_report_data(source)
+        return self._render_executive_summary(data)
+
+    def _is_legacy_session(self, source: Any) -> bool:
+        """判断是否为旧版会话对象"""
+        return hasattr(source, "targets") and hasattr(source, "findings")
+
+    def _infer_target_type(self, target: Optional[str]) -> str:
+        """粗略推断目标类型"""
+        if not target:
+            return "unknown"
+        if target.startswith(("http://", "https://")):
+            return "url"
+        if "/" in target:
+            return "network"
+        return "host"
+
+    def _build_targets(self, target_value: Optional[str]) -> List[Dict[str, str]]:
+        """构建统一的目标列表结构"""
+        if not target_value:
+            return []
+        return [{"value": target_value, "type": self._infer_target_type(target_value)}]
+
+    def _normalize_notes(self, notes: List[Any]) -> List[Dict[str, Any]]:
+        """统一备注结构"""
+        normalized = []
+        for note in notes or []:
+            if isinstance(note, dict) and "content" in note:
+                normalized.append(note)
+            elif isinstance(note, str):
+                normalized.append({"content": note, "timestamp": ""})
+        return normalized
+
+    def _normalize_findings(self, findings: List[Any]) -> List[Dict[str, Any]]:
+        """统一发现结构，补齐模板所需字段"""
+        normalized = []
+        for finding in findings or []:
+            if isinstance(finding, dict):
+                data = dict(finding)
+            elif hasattr(finding, "to_dict"):
+                data = finding.to_dict()
+            else:
+                continue
+
+            raw_severity = data.get("severity", "info")
+            if hasattr(raw_severity, "value"):
+                raw_severity = raw_severity.value
+            severity = str(raw_severity).lower()
+            description = (
+                data.get("description")
+                or data.get("evidence")
+                or data.get("detail")
+                or ""
+            )
+            recommendations = data.get("recommendations")
+            if recommendations is None and data.get("remediation"):
+                recommendations = [data.get("remediation")]
+            if recommendations is None:
+                recommendations = []
+
+            data.setdefault("title", data.get("name") or data.get("type") or "未知漏洞")
+            data.setdefault("severity", severity)
+            data.setdefault("description", description)
+            data.setdefault("recommendations", recommendations)
+            if "target" not in data:
+                data["target"] = data.get("url")
+            normalized.append(data)
+
+        return normalized
     
     def _summarize_findings(self, findings: List[Dict]) -> Dict[str, int]:
         """汇总发现"""
@@ -206,11 +378,34 @@ class ReportGenerator:
     
     def _calculate_scan_stats(self, session) -> Dict[str, Any]:
         """计算扫描统计"""
-        results = session.results if hasattr(session, 'results') else []
-        
+        if hasattr(session, "total_requests") or hasattr(session, "requests_sent"):
+            total_requests = (
+                getattr(session, "total_requests", None)
+                if getattr(session, "total_requests", None) is not None
+                else getattr(session, "requests_sent", 0)
+            )
+            vulnerabilities = getattr(session, "vulnerabilities", [])
+            unique_endpoints = len({
+                getattr(v, "url", None) or (v.get("url") if isinstance(v, dict) else None)
+                for v in vulnerabilities
+                if getattr(v, "url", None) or (isinstance(v, dict) and v.get("url"))
+            })
+
+            return {
+                "total_requests": total_requests or 0,
+                "unique_endpoints": unique_endpoints,
+                "scan_duration": self._calculate_duration(session),
+                "success_rate": self._calculate_success_rate_from_scan_source(session)
+            }
+
+        results = session.results if hasattr(session, "results") else []
+        unique_endpoints = len({
+            url for url in (self._extract_result_url(r) for r in results) if url
+        })
+
         return {
             "total_requests": len(results),
-            "unique_endpoints": len(set(r.get("url", "") for r in results if isinstance(r, dict))),
+            "unique_endpoints": unique_endpoints,
             "scan_duration": self._calculate_duration(session),
             "success_rate": self._calculate_success_rate(results)
         }
@@ -218,11 +413,16 @@ class ReportGenerator:
     def _calculate_duration(self, session) -> str:
         """计算扫描持续时间"""
         try:
-            if hasattr(session, 'updated_at') and hasattr(session, 'created_at'):
-                delta = session.updated_at - session.created_at
-                hours, remainder = divmod(delta.total_seconds(), 3600)
-                minutes, seconds = divmod(remainder, 60)
-                return f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
+            if hasattr(session, "started_at") and hasattr(session, "ended_at"):
+                if session.started_at and session.ended_at:
+                    delta = session.ended_at - session.started_at
+                    return self._format_duration(delta.total_seconds())
+            if hasattr(session, "duration") and session.duration is not None:
+                return self._format_duration(float(session.duration))
+            if hasattr(session, "updated_at") and hasattr(session, "created_at"):
+                if session.updated_at and session.created_at:
+                    delta = session.updated_at - session.created_at
+                    return self._format_duration(delta.total_seconds())
         except (TypeError, AttributeError):
             # 时间计算失败时返回默认值
             pass
@@ -232,13 +432,56 @@ class ReportGenerator:
         """计算请求成功率"""
         if not results:
             return 0.0
-        success = sum(1 for r in results if isinstance(r, dict) and r.get("status_code", 0) < 400)
+        success = 0
+        for result in results:
+            if isinstance(result, dict):
+                status_code = result.get("status_code")
+                if status_code is not None:
+                    success += 1 if status_code < 400 else 0
+                elif result.get("success") is True:
+                    success += 1
+                continue
+            if hasattr(result, "success"):
+                success += 1 if result.success else 0
+                continue
+            if hasattr(result, "result") and isinstance(result.result, dict):
+                status_code = result.result.get("status_code")
+                if status_code is not None and status_code < 400:
+                    success += 1
         return round(success / len(results) * 100, 2)
+
+    def _calculate_success_rate_from_scan_source(self, session) -> float:
+        """计算扫描成功率（基于总请求与错误计数）"""
+        total = getattr(session, "requests_sent", None)
+        if total is None:
+            total = getattr(session, "total_requests", 0)
+        errors = getattr(session, "errors_count", None)
+        if not total:
+            return 0.0
+        if errors is None:
+            return 0.0
+        success = max(total - errors, 0)
+        return round(success / total * 100, 2)
+
+    def _extract_result_url(self, result: Any) -> Optional[str]:
+        """从执行结果中提取URL"""
+        if isinstance(result, dict):
+            return result.get("url") or result.get("target")
+        if hasattr(result, "result") and isinstance(result.result, dict):
+            return result.result.get("url") or result.result.get("target")
+        return None
+
+    def _format_duration(self, seconds: float) -> str:
+        """将秒数格式化为可读时长"""
+        if seconds < 0:
+            return "N/A"
+        hours, remainder = divmod(seconds, 3600)
+        minutes, secs = divmod(remainder, 60)
+        return f"{int(hours)}h {int(minutes)}m {int(secs)}s"
     
     def _generate_executive_summary(self, data: Dict, session_id: str) -> str:
         """生成执行摘要报告"""
-        template = Template(self._get_executive_template())
-        content = template.render(**data)
+        content = self._render_executive_summary(data)
         
         filename = f"executive_{session_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
         filepath = os.path.join(self.reports_dir, filename)
@@ -247,6 +490,11 @@ class ReportGenerator:
             f.write(content)
         
         return filepath
+
+    def _render_executive_summary(self, data: Dict) -> str:
+        """渲染执行摘要HTML内容"""
+        template = Template(self._get_executive_template())
+        return template.render(**data)
     
     def _get_executive_template(self) -> str:
         """执行摘要模板"""
@@ -333,8 +581,7 @@ class ReportGenerator:
     
     def _generate_html(self, data: Dict, session_id: str) -> str:
         """生成HTML报告"""
-        template = Template(self._get_html_template())
-        html_content = template.render(**data)
+        html_content = self._render_html(data)
         
         filename = f"report_{session_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
         filepath = os.path.join(self.reports_dir, filename)
@@ -343,6 +590,11 @@ class ReportGenerator:
             f.write(html_content)
         
         return filepath
+
+    def _render_html(self, data: Dict) -> str:
+        """渲染HTML报告内容"""
+        template = Template(self._get_html_template())
+        return template.render(**data)
     
     def _generate_json(self, data: Dict, session_id: str) -> str:
         """生成JSON报告"""
@@ -356,8 +608,7 @@ class ReportGenerator:
     
     def _generate_markdown(self, data: Dict, session_id: str) -> str:
         """生成Markdown报告"""
-        template = Template(self._get_markdown_template())
-        md_content = template.render(**data)
+        md_content = self._render_markdown(data)
         
         filename = f"report_{session_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
         filepath = os.path.join(self.reports_dir, filename)
@@ -366,6 +617,11 @@ class ReportGenerator:
             f.write(md_content)
         
         return filepath
+
+    def _render_markdown(self, data: Dict) -> str:
+        """渲染Markdown报告内容"""
+        template = Template(self._get_markdown_template())
+        return template.render(**data)
     
     def _get_html_template(self) -> str:
         """HTML报告模板"""

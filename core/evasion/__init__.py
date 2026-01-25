@@ -31,6 +31,23 @@ from .payload_obfuscator import (
     generate_shellcode_loader,
 )
 
+# WAF绕过引擎
+from .waf_bypass_engine import (
+    WAFBypassEngine,
+    WAFDetector,
+    PayloadMutator,
+    ChunkedEncoder,
+    HeaderManipulator,
+    PathNormalizer,
+    WAFType,
+    BypassTechnique,
+    WAFFingerprint,
+    BypassResult,
+    normalize_waf_type,
+    bypass_waf,
+    detect_waf,
+)
+
 __all__ = [
     # 核心类
     'PayloadObfuscator',
@@ -55,4 +72,18 @@ __all__ = [
     'obfuscate_payload',
     'obfuscate_python_code',
     'generate_shellcode_loader',
+    # WAF绕过
+    'WAFBypassEngine',
+    'WAFDetector',
+    'PayloadMutator',
+    'ChunkedEncoder',
+    'HeaderManipulator',
+    'PathNormalizer',
+    'WAFType',
+    'BypassTechnique',
+    'WAFFingerprint',
+    'BypassResult',
+    'normalize_waf_type',
+    'bypass_waf',
+    'detect_waf',
 ]

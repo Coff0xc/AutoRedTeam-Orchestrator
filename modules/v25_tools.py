@@ -15,6 +15,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import logging
+from utils.mcp_tooling import patch_mcp_tool
+
 logger = logging.getLogger(__name__)
 
 
@@ -28,6 +30,7 @@ def register_v25_tools(mcp):
     Returns:
         注册的工具列表
     """
+    patch_mcp_tool(mcp)
     registered = []
 
     # ========== JS分析工具 ==========

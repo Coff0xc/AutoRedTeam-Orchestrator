@@ -130,7 +130,8 @@ class SmartPayloadSelector:
 
         for waf_name, signatures in self.WAF_SIGNATURES.items():
             if any(sig in combined for sig in signatures):
-                return waf_name
+                from core.evasion import normalize_waf_type
+                return normalize_waf_type(waf_name).value
         return None
 
     def _detect_db(self, target_info: Dict) -> str:

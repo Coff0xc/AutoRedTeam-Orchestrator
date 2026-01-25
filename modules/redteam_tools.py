@@ -9,11 +9,14 @@ import json
 import logging
 from typing import Optional, Dict, Any, List
 
+from utils.mcp_tooling import patch_mcp_tool
+
 logger = logging.getLogger(__name__)
 
 
 def register_redteam_tools(mcp):
     """注册 Red Team 高级工具到 MCP Server"""
+    patch_mcp_tool(mcp)
 
     registered_tools = []
 

@@ -675,7 +675,9 @@ def create_chain_from_pool(pool: ProxyPool,
 
 if __name__ == "__main__":
     # 测试代码
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    from utils.logger import configure_root_logger
+
+    configure_root_logger(level=logging.INFO, log_to_file=True, log_to_console=True)
 
     print("=== ProxyChain Test ===\n")
 

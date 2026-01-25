@@ -3,6 +3,7 @@
 OOB带外检测模块 - 支持盲SSRF/XXE/SQLi检测
 集成 Interactsh 和 DNSLog 平台
 """
+import logging
 
 import os
 import re
@@ -116,8 +117,8 @@ class InteractshClient:
                         raw_request=item.get("raw-request", ""),
                         identifier=item.get("unique-id", "")
                     ))
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return interactions
 
@@ -159,8 +160,9 @@ class DNSLogClient:
                 resp = self.session.get(self.PLATFORMS["dnslog"]["domain_api"], timeout=5)
                 if resp.status_code == 200:
                     self.domain = resp.text.strip()
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         elif self.platform == "ceye" and self.token:
             self.domain = f"{uuid.uuid4().hex[:8]}.ceye.io"
 
@@ -186,8 +188,8 @@ class DNSLogClient:
                             remote_address=record.get("ip", ""),
                             identifier=record.get("subdomain", "")
                         ))
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return interactions
 

@@ -15,6 +15,14 @@ from ..result import DetectionResult, Severity, DetectorType, RequestInfo, Respo
 from ..factory import register_detector
 from ..payloads import get_payloads, PayloadCategory
 
+# 导入项目统一异常类型
+from core.exceptions import (
+    DetectorError,
+    HTTPError,
+    TimeoutError as DetectorTimeoutError,
+    ConnectionError as DetectorConnectionError,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -126,7 +134,9 @@ class SQLiDetector(BaseDetector):
 
         # 加载 payload
         max_payloads = self.config.get('max_payloads', 30)
-        self.payloads = get_payloads(PayloadCategory.SQLI, limit=max_payloads)
+        self.payloads = self._enhance_payloads(
+            get_payloads(PayloadCategory.SQLI, limit=max_payloads)
+        )
 
         # 编译错误模式正则
         self._compiled_patterns: Dict[str, List[re.Pattern]] = {}
@@ -282,6 +292,14 @@ class SQLiDetector(BaseDetector):
             # 检查响应中的数据库错误
             db_type, match_text = self._find_db_error(response.text)
             if db_type:
+                request_info = self._build_request_info(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    params=test_params if method == 'GET' else None,
+                    data=test_params if method != 'GET' else None
+                )
+                response_info = self._build_response_info(response)
                 return self._create_result(
                     url=url,
                     vulnerable=True,
@@ -290,6 +308,8 @@ class SQLiDetector(BaseDetector):
                     evidence=match_text,
                     confidence=0.95,
                     verified=True,
+                    request=request_info,
+                    response=response_info,
                     remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
                     references=[
                         "https://owasp.org/www-community/attacks/SQL_Injection",
@@ -297,8 +317,22 @@ class SQLiDetector(BaseDetector):
                     ],
                     extra={'db_type': db_type, 'injection_type': 'error-based'}
                 )
+        except DetectorTimeoutError as e:
+            # 请求超时 - 可能是服务器处理慢或网络问题
+            logger.debug(f"错误型注入检测超时 {url}: {e}")
+        except DetectorConnectionError as e:
+            # 连接失败 - 目标可能不可达
+            logger.debug(f"错误型注入检测连接失败 {url}: {e}")
+        except HTTPError as e:
+            # 其他 HTTP 错误
+            logger.debug(f"错误型注入检测 HTTP 错误 {url}: {e}")
+        except (AttributeError, TypeError) as e:
+            # 响应对象属性访问错误（如 response.text 不存在）
+            logger.debug(f"错误型注入检测响应解析失败: {e}")
         except Exception as e:
-            logger.debug(f"错误型注入检测失败: {e}")
+            # 捕获其他未预期异常，保证检测流程继续
+            # 注意：这里使用宽泛捕获是为了单个 payload 测试失败不影响整体检测
+            logger.warning(f"错误型注入检测未预期错误: {type(e).__name__}: {e}")
 
         return None
 
@@ -331,14 +365,22 @@ class SQLiDetector(BaseDetector):
             start_time = time.time()
 
             if method == 'GET':
-                self.http_client.get(url, params=test_params, headers=headers)
+                response = self.http_client.get(url, params=test_params, headers=headers)
             else:
-                self.http_client.post(url, data=test_params, headers=headers)
+                response = self.http_client.post(url, data=test_params, headers=headers)
 
             elapsed = time.time() - start_time
 
             # 如果响应时间超过阈值，可能存在时间盲注
             if elapsed >= self.TIME_THRESHOLD:
+                request_info = self._build_request_info(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    params=test_params if method == 'GET' else None,
+                    data=test_params if method != 'GET' else None
+                )
+                response_info = self._build_response_info(response)
                 return self._create_result(
                     url=url,
                     vulnerable=True,
@@ -347,14 +389,49 @@ class SQLiDetector(BaseDetector):
                     evidence=f"响应延迟 {elapsed:.2f} 秒（阈值 {self.TIME_THRESHOLD} 秒）",
                     confidence=0.85,
                     verified=True,
+                    request=request_info,
+                    response=response_info,
                     remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
                     references=[
                         "https://owasp.org/www-community/attacks/Blind_SQL_Injection"
                     ],
                     extra={'injection_type': 'time-based', 'delay': elapsed}
                 )
+        except DetectorTimeoutError as e:
+            # 超时可能是时间盲注成功的信号，需要进一步验证
+            elapsed = time.time() - start_time
+            if elapsed >= self.TIME_THRESHOLD:
+                logger.info(f"时间盲注检测: 请求超时可能表明存在漏洞 {url}")
+                request_info = self._build_request_info(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    params=test_params if method == 'GET' else None,
+                    data=test_params if method != 'GET' else None
+                )
+                return self._create_result(
+                    url=url,
+                    vulnerable=True,
+                    param=param_name,
+                    payload=payload,
+                    evidence=f"请求超时（耗时 {elapsed:.2f} 秒），可能存在时间盲注",
+                    confidence=0.75,  # 置信度稍低，因为可能是网络问题
+                    verified=False,
+                    request=request_info,
+                    remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
+                    extra={'injection_type': 'time-based', 'delay': elapsed, 'timeout': True}
+                )
+            logger.debug(f"时间盲注检测超时 {url}: {e}")
+        except DetectorConnectionError as e:
+            # 连接失败 - 目标可能不可达
+            logger.debug(f"时间盲注检测连接失败 {url}: {e}")
+        except HTTPError as e:
+            # 其他 HTTP 错误
+            logger.debug(f"时间盲注检测 HTTP 错误 {url}: {e}")
         except Exception as e:
-            logger.debug(f"时间盲注检测失败: {e}")
+            # 捕获其他未预期异常
+            # 注意：这里使用宽泛捕获是为了单个 payload 测试失败不影响整体检测
+            logger.warning(f"时间盲注检测未预期错误: {type(e).__name__}: {e}")
 
         return None
 
@@ -424,6 +501,14 @@ class SQLiDetector(BaseDetector):
 
                 # 如果真假条件响应明显不同，可能存在布尔盲注
                 if abs(true_len - false_len) > 50 and abs(true_len - baseline_length) < 50:
+                    request_info = self._build_request_info(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        params=true_params if method == 'GET' else None,
+                        data=true_params if method != 'GET' else None
+                    )
+                    response_info = self._build_response_info(true_response)
                     return self._create_result(
                         url=url,
                         vulnerable=True,
@@ -432,12 +517,28 @@ class SQLiDetector(BaseDetector):
                         evidence=f"真条件响应长度: {true_len}, 假条件响应长度: {false_len}",
                         confidence=0.75,
                         verified=False,
+                        request=request_info,
+                        response=response_info,
                         remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
                         extra={'injection_type': 'boolean-based'}
                     )
 
+            except DetectorTimeoutError as e:
+                # 请求超时
+                logger.debug(f"布尔盲注检测超时 {url}: {e}")
+            except DetectorConnectionError as e:
+                # 连接失败
+                logger.debug(f"布尔盲注检测连接失败 {url}: {e}")
+            except HTTPError as e:
+                # HTTP 错误
+                logger.debug(f"布尔盲注检测 HTTP 错误 {url}: {e}")
+            except (AttributeError, TypeError) as e:
+                # 响应对象属性访问错误
+                logger.debug(f"布尔盲注检测响应解析失败: {e}")
             except Exception as e:
-                logger.debug(f"布尔盲注检测失败: {e}")
+                # 捕获其他未预期异常
+                # 注意：这里使用宽泛捕获是为了单个 payload 测试失败不影响整体检测
+                logger.warning(f"布尔盲注检测未预期错误: {type(e).__name__}: {e}")
 
         return None
 
@@ -484,8 +585,23 @@ class SQLiDetector(BaseDetector):
                 return self.http_client.get(url, params=params, headers=headers)
             else:
                 return self.http_client.post(url, data=params, headers=headers)
+        except DetectorTimeoutError as e:
+            logger.debug(f"获取基线响应超时 {url}: {e}")
+            return None
+        except DetectorConnectionError as e:
+            logger.debug(f"获取基线响应连接失败 {url}: {e}")
+            return None
+        except HTTPError as e:
+            logger.debug(f"获取基线响应 HTTP 错误 {url}: {e}")
+            return None
+        except (OSError, IOError) as e:
+            # 网络层错误
+            logger.debug(f"获取基线响应网络错误 {url}: {e}")
+            return None
         except Exception as e:
-            logger.debug(f"获取基线响应失败: {e}")
+            # 捕获其他未预期异常
+            # 注意：基线响应获取失败不应中断整个检测流程
+            logger.warning(f"获取基线响应未预期错误 {url}: {type(e).__name__}: {e}")
             return None
 
     def _should_skip_param(self, param_name: str) -> bool:
@@ -524,11 +640,84 @@ class SQLiDetector(BaseDetector):
         if result.verified:
             return True
 
-        # 尝试使用不同的 payload 验证
-        try:
-            # 使用时间盲注验证
-            verify_payload = f"' AND SLEEP(3)--"
-            # TODO: 实现验证逻辑
+        request = result.request
+        method = request.method.upper() if request and request.method else "GET"
+        headers = request.headers if request else {}
+
+        params: Dict[str, str] = {}
+        if request and request.params:
+            params = request.params.copy()
+        else:
+            parsed = urlparse(result.url)
+            params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
+
+        if result.param:
+            params.setdefault(result.param, "")
+            original = params.get(result.param, "")
+        else:
             return False
-        except Exception:
+
+        def _build_payload(base: str, clause: str) -> str:
+            if base.isdigit():
+                return f"{base} OR {clause}"
+            return f"{base}' OR {clause}--"
+
+        try:
+            # 时间盲注验证
+            verify_clause = f"SLEEP({self.TIME_DELAY})"
+            verify_value = _build_payload(str(original), verify_clause)
+            verify_params = params.copy()
+            verify_params[result.param] = verify_value
+
+            start_time = time.time()
+            if method == "GET":
+                self.http_client.get(result.url, params=verify_params, headers=headers)
+            else:
+                self.http_client.post(result.url, data=verify_params, headers=headers)
+            elapsed = time.time() - start_time
+
+            if elapsed >= self.TIME_THRESHOLD:
+                result.verified = True
+                result.confidence = max(result.confidence, 0.9)
+                return True
+
+            # 布尔盲注验证（基于响应长度差异）
+            baseline = self._get_baseline_response(result.url, params, method, headers)
+            if baseline is None:
+                return False
+
+            true_params = params.copy()
+            false_params = params.copy()
+            true_params[result.param] = _build_payload(str(original), "1=1")
+            false_params[result.param] = _build_payload(str(original), "1=2")
+
+            if method == "GET":
+                resp_true = self.http_client.get(result.url, params=true_params, headers=headers)
+                resp_false = self.http_client.get(result.url, params=false_params, headers=headers)
+            else:
+                resp_true = self.http_client.post(result.url, data=true_params, headers=headers)
+                resp_false = self.http_client.post(result.url, data=false_params, headers=headers)
+
+            baseline_len = len(getattr(baseline, "text", "") or "")
+            true_len = len(getattr(resp_true, "text", "") or "")
+            false_len = len(getattr(resp_false, "text", "") or "")
+
+            def _ratio(a: int, b: int) -> float:
+                return abs(a - b) / max(1, b)
+
+            if _ratio(true_len, baseline_len) < 0.1 and _ratio(false_len, baseline_len) > 0.2:
+                result.verified = True
+                result.confidence = max(result.confidence, 0.8)
+                return True
+
+            return False
+
+        except DetectorTimeoutError:
+            logger.debug("SQL注入验证: 请求超时，可能存在漏洞")
+            return False
+        except (DetectorConnectionError, HTTPError) as e:
+            logger.debug(f"SQL注入验证失败: {e}")
+            return False
+        except Exception as e:
+            logger.debug(f"SQL注入验证未预期错误: {type(e).__name__}: {e}")
             return False

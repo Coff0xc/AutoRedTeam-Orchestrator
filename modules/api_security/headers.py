@@ -529,11 +529,16 @@ class SecurityHeadersTester(BaseAPITester):
             )
 
             if header_value:
-                # 简单评分：存在得满分
-                # TODO: 根据配置质量调整分数
-                header_info.score = weight
-                header_info.secure = True
-                total_score += weight
+                ratio, issues, recommendations, secure = self._evaluate_header_config(
+                    header_name, header_value
+                )
+                header_info.score = max(0, min(weight, int(round(weight * ratio))))
+                header_info.secure = secure
+                header_info.issues.extend(issues)
+                header_info.recommendations.extend(recommendations)
+                total_score += header_info.score
+                if not secure:
+                    weak.append(header_name)
             else:
                 header_info.score = 0
                 if config['required']:
@@ -563,6 +568,110 @@ class SecurityHeadersTester(BaseAPITester):
             missing_headers=missing,
             weak_headers=weak
         )
+
+    def _evaluate_header_config(
+        self,
+        header_name: str,
+        header_value: str
+    ) -> Tuple[float, List[str], List[str], bool]:
+        """根据配置质量评估安全头得分"""
+        value = header_value.strip()
+        lower = value.lower()
+        issues: List[str] = []
+        recommendations: List[str] = []
+        ratio = 1.0
+
+        if header_name == 'Strict-Transport-Security':
+            max_age = self._extract_max_age(lower)
+            if not max_age:
+                ratio = 0.5
+                issues.append("HSTS missing max-age")
+                recommendations.append("Set max-age to at least 15552000 (180 days)")
+            elif max_age < 15552000:
+                ratio = min(ratio, 0.6)
+                issues.append("HSTS max-age too low")
+                recommendations.append("Increase max-age to 31536000 (1 year)")
+
+            if 'includesubdomains' not in lower:
+                ratio -= 0.2
+                issues.append("HSTS missing includeSubDomains")
+                recommendations.append("Add includeSubDomains to HSTS")
+
+            if 'preload' not in lower:
+                ratio -= 0.1
+                recommendations.append("Consider enabling HSTS preload")
+
+        elif header_name == 'Content-Security-Policy':
+            if 'default-src' not in lower:
+                ratio = min(ratio, 0.7)
+                issues.append("CSP missing default-src")
+                recommendations.append("Add default-src 'self' or stricter directives")
+
+            if any(directive in lower for directive in self.INSECURE_CSP_DIRECTIVES):
+                ratio = min(ratio, 0.4)
+                issues.append("CSP contains insecure directives")
+                recommendations.append("Remove unsafe-inline/unsafe-eval and wildcards")
+
+            if 'report-uri' not in lower and 'report-to' not in lower:
+                ratio -= 0.1
+                recommendations.append("Add report-uri or report-to for CSP reporting")
+
+        elif header_name == 'X-Frame-Options':
+            valid = ['deny', 'sameorigin']
+            if lower not in valid and not lower.startswith('allow-from'):
+                ratio = 0.6
+                issues.append("X-Frame-Options non-standard value")
+                recommendations.append("Use DENY or SAMEORIGIN")
+
+        elif header_name == 'X-Content-Type-Options':
+            if lower != 'nosniff':
+                ratio = 0.6
+                issues.append("X-Content-Type-Options should be nosniff")
+                recommendations.append("Set X-Content-Type-Options: nosniff")
+
+        elif header_name == 'X-XSS-Protection':
+            if lower == '0':
+                ratio = 0.3
+                issues.append("X-XSS-Protection disabled")
+                recommendations.append("Set X-XSS-Protection: 1; mode=block")
+            elif lower != '1; mode=block':
+                ratio = 0.6
+                recommendations.append("Use X-XSS-Protection: 1; mode=block")
+
+        elif header_name == 'Referrer-Policy':
+            unsafe = ['unsafe-url', 'no-referrer-when-downgrade']
+            strong = ['no-referrer', 'strict-origin', 'strict-origin-when-cross-origin']
+            if lower in unsafe:
+                ratio = 0.4
+                issues.append("Referrer-Policy is too permissive")
+                recommendations.append("Use strict-origin-when-cross-origin or no-referrer")
+            elif lower not in strong:
+                ratio = 0.7
+                recommendations.append("Prefer strict-origin-when-cross-origin")
+
+        elif header_name == 'Permissions-Policy':
+            if '()' not in lower and '=' in lower:
+                ratio = 0.7
+                recommendations.append("Restrict sensitive features with ()")
+
+        elif header_name == 'Cross-Origin-Opener-Policy':
+            if lower not in ['same-origin', 'same-origin-allow-popups']:
+                ratio = 0.6
+                recommendations.append("Use same-origin or same-origin-allow-popups")
+
+        elif header_name == 'Cross-Origin-Embedder-Policy':
+            if lower != 'require-corp':
+                ratio = 0.6
+                recommendations.append("Use Cross-Origin-Embedder-Policy: require-corp")
+
+        elif header_name == 'Cross-Origin-Resource-Policy':
+            if lower not in ['same-origin', 'same-site']:
+                ratio = 0.6
+                recommendations.append("Use Cross-Origin-Resource-Policy: same-origin")
+
+        ratio = max(0.0, min(1.0, ratio))
+        secure = ratio >= 0.8
+        return ratio, issues, recommendations, secure
 
     def get_security_score(self) -> Optional[SecurityScore]:
         """获取安全评分"""

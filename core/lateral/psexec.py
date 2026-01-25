@@ -68,6 +68,7 @@ class PsExecLateral(BaseLateralModule):
     description = 'PsExec 风格横向移动，通过 SMB 和 SCM 执行命令'
     default_port = 445
     supported_auth = [AuthMethod.PASSWORD, AuthMethod.HASH]
+    supports_file_transfer = True  # 支持 SMB 共享文件传输
 
     def __init__(
         self,
@@ -167,20 +168,20 @@ class PsExecLateral(BaseLateralModule):
         if self._scm_handle and self._dce:
             try:
                 scmr.hRCloseServiceHandle(self._dce, self._scm_handle)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         if self._dce:
             try:
                 self._dce.disconnect()
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         if self._smb_conn:
             try:
                 self._smb_conn.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         self._smb_conn = None
         self._rpc_transport = None
@@ -259,12 +260,13 @@ class PsExecLateral(BaseLateralModule):
             if service_handle:
                 try:
                     scmr.hRDeleteService(self._dce, service_handle)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
                 try:
                     scmr.hRCloseServiceHandle(self._dce, service_handle)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     def execute_with_output(
         self,
@@ -323,8 +325,9 @@ class PsExecLateral(BaseLateralModule):
         if not self._smb_conn:
             return ""
 
-        temp_file = tempfile.mktemp()
+        fd, temp_file = tempfile.mkstemp(prefix='art_psexec_')
         try:
+            os.close(fd)
             with open(temp_file, 'wb') as f:
                 self._smb_conn.getFile(self.share, remote_path, f.write)
 

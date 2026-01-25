@@ -93,8 +93,9 @@ class NucleiScanTool(BaseTool):
                                         try:
                                             vuln = json.loads(line)
                                             vulnerabilities.append(self._parse_vuln_item(vuln))
-                                        except Exception:
-                                            pass
+                                        except Exception as exc:
+                                            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
                 except Exception as e:
                     logger.error(f"解析Nuclei JSON失败: {e}")
             

@@ -22,6 +22,8 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 import logging
 
+from utils.logger import configure_root_logger
+
 # 统一 HTTP 客户端工厂
 try:
     from core.http import get_async_client
@@ -29,11 +31,7 @@ try:
 except ImportError:
     HAS_HTTP_FACTORY = False
 
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s'
-)
+configure_root_logger(level=logging.INFO, log_to_file=True, log_to_console=True)
 logger = logging.getLogger(__name__)
 
 
@@ -209,8 +207,8 @@ class CVEUpdateManager:
                         temp_file.unlink()
                     elif temp_file.is_dir():
                         shutil.rmtree(temp_file)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         except Exception as e:
             logger.debug(f"退出清理失败 (可忽略): {e}")
