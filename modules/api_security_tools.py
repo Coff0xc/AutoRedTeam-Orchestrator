@@ -7,11 +7,14 @@ API安全MCP工具注册模块
 import logging
 from typing import Optional
 
+from utils.mcp_tooling import patch_mcp_tool
+
 logger = logging.getLogger(__name__)
 
 
 def register_api_security_tools(mcp):
     """注册API安全工具到MCP Server"""
+    patch_mcp_tool(mcp)
 
     registered_tools = []
 

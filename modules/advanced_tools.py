@@ -7,6 +7,8 @@
 import logging
 from typing import Dict, List, Optional, Any
 
+from utils.mcp_tooling import patch_mcp_tool
+
 logger = logging.getLogger(__name__)
 
 # 导入新模块
@@ -404,6 +406,7 @@ def register_advanced_tools(mcp):
         from modules.advanced_tools import register_advanced_tools
         register_advanced_tools(mcp)
     """
+    patch_mcp_tool(mcp)
 
     # 隐蔽请求
     @mcp.tool()

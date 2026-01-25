@@ -62,6 +62,12 @@ from .manager import (
     reset_session_manager,
 )
 
+from .http_manager import (
+    AuthContext,
+    HTTPSessionManager,
+    get_http_session_manager,
+)
+
 from .storage import (
     SessionStorage,
 )
@@ -87,6 +93,11 @@ __all__ = [
     'SessionManager',
     'get_session_manager',
     'reset_session_manager',
+
+    # HTTP Manager
+    'AuthContext',
+    'HTTPSessionManager',
+    'get_http_session_manager',
 
     # Storage
     'SessionStorage',

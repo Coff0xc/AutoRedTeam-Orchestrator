@@ -70,6 +70,35 @@ class SSRFDetector(BaseDetector):
         r'public-ipv4',
         r'security-credentials',
         r'iam/security-credentials',
+        r'AccessKeyId',
+        r'SecretAccessKey',
+    ]
+
+    # GCP 元数据响应特征
+    GCP_METADATA_PATTERNS = [
+        r'computeMetadata',
+        r'project-id',
+        r'instance/service-accounts',
+        r'access_token',
+        r'gcp',
+    ]
+
+    # Azure 元数据响应特征
+    AZURE_METADATA_PATTERNS = [
+        r'vmId',
+        r'subscriptionId',
+        r'resourceGroupName',
+        r'location',
+        r'sku',
+    ]
+
+    # Alibaba Cloud 元数据响应特征
+    ALIBABA_METADATA_PATTERNS = [
+        r'instance-id',
+        r'private-ipv4',
+        r'region-id',
+        r'zone-id',
+        r'ram/security-credentials',
     ]
 
     # 内网服务响应特征
@@ -92,16 +121,30 @@ class SSRFDetector(BaseDetector):
             config: 配置选项
                 - oob_server: OOB 服务器地址
                 - check_aws: 是否检测 AWS 元数据
+                - check_gcp: 是否检测 GCP 元数据
+                - check_azure: 是否检测 Azure 元数据
+                - check_alibaba: 是否检测阿里云元数据
                 - check_internal: 是否检测内网访问
+                - check_protocols: 是否检测协议滥用 (dict://, gopher://)
+                - check_blind: 是否检测盲 SSRF
         """
         super().__init__(config)
 
         # 加载 payload
-        self.payloads = get_payloads(PayloadCategory.SSRF)
+        self.payloads = self._enhance_payloads(get_payloads(PayloadCategory.SSRF))
 
         # 编译模式
         self._aws_patterns = [
             re.compile(p, re.IGNORECASE) for p in self.AWS_METADATA_PATTERNS
+        ]
+        self._gcp_patterns = [
+            re.compile(p, re.IGNORECASE) for p in self.GCP_METADATA_PATTERNS
+        ]
+        self._azure_patterns = [
+            re.compile(p, re.IGNORECASE) for p in self.AZURE_METADATA_PATTERNS
+        ]
+        self._alibaba_patterns = [
+            re.compile(p, re.IGNORECASE) for p in self.ALIBABA_METADATA_PATTERNS
         ]
         self._internal_patterns = [
             re.compile(p, re.IGNORECASE) for p in self.INTERNAL_SERVICE_PATTERNS
@@ -110,7 +153,12 @@ class SSRFDetector(BaseDetector):
         # 配置
         self.oob_server = self.config.get('oob_server', None)
         self.check_aws = self.config.get('check_aws', True)
+        self.check_gcp = self.config.get('check_gcp', True)
+        self.check_azure = self.config.get('check_azure', True)
+        self.check_alibaba = self.config.get('check_alibaba', True)
         self.check_internal = self.config.get('check_internal', True)
+        self.check_protocols = self.config.get('check_protocols', True)
+        self.check_blind = self.config.get('check_blind', True)
 
     def detect(self, url: str, **kwargs) -> List[DetectionResult]:
         """检测 SSRF 漏洞
@@ -152,6 +200,33 @@ class SSRFDetector(BaseDetector):
                     results.append(aws_result)
                     continue
 
+            # 检测 GCP 元数据访问
+            if self.check_gcp:
+                gcp_result = self._test_gcp_metadata(
+                    url, params, param_name, method, headers
+                )
+                if gcp_result:
+                    results.append(gcp_result)
+                    continue
+
+            # 检测 Azure 元数据访问
+            if self.check_azure:
+                azure_result = self._test_azure_metadata(
+                    url, params, param_name, method, headers
+                )
+                if azure_result:
+                    results.append(azure_result)
+                    continue
+
+            # 检测阿里云元数据访问
+            if self.check_alibaba:
+                alibaba_result = self._test_alibaba_metadata(
+                    url, params, param_name, method, headers
+                )
+                if alibaba_result:
+                    results.append(alibaba_result)
+                    continue
+
             # 检测内网访问
             if self.check_internal:
                 internal_result = self._test_internal_access(
@@ -167,6 +242,24 @@ class SSRFDetector(BaseDetector):
             )
             if file_result:
                 results.append(file_result)
+                continue
+
+            # 检测协议滥用 (dict://, gopher://)
+            if self.check_protocols:
+                protocol_result = self._test_protocol_abuse(
+                    url, params, param_name, method, headers
+                )
+                if protocol_result:
+                    results.append(protocol_result)
+                    continue
+
+            # 检测盲 SSRF (仅当未发现其他漏洞时)
+            if self.check_blind and not results:
+                blind_result = self._test_blind_ssrf(
+                    url, params, param_name, method, headers
+                )
+                if blind_result:
+                    results.append(blind_result)
 
         self._log_detection_end(url, results)
         return results
@@ -215,6 +308,14 @@ class SSRFDetector(BaseDetector):
                 # 检查 AWS 元数据响应
                 for pattern in self._aws_patterns:
                     if pattern.search(response.text):
+                        request_info = self._build_request_info(
+                            method=method,
+                            url=url,
+                            headers=headers,
+                            params=test_params if method == 'GET' else None,
+                            data=test_params if method != 'GET' else None
+                        )
+                        response_info = self._build_response_info(response)
                         return self._create_result(
                             url=url,
                             vulnerable=True,
@@ -223,6 +324,8 @@ class SSRFDetector(BaseDetector):
                             evidence=f"检测到 AWS 元数据访问: {pattern.pattern}",
                             confidence=0.95,
                             verified=True,
+                            request=request_info,
+                            response=response_info,
                             remediation="限制服务端请求的目标，使用白名单机制",
                             references=[
                                 "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery"
@@ -292,6 +395,14 @@ class SSRFDetector(BaseDetector):
                 # 检查是否有内网服务响应
                 for pattern in self._internal_patterns:
                     if pattern.search(response.text):
+                        request_info = self._build_request_info(
+                            method=method,
+                            url=url,
+                            headers=headers,
+                            params=test_params if method == 'GET' else None,
+                            data=test_params if method != 'GET' else None
+                        )
+                        response_info = self._build_response_info(response)
                         return self._create_result(
                             url=url,
                             vulnerable=True,
@@ -300,6 +411,8 @@ class SSRFDetector(BaseDetector):
                             evidence=f"检测到内网服务响应: {pattern.pattern}",
                             confidence=0.85,
                             verified=True,
+                            request=request_info,
+                            response=response_info,
                             remediation="限制服务端请求的目标，禁止访问内网地址",
                             extra={
                                 'ssrf_type': 'internal_access',
@@ -311,6 +424,14 @@ class SSRFDetector(BaseDetector):
                 if response.status_code == 200 and len(response.text) > 100:
                     # 检查是否包含 HTML/JSON 内容
                     if any(marker in response.text.lower() for marker in ['<html', '<!doctype', '{"', '{']):
+                        request_info = self._build_request_info(
+                            method=method,
+                            url=url,
+                            headers=headers,
+                            params=test_params if method == 'GET' else None,
+                            data=test_params if method != 'GET' else None
+                        )
+                        response_info = self._build_response_info(response)
                         return self._create_result(
                             url=url,
                             vulnerable=True,
@@ -319,6 +440,8 @@ class SSRFDetector(BaseDetector):
                             evidence=f"成功访问内网地址 {target}",
                             confidence=0.70,
                             verified=False,
+                            request=request_info,
+                            response=response_info,
                             remediation="限制服务端请求的目标，禁止访问内网地址",
                             extra={
                                 'ssrf_type': 'internal_access',
@@ -369,6 +492,14 @@ class SSRFDetector(BaseDetector):
                     response = self.http_client.post(url, data=test_params, headers=headers)
 
                 if signature in response.text:
+                    request_info = self._build_request_info(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        params=test_params if method == 'GET' else None,
+                        data=test_params if method != 'GET' else None
+                    )
+                    response_info = self._build_response_info(response)
                     return self._create_result(
                         url=url,
                         vulnerable=True,
@@ -377,6 +508,8 @@ class SSRFDetector(BaseDetector):
                         evidence=f"检测到本地文件读取: {signature}",
                         confidence=0.95,
                         verified=True,
+                        request=request_info,
+                        response=response_info,
                         remediation="禁用 file:// 协议处理",
                         extra={
                             'ssrf_type': 'file_protocol',
@@ -432,3 +565,417 @@ class SSRFDetector(BaseDetector):
     def get_payloads(self) -> List[str]:
         """获取检测器使用的 payload 列表"""
         return self.payloads
+
+    def _test_gcp_metadata(
+        self,
+        url: str,
+        params: Dict[str, str],
+        param_name: str,
+        method: str,
+        headers: Dict[str, str]
+    ) -> Optional[DetectionResult]:
+        """测试 GCP 元数据访问
+
+        Args:
+            url: 目标 URL
+            params: 参数字典
+            param_name: 测试参数名
+            method: HTTP 方法
+            headers: 请求头
+
+        Returns:
+            检测结果或 None
+        """
+        gcp_payloads = [
+            'http://metadata.google.internal/computeMetadata/v1/',
+            'http://metadata.google.internal/computeMetadata/v1/instance/',
+            'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token',
+            'http://metadata.google.internal/computeMetadata/v1/project/project-id',
+            # 需要特殊头的变体
+            'http://169.254.169.254/computeMetadata/v1/',
+        ]
+
+        for payload in gcp_payloads:
+            test_params = params.copy()
+            test_params[param_name] = payload
+
+            # GCP 元数据服务需要特殊的请求头
+            test_headers = headers.copy()
+            test_headers['Metadata-Flavor'] = 'Google'
+
+            try:
+                if method == 'GET':
+                    response = self.http_client.get(url, params=test_params, headers=test_headers)
+                else:
+                    response = self.http_client.post(url, data=test_params, headers=test_headers)
+
+                # 检查 GCP 元数据响应
+                for pattern in self._gcp_patterns:
+                    if pattern.search(response.text):
+                        request_info = self._build_request_info(
+                            method=method,
+                            url=url,
+                            headers=test_headers,
+                            params=test_params if method == 'GET' else None,
+                            data=test_params if method != 'GET' else None
+                        )
+                        response_info = self._build_response_info(response)
+                        return self._create_result(
+                            url=url,
+                            vulnerable=True,
+                            param=param_name,
+                            payload=payload,
+                            evidence=f"检测到 GCP 元数据访问: {pattern.pattern}",
+                            confidence=0.95,
+                            verified=True,
+                            request=request_info,
+                            response=response_info,
+                            remediation="限制服务端请求的目标，使用白名单机制",
+                            references=[
+                                "https://cloud.google.com/compute/docs/metadata/overview"
+                            ],
+                            extra={
+                                'ssrf_type': 'gcp_metadata',
+                                'target': 'metadata.google.internal'
+                            }
+                        )
+
+            except Exception as e:
+                logger.debug(f"GCP 元数据检测失败: {e}")
+
+        return None
+
+    def _test_azure_metadata(
+        self,
+        url: str,
+        params: Dict[str, str],
+        param_name: str,
+        method: str,
+        headers: Dict[str, str]
+    ) -> Optional[DetectionResult]:
+        """测试 Azure 元数据访问
+
+        Args:
+            url: 目标 URL
+            params: 参数字典
+            param_name: 测试参数名
+            method: HTTP 方法
+            headers: 请求头
+
+        Returns:
+            检测结果或 None
+        """
+        azure_payloads = [
+            'http://169.254.169.254/metadata/instance?api-version=2021-02-01',
+            'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/',
+            'http://169.254.169.254/metadata/instance/compute?api-version=2021-02-01',
+        ]
+
+        for payload in azure_payloads:
+            test_params = params.copy()
+            test_params[param_name] = payload
+
+            # Azure 元数据服务需要特殊的请求头
+            test_headers = headers.copy()
+            test_headers['Metadata'] = 'true'
+
+            try:
+                if method == 'GET':
+                    response = self.http_client.get(url, params=test_params, headers=test_headers)
+                else:
+                    response = self.http_client.post(url, data=test_params, headers=test_headers)
+
+                # 检查 Azure 元数据响应
+                for pattern in self._azure_patterns:
+                    if pattern.search(response.text):
+                        request_info = self._build_request_info(
+                            method=method,
+                            url=url,
+                            headers=test_headers,
+                            params=test_params if method == 'GET' else None,
+                            data=test_params if method != 'GET' else None
+                        )
+                        response_info = self._build_response_info(response)
+                        return self._create_result(
+                            url=url,
+                            vulnerable=True,
+                            param=param_name,
+                            payload=payload,
+                            evidence=f"检测到 Azure 元数据访问: {pattern.pattern}",
+                            confidence=0.95,
+                            verified=True,
+                            request=request_info,
+                            response=response_info,
+                            remediation="限制服务端请求的目标，使用白名单机制",
+                            references=[
+                                "https://docs.microsoft.com/en-us/azure/virtual-machines/windows/instance-metadata-service"
+                            ],
+                            extra={
+                                'ssrf_type': 'azure_metadata',
+                                'target': '169.254.169.254'
+                            }
+                        )
+
+            except Exception as e:
+                logger.debug(f"Azure 元数据检测失败: {e}")
+
+        return None
+
+    def _test_alibaba_metadata(
+        self,
+        url: str,
+        params: Dict[str, str],
+        param_name: str,
+        method: str,
+        headers: Dict[str, str]
+    ) -> Optional[DetectionResult]:
+        """测试阿里云元数据访问
+
+        Args:
+            url: 目标 URL
+            params: 参数字典
+            param_name: 测试参数名
+            method: HTTP 方法
+            headers: 请求头
+
+        Returns:
+            检测结果或 None
+        """
+        alibaba_payloads = [
+            'http://100.100.100.200/latest/meta-data/',
+            'http://100.100.100.200/latest/meta-data/instance-id',
+            'http://100.100.100.200/latest/meta-data/ram/security-credentials/',
+            'http://100.100.100.200/latest/user-data/',
+        ]
+
+        for payload in alibaba_payloads:
+            test_params = params.copy()
+            test_params[param_name] = payload
+
+            try:
+                if method == 'GET':
+                    response = self.http_client.get(url, params=test_params, headers=headers)
+                else:
+                    response = self.http_client.post(url, data=test_params, headers=headers)
+
+                # 检查阿里云元数据响应
+                for pattern in self._alibaba_patterns:
+                    if pattern.search(response.text):
+                        request_info = self._build_request_info(
+                            method=method,
+                            url=url,
+                            headers=headers,
+                            params=test_params if method == 'GET' else None,
+                            data=test_params if method != 'GET' else None
+                        )
+                        response_info = self._build_response_info(response)
+                        return self._create_result(
+                            url=url,
+                            vulnerable=True,
+                            param=param_name,
+                            payload=payload,
+                            evidence=f"检测到阿里云元数据访问: {pattern.pattern}",
+                            confidence=0.95,
+                            verified=True,
+                            request=request_info,
+                            response=response_info,
+                            remediation="限制服务端请求的目标，使用白名单机制",
+                            references=[
+                                "https://help.aliyun.com/document_detail/49122.html"
+                            ],
+                            extra={
+                                'ssrf_type': 'alibaba_metadata',
+                                'target': '100.100.100.200'
+                            }
+                        )
+
+            except Exception as e:
+                logger.debug(f"阿里云元数据检测失败: {e}")
+
+        return None
+
+    def _test_protocol_abuse(
+        self,
+        url: str,
+        params: Dict[str, str],
+        param_name: str,
+        method: str,
+        headers: Dict[str, str]
+    ) -> Optional[DetectionResult]:
+        """测试协议滥用 (dict://, gopher://)
+
+        Args:
+            url: 目标 URL
+            params: 参数字典
+            param_name: 测试参数名
+            method: HTTP 方法
+            headers: 请求头
+
+        Returns:
+            检测结果或 None
+        """
+        protocol_payloads = [
+            # Dict 协议 (常用于攻击 Redis)
+            ('dict://127.0.0.1:6379/info', 'redis_version', 'dict'),
+            ('dict://127.0.0.1:6379/CONFIG GET *', 'maxmemory', 'dict'),
+            # Gopher 协议 (可构造任意 TCP 请求)
+            ('gopher://127.0.0.1:6379/_INFO', 'redis', 'gopher'),
+            ('gopher://127.0.0.1:6379/_CONFIG%20GET%20*', 'config', 'gopher'),
+            # FTP 协议
+            ('ftp://127.0.0.1:21', 'FTP', 'ftp'),
+        ]
+
+        for payload, signature, protocol in protocol_payloads:
+            test_params = params.copy()
+            test_params[param_name] = payload
+
+            try:
+                if method == 'GET':
+                    response = self.http_client.get(url, params=test_params, headers=headers)
+                else:
+                    response = self.http_client.post(url, data=test_params, headers=headers)
+
+                if signature.lower() in response.text.lower():
+                    request_info = self._build_request_info(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        params=test_params if method == 'GET' else None,
+                        data=test_params if method != 'GET' else None
+                    )
+                    response_info = self._build_response_info(response)
+                    return self._create_result(
+                        url=url,
+                        vulnerable=True,
+                        param=param_name,
+                        payload=payload,
+                        evidence=f"检测到 {protocol}:// 协议滥用: {signature}",
+                        confidence=0.90,
+                        verified=True,
+                        request=request_info,
+                        response=response_info,
+                        remediation=f"禁用 {protocol}:// 协议处理，使用协议白名单",
+                        extra={
+                            'ssrf_type': 'protocol_abuse',
+                            'protocol': protocol,
+                            'target': payload
+                        }
+                    )
+
+            except Exception as e:
+                logger.debug(f"{protocol}:// 协议检测失败: {e}")
+
+        return None
+
+    def _test_blind_ssrf(
+        self,
+        url: str,
+        params: Dict[str, str],
+        param_name: str,
+        method: str,
+        headers: Dict[str, str]
+    ) -> Optional[DetectionResult]:
+        """测试盲 SSRF (基于时间差异和错误信息)
+
+        Args:
+            url: 目标 URL
+            params: 参数字典
+            param_name: 测试参数名
+            method: HTTP 方法
+            headers: 请求头
+
+        Returns:
+            检测结果或 None
+        """
+        # 错误指示器 (可能表明存在 SSRF)
+        error_indicators = [
+            'connection refused', 'connection timed out',
+            'could not connect', 'failed to connect',
+            'no route to host', 'network unreachable',
+            'name or service not known', 'getaddrinfo failed',
+            'connection reset', 'socket error',
+        ]
+
+        # 使用会导致延迟的不可达 IP
+        blind_payloads = [
+            ('http://10.255.255.1', 5),  # 不可达的内网 IP
+            ('http://192.168.255.255', 5),
+            ('http://172.31.255.255', 5),
+        ]
+
+        # 先获取基线响应时间
+        baseline_start = time.time()
+        try:
+            if method == 'GET':
+                self.http_client.get(url, params=params, headers=headers)
+            else:
+                self.http_client.post(url, data=params, headers=headers)
+            baseline_time = time.time() - baseline_start
+        except Exception:
+            baseline_time = 0
+
+        for payload, expected_delay in blind_payloads:
+            test_params = params.copy()
+            test_params[param_name] = payload
+
+            try:
+                start_time = time.time()
+
+                if method == 'GET':
+                    response = self.http_client.get(url, params=test_params, headers=headers)
+                else:
+                    response = self.http_client.post(url, data=test_params, headers=headers)
+
+                elapsed_time = time.time() - start_time
+                response_text = response.text.lower() if response else ''
+
+                # 检查错误指示器
+                found_error = None
+                for indicator in error_indicators:
+                    if indicator in response_text:
+                        found_error = indicator
+                        break
+
+                # 检查时间延迟 (响应时间超过预期延迟的70%且比基线多3秒以上)
+                has_delay = elapsed_time >= expected_delay * 0.7 and elapsed_time >= baseline_time + 3
+
+                if found_error or has_delay:
+                    evidence_parts = []
+                    if found_error:
+                        evidence_parts.append(f"错误信息: {found_error}")
+                    if has_delay:
+                        evidence_parts.append(f"响应延迟: {elapsed_time:.2f}s (基线: {baseline_time:.2f}s)")
+
+                    request_info = self._build_request_info(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        params=test_params if method == 'GET' else None,
+                        data=test_params if method != 'GET' else None
+                    )
+                    response_info = self._build_response_info(response)
+
+                    return self._create_result(
+                        url=url,
+                        vulnerable=True,
+                        param=param_name,
+                        payload=payload,
+                        evidence="; ".join(evidence_parts),
+                        confidence=0.60 if found_error else 0.50,
+                        verified=False,  # 盲 SSRF 需要进一步验证
+                        request=request_info,
+                        response=response_info,
+                        remediation="限制服务端请求的目标，使用白名单机制",
+                        extra={
+                            'ssrf_type': 'blind',
+                            'error_indicator': found_error,
+                            'response_time': elapsed_time,
+                            'baseline_time': baseline_time,
+                            'has_delay': has_delay
+                        }
+                    )
+
+            except Exception as e:
+                logger.debug(f"盲 SSRF 检测失败: {e}")
+
+        return None

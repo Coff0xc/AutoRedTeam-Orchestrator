@@ -8,6 +8,7 @@ XXE (XML External Entity) 检测器
 - 参数实体注入
 - 盲 XXE (OOB)
 """
+import logging
 
 from typing import Dict, List, Any, Optional
 import re
@@ -174,8 +175,8 @@ class XXEDetector(BaseDetector):
 
                             if not deep_scan:
                                 break
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             if vulnerabilities and not deep_scan:
                 break
@@ -253,8 +254,8 @@ class XXEDetector(BaseDetector):
 
             if response and response.get("success"):
                 return self.validate_response(response, modified_payload)
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return False
 

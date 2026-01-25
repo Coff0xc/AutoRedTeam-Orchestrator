@@ -163,8 +163,8 @@ class AdaptivePayloadEngine:
                     data = json.load(f)
                     for k, v in data.items():
                         self.payload_stats[k].update(v)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     def _save_history(self):
         """保存历史数据"""
@@ -173,8 +173,8 @@ class AdaptivePayloadEngine:
                 self.history_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(self.history_file, 'w', encoding='utf-8') as f:
                     json.dump(dict(self.payload_stats), f, indent=2)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     def _get_payload_key(self, vuln_type: str, payload: str) -> str:
         """生成Payload唯一键"""

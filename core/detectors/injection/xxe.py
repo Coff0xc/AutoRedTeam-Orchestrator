@@ -129,7 +129,7 @@ class XXEDetector(BaseDetector):
         super().__init__(config)
 
         # 加载 payload
-        self.payloads = get_payloads(PayloadCategory.XXE)
+        self.payloads = self._enhance_payloads(get_payloads(PayloadCategory.XXE))
 
         # 编译文件模式
         self._file_patterns: Dict[str, List[re.Pattern]] = {}
@@ -209,6 +209,13 @@ class XXEDetector(BaseDetector):
         if result:
             os_type, evidence = self._check_file_content(result.text, 'unix')
             if os_type:
+                request_info = self._build_request_info(
+                    method="POST",
+                    url=url,
+                    headers=headers,
+                    data=unix_payload
+                )
+                response_info = self._build_response_info(result)
                 return self._create_result(
                     url=url,
                     vulnerable=True,
@@ -216,6 +223,8 @@ class XXEDetector(BaseDetector):
                     evidence=evidence,
                     confidence=0.95,
                     verified=True,
+                    request=request_info,
+                    response=response_info,
                     remediation="禁用 XML 外部实体解析，使用安全的 XML 解析器配置",
                     references=[
                         "https://owasp.org/www-community/vulnerabilities/XML_External_Entity_(XXE)_Processing",
@@ -234,6 +243,13 @@ class XXEDetector(BaseDetector):
         if result:
             os_type, evidence = self._check_file_content(result.text, 'windows')
             if os_type:
+                request_info = self._build_request_info(
+                    method="POST",
+                    url=url,
+                    headers=headers,
+                    data=windows_payload
+                )
+                response_info = self._build_response_info(result)
                 return self._create_result(
                     url=url,
                     vulnerable=True,
@@ -241,6 +257,8 @@ class XXEDetector(BaseDetector):
                     evidence=evidence,
                     confidence=0.95,
                     verified=True,
+                    request=request_info,
+                    response=response_info,
                     remediation="禁用 XML 外部实体解析，使用安全的 XML 解析器配置",
                     extra={
                         'xxe_type': 'basic',
@@ -271,6 +289,13 @@ class XXEDetector(BaseDetector):
         if result:
             os_type, evidence = self._check_file_content(result.text, 'unix')
             if os_type:
+                request_info = self._build_request_info(
+                    method="POST",
+                    url=url,
+                    headers=headers,
+                    data=xinclude_payload
+                )
+                response_info = self._build_response_info(result)
                 return self._create_result(
                     url=url,
                     vulnerable=True,
@@ -278,6 +303,8 @@ class XXEDetector(BaseDetector):
                     evidence=evidence,
                     confidence=0.90,
                     verified=True,
+                    request=request_info,
+                    response=response_info,
                     remediation="禁用 XInclude 处理",
                     extra={
                         'xxe_type': 'xinclude',
@@ -306,6 +333,13 @@ class XXEDetector(BaseDetector):
         result = self._send_xxe_payload(url, aws_payload, headers)
 
         if result and 'ami-id' in result.text.lower():
+            request_info = self._build_request_info(
+                method="POST",
+                url=url,
+                headers=headers,
+                data=aws_payload
+            )
+            response_info = self._build_response_info(result)
             return self._create_result(
                 url=url,
                 vulnerable=True,
@@ -313,6 +347,8 @@ class XXEDetector(BaseDetector):
                 evidence="检测到 AWS 元数据访问",
                 confidence=0.95,
                 verified=True,
+                request=request_info,
+                response=response_info,
                 remediation="禁用 XML 外部实体解析，限制网络访问",
                 extra={
                     'xxe_type': 'ssrf',
@@ -328,6 +364,13 @@ class XXEDetector(BaseDetector):
             if result and len(result.text) > 100:
                 # 检查是否有有意义的响应
                 if any(keyword in result.text.lower() for keyword in ['html', 'server', 'apache', 'nginx']):
+                    request_info = self._build_request_info(
+                        method="POST",
+                        url=url,
+                        headers=headers,
+                        data=localhost_payload
+                    )
+                    response_info = self._build_response_info(result)
                     return self._create_result(
                         url=url,
                         vulnerable=True,
@@ -335,6 +378,8 @@ class XXEDetector(BaseDetector):
                         evidence=f"成功访问内网端口 {port}",
                         confidence=0.80,
                         verified=False,
+                        request=request_info,
+                        response=response_info,
                         remediation="禁用 XML 外部实体解析，限制网络访问",
                         extra={
                             'xxe_type': 'ssrf',
@@ -382,6 +427,12 @@ class XXEDetector(BaseDetector):
             evidence=f"已发送 OOB XXE payload，请检查 {oob_url}",
             confidence=0.0,
             verified=False,
+            request=self._build_request_info(
+                method="POST",
+                url=url,
+                headers=headers,
+                data=payload
+            ),
             remediation="禁用 XML 外部实体解析",
             extra={
                 'xxe_type': 'blind',

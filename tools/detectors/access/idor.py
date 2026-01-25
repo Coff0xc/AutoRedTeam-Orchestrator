@@ -8,6 +8,7 @@ IDOR (Insecure Direct Object Reference) 检测器
 - 路径参数越权
 - 水平/垂直越权
 """
+import logging
 
 from typing import Dict, List, Any, Optional
 import re
@@ -167,8 +168,8 @@ class IDORDetector(BaseDetector):
                             "sensitive_data": sensitive_found[:3] if sensitive_found else None
                         })
 
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             # 分析结果
             if len(findings) > 1:
@@ -278,8 +279,8 @@ class IDORDetector(BaseDetector):
                                 "size": length
                             })
 
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             if findings:
                 vuln = Vulnerability(
@@ -320,8 +321,9 @@ class IDORDetector(BaseDetector):
                     response = self.send_request(test_url)
                     if response and response.get("success"):
                         return response.get("status_code") == 200
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             return False
 
         # 参数 IDOR 验证
@@ -337,8 +339,8 @@ class IDORDetector(BaseDetector):
                 status = response.get("status_code", 0)
                 length = response.get("response_length", 0)
                 return status == 200 and length > 100
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return False
 

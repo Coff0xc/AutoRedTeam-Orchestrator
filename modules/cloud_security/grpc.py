@@ -404,8 +404,8 @@ class GRPCTester(BaseCloudTester):
                             # 解析文件描述符获取方法信息
                             # 这里简化处理
                             pass
-                except:
-                    pass
+                except (grpc.RpcError, StopIteration, AttributeError) as e:
+                    logger.debug(f'获取服务 {service_name} 的文件描述符失败: {e}')
 
                 services_info.append(service_info)
 

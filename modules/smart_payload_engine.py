@@ -91,7 +91,8 @@ class TargetProfile:
         for waf_name, signatures in waf_signatures.items():
             for sig in signatures:
                 if sig in headers_str or sig in body_lower:
-                    return waf_name
+                    from core.evasion import normalize_waf_type
+                    return normalize_waf_type(waf_name).value
         return None
     
     def _detect_framework(self) -> Optional[str]:

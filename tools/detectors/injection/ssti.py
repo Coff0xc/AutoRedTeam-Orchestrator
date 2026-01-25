@@ -12,6 +12,7 @@ SSTI (Server-Side Template Injection) 检测器
 - ERB (Ruby)
 - Thymeleaf (Java)
 """
+import logging
 
 from typing import Dict, List, Any, Optional
 import re
@@ -242,8 +243,8 @@ class SSTIDetector(BaseDetector):
                                         vulnerabilities.append(vuln)
                                 break
 
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
                 if vulnerabilities and not deep_scan:
                     break
@@ -292,8 +293,8 @@ class SSTIDetector(BaseDetector):
                 if response and response.get("success"):
                     if expected in response.get("response_text", ""):
                         return True
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return False
 

@@ -281,6 +281,80 @@ def get_logger(
     return logger
 
 
+def configure_root_logger(
+    level: int = logging.INFO,
+    log_file: Optional[Path] = None,
+    colored: bool = True,
+    log_to_file: bool = True,
+    log_to_console: bool = True,
+    max_file_size: int = 10 * 1024 * 1024,
+    backup_count: int = 5,
+    filter_sensitive: bool = True,
+    stream = sys.stderr,
+    force: bool = False
+) -> logging.Logger:
+    """
+    配置根日志器，确保全局日志有统一输出（文件 + 控制台）
+
+    Args:
+        level: 日志级别
+        log_file: 日志文件路径（默认自动生成）
+        colored: 是否启用彩色输出
+        log_to_file: 是否输出到文件
+        log_to_console: 是否输出到控制台
+        max_file_size: 单个日志文件最大大小（字节）
+        backup_count: 保留的备份文件数量
+        filter_sensitive: 是否过滤敏感信息
+        stream: 控制台输出流
+        force: 是否强制重置已有handler
+    """
+    root_logger = logging.getLogger()
+
+    if root_logger.handlers and not force:
+        return root_logger
+
+    if force:
+        for handler in list(root_logger.handlers):
+            root_logger.removeHandler(handler)
+
+    root_logger.setLevel(level)
+
+    console_fmt = '%(asctime)s | %(name)s | %(levelname)s | %(message)s'
+    file_fmt = '%(asctime)s | %(name)s | %(levelname)s | %(funcName)s:%(lineno)d | %(message)s'
+    date_fmt = '%Y-%m-%d %H:%M:%S'
+
+    if log_to_console:
+        console_handler = logging.StreamHandler(stream)
+        console_handler.setLevel(level)
+        console_formatter = ColoredFormatter(
+            fmt=console_fmt,
+            datefmt=date_fmt,
+            colored=colored
+        )
+        console_handler.setFormatter(console_formatter)
+        root_logger.addHandler(console_handler)
+
+    if log_to_file:
+        if log_file is None:
+            project_root = Path(__file__).parent.parent
+            log_dir = project_root / 'logs'
+            date_str = datetime.now().strftime('%Y%m%d')
+            log_file = log_dir / f'root_{date_str}.log'
+
+        file_handler = SecureFileHandler(
+            filename=log_file,
+            maxBytes=max_file_size,
+            backupCount=backup_count,
+            filter_sensitive=filter_sensitive
+        )
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(logging.Formatter(fmt=file_fmt, datefmt=date_fmt))
+        root_logger.addHandler(file_handler)
+
+    root_logger.info("Root logger configured")
+    return root_logger
+
+
 def set_log_level(logger_name: str, level: Union[int, str]) -> None:
     """
     动态设置日志级别
@@ -347,6 +421,7 @@ __all__ = [
     'ColoredFormatter',
     'SecureFileHandler',
     'get_logger',
+    'configure_root_logger',
     'set_log_level',
     'add_file_handler',
     'logger',

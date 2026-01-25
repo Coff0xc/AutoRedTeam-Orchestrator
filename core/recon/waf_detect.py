@@ -547,8 +547,9 @@ class WAFDetector:
                     "body": body[:50000],
                     "cookies": e.headers.get("Set-Cookie", "") if e.headers else "",
                 }
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         except Exception as e:
             self._logger.debug(f"Request error for {url}: {e}")
 

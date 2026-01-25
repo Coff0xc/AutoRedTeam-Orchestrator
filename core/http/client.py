@@ -182,8 +182,8 @@ class HTTPClient:
             try:
                 import urllib3
                 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     def _get_sync_client(self):
         """获取或创建同步客户端"""

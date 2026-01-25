@@ -114,7 +114,9 @@ class RCEDetector(BaseDetector):
 
         # 加载 payload
         max_payloads = self.config.get('max_payloads', 30)
-        self.payloads = get_payloads(PayloadCategory.RCE, limit=max_payloads)
+        self.payloads = self._enhance_payloads(
+            get_payloads(PayloadCategory.RCE, limit=max_payloads)
+        )
 
         # 编译成功模式
         self._success_patterns: Dict[str, List[re.Pattern]] = {}
@@ -245,6 +247,14 @@ class RCEDetector(BaseDetector):
                 # 检查响应中是否有命令执行成功的标志
                 os_type, evidence = self._check_command_output(response.text)
                 if os_type:
+                    request_info = self._build_request_info(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        params=test_params if method == 'GET' else None,
+                        data=test_params if method != 'GET' else None
+                    )
+                    response_info = self._build_response_info(response)
                     return self._create_result(
                         url=url,
                         vulnerable=True,
@@ -253,6 +263,8 @@ class RCEDetector(BaseDetector):
                         evidence=evidence,
                         confidence=0.95,
                         verified=True,
+                        request=request_info,
+                        response=response_info,
                         remediation="避免将用户输入直接传递给系统命令，使用白名单验证或安全的 API",
                         references=[
                             "https://owasp.org/www-community/attacks/Command_Injection",
@@ -318,9 +330,9 @@ class RCEDetector(BaseDetector):
                 start = time.time()
 
                 if method == 'GET':
-                    self.http_client.get(url, params=test_params, headers=headers)
+                    response = self.http_client.get(url, params=test_params, headers=headers)
                 else:
-                    self.http_client.post(url, data=test_params, headers=headers)
+                    response = self.http_client.post(url, data=test_params, headers=headers)
 
                 elapsed = time.time() - start
 
@@ -329,12 +341,20 @@ class RCEDetector(BaseDetector):
                     # 验证：再次测试确认
                     start2 = time.time()
                     if method == 'GET':
-                        self.http_client.get(url, params=test_params, headers=headers)
+                        response_second = self.http_client.get(url, params=test_params, headers=headers)
                     else:
-                        self.http_client.post(url, data=test_params, headers=headers)
+                        response_second = self.http_client.post(url, data=test_params, headers=headers)
                     elapsed2 = time.time() - start2
 
                     if elapsed2 >= expected_delay - 1:
+                        request_info = self._build_request_info(
+                            method=method,
+                            url=url,
+                            headers=headers,
+                            params=test_params if method == 'GET' else None,
+                            data=test_params if method != 'GET' else None
+                        )
+                        response_info = self._build_response_info(response_second or response)
                         return self._create_result(
                             url=url,
                             vulnerable=True,
@@ -343,6 +363,8 @@ class RCEDetector(BaseDetector):
                             evidence=f"响应延迟 {elapsed:.2f}s / {elapsed2:.2f}s（预期 {expected_delay}s）",
                             confidence=0.85,
                             verified=True,
+                            request=request_info,
+                            response=response_info,
                             remediation="避免将用户输入直接传递给系统命令，使用白名单验证或安全的 API",
                             extra={
                                 'injection_type': 'time-based',

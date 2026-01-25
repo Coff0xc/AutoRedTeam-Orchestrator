@@ -15,6 +15,14 @@ from ..result import DetectionResult, Severity, DetectorType, RequestInfo, Respo
 from ..factory import register_detector
 from ..payloads import get_payloads, PayloadCategory
 
+# 导入项目统一异常类型
+from core.exceptions import (
+    DetectorError,
+    HTTPError,
+    TimeoutError as DetectorTimeoutError,
+    ConnectionError as DetectorConnectionError,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -95,7 +103,9 @@ class XSSDetector(BaseDetector):
 
         # 加载 payload
         max_payloads = self.config.get('max_payloads', 30)
-        self.payloads = get_payloads(PayloadCategory.XSS, limit=max_payloads)
+        self.payloads = self._enhance_payloads(
+            get_payloads(PayloadCategory.XSS, limit=max_payloads)
+        )
 
         # 编译反射模式
         self._reflection_patterns = [
@@ -213,6 +223,14 @@ class XSSDetector(BaseDetector):
                         )
 
                         if xss_type:
+                            request_info = self._build_request_info(
+                                method=method,
+                                url=url,
+                                headers=headers,
+                                params=test_params if method == 'GET' else None,
+                                data=test_params if method != 'GET' else None
+                            )
+                            response_info = self._build_response_info(response)
                             results.append(self._create_result(
                                 url=url,
                                 vulnerable=True,
@@ -221,6 +239,8 @@ class XSSDetector(BaseDetector):
                                 evidence=evidence,
                                 confidence=0.9 if xss_type == 'full' else 0.7,
                                 verified=True if xss_type == 'full' else False,
+                                request=request_info,
+                                response=response_info,
                                 remediation="对用户输入进行 HTML 实体编码，使用 CSP 策略",
                                 references=[
                                     "https://owasp.org/www-community/attacks/xss/",
@@ -235,8 +255,22 @@ class XSSDetector(BaseDetector):
                             # 发现漏洞后跳过该参数的其他 payload
                             break
 
+                    except DetectorTimeoutError as e:
+                        # 请求超时 - 常见情况
+                        logger.debug(f"反射型 XSS 检测超时 {url}: {e}")
+                    except DetectorConnectionError as e:
+                        # 连接失败 - 目标可能不可达
+                        logger.debug(f"反射型 XSS 检测连接失败 {url}: {e}")
+                    except HTTPError as e:
+                        # 其他 HTTP 错误
+                        logger.debug(f"反射型 XSS 检测 HTTP 错误 {url}: {e}")
+                    except (AttributeError, TypeError) as e:
+                        # 响应对象属性访问错误（如 response.text 不存在）
+                        logger.debug(f"反射型 XSS 检测响应解析失败: {e}")
                     except Exception as e:
-                        logger.debug(f"反射型 XSS 检测失败: {e}")
+                        # 捕获其他未预期异常，保证检测流程继续
+                        # 注意：这里使用宽泛捕获是为了单个 payload 测试失败不影响整体检测
+                        logger.warning(f"反射型 XSS 检测未预期错误: {type(e).__name__}: {e}")
 
                 # 如果已发现该参数存在漏洞，跳出
                 if any(r.param == param_name for r in results):
@@ -267,6 +301,12 @@ class XSSDetector(BaseDetector):
             dom_vulns = self._find_dom_xss_patterns(response.text)
 
             for vuln in dom_vulns:
+                request_info = self._build_request_info(
+                    method="GET",
+                    url=url,
+                    headers=headers
+                )
+                response_info = self._build_response_info(response)
                 results.append(self._create_result(
                     url=url,
                     vulnerable=True,
@@ -275,6 +315,8 @@ class XSSDetector(BaseDetector):
                     evidence=vuln['evidence'],
                     confidence=0.6,  # DOM XSS 需要手动验证
                     verified=False,
+                    request=request_info,
+                    response=response_info,
                     remediation="避免使用危险的 DOM 操作，使用安全的 API 如 textContent",
                     references=[
                         "https://owasp.org/www-community/attacks/DOM_Based_XSS"
@@ -286,8 +328,25 @@ class XSSDetector(BaseDetector):
                     }
                 ))
 
+        except DetectorTimeoutError as e:
+            # 请求超时
+            logger.debug(f"DOM XSS 检测超时 {url}: {e}")
+        except DetectorConnectionError as e:
+            # 连接失败
+            logger.debug(f"DOM XSS 检测连接失败 {url}: {e}")
+        except HTTPError as e:
+            # HTTP 错误
+            logger.debug(f"DOM XSS 检测 HTTP 错误 {url}: {e}")
+        except (AttributeError, TypeError) as e:
+            # 响应对象属性访问错误
+            logger.debug(f"DOM XSS 检测响应解析失败: {e}")
+        except re.error as e:
+            # 正则表达式错误（在 _find_dom_xss_patterns 中可能发生）
+            logger.warning(f"DOM XSS 检测正则表达式错误: {e}")
         except Exception as e:
-            logger.debug(f"DOM XSS 检测失败: {e}")
+            # 捕获其他未预期异常
+            # 注意：DOM XSS 检测失败不应影响其他检测
+            logger.warning(f"DOM XSS 检测未预期错误: {type(e).__name__}: {e}")
 
         return results
 

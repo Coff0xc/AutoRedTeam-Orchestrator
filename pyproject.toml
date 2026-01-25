@@ -36,9 +36,6 @@ addopts = """
     --verbose
     --strict-markers
     --tb=short
-    --cov-report=term-missing
-    --cov-report=html
-    --cov-report=xml
 """
 markers = [
     "slow: 标记慢速测试",
@@ -128,7 +125,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "AutoRedTeam Team"}
 ]
 keywords = ["security", "pentest", "red-team", "mcp", "ai"]
 classifiers = [
@@ -157,12 +154,54 @@ dev = [
     "isort>=5.13.0",
     "pylint>=3.0.0",
 ]
+ai = [
+    "openai>=1.12.0",
+    "anthropic>=0.18.0",
+    "langchain>=0.1.0",
+    "langchain-openai>=0.0.5",
+]
+performance = [
+    "httpx>=0.26.0",
+    "celery>=5.3.0",
+    "redis>=5.0.0",
+]
+recon = [
+    "python-nmap>=0.7.1",
+    "shodan>=1.31.0",
+    "censys>=2.2.0",
+    "dnspython>=2.5.0",
+    "whois>=0.9.27",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=5.1.0",
+]
+network = [
+    "paramiko>=3.4.0",
+    "pexpect>=4.9.0",
+    "websockets>=12.0",
+    "cryptography>=42.0.0",
+]
+storage = [
+    "sqlalchemy>=2.0.0",
+    "pymongo>=4.6.0",
+]
+reporting = [
+    "jinja2>=3.1.0",
+    "markdown>=3.5.0",
+    "python-docx>=1.1.0",
+    "reportlab>=4.0.0",
+]
+ui = [
+    "colorama>=0.4.6",
+    "rich>=13.7.0",
+    "click>=8.1.0",
+    "python-dotenv>=1.0.0",
+]
 
 [project.urls]
-Homepage = "https://github.com/your/repo"
-Documentation = "https://your-docs-url"
-Repository = "https://github.com/your/repo"
-Issues = "https://github.com/your/repo/issues"
+Homepage = "https://github.com/Coff0xc/AutoRedTeam-Orchestrator"
+Documentation = "https://github.com/Coff0xc/AutoRedTeam-Orchestrator#readme"
+Repository = "https://github.com/Coff0xc/AutoRedTeam-Orchestrator"
+Issues = "https://github.com/Coff0xc/AutoRedTeam-Orchestrator/issues"
 
 [project.scripts]
 autoredteam = "mcp_stdio_server:main"

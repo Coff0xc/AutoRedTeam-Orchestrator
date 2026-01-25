@@ -156,9 +156,9 @@ class XXEScannerTool(BaseTool):
             try:
                 import json
                 headers.update(json.loads(custom_headers))
-            except Exception:
-                pass
-        
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         # 1. 测试基础XXE (文件读取)
         file_payloads = XXEPayloadGenerator.file_read(test_file)
         for payload in file_payloads:
@@ -274,9 +274,8 @@ class XXEScannerTool(BaseTool):
             else:
                 requests.get(url, params={"xml": payload}, headers=headers,
                             timeout=timeout, verify=False)
-        except Exception:
-            pass
-
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
 @dataclass
 class XXEPayloadTool(BaseTool):

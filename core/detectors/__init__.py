@@ -90,6 +90,8 @@ from .injection import (
     SSTIDetector,
     XXEDetector,
     LDAPiDetector,
+    DeserializeDetector,
+    FastjsonDetector,
 )
 
 # 访问控制检测器
@@ -98,6 +100,12 @@ from .access import (
     PathTraversalDetector,
     SSRFDetector,
     OpenRedirectDetector,
+)
+
+# 文件类检测器
+from .file import (
+    LFIDetector,
+    FileUploadDetector,
 )
 
 # 认证检测器
@@ -154,6 +162,21 @@ def get_detector_info(name: str) -> dict:
 
 # ==================== 导出 ====================
 
+# 误报过滤器
+from .false_positive_filter import (
+    FalsePositiveFilter,
+    DynamicContentNormalizer,
+    SPADetector,
+    WAFBlockDetector,
+    RateLimitDetector,
+    CaptchaDetector,
+    FilterReason,
+    FilterResult,
+    ResponseBaseline,
+    is_false_positive,
+    normalize_response,
+)
+
 __all__ = [
     # 基础类
     'BaseDetector',
@@ -191,12 +214,18 @@ __all__ = [
     'SSTIDetector',
     'XXEDetector',
     'LDAPiDetector',
+    'DeserializeDetector',
+    'FastjsonDetector',
 
     # 访问控制检测器
     'IDORDetector',
     'PathTraversalDetector',
     'SSRFDetector',
     'OpenRedirectDetector',
+
+    # 文件类检测器
+    'LFIDetector',
+    'FileUploadDetector',
 
     # 认证检测器
     'WeakPasswordDetector',
@@ -208,6 +237,19 @@ __all__ = [
     'CSRFDetector',
     'SecurityHeadersDetector',
     'InfoDisclosureDetector',
+    
+    # 误报过滤
+    'FalsePositiveFilter',
+    'DynamicContentNormalizer',
+    'SPADetector',
+    'WAFBlockDetector',
+    'RateLimitDetector',
+    'CaptchaDetector',
+    'FilterReason',
+    'FilterResult',
+    'ResponseBaseline',
+    'is_false_positive',
+    'normalize_response',
 
     # 便捷函数
     'create_detector',

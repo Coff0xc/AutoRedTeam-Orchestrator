@@ -1,172 +1,255 @@
 """
-统一 HTTP 客户端 - 安全的 HTTP 请求封装
-解决 SSL 验证禁用、重复代码等问题
+统一 HTTP 客户端 - 已弃用
 
-使用示例:
+⚠️ 此模块已弃用，请使用 core.http 模块
+
+迁移指南:
+    # 旧代码
     from utils.http_client import SecureHTTPClient
+    client = SecureHTTPClient()
 
-    client = SecureHTTPClient()  # 默认启用 SSL
-    resp = client.get("https://example.com")
+    # 新代码
+    from core.http import HTTPClient, HTTPConfig
+    config = HTTPConfig()
+    client = HTTPClient(config=config)
 
-    # 特殊情况禁用 SSL（会发出警告）
-    client_insecure = SecureHTTPClient(verify_ssl=False)
+    # 或使用便捷函数
+    from core.http import get_client
+    client = get_client()
 """
 
-import requests
 import warnings
 import logging
-from typing import Optional, Dict, Any
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
 
+# 发出弃用警告
+warnings.warn(
+    "utils.http_client 模块已弃用，请使用 core.http 模块。"
+    "此模块将在 v4.0 中移除。",
+    DeprecationWarning,
+    stacklevel=2
+)
+
 
 class SecurityWarning(UserWarning):
-    """安全警告"""
+    """安全警告 - 已弃用，使用 core.http.exceptions"""
     pass
 
 
-class SecureHTTPClient:
-    """安全的 HTTP 客户端
+# 向后兼容：重定向到 core.http
+try:
+    from core.http import (
+        HTTPClient as _HTTPClient,
+        HTTPConfig,
+        get_client,
+    )
 
-    特性:
-    - 默认启用 SSL 验证
-    - 自动重试机制
-    - 统一的超时控制
-    - 自定义 User-Agent
-    - 代理支持
-    """
-
-    def __init__(
-        self,
-        verify_ssl: Optional[bool] = None,
-        timeout: int = 30,
-        max_retries: int = 3,
-        user_agent: str = "AutoRedTeam/3.0",
-        proxy: Optional[Dict[str, str]] = None
-    ):
-        """初始化 HTTP 客户端
-
-        Args:
-            verify_ssl: 是否验证 SSL（None 时从配置读取，默认 True）
-            timeout: 默认超时时间（秒）
-            max_retries: 最大重试次数
-            user_agent: User-Agent 字符串
-            proxy: 代理配置 {"http": "...", "https": "..."}
+    class SecureHTTPClient:
         """
-        self.session = requests.Session()
-        self.timeout = timeout
+        安全的 HTTP 客户端 - 已弃用
 
-        # SSL 验证配置
-        if verify_ssl is None:
-            # 从配置读取（默认 True）
-            try:
-                from utils.config_manager import get_config
-                verify_ssl = get_config().security.verify_ssl
-            except Exception:
-                verify_ssl = True  # 默认启用
+        ⚠️ 此类已弃用，请使用 core.http.HTTPClient
 
-        self.verify_ssl = verify_ssl
+        向后兼容包装器，内部使用 core.http.HTTPClient
+        """
 
-        # 禁用 SSL 时发出警告
-        if not verify_ssl:
+        def __init__(
+            self,
+            verify_ssl=None,
+            timeout=30,
+            max_retries=3,
+            user_agent="AutoRedTeam/3.0",
+            proxy=None
+        ):
             warnings.warn(
-                "SSL 验证已禁用！可能存在中间人攻击风险。"
-                "仅在测试环境或明确信任的网络中使用。",
-                SecurityWarning,
+                "SecureHTTPClient 已弃用，请使用 core.http.HTTPClient",
+                DeprecationWarning,
                 stacklevel=2
             )
-            logger.warning("SSL 验证已禁用")
 
-            # 禁用 urllib3 的 SSL 警告（避免噪音）
-            import urllib3
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            # 创建配置
+            config = HTTPConfig()
+            config.timeout = timeout
+            config.verify_ssl = verify_ssl if verify_ssl is not None else True
+            config.user_agent = user_agent
 
-        # 配置重试策略
-        retry_strategy = Retry(
-            total=max_retries,
-            backoff_factor=1,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]
+            if proxy:
+                config.proxy_url = proxy.get('https') or proxy.get('http')
+
+            # 使用 core.http.HTTPClient
+            self._client = _HTTPClient(config=config)
+            self.timeout = timeout
+            self.verify_ssl = config.verify_ssl
+
+        def get(self, url, **kwargs):
+            """GET 请求"""
+            kwargs.setdefault('timeout', self.timeout)
+            return self._client.get(url, **kwargs)
+
+        def post(self, url, **kwargs):
+            """POST 请求"""
+            kwargs.setdefault('timeout', self.timeout)
+            return self._client.post(url, **kwargs)
+
+        def put(self, url, **kwargs):
+            """PUT 请求"""
+            kwargs.setdefault('timeout', self.timeout)
+            return self._client.put(url, **kwargs)
+
+        def delete(self, url, **kwargs):
+            """DELETE 请求"""
+            kwargs.setdefault('timeout', self.timeout)
+            return self._client.delete(url, **kwargs)
+
+        def head(self, url, **kwargs):
+            """HEAD 请求"""
+            kwargs.setdefault('timeout', self.timeout)
+            return self._client.head(url, **kwargs)
+
+        def options(self, url, **kwargs):
+            """OPTIONS 请求"""
+            kwargs.setdefault('timeout', self.timeout)
+            return self._client.options(url, **kwargs)
+
+        def request(self, method, url, **kwargs):
+            """通用请求方法"""
+            kwargs.setdefault('timeout', self.timeout)
+            return self._client.request(method, url, **kwargs)
+
+        def close(self):
+            """关闭会话"""
+            if hasattr(self._client, 'close'):
+                self._client.close()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            self.close()
+
+
+    # 便捷函数 - 已弃用
+    def get(url, **kwargs):
+        """便捷的 GET 请求 - 已弃用，使用 core.http.get_client()"""
+        warnings.warn(
+            "utils.http_client.get() 已弃用，请使用 core.http.get_client().get()",
+            DeprecationWarning,
+            stacklevel=2
         )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        self.session.mount("http://", adapter)
-        self.session.mount("https://", adapter)
-
-        # 设置默认 headers
-        self.session.headers.update({
-            "User-Agent": user_agent,
-            "Accept": "*/*",
-        })
-
-        # 代理配置
-        if proxy:
-            self.session.proxies.update(proxy)
-
-    def get(self, url: str, **kwargs) -> requests.Response:
-        """GET 请求"""
-        kwargs.setdefault('verify', self.verify_ssl)
-        kwargs.setdefault('timeout', self.timeout)
-        return self.session.get(url, **kwargs)
-
-    def post(self, url: str, **kwargs) -> requests.Response:
-        """POST 请求"""
-        kwargs.setdefault('verify', self.verify_ssl)
-        kwargs.setdefault('timeout', self.timeout)
-        return self.session.post(url, **kwargs)
-
-    def put(self, url: str, **kwargs) -> requests.Response:
-        """PUT 请求"""
-        kwargs.setdefault('verify', self.verify_ssl)
-        kwargs.setdefault('timeout', self.timeout)
-        return self.session.put(url, **kwargs)
-
-    def delete(self, url: str, **kwargs) -> requests.Response:
-        """DELETE 请求"""
-        kwargs.setdefault('verify', self.verify_ssl)
-        kwargs.setdefault('timeout', self.timeout)
-        return self.session.delete(url, **kwargs)
-
-    def head(self, url: str, **kwargs) -> requests.Response:
-        """HEAD 请求"""
-        kwargs.setdefault('verify', self.verify_ssl)
-        kwargs.setdefault('timeout', self.timeout)
-        return self.session.head(url, **kwargs)
-
-    def options(self, url: str, **kwargs) -> requests.Response:
-        """OPTIONS 请求"""
-        kwargs.setdefault('verify', self.verify_ssl)
-        kwargs.setdefault('timeout', self.timeout)
-        return self.session.options(url, **kwargs)
-
-    def request(self, method: str, url: str, **kwargs) -> requests.Response:
-        """通用请求方法"""
-        kwargs.setdefault('verify', self.verify_ssl)
-        kwargs.setdefault('timeout', self.timeout)
-        return self.session.request(method, url, **kwargs)
-
-    def close(self):
-        """关闭会话"""
-        self.session.close()
-
-    def __enter__(self):
-        """上下文管理器支持"""
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """上下文管理器支持"""
-        self.close()
-
-
-# 便捷函数
-def get(url: str, **kwargs) -> requests.Response:
-    """便捷的 GET 请求（使用默认安全配置）"""
-    with SecureHTTPClient() as client:
+        client = get_client()
         return client.get(url, **kwargs)
 
 
-def post(url: str, **kwargs) -> requests.Response:
-    """便捷的 POST 请求（使用默认安全配置）"""
-    with SecureHTTPClient() as client:
+    def post(url, **kwargs):
+        """便捷的 POST 请求 - 已弃用，使用 core.http.get_client()"""
+        warnings.warn(
+            "utils.http_client.post() 已弃用，请使用 core.http.get_client().post()",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        client = get_client()
         return client.post(url, **kwargs)
+
+except ImportError:
+    # core.http 不可用时，保留原始实现
+    import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
+
+    logger.warning("core.http 不可用，使用原始 SecureHTTPClient 实现")
+
+    class SecureHTTPClient:
+        """安全的 HTTP 客户端 (回退实现)"""
+
+        def __init__(
+            self,
+            verify_ssl=None,
+            timeout=30,
+            max_retries=3,
+            user_agent="AutoRedTeam/3.0",
+            proxy=None
+        ):
+            self.session = requests.Session()
+            self.timeout = timeout
+
+            if verify_ssl is None:
+                verify_ssl = True
+
+            self.verify_ssl = verify_ssl
+
+            if not verify_ssl:
+                import urllib3
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+            retry_strategy = Retry(
+                total=max_retries,
+                backoff_factor=1,
+                status_forcelist=[429, 500, 502, 503, 504],
+                allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]
+            )
+            adapter = HTTPAdapter(max_retries=retry_strategy)
+            self.session.mount("http://", adapter)
+            self.session.mount("https://", adapter)
+
+            self.session.headers.update({
+                "User-Agent": user_agent,
+                "Accept": "*/*",
+            })
+
+            if proxy:
+                self.session.proxies.update(proxy)
+
+        def get(self, url, **kwargs):
+            kwargs.setdefault('verify', self.verify_ssl)
+            kwargs.setdefault('timeout', self.timeout)
+            return self.session.get(url, **kwargs)
+
+        def post(self, url, **kwargs):
+            kwargs.setdefault('verify', self.verify_ssl)
+            kwargs.setdefault('timeout', self.timeout)
+            return self.session.post(url, **kwargs)
+
+        def put(self, url, **kwargs):
+            kwargs.setdefault('verify', self.verify_ssl)
+            kwargs.setdefault('timeout', self.timeout)
+            return self.session.put(url, **kwargs)
+
+        def delete(self, url, **kwargs):
+            kwargs.setdefault('verify', self.verify_ssl)
+            kwargs.setdefault('timeout', self.timeout)
+            return self.session.delete(url, **kwargs)
+
+        def head(self, url, **kwargs):
+            kwargs.setdefault('verify', self.verify_ssl)
+            kwargs.setdefault('timeout', self.timeout)
+            return self.session.head(url, **kwargs)
+
+        def options(self, url, **kwargs):
+            kwargs.setdefault('verify', self.verify_ssl)
+            kwargs.setdefault('timeout', self.timeout)
+            return self.session.options(url, **kwargs)
+
+        def request(self, method, url, **kwargs):
+            kwargs.setdefault('verify', self.verify_ssl)
+            kwargs.setdefault('timeout', self.timeout)
+            return self.session.request(method, url, **kwargs)
+
+        def close(self):
+            self.session.close()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            self.close()
+
+
+    def get(url, **kwargs):
+        with SecureHTTPClient() as client:
+            return client.get(url, **kwargs)
+
+
+    def post(url, **kwargs):
+        with SecureHTTPClient() as client:
+            return client.post(url, **kwargs)

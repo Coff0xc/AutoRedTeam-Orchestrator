@@ -22,6 +22,7 @@
     # 解析目标
     host, port, protocol = parse_target("https://example.com:443")
 """
+import logging
 
 import socket
 import ipaddress
@@ -72,9 +73,8 @@ def is_port_open(
     finally:
         try:
             sock.close()
-        except Exception:
-            pass
-
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
 def scan_ports(
     host: str,

@@ -15,7 +15,6 @@ import asyncio
 import ipaddress
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
 from enum import Enum
 from typing import (
     Any, Callable, Dict, List, Optional, Tuple, Type, Union,
@@ -23,6 +22,7 @@ from typing import (
 )
 from urllib.parse import urlparse
 
+from core.result import ToolResult
 from .categories import ToolCategory
 
 
@@ -374,83 +374,6 @@ class ToolParameter:
 
 
 @dataclass
-class ToolResult:
-    """工具执行结果
-
-    封装工具执行的返回结果，包括成功/失败状态、数据和元数据。
-
-    Attributes:
-        success: 是否成功
-        data: 返回数据
-        error: 错误信息
-        metadata: 元数据 (执行时间、请求ID等)
-    """
-    success: bool
-    data: Any = None
-    error: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
-    def __post_init__(self):
-        """后处理"""
-        if 'timestamp' not in self.metadata:
-            self.metadata['timestamp'] = datetime.now().isoformat()
-
-    def to_dict(self) -> Dict[str, Any]:
-        """转换为字典
-
-        Returns:
-            结果字典
-        """
-        result = {
-            'success': self.success,
-            'data': self.data,
-            'metadata': self.metadata,
-        }
-        if self.error:
-            result['error'] = self.error
-        return result
-
-    @classmethod
-    def ok(cls, data: Any = None, **metadata) -> 'ToolResult':
-        """创建成功结果
-
-        Args:
-            data: 返回数据
-            **metadata: 额外元数据
-
-        Returns:
-            成功的ToolResult
-        """
-        return cls(success=True, data=data, metadata=metadata)
-
-    @classmethod
-    def fail(cls, error: str, data: Any = None, **metadata) -> 'ToolResult':
-        """创建失败结果
-
-        Args:
-            error: 错误信息
-            data: 附加数据 (如部分结果)
-            **metadata: 额外元数据
-
-        Returns:
-            失败的ToolResult
-        """
-        return cls(success=False, error=error, data=data, metadata=metadata)
-
-    def with_metadata(self, **kwargs) -> 'ToolResult':
-        """添加元数据
-
-        Args:
-            **kwargs: 要添加的元数据
-
-        Returns:
-            更新后的ToolResult
-        """
-        self.metadata.update(kwargs)
-        return self
-
-
-@dataclass
 class ToolMetadata:
     """工具元数据
 
@@ -749,10 +672,20 @@ class FunctionTool(BaseTool):
             elif isinstance(result, dict):
                 # 检查是否已是结果格式
                 if 'success' in result:
-                    return ToolResult(
-                        success=result.get('success', True),
-                        data=result.get('data', result),
-                        error=result.get('error'),
+                    success = result.get('success', True)
+                    data = result.get('data', result)
+                    error = result.get('error')
+                    error_type = result.get('error_type')
+                    metadata = result.get('metadata')
+                    if not isinstance(metadata, dict):
+                        metadata = {}
+                    if success:
+                        return ToolResult.ok(data=data, **metadata)
+                    return ToolResult.fail(
+                        error=error or "执行失败",
+                        error_type=error_type,
+                        data=data,
+                        **metadata
                     )
                 return ToolResult.ok(data=result)
             else:
@@ -789,10 +722,20 @@ class FunctionTool(BaseTool):
                 return result
             elif isinstance(result, dict):
                 if 'success' in result:
-                    return ToolResult(
-                        success=result.get('success', True),
-                        data=result.get('data', result),
-                        error=result.get('error'),
+                    success = result.get('success', True)
+                    data = result.get('data', result)
+                    error = result.get('error')
+                    error_type = result.get('error_type')
+                    metadata = result.get('metadata')
+                    if not isinstance(metadata, dict):
+                        metadata = {}
+                    if success:
+                        return ToolResult.ok(data=data, **metadata)
+                    return ToolResult.fail(
+                        error=error or "执行失败",
+                        error_type=error_type,
+                        data=data,
+                        **metadata
                     )
                 return ToolResult.ok(data=result)
             else:

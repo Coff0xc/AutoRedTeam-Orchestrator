@@ -476,8 +476,9 @@ class VulnerabilityPipeline:
                                             "type": "Information Exposure"
                                         })
                                         break
-                        except Exception:
-                            pass
+                        except Exception as exc:
+                            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
                         continue
 
                     # Basic Auth
@@ -503,8 +504,9 @@ class VulnerabilityPipeline:
                                             results["weak_credentials"].append(cred)
                                             self.context.weak_credentials.append(cred)
                                             break
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
                     else:
                         # Form-based Auth
                         user_field = cms_config.get("user_field", "username")
@@ -535,8 +537,8 @@ class VulnerabilityPipeline:
                                         results["weak_credentials"].append(cred)
                                         self.context.weak_credentials.append(cred)
                                         break
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 记录登录页面
         self.context.login_pages = [c["url"] for c in results["weak_credentials"]]
@@ -629,8 +631,8 @@ class VulnerabilityPipeline:
                             results["vulnerabilities"].append(vuln)
                             self.context.vulnerabilities.append(vuln)
 
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 结束性能监控
         if self.manager and exec_id:

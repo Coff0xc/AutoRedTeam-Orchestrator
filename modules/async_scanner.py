@@ -308,8 +308,9 @@ class AsyncDirScanner(AsyncScanner):
                     "status": status,
                     "length": length
                 }
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         return None
 
     async def scan(self, base_url: str, paths: Optional[List[str]] = None) -> Dict[str, Any]:

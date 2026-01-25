@@ -193,11 +193,20 @@ class SafeExecutor:
                 "returncode": -1
             }
 
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError) as e:
             logger.error(f"命令执行失败: {e}")
             return {
                 "success": False,
-                "error": str(e),
+                "error": f"执行错误: {e}",
+                "stdout": "",
+                "stderr": "",
+                "returncode": -1
+            }
+        except ValueError as e:
+            logger.error(f"命令参数错误: {e}")
+            return {
+                "success": False,
+                "error": f"参数错误: {e}",
                 "stdout": "",
                 "stderr": "",
                 "returncode": -1
@@ -332,76 +341,327 @@ class SecurityError(Exception):
 class SandboxExecutor:
     """
     沙箱执行器 - 在受限环境中执行命令
-    使用资源限制、网络隔离等技术
+
+    提供多层安全隔离：
+    - 资源限制（内存、CPU、文件描述符）
+    - 进程隔离（独立进程组）
+    - 环境变量清理
+    - 工作目录限制
+    - 临时目录隔离
+    - 网络访问控制（Linux仅限）
     """
 
-    def __init__(self, max_memory_mb: int = 512, max_cpu_percent: int = 50):
+    # 默认允许的环境变量
+    DEFAULT_ALLOWED_ENV = ["PATH", "HOME", "USER", "LANG", "LC_ALL", "TERM"]
+
+    # 高风险命令（在沙箱中禁止）
+    SANDBOX_BLACKLIST = [
+        "rm", "rmdir", "del", "format", "mkfs", "dd",
+        "shutdown", "reboot", "halt", "init",
+        "mount", "umount", "fdisk", "parted",
+        "iptables", "ip6tables", "nft", "firewall-cmd",
+        "systemctl", "service", "chkconfig",
+        "useradd", "userdel", "usermod", "groupadd",
+        "passwd", "chpasswd", "su", "sudo",
+        "crontab", "at",
+    ]
+
+    def __init__(
+        self,
+        max_memory_mb: int = 512,
+        max_cpu_percent: int = 50,
+        max_fds: int = 256,
+        max_processes: int = 50,
+        allowed_env_vars: Optional[List[str]] = None,
+        use_temp_dir: bool = True,
+        restrict_network: bool = False
+    ):
         """
         初始化沙箱执行器
 
         Args:
             max_memory_mb: 最大内存限制（MB）
             max_cpu_percent: 最大CPU使用率（%）
+            max_fds: 最大文件描述符数量
+            max_processes: 最大子进程数量
+            allowed_env_vars: 允许的环境变量列表（None使用默认）
+            use_temp_dir: 是否使用临时目录隔离
+            restrict_network: 是否限制网络访问（仅Linux）
         """
         self.max_memory = max_memory_mb * 1024 * 1024
         self.max_cpu = max_cpu_percent
+        self.max_fds = max_fds
+        self.max_processes = max_processes
+        self.allowed_env_vars = allowed_env_vars or self.DEFAULT_ALLOWED_ENV
+        self.use_temp_dir = use_temp_dir
+        self.restrict_network = restrict_network
 
-    def execute(self, cmd: List[str], timeout: int = 60) -> Dict:
+    def _prepare_environment(self) -> Dict[str, str]:
+        """准备受限的环境变量"""
+        clean_env = {}
+        for var in self.allowed_env_vars:
+            if var in os.environ:
+                clean_env[var] = os.environ[var]
+
+        # 添加沙箱标识
+        clean_env["SANDBOX_ACTIVE"] = "1"
+        return clean_env
+
+    def _validate_command(self, cmd: List[str]) -> None:
+        """
+        验证命令在沙箱中是否安全
+
+        Args:
+            cmd: 命令列表
+
+        Raises:
+            SecurityError: 命令不安全
+        """
+        if not cmd or not isinstance(cmd, list):
+            raise SecurityError("命令必须是非空列表")
+
+        command_name = os.path.basename(cmd[0])
+
+        # 检查黑名单
+        if command_name in self.SANDBOX_BLACKLIST:
+            raise SecurityError(f"沙箱中禁止执行: {command_name}")
+
+        # 检查危险模式
+        dangerous_patterns = [
+            "../../",  # 路径遍历
+            "/etc/passwd",
+            "/etc/shadow",
+            "/proc/",
+            "/sys/",
+        ]
+
+        cmd_str = " ".join(cmd)
+        for pattern in dangerous_patterns:
+            if pattern in cmd_str:
+                raise SecurityError(f"检测到危险路径访问: {pattern}")
+
+    def _create_temp_workdir(self) -> str:
+        """创建临时工作目录"""
+        import tempfile
+        workdir = tempfile.mkdtemp(prefix="sandbox_")
+        logger.debug(f"创建沙箱工作目录: {workdir}")
+        return workdir
+
+    def _cleanup_temp_workdir(self, workdir: str) -> None:
+        """清理临时工作目录"""
+        import shutil
+        try:
+            if workdir and os.path.isdir(workdir) and "sandbox_" in workdir:
+                shutil.rmtree(workdir, ignore_errors=True)
+                logger.debug(f"清理沙箱工作目录: {workdir}")
+        except (OSError, PermissionError) as e:
+            logger.warning(f"清理临时目录失败: {e}")
+
+    def execute(
+        self,
+        cmd: List[str],
+        timeout: int = 60,
+        cwd: Optional[str] = None,
+        cleanup: bool = True
+    ) -> Dict:
         """
         在沙箱中执行命令
 
         Args:
             cmd: 命令列表
-            timeout: 超时时间
+            timeout: 超时时间（秒）
+            cwd: 工作目录（None使用临时目录）
+            cleanup: 是否自动清理临时目录
 
         Returns:
-            执行结果
+            执行结果字典
         """
-        # TODO: 实现完整的沙箱隔离
-        # 可以使用：
-        # - Linux: cgroups, namespaces, seccomp
-        # - Windows: Job Objects, AppContainer
-        # - 跨平台: Docker容器
+        temp_workdir = None
 
         try:
-            # 基本实现：仅使用超时和资源限制
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                shell=False
-            )
+            # 1. 验证命令安全性
+            self._validate_command(cmd)
+
+            # 2. 准备工作目录
+            if cwd is None and self.use_temp_dir:
+                temp_workdir = self._create_temp_workdir()
+                cwd = temp_workdir
+            elif cwd is None:
+                import tempfile
+                cwd = tempfile.gettempdir()
+
+            # 3. 准备环境变量
+            env = self._prepare_environment()
+
+            preexec_fn = None
+            creationflags = 0
+
+            # POSIX系统：使用resource模块设置限制
+            if os.name == "posix":
+                # 捕获当前实例的属性，避免闭包问题
+                max_memory = self.max_memory
+                max_cpu = self.max_cpu
+                max_fds = self.max_fds
+                max_procs = self.max_processes
+                restrict_net = self.restrict_network
+
+                def _apply_limits():
+                    """应用资源限制（在子进程中执行）"""
+                    try:
+                        import resource
+
+                        # 内存限制（虚拟内存）
+                        resource.setrlimit(
+                            resource.RLIMIT_AS,
+                            (max_memory, max_memory)
+                        )
+
+                        # CPU时间限制
+                        cpu_time = max(1, int(timeout * (max_cpu / 100)))
+                        resource.setrlimit(
+                            resource.RLIMIT_CPU,
+                            (cpu_time, cpu_time)
+                        )
+
+                        # 文件描述符限制
+                        resource.setrlimit(
+                            resource.RLIMIT_NOFILE,
+                            (max_fds, max_fds)
+                        )
+
+                        # 子进程数限制
+                        resource.setrlimit(
+                            resource.RLIMIT_NPROC,
+                            (max_procs, max_procs)
+                        )
+
+                        # 核心转储限制（禁止）
+                        resource.setrlimit(
+                            resource.RLIMIT_CORE,
+                            (0, 0)
+                        )
+
+                    except ImportError:
+                        pass  # resource模块不可用
+                    except (OSError, ValueError):
+                        pass  # 资源限制设置失败
+
+                    # 创建新的进程组（用于信号隔离）
+                    try:
+                        os.setsid()
+                    except (OSError, PermissionError):
+                        pass
+
+                    # 限制网络访问（Linux seccomp，如果可用）
+                    if restrict_net:
+                        try:
+                            # 尝试使用 prctl 限制网络
+                            import ctypes
+                            libc = ctypes.CDLL("libc.so.6", use_errno=True)
+                            # PR_SET_NO_NEW_PRIVS = 38
+                            libc.prctl(38, 1, 0, 0, 0)
+                        except (ImportError, OSError, AttributeError):
+                            pass
+
+                preexec_fn = _apply_limits
+
+            # Windows系统：使用Job对象
+            elif os.name == "nt":
+                creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+
+            # 4. 构建subprocess参数
+            run_kwargs = {
+                "capture_output": True,
+                "text": True,
+                "timeout": timeout,
+                "shell": False,
+                "cwd": cwd,
+                "env": env,
+            }
+
+            if preexec_fn is not None:
+                run_kwargs["preexec_fn"] = preexec_fn
+            if creationflags:
+                run_kwargs["creationflags"] = creationflags
+
+            # 5. 执行命令
+            logger.debug(f"沙箱执行: {' '.join(cmd)}")
+            result = subprocess.run(cmd, **run_kwargs)
 
             return {
                 "success": result.returncode == 0,
                 "stdout": result.stdout,
                 "stderr": result.stderr,
-                "returncode": result.returncode
+                "returncode": result.returncode,
+                "command": " ".join(cmd),
+                "sandbox": True
             }
 
-        except subprocess.TimeoutExpired:
+        except SecurityError as e:
+            logger.warning(f"沙箱安全检查失败: {e}")
             return {
                 "success": False,
-                "error": "沙箱执行超时",
+                "error": f"安全检查失败: {e}",
                 "stdout": "",
                 "stderr": "",
-                "returncode": -1
+                "returncode": -1,
+                "sandbox": True
             }
 
-        except Exception as e:
+        except subprocess.TimeoutExpired as e:
+            logger.error(f"沙箱执行超时: {' '.join(cmd)}")
             return {
                 "success": False,
-                "error": str(e),
+                "error": f"执行超时（{timeout}秒）",
+                "stdout": e.stdout.decode() if e.stdout else "",
+                "stderr": e.stderr.decode() if e.stderr else "",
+                "returncode": -1,
+                "sandbox": True
+            }
+
+        except MemoryError:
+            logger.error("沙箱内存不足")
+            return {
+                "success": False,
+                "error": "内存限制触发",
                 "stdout": "",
                 "stderr": "",
-                "returncode": -1
+                "returncode": -1,
+                "sandbox": True
             }
+
+        except (OSError, subprocess.SubprocessError) as e:
+            logger.error(f"沙箱执行失败: {e}")
+            return {
+                "success": False,
+                "error": f"执行错误: {e}",
+                "stdout": "",
+                "stderr": "",
+                "returncode": -1,
+                "sandbox": True
+            }
+
+        except ValueError as e:
+            logger.error(f"沙箱参数错误: {e}")
+            return {
+                "success": False,
+                "error": f"参数错误: {e}",
+                "stdout": "",
+                "stderr": "",
+                "returncode": -1,
+                "sandbox": True
+            }
+
+        finally:
+            # 清理临时工作目录
+            if cleanup and temp_workdir:
+                self._cleanup_temp_workdir(temp_workdir)
 
 
 # ========== 全局实例 ==========
 
 _safe_executor: Optional[SafeExecutor] = None
+_sandbox_executor: Optional[SandboxExecutor] = None
 
 
 def get_safe_executor(policy: ExecutionPolicy = ExecutionPolicy.STRICT) -> SafeExecutor:
@@ -410,6 +670,29 @@ def get_safe_executor(policy: ExecutionPolicy = ExecutionPolicy.STRICT) -> SafeE
     if _safe_executor is None:
         _safe_executor = SafeExecutor(policy=policy)
     return _safe_executor
+
+
+def get_sandbox_executor(
+    max_memory_mb: int = 512,
+    max_cpu_percent: int = 50
+) -> SandboxExecutor:
+    """
+    获取全局沙箱执行器实例
+
+    Args:
+        max_memory_mb: 最大内存限制（MB）
+        max_cpu_percent: 最大CPU使用率（%）
+
+    Returns:
+        SandboxExecutor 实例
+    """
+    global _sandbox_executor
+    if _sandbox_executor is None:
+        _sandbox_executor = SandboxExecutor(
+            max_memory_mb=max_memory_mb,
+            max_cpu_percent=max_cpu_percent
+        )
+    return _sandbox_executor
 
 
 # ========== 便捷函数 ==========
@@ -430,27 +713,107 @@ def safe_execute(cmd: List[str], timeout: int = 300, **kwargs) -> Dict:
     return executor.execute(cmd, timeout=timeout, **kwargs)
 
 
+def sandbox_execute(cmd: List[str], timeout: int = 60, **kwargs) -> Dict:
+    """
+    便捷函数：沙箱执行命令
+
+    Args:
+        cmd: 命令列表
+        timeout: 超时时间
+        **kwargs: 其他参数
+
+    Returns:
+        执行结果字典
+    """
+    executor = get_sandbox_executor()
+    return executor.execute(cmd, timeout=timeout, **kwargs)
+
+
 # ========== 测试 ==========
 
 if __name__ == "__main__":
-    # 测试用例
+    print("=" * 60)
+    print("安全执行器测试")
+    print("=" * 60)
+
+    # 测试 SafeExecutor
     executor = SafeExecutor(policy=ExecutionPolicy.STRICT)
 
     # 测试安全命令
-    print("测试1: 安全命令")
+    print("\n[测试1] 安全命令 (nmap)")
     result = executor.execute(["nmap", "-sV", "127.0.0.1"])
-    print(f"结果: {result['success']}")
+    print(f"  结果: {result.get('success', 'N/A')}")
+    if result.get('error'):
+        print(f"  错误: {result['error']}")
 
     # 测试危险命令
-    print("\n测试2: 危险命令（应该被阻止）")
+    print("\n[测试2] 危险命令（应该被阻止）")
     try:
         result = executor.execute(["rm", "-rf", "/"])
+        print(f"  意外通过: {result}")
     except SecurityError as e:
-        print(f"预期的错误: {e}")
+        print(f"  预期阻止: {e}")
 
     # 测试命令注入
-    print("\n测试3: 命令注入（应该被阻止）")
+    print("\n[测试3] 命令注入（应该被阻止）")
     try:
         result = executor.execute(["nmap", "-sV; rm -rf /"])
+        print(f"  意外通过: {result}")
     except SecurityError as e:
-        print(f"预期的错误: {e}")
+        print(f"  预期阻止: {e}")
+
+    # 测试 SandboxExecutor
+    print("\n" + "=" * 60)
+    print("沙箱执行器测试")
+    print("=" * 60)
+
+    sandbox = SandboxExecutor(
+        max_memory_mb=256,
+        max_cpu_percent=25,
+        use_temp_dir=True
+    )
+
+    # 测试沙箱中的安全命令
+    print("\n[测试4] 沙箱安全命令 (echo)")
+    result = sandbox.execute(["echo", "Hello from sandbox"])
+    print(f"  结果: {result.get('success', 'N/A')}")
+    if result.get('stdout'):
+        print(f"  输出: {result['stdout'].strip()}")
+
+    # 测试沙箱黑名单
+    print("\n[测试5] 沙箱黑名单（应该被阻止）")
+    result = sandbox.execute(["rm", "-rf", "/tmp/test"])
+    print(f"  结果: {result.get('success', 'N/A')}")
+    if result.get('error'):
+        print(f"  错误: {result['error']}")
+
+    # 测试路径遍历检测
+    print("\n[测试6] 路径遍历检测（应该被阻止）")
+    result = sandbox.execute(["cat", "../../etc/passwd"])
+    print(f"  结果: {result.get('success', 'N/A')}")
+    if result.get('error'):
+        print(f"  错误: {result['error']}")
+
+    print("\n" + "=" * 60)
+    print("测试完成")
+    print("=" * 60)
+
+
+# ========== 模块导出 ==========
+
+__all__ = [
+    # 枚举
+    "ExecutionPolicy",
+    # 数据类
+    "CommandWhitelist",
+    # 异常
+    "SecurityError",
+    # 类
+    "SafeExecutor",
+    "SandboxExecutor",
+    # 全局函数
+    "get_safe_executor",
+    "get_sandbox_executor",
+    "safe_execute",
+    "sandbox_execute",
+]

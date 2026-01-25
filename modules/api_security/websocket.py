@@ -523,8 +523,8 @@ class WebSocketTester(BaseAPITester):
             if sock:
                 try:
                     sock.close()
-                except:
-                    pass
+                except OSError as e:
+                    logger.debug(f'关闭socket失败: {e}')
 
         return result
 

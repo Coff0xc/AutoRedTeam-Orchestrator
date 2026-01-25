@@ -300,8 +300,9 @@ class WMIConnection:
         if self._dcom:
             try:
                 self._dcom.disconnect()
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         self._connected = False
 
 

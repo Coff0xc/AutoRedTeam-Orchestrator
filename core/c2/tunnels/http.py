@@ -271,8 +271,9 @@ class HTTPTunnel(BaseTunnel):
             try:
                 if hasattr(self._client, 'close'):
                     self._client.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             self._client = None
 
     def _build_headers(self) -> Dict[str, str]:
@@ -380,8 +381,8 @@ class HTTPTunnel(BaseTunnel):
                 if callable(result):
                     return result()
                 return result
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return {}
 

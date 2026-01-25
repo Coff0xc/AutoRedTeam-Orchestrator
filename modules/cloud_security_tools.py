@@ -7,11 +7,14 @@
 import logging
 from typing import Optional
 
+from utils.mcp_tooling import patch_mcp_tool
+
 logger = logging.getLogger(__name__)
 
 
 def register_cloud_security_tools(mcp):
     """注册云安全工具到MCP Server"""
+    patch_mcp_tool(mcp)
 
     registered_tools = []
 

@@ -474,8 +474,8 @@ class SSHConnection:
         finally:
             try:
                 client_sock.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     def _forward_data(self, sock: socket.socket, channel):
         """双向数据转发"""
@@ -500,20 +500,22 @@ class SSHConnection:
         finally:
             try:
                 channel.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             try:
                 sock.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     def close(self):
         """关闭连接"""
         if self._client:
             try:
                 self._client.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         self._connected = False
 
 

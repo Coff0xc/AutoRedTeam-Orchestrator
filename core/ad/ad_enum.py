@@ -12,6 +12,7 @@ ATT&CK Technique: T1087 - Account Discovery
 
 注意: 仅用于授权的渗透测试和安全研究
 """
+import logging
 
 import socket
 import struct
@@ -437,8 +438,9 @@ class SimpleLDAPClient:
                 # 发送Unbind
                 message = bytes([0x30, 0x05, 0x02, 0x01, self.message_id, 0x42, 0x00])
                 self.sock.send(message)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
             finally:
                 self.sock.close()
                 self.sock = None

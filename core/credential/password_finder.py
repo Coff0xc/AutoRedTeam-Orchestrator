@@ -12,6 +12,7 @@ ATT&CK Technique: T1552 - Unsecured Credentials
 
 注意: 仅用于授权的渗透测试和安全研究
 """
+import logging
 
 import os
 import re
@@ -221,8 +222,8 @@ class PasswordFinder:
                     chunk = f.read(512)
                     if b'\x00' in chunk:  # 包含null字节,可能是二进制
                         return True
-        except Exception:
-            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return False
 

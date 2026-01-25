@@ -2,6 +2,7 @@
 """
 增强型扫描器 - 集成资产探测、组件识别、智能Payload、漏洞验证
 """
+import logging
 
 import subprocess
 import json
@@ -96,10 +97,12 @@ class EnhancedScanner:
                             for t in data.get("tech", []):
                                 if t not in assets["technologies"]:
                                     assets["technologies"].append(t)
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+                        except Exception as exc:
+                            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
+            except Exception as exc:
+                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         print(f"    ✓ 发现 {len(assets['urls'])} 个活跃URL")
         
         # 4. 端口扫描
@@ -205,8 +208,9 @@ class EnhancedScanner:
                             "template": v.get("template-id", ""),
                             "verified": True
                         })
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
         print(f"    ✓ Nuclei发现 {len(vulns)} 个漏洞")
         
         # 2. 组件CVE检测
