@@ -133,7 +133,7 @@ class SecureFileExfiltrator(ABC):
             if original_abs != resolved_path:
                 # 路径被规范化，可能包含 .. 或符号链接
                 return True
-        except Exception:
+        except (OSError, ValueError):
             return True
 
         return False

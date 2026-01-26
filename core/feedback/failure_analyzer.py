@@ -271,7 +271,7 @@ class FailureAnalyzer:
             body = getattr(response, 'text', '') or ''
             if callable(body):
                 body = body()
-        except Exception:
+        except (AttributeError, TypeError):
             pass
 
         # 合并用于搜索的文本

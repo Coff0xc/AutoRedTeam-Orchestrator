@@ -102,7 +102,7 @@ def auth_bypass_detect(url: str, username_param: str = "username", password_para
                         "redirect_to": location,
                         "url": url
                     })
-        except Exception:
+        except (requests.RequestException, OSError):
             logger.warning("Suppressed exception", exc_info=True)
 
     # 测试未授权访问
@@ -119,7 +119,7 @@ def auth_bypass_detect(url: str, username_param: str = "username", password_para
                         "path": path,
                         "url": test_url
                     })
-        except Exception:
+        except (requests.RequestException, OSError):
             logger.warning("Suppressed exception", exc_info=True)
 
     return {
@@ -166,14 +166,14 @@ def weak_password_detect(url: str, username_param: str = "username", password_pa
     # 获取基线响应
     try:
         baseline_resp = requests.post(
-            url, 
+            url,
             data={username_param: "nonexistent_user_xyz", password_param: "random_password_xyz"},
-            timeout=10, 
+            timeout=10,
             verify=get_verify_ssl()
         )
         baseline_length = len(baseline_resp.text)
         baseline_status = baseline_resp.status_code
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
         baseline_length = 0
         baseline_status = 200
@@ -206,7 +206,7 @@ def weak_password_detect(url: str, username_param: str = "username", password_pa
                         "url": url
                     })
                     break  # 找到一个用户的弱密码就跳过该用户
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
     return {
@@ -272,7 +272,7 @@ def jwt_vuln_detect(token: str = None, url: str = None) -> dict:
                                 "detail": f"JWT使用弱密钥: '{secret}'"
                             })
                             break
-                    except Exception:
+                    except (ValueError, KeyError, TypeError):
                         logger.warning("Suppressed exception", exc_info=True)
 
             # 检查payload中的敏感信息

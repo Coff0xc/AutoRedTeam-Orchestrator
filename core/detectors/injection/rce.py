@@ -276,7 +276,7 @@ class RCEDetector(BaseDetector):
                         }
                     )
 
-            except Exception as e:
+            except (ConnectionError, TimeoutError, OSError) as e:
                 logger.debug(f"回显型命令注入检测失败: {e}")
 
         return None
@@ -311,7 +311,7 @@ class RCEDetector(BaseDetector):
             else:
                 self.http_client.post(url, data=params, headers=headers)
             baseline_time = time.time() - start
-        except Exception:
+        except (ConnectionError, TimeoutError, OSError):
             baseline_time = 1.0
 
         # 根据目标系统选择 payload
@@ -373,7 +373,7 @@ class RCEDetector(BaseDetector):
                             }
                         )
 
-            except Exception as e:
+            except (ConnectionError, TimeoutError, OSError) as e:
                 logger.debug(f"时间盲注检测失败: {e}")
 
         return None

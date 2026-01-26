@@ -7,6 +7,7 @@
 import os
 import json
 import base64
+import binascii
 import secrets
 import logging
 from typing import Any, Dict, Optional
@@ -57,7 +58,7 @@ class SecretsManager:
         key_file = Path(self.storage_path) / ".master_key"
         if key_file.exists():
             try:
-                with open(key_file, 'r') as f:
+                with open(key_file, 'r', encoding='utf-8') as f:
                     key = f.read().strip()
                 logger.info("从密钥文件加载主密钥")
                 return key
@@ -70,7 +71,7 @@ class SecretsManager:
 
         # 保存到文件
         try:
-            with open(key_file, 'w') as f:
+            with open(key_file, 'w', encoding='utf-8') as f:
                 f.write(new_key)
             # 设置文件权限（仅所有者可读写）
             if os.name != 'nt':  # Unix-like系统
@@ -86,17 +87,58 @@ class SecretsManager:
         try:
             # 如果是Fernet格式的密钥，直接使用
             return Fernet(master_key.encode())
-        except Exception:
-            # 否则使用PBKDF2派生密钥
+        except (ValueError, binascii.Error, TypeError):
+            # 否则使用PBKDF2派生密钥，使用随机盐值
+            salt = self._get_or_create_salt()
             kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
-                salt=b'redteam_salt_v1',  # 生产环境应使用随机salt
+                salt=salt,
                 iterations=100000,
                 backend=default_backend()
             )
             key = base64.urlsafe_b64encode(kdf.derive(master_key.encode()))
             return Fernet(key)
+
+    def _get_or_create_salt(self) -> bytes:
+        """
+        获取或创建KDF盐值
+
+        盐值存储在文件中，首次运行时随机生成
+        """
+        salt_file = Path(self.storage_path) / ".kdf_salt"
+
+        if salt_file.exists():
+            try:
+                with open(salt_file, 'rb') as f:
+                    salt = f.read()
+                if len(salt) == 16:  # 有效的盐值
+                    return salt
+            except Exception as e:
+                logger.warning(f"读取盐值文件失败: {e}")
+
+        # 生成新的随机盐值
+        salt = secrets.token_bytes(16)
+
+        # 保存到文件
+        try:
+            with open(salt_file, 'wb') as f:
+                f.write(salt)
+            # 设置文件权限（仅所有者可读写）
+            if os.name != 'nt':
+                os.chmod(salt_file, 0o600)
+            else:
+                # Windows: 尝试设置权限
+                try:
+                    import stat
+                    os.chmod(salt_file, stat.S_IRUSR | stat.S_IWUSR)
+                except OSError:
+                    pass
+            logger.info(f"KDF盐值已保存到: {salt_file}")
+        except Exception as e:
+            logger.error(f"保存盐值文件失败: {e}")
+
+        return salt
 
     def set_secret(self, key: str, value: str):
         """
@@ -160,7 +202,7 @@ class SecretsManager:
 
         # 更新密钥文件
         key_file = Path(self.storage_path) / ".master_key"
-        with open(key_file, 'w') as f:
+        with open(key_file, 'w', encoding='utf-8') as f:
             f.write(new_master_key)
 
         logger.info("主密钥已轮换")

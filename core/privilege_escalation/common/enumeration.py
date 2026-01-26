@@ -121,7 +121,7 @@ class PrivilegeEnumerator:
             try:
                 import getpass
                 info.current_user = getpass.getuser()
-            except Exception:
+            except (ImportError, KeyError, OSError):
                 info.current_user = os.environ.get('USER', os.environ.get('USERNAME', 'unknown'))
 
             # 平台特定信息

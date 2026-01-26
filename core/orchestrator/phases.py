@@ -485,7 +485,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
                 if "application/json" in content_type or body_str.strip().startswith(("{", "[")):
                     try:
                         json_data = json.loads(body_str)
-                    except Exception:
+                    except (json.JSONDecodeError, ValueError):
                         data = body_str
                 elif "application/x-www-form-urlencoded" in content_type or "=" in body_str:
                     parsed = parse_qs(body_str, keep_blank_values=True)
@@ -1001,7 +1001,7 @@ class PrivilegeEscPhaseExecutor(BasePhaseExecutor):
             for name in method_names:
                 try:
                     methods.append(EscalationMethod(name))
-                except Exception:
+                except ValueError:
                     self.logger.warning(f"未知提权方法: {name}")
 
             escalation_config = EscalationConfig(

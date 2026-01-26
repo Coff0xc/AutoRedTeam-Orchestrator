@@ -81,7 +81,7 @@ def xxe_detect(url: str, param: str = None, method: str = "POST") -> dict:
                 })
                 break
 
-        except Exception:
+        except (requests.RequestException, OSError):
             logger.warning("Suppressed exception", exc_info=True)
 
     return {
@@ -170,7 +170,7 @@ def deserialize_detect(url: str, param: str = None, method: str = "POST") -> dic
                     "detail": "Cookie可能包含PHP序列化数据"
                 })
 
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
 
     # 2. PHP反序列化测试
@@ -199,7 +199,7 @@ def deserialize_detect(url: str, param: str = None, method: str = "POST") -> dic
                     })
                     break
 
-        except Exception:
+        except (requests.RequestException, OSError):
             logger.warning("Suppressed exception", exc_info=True)
 
     # 3. Java反序列化测试
@@ -228,7 +228,7 @@ def deserialize_detect(url: str, param: str = None, method: str = "POST") -> dic
                     })
                     break
 
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
 
     return {

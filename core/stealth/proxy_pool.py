@@ -217,7 +217,7 @@ class ProxyValidator:
 
             return ProxyAnonymity.ELITE
 
-        except Exception:
+        except (ConnectionError, TimeoutError, OSError):
             return ProxyAnonymity.ANONYMOUS
 
 

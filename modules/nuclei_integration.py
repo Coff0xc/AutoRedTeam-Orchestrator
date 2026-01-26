@@ -286,7 +286,7 @@ class NucleiScanner:
         """扫描多个目标"""
         # 写入目标文件
         targets_file = os.path.join(self.output_dir, "targets.txt")
-        with open(targets_file, 'w') as f:
+        with open(targets_file, 'w', encoding='utf-8') as f:
             f.write('\n'.join(targets))
         
         # 构建命令

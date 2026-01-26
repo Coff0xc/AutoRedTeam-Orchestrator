@@ -911,7 +911,7 @@ class SSRFDetector(BaseDetector):
             else:
                 self.http_client.post(url, data=params, headers=headers)
             baseline_time = time.time() - baseline_start
-        except Exception:
+        except (ConnectionError, TimeoutError, OSError):
             baseline_time = 0
 
         for payload, expected_delay in blind_payloads:

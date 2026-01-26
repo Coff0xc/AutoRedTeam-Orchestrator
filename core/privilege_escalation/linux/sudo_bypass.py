@@ -390,7 +390,7 @@ class SudoBypass:
 
             return min_v <= v <= max_v
 
-        except Exception:
+        except ValueError:
             return False
 
 

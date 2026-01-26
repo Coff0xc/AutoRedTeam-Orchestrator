@@ -180,7 +180,7 @@ class LDAPiDetector(BaseDetector):
                 return self.http_client.get(url, params=params, headers=headers)
             else:
                 return self.http_client.post(url, data=params, headers=headers)
-        except Exception:
+        except (ConnectionError, TimeoutError, OSError):
             return None
 
     def _check_error_response(self, response_text: str) -> Optional[str]:

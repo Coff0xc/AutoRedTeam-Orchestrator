@@ -2,10 +2,20 @@
 自动化渗透编排工具处理器
 包含: auto_pentest, pentest_resume, pentest_status, pentest_phase,
       exploit_vulnerability, exploit_by_cve, get_attack_paths
+
+授权级别:
+- CRITICAL: auto_pentest, pentest_resume, pentest_phase, exploit_*, verify_and_exploit
+- DANGEROUS: pentest_status, get_attack_paths, analyze_exploit_failure
 """
 
 from typing import Any, Dict, List
 from .tooling import tool
+
+# 授权中间件
+from core.security import (
+    require_critical_auth,
+    require_dangerous_auth,
+)
 
 
 def register_orchestration_tools(mcp, counter, logger):
@@ -18,6 +28,7 @@ def register_orchestration_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
+    @require_critical_auth
     async def auto_pentest(
         target: str,
         quick_mode: bool = False,
@@ -68,6 +79,7 @@ def register_orchestration_tools(mcp, counter, logger):
             return {'success': False, 'error': str(e), 'target': target}
 
     @tool(mcp)
+    @require_critical_auth
     async def pentest_resume(session_id: str) -> Dict[str, Any]:
         """恢复渗透测试 - 从检查点恢复之前中断的渗透测试
 
@@ -99,6 +111,7 @@ def register_orchestration_tools(mcp, counter, logger):
             return {'success': False, 'error': str(e), 'session_id': session_id}
 
     @tool(mcp)
+    @require_dangerous_auth
     async def pentest_status(session_id: str) -> Dict[str, Any]:
         """查询渗透测试状态 - 获取渗透测试会话的当前状态
 
@@ -133,6 +146,7 @@ def register_orchestration_tools(mcp, counter, logger):
             return {'success': False, 'error': str(e), 'session_id': session_id}
 
     @tool(mcp)
+    @require_critical_auth
     async def pentest_phase(
         target: str,
         phase: str,
@@ -186,6 +200,7 @@ def register_orchestration_tools(mcp, counter, logger):
             return {'success': False, 'error': str(e), 'target': target, 'phase': phase}
 
     @tool(mcp)
+    @require_critical_auth
     async def exploit_vulnerability(
         detection_result: Dict[str, Any],
         targets: Dict[str, Any] = None,
@@ -302,6 +317,7 @@ def register_orchestration_tools(mcp, counter, logger):
             return {'success': False, 'error': str(e)}
 
     @tool(mcp)
+    @require_critical_auth
     async def exploit_by_cve(
         target: str,
         cve_id: str,
@@ -342,6 +358,7 @@ def register_orchestration_tools(mcp, counter, logger):
             return {'success': False, 'error': str(e), 'target': target, 'cve_id': cve_id}
 
     @tool(mcp)
+    @require_dangerous_auth
     async def get_attack_paths(
         target: str,
         session_id: str = None,
@@ -380,6 +397,7 @@ def register_orchestration_tools(mcp, counter, logger):
             return {'success': False, 'error': str(e), 'target': target}
 
     @tool(mcp)
+    @require_critical_auth
     async def exploit_orchestrate(
         detections: List[Dict[str, Any]],
         top_n: int = 3,
@@ -442,6 +460,7 @@ def register_orchestration_tools(mcp, counter, logger):
             return {'success': False, 'error': str(e)}
 
     @tool(mcp)
+    @require_critical_auth
     async def exploit_with_retry(
         detection_result: Dict[str, Any],
         max_retries: int = 3,
@@ -488,6 +507,7 @@ def register_orchestration_tools(mcp, counter, logger):
             return {'success': False, 'error': str(e)}
 
     @tool(mcp)
+    @require_critical_auth
     async def verify_and_exploit(
         detection_result: Dict[str, Any],
         verification_method: str = 'auto',
@@ -580,6 +600,7 @@ def register_orchestration_tools(mcp, counter, logger):
             return {'success': False, 'error': str(e)}
 
     @tool(mcp)
+    @require_dangerous_auth
     async def analyze_exploit_failure(
         failed_result: Dict[str, Any],
         context: Dict[str, Any] = None

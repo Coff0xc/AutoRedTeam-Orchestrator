@@ -384,7 +384,7 @@ class CheckpointManager:
                 created = dt.datetime.fromisoformat(checkpoint.created_at)
                 if (now - created).total_seconds() > self.ttl_hours * 3600:
                     expired.append(task_id)
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 continue
 
         for task_id in expired:
@@ -566,7 +566,7 @@ class FaultRecovery:
                             result = handler(*args, **kwargs)
                         record.recovered = True
                         return result
-                    except Exception:
+                    except (ConnectionError, TimeoutError, OSError):
                         raise e
             raise
 

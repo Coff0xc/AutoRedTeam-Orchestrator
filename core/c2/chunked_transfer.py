@@ -177,7 +177,7 @@ class ChunkedTransfer:
             # 调用发送函数
             result = await send_func(chunk)
             return result
-        except Exception:
+        except (asyncio.TimeoutError, ConnectionError, OSError):
             if retry_count < self.max_retries:
                 self.stats.retries += 1
                 await asyncio.sleep(random.uniform(*self.delay_range))

@@ -769,7 +769,7 @@ class Bulkhead:
                     self._stats["timeout"] += 1
 
             return acquired
-        except Exception:
+        except (RuntimeError, threading.BrokenBarrierError):
             with self._lock:
                 self._waiting_count -= 1
             return False

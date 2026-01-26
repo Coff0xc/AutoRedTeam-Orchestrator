@@ -243,7 +243,7 @@ class WMIConnection:
                         row[prop] = properties[prop]['value']
                     results.append(row)
 
-                except Exception:
+                except (StopIteration, KeyError):
                     break
 
             return WMIQueryResult(success=True, data=results)
@@ -292,7 +292,7 @@ class WMIConnection:
         try:
             result = self.exec_command(f"taskkill /F /PID {pid}")
             return result.success
-        except Exception:
+        except (ConnectionError, OSError, ValueError):
             return False
 
     def close(self):

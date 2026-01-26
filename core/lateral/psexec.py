@@ -349,7 +349,7 @@ class PsExecLateral(BaseLateralModule):
         try:
             self._smb_conn.deleteFile(self.share, remote_path)
             return True
-        except Exception:
+        except (OSError, ConnectionError, IOError):
             return False
 
     def upload_and_execute(

@@ -216,7 +216,7 @@ class SMBExfiltrationNative(BaseExfiltration):
                     timeout=self.config.timeout
                 )
                 return result.returncode == 0
-            except Exception:
+            except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
                 return False
 
         # 在 Linux 上使用 smbclient
@@ -228,7 +228,7 @@ class SMBExfiltrationNative(BaseExfiltration):
                     timeout=self.config.timeout
                 )
                 return result.returncode == 0
-            except Exception:
+            except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
                 return False
 
     def disconnect(self) -> None:

@@ -121,7 +121,7 @@ class UACBypass:
         try:
             import ctypes
             return ctypes.windll.shell32.IsUserAnAdmin() != 0
-        except Exception:
+        except (AttributeError, OSError, ValueError):
             return False
 
     def get_available_techniques(self) -> List[UACBypassTechnique]:

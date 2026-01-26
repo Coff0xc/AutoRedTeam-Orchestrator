@@ -211,7 +211,7 @@ class IDORDetector(BaseDetector):
                         ))
                         break
 
-                except Exception as e:
+                except (ConnectionError, TimeoutError, OSError) as e:
                     logger.debug(f"IDOR 检测失败: {e}")
 
         return results
@@ -286,7 +286,7 @@ class IDORDetector(BaseDetector):
                         ))
                         break
 
-                except Exception as e:
+                except (ConnectionError, TimeoutError, OSError) as e:
                     logger.debug(f"路径 IDOR 检测失败: {e}")
 
         return results
@@ -328,7 +328,7 @@ class IDORDetector(BaseDetector):
                 variant = variant_func(value)
                 if variant and variant not in variants:
                     variants.append(variant)
-            except Exception:
+            except (ValueError, TypeError, AttributeError):
                 continue
         return variants
 
@@ -388,7 +388,7 @@ class IDORDetector(BaseDetector):
                 return self.http_client.get(url, params=params, headers=headers)
             else:
                 return self.http_client.post(url, data=params, headers=headers)
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError) as e:
             logger.debug(f"获取基线失败: {e}")
             return None
 

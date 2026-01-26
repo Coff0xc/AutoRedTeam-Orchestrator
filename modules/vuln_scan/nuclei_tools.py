@@ -77,7 +77,7 @@ class NucleiScanTool(BaseTool):
                     # Nuclei 的 -je 输出是一个 JSON 数组还是多个 JSON 对象？
                     # 通常是多个 JSON 对象，每行一个，或者是一个大数组
                     # 检查文件内容
-                    with open(json_output, 'r') as f:
+                    with open(json_output, 'r', encoding='utf-8') as f:
                         content = f.read()
                         if content.strip():
                             # 尝试作为整个JSON数组解析

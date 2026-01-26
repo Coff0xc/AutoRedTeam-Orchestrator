@@ -66,7 +66,7 @@ def ssrf_detect(url: str, param: str = None) -> dict:
                             "url": test_url
                         })
                         break
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
     return {"success": True, "url": url, "ssrf_vulns": vulns, "total": len(vulns)}
@@ -125,7 +125,7 @@ def lfi_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
                             "url": test_url
                         })
                         break
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
     return {
@@ -197,7 +197,7 @@ def redirect_detect(url: str, param: str = None) -> dict:
                         "url": test_url
                     })
                     break
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
     return {"success": True, "url": url, "redirect_vulns": vulns, "total": len(vulns)}
@@ -231,7 +231,7 @@ def idor_detect(url: str, param: str = None, test_values: list = None) -> dict:
                     "length": len(resp.text),
                     "url": test_url
                 }
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
     # 分析响应差异
@@ -312,7 +312,7 @@ def crlf_detect(url: str, param: str = None) -> dict:
                         "url": test_url
                     })
                     break
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
     return {"success": True, "url": url, "crlf_vulns": vulns, "total": len(vulns)}

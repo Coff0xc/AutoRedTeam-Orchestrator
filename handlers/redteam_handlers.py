@@ -2,6 +2,11 @@
 红队工具处理器
 包含: lateral_smb, c2_beacon_start, payload_obfuscate, credential_find,
       privilege_check, privilege_escalate, exfiltrate_data, exfiltrate_file
+
+授权级别:
+- CRITICAL: lateral_smb, c2_beacon_start, credential_find, privilege_escalate,
+            exfiltrate_*, post_exploit_amsi/etw/stager/evasion_chain
+- DANGEROUS: payload_obfuscate, waf_bypass, privilege_check, post_exploit_privesc_suggest
 """
 
 from typing import Any, Dict, List
@@ -11,6 +16,12 @@ from .error_handling import (
     ErrorCategory,
     extract_target,
     extract_file_path,
+)
+
+# 授权中间件
+from core.security import (
+    require_critical_auth,
+    require_dangerous_auth,
 )
 
 from core.exceptions import (
@@ -53,6 +64,7 @@ def register_redteam_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
+    @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM, extract_target)
     async def lateral_smb(
         target: str,
@@ -87,6 +99,7 @@ def register_redteam_tools(mcp, counter, logger):
         )
 
     @tool(mcp)
+    @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM, lambda a, kw: {'server': kw.get('server') or (a[0] if a else None)})
     async def c2_beacon_start(
         server: str,
@@ -128,6 +141,7 @@ def register_redteam_tools(mcp, counter, logger):
         return {'success': False, 'error': 'Connection failed', 'server': server}
 
     @tool(mcp)
+    @require_dangerous_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def payload_obfuscate(payload: str, technique: str = "xor") -> Dict[str, Any]:
         """Payload混淆 - 对payload进行混淆处理
@@ -155,6 +169,7 @@ def register_redteam_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @require_dangerous_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def waf_bypass(
         payload: str,
@@ -206,6 +221,7 @@ def register_redteam_tools(mcp, counter, logger):
         return data
 
     @tool(mcp)
+    @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM, lambda a, kw: {'path': kw.get('path') or (a[0] if a else None)})
     async def credential_find(path: str = None, patterns: List[str] = None) -> Dict[str, Any]:
         """凭证发现 - 在文件中搜索敏感凭证
@@ -234,6 +250,7 @@ def register_redteam_tools(mcp, counter, logger):
     # ==================== 权限提升工具 ====================
 
     @tool(mcp)
+    @require_dangerous_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def privilege_check() -> Dict[str, Any]:
         """检查当前权限级别 - 获取当前系统权限和可用提权向量
@@ -258,6 +275,7 @@ def register_redteam_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM, lambda a, kw: {'method': kw.get('method', 'auto')})
     async def privilege_escalate(
         method: str = "auto",
@@ -306,6 +324,7 @@ def register_redteam_tools(mcp, counter, logger):
     # ==================== 后渗透工具 ====================
 
     @tool(mcp)
+    @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def post_exploit_amsi_bypass(technique: str = None) -> Dict[str, Any]:
         """AMSI绕过 - 生成AMSI绕过代码
@@ -325,6 +344,7 @@ def register_redteam_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def post_exploit_etw_bypass() -> Dict[str, Any]:
         """ETW绕过 - 获取ETW Patch代码"""
@@ -336,6 +356,7 @@ def register_redteam_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def post_exploit_stager(
         payload_type: str = "powershell",
@@ -359,6 +380,7 @@ def register_redteam_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def post_exploit_evasion_chain(target_os: str = "windows") -> Dict[str, Any]:
         """获取推荐的后渗透规避链"""
@@ -374,6 +396,7 @@ def register_redteam_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @require_dangerous_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def post_exploit_privesc_suggest(
         current_privileges: List[str],
@@ -397,6 +420,7 @@ def register_redteam_tools(mcp, counter, logger):
     # ==================== 数据外泄工具 ====================
 
     @tool(mcp)
+    @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM, lambda a, kw: {'channel': kw.get('channel', 'https')})
     async def exfiltrate_data(
         data: str,
@@ -445,6 +469,7 @@ def register_redteam_tools(mcp, counter, logger):
         return result.to_dict()
 
     @tool(mcp)
+    @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM, extract_file_path)
     async def exfiltrate_file(
         file_path: str,

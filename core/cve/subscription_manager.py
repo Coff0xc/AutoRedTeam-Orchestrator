@@ -238,7 +238,7 @@ class SubscriptionManager:
                         raise ValueError("CVSS范围格式错误,应为 'min-max' (如 '7.0-10.0')")
                     float(parts[0])
                     float(parts[1])
-                except Exception:
+                except ValueError:
                     raise ValueError("CVSS范围格式错误,应为 'min-max' (如 '7.0-10.0')")
 
             # 严重性验证

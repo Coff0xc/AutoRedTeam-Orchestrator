@@ -116,7 +116,7 @@ def validate_url(url: str, allowed_schemes: Optional[List[str]] = None) -> bool:
 
         return True
 
-    except Exception:
+    except (ValueError, TypeError):
         return False
 
 
@@ -481,7 +481,7 @@ class InputValidator:
         try:
             import os
             normalized = os.path.normpath(decoded_path)
-        except Exception:
+        except (TypeError, ValueError):
             return False, "路径格式无效"
 
         # 检查绝对路径
@@ -509,7 +509,7 @@ class InputValidator:
                 path_resolved = (base_resolved / normalized).resolve()
                 if not str(path_resolved).startswith(str(base_resolved)):
                     return False, "路径超出允许范围"
-            except Exception:
+            except (OSError, ValueError, RuntimeError):
                 return False, "路径解析失败"
 
         # 检查是否存在

@@ -186,7 +186,7 @@ class ObjectPool(Generic[T]):
                 if self._reset_func:
                     try:
                         self._reset_func(obj)
-                    except Exception:
+                    except (TypeError, AttributeError, RuntimeError):
                         return  # 重置失败，丢弃对象
 
                 if len(self._pool) < self._max_size:
@@ -363,7 +363,7 @@ class MemoryMonitor:
                     "percent": 0,
                     "timestamp": time.time()
                 }
-            except Exception:
+            except (AttributeError, OSError):
                 return {
                     "rss_mb": sys.getsizeof(gc.get_objects()) / 1024 / 1024,
                     "vms_mb": 0,

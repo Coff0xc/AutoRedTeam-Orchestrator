@@ -84,7 +84,7 @@ def safe_write(
             # 重命名（原子操作）
             temp_path.replace(path)
 
-        except Exception:
+        except (IOError, OSError, PermissionError):
             # 清理临时文件
             if temp_path.exists():
                 temp_path.unlink()
@@ -119,7 +119,7 @@ def safe_read(
         return path.read_text(encoding=encoding)
     except FileNotFoundError:
         return default
-    except Exception:
+    except (IOError, OSError, UnicodeDecodeError):
         return default
 
 

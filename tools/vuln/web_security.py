@@ -76,10 +76,10 @@ def csrf_detect(url: str, method: str = "POST") -> dict:
                         "detail": "服务器不验证Referer头",
                         "url": url
                     })
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
 
     return {
@@ -159,7 +159,7 @@ def cors_deep_check(url: str) -> dict:
                     "detail": "服务器接受null Origin，可能被iframe利用"
                 })
 
-        except Exception:
+        except (requests.RequestException, OSError):
             logger.warning("Suppressed exception", exc_info=True)
 
     return {
@@ -282,7 +282,7 @@ def security_headers_check(url: str) -> dict:
                     "issues": csp_issues
                 })
 
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
 
     # 计算安全分数
@@ -360,10 +360,10 @@ def cache_poisoning_detect(url: str) -> dict:
                             "detail": f"注入的值被反射到{resp_header}头中"
                         })
 
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
 
     return {

@@ -57,19 +57,40 @@ class TerminalLogger:
         # 尝试打开日志文件
         try:
             self.log_file = open(LOG_FILE, 'a', buffering=1, encoding='utf-8')
-        except Exception:
+        except OSError:
             self.log_file = None
-            
+
         self.lock = threading.Lock()
         self.enabled = True
-        
+
         # 跨平台：仅在 Unix 系统尝试获取真实 TTY
         self.real_tty = None
         if sys.platform != 'win32':
             try:
                 self.real_tty = open('/dev/tty', 'w')
-            except Exception as exc:
+            except OSError as exc:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+
+    def __del__(self):
+        """析构时关闭文件句柄，防止资源泄漏"""
+        self.close()
+
+    def close(self):
+        """显式关闭所有文件句柄"""
+        with self.lock:
+            if self.log_file is not None:
+                try:
+                    self.log_file.close()
+                except OSError:
+                    pass
+                self.log_file = None
+
+            if self.real_tty is not None:
+                try:
+                    self.real_tty.close()
+                except OSError:
+                    pass
+                self.real_tty = None
 
     def _write(self, msg: str):
         """线程安全写入"""
