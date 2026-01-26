@@ -217,7 +217,7 @@ class CSRFDetector(BaseDetector):
         # 获取基线响应（正常请求）
         try:
             baseline = self.http_client.request(method, url, data=data, headers=headers)
-        except Exception:
+        except (ConnectionError, TimeoutError, OSError):
             return results
 
         # 测试 1: 移除 Token

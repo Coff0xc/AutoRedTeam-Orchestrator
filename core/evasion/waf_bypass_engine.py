@@ -437,16 +437,16 @@ class PayloadMutator:
     def generate_variants(self, payload: str, max_variants: int = 50) -> List[Tuple[str, List[str]]]:
         """生成payload变体"""
         variants: List[Tuple[str, List[str]]] = [(payload, [])]  # 原始payload
-        
+
         # 单一变异
         for tech_name in self.mutations.keys():
             try:
                 mutated = self.mutate(payload, tech_name)
                 if mutated != payload:
                     variants.append((mutated, [tech_name]))
-            except Exception:
+            except (ValueError, UnicodeError, KeyError, TypeError):
                 continue
-        
+
         # 组合变异（2层）
         combo_techniques = [
             ["random_case", "url_encode"],
@@ -457,13 +457,13 @@ class PayloadMutator:
             ["unicode_encode", "random_case"],
             ["hex_encode", "whitespace_newline"],
         ]
-        
+
         for combo in combo_techniques:
             try:
                 mutated = self.mutate_multi(payload, combo)
                 if mutated != payload:
                     variants.append((mutated, combo))
-            except Exception:
+            except (ValueError, UnicodeError, KeyError, TypeError):
                 continue
         
         return variants[:max_variants]
@@ -727,7 +727,7 @@ class WAFBypassEngine:
                             waf_type=waf_type,
                             confidence=0.6,
                         ))
-                except Exception:
+                except (ValueError, UnicodeError, KeyError, TypeError):
                     continue
         
         return results[:max_variants]

@@ -200,7 +200,7 @@ class DNSResolver:
             return list(result[2])
         except socket.gaierror:
             return []
-        except Exception:
+        except (socket.timeout, OSError):
             return []
 
     def resolve_ipv6(self, hostname: str) -> List[str]:
@@ -219,7 +219,7 @@ class DNSResolver:
             return list(set(r[4][0] for r in results))
         except socket.gaierror:
             return []
-        except Exception:
+        except (socket.timeout, OSError):
             return []
 
     async def async_resolve_ipv6(self, hostname: str) -> List[str]:
@@ -228,7 +228,7 @@ class DNSResolver:
         try:
             result = await loop.run_in_executor(None, self.resolve_ipv6, hostname)
             return result
-        except Exception:
+        except (socket.gaierror, socket.timeout, OSError):
             return []
 
     def get_all_records(self, domain: str) -> DNSResult:
@@ -478,7 +478,7 @@ class DNSResolver:
             return result[0]
         except socket.herror:
             return None
-        except Exception:
+        except (socket.gaierror, socket.timeout, OSError):
             return None
 
     async def async_reverse_lookup(self, ip: str) -> Optional[str]:
@@ -513,7 +513,7 @@ class DNSResolver:
                 try:
                     ips = future.result()
                     results[hostname] = ips
-                except Exception:
+                except (socket.gaierror, socket.timeout, OSError, concurrent.futures.CancelledError):
                     results[hostname] = []
 
         return results

@@ -44,13 +44,16 @@ class SessionManager:
                 cls._instance._initialized = False
             return cls._instance
 
-    def __init__(self, storage_dir: Optional[str] = None, auto_save: bool = True):
+    def __init__(self, storage_dir: Optional[str] = None, auto_save: bool = True,
+                 max_sessions: int = 1000, auto_cleanup_threshold: int = 100):
         """
         初始化会话管理器
 
         Args:
             storage_dir: 存储目录路径
             auto_save: 是否自动保存会话
+            max_sessions: 最大会话数量（超过时自动清理旧会话）
+            auto_cleanup_threshold: 触发自动清理的会话阈值
         """
         # 防止重复初始化
         if self._initialized:
@@ -59,6 +62,11 @@ class SessionManager:
         self._sessions: Dict[str, ScanContext] = {}
         self._results: Dict[str, ScanResult] = {}
         self._session_lock = threading.RLock()  # 可重入锁
+
+        # 会话限制和自动清理
+        self._max_sessions = max_sessions
+        self._auto_cleanup_threshold = auto_cleanup_threshold
+        self._cleanup_counter = 0  # 清理计数器
 
         # 存储
         self._storage = SessionStorage(storage_dir) if storage_dir else SessionStorage()
@@ -94,6 +102,12 @@ class SessionManager:
             ScanContext: 新创建的会话上下文
         """
         with self._session_lock:
+            # 自动清理：每 N 次创建检查一次
+            self._cleanup_counter += 1
+            if self._cleanup_counter >= self._auto_cleanup_threshold:
+                self._cleanup_counter = 0
+                self._auto_cleanup()
+
             # 生成或验证会话ID
             if session_id is None:
                 session_id = str(uuid.uuid4())
@@ -123,6 +137,56 @@ class SessionManager:
                 self._storage.save_context(context)
 
             return context
+
+    def _auto_cleanup(self) -> int:
+        """
+        自动清理过期会话（内部方法，需在锁内调用）
+
+        策略:
+        1. 清理已完成/失败超过 1 小时的会话
+        2. 如果会话数超过 max_sessions，强制清理最旧的已完成会话
+
+        Returns:
+            int: 清理的会话数
+        """
+        now = datetime.now()
+        cleaned = 0
+
+        # 阶段1: 清理过期会话（1小时）
+        expired_ids = []
+        for session_id, context in self._sessions.items():
+            if context.status in (ContextStatus.COMPLETED, ContextStatus.FAILED):
+                if context.ended_at:
+                    age = (now - context.ended_at).total_seconds()
+                    if age > 3600:  # 1小时
+                        expired_ids.append(session_id)
+
+        for session_id in expired_ids:
+            del self._sessions[session_id]
+            self._results.pop(session_id, None)
+            cleaned += 1
+
+        # 阶段2: 如果仍然超过限制，强制清理最旧的已完成会话
+        if len(self._sessions) > self._max_sessions:
+            # 按结束时间排序已完成的会话
+            completed = [
+                (sid, ctx) for sid, ctx in self._sessions.items()
+                if ctx.status in (ContextStatus.COMPLETED, ContextStatus.FAILED)
+            ]
+            completed.sort(key=lambda x: x[1].ended_at or datetime.min)
+
+            # 删除最旧的会话直到低于限制
+            for session_id, _ in completed:
+                if len(self._sessions) <= self._max_sessions * 0.8:  # 清理到80%
+                    break
+                del self._sessions[session_id]
+                self._results.pop(session_id, None)
+                cleaned += 1
+
+        if cleaned > 0:
+            logger.info(f"自动清理了 {cleaned} 个过期会话，当前会话数: {len(self._sessions)}")
+
+        return cleaned
 
     def get_session(self, session_id: str) -> Optional[ScanContext]:
         """

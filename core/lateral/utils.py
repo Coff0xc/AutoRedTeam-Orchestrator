@@ -83,7 +83,7 @@ def check_port(
 
     except socket.timeout:
         return PortStatus.FILTERED
-    except Exception:
+    except OSError:
         return PortStatus.UNKNOWN
 
 
@@ -123,7 +123,7 @@ def scan_ports(
                 port = future_to_port[future]
                 try:
                     results[port] = future.result()
-                except Exception:
+                except (concurrent.futures.CancelledError, TimeoutError, OSError):
                     results[port] = PortStatus.UNKNOWN
     else:
         for port in ports:
@@ -528,7 +528,7 @@ def parse_target_list(targets: Union[str, List[str]]) -> List[str]:
             import ipaddress
             network = ipaddress.ip_network(targets, strict=False)
             return [str(ip) for ip in network.hosts()]
-        except Exception:
+        except ValueError:
             return [targets]
 
     # IP 范围

@@ -71,7 +71,7 @@ class NiktoScanTool(BaseTool):
             findings = []
             if os.path.exists(output_file):
                 try:
-                    with open(output_file, 'r') as f:
+                    with open(output_file, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                         
                     if isinstance(data, dict):
@@ -202,7 +202,7 @@ class ZAPScanTool(BaseTool):
             alerts = []
             if os.path.exists(report_file):
                 try:
-                    with open(report_file, 'r') as f:
+                    with open(report_file, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                     
                     for site in data.get("site", []):

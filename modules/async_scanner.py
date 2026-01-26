@@ -5,6 +5,7 @@
 """
 
 import asyncio
+import socket
 import time
 import logging
 from typing import Any, Dict, List, Optional, Callable
@@ -208,7 +209,7 @@ class AsyncPortScanner(AsyncScanner):
             return None
         except ConnectionRefusedError:
             return None
-        except Exception:
+        except OSError:
             return None
 
     async def _grab_banner(self, host: str, port: int) -> str:
@@ -232,7 +233,7 @@ class AsyncPortScanner(AsyncScanner):
             await writer.wait_closed()
 
             return banner.decode('utf-8', errors='ignore')[:200]
-        except Exception:
+        except (asyncio.TimeoutError, ConnectionRefusedError, OSError):
             return ""
 
     async def scan(self, host: str, ports: List[int]) -> Dict[str, Any]:
@@ -363,7 +364,7 @@ class AsyncSubdomainScanner(AsyncScanner):
                 timeout=self.timeout
             )
             return list(set(r[4][0] for r in result))
-        except Exception:
+        except (asyncio.TimeoutError, socket.gaierror, OSError):
             return None
 
     async def scan(self, domain: str, subdomains: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -431,7 +432,7 @@ class AsyncVulnScanner(AsyncScanner):
                         "payload": payload,
                         "evidence": "SQL error detected"
                     }
-            except Exception:
+            except (asyncio.TimeoutError, ConnectionError, OSError):
                 continue
 
         return {"vulnerable": False, "type": "sqli"}
@@ -460,7 +461,7 @@ class AsyncVulnScanner(AsyncScanner):
                         "payload": payload,
                         "evidence": "Payload reflected"
                     }
-            except Exception:
+            except (asyncio.TimeoutError, ConnectionError, OSError):
                 continue
 
         return {"vulnerable": False, "type": "xss"}
@@ -491,7 +492,7 @@ class AsyncVulnScanner(AsyncScanner):
                         "payload": payload,
                         "evidence": "File content detected"
                     }
-            except Exception:
+            except (asyncio.TimeoutError, ConnectionError, OSError):
                 continue
 
         return {"vulnerable": False, "type": "lfi"}

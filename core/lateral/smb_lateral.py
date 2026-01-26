@@ -559,16 +559,17 @@ class SMBLateral:
                     dwStartType=scmr.SERVICE_DEMAND_START
                 )
                 service_handle = resp['lpServiceHandle']
-            except Exception:
-                # 服务可能已存在
+            except (KeyError, OSError) as e:
+                # 服务可能已存在，尝试打开
+                logger.debug(f"Service create failed, trying open: {e}")
                 resp = scmr.hROpenServiceW(dce, sc_handle, service_name)
                 service_handle = resp['lpServiceHandle']
 
             # 启动服务
             try:
                 scmr.hRStartServiceW(dce, service_handle)
-            except Exception as exc:
-                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+            except (KeyError, OSError) as e:
+                logger.debug(f"Service start issue (may be expected): {e}")
 
             # 删除服务
             scmr.hRDeleteService(dce, service_handle)

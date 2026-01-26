@@ -2,6 +2,8 @@
 MCP tool result normalization helpers.
 
 Use these helpers to wrap legacy MCP tools so they return ToolResult.to_dict().
+
+Note: 使用延迟导入避免循环依赖 (core.result 在函数调用时才导入)
 """
 
 from __future__ import annotations
@@ -10,18 +12,21 @@ import functools
 import inspect
 from typing import Any, Callable
 
-from core.result import ensure_tool_result
-
 
 def _wrap_tool_func(func: Callable[..., Any]) -> Callable[..., Any]:
+    """包装工具函数，标准化返回值为 ToolResult.to_dict()"""
     if inspect.iscoroutinefunction(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs) -> Any:
+            # 延迟导入避免循环依赖
+            from core.result import ensure_tool_result
             result = await func(*args, **kwargs)
             return ensure_tool_result(result).to_dict()
     else:
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Any:
+            # 延迟导入避免循环依赖
+            from core.result import ensure_tool_result
             result = func(*args, **kwargs)
             return ensure_tool_result(result).to_dict()
 

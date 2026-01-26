@@ -15,6 +15,14 @@ from urllib.parse import urljoin
 
 import sys
 import os
+
+# 导入 requests 用于异常处理
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
 from tools.detectors.base import BaseDetector, Vulnerability
@@ -143,7 +151,7 @@ class WeakPasswordDetector(BaseDetector):
                         "has_login_form": has_login_form
                     })
 
-            except Exception:
+            except (requests.RequestException, OSError) if HAS_REQUESTS else OSError:
                 continue
 
         return login_pages
@@ -202,7 +210,7 @@ class WeakPasswordDetector(BaseDetector):
                             })
                             return successful  # 找到一个就返回
 
-                    except Exception:
+                    except (requests.RequestException, OSError) if HAS_REQUESTS else OSError:
                         continue
 
         return successful
@@ -276,7 +284,7 @@ class WeakPasswordDetector(BaseDetector):
                                     }
                                 ))
 
-            except Exception:
+            except (requests.RequestException, OSError) if HAS_REQUESTS else OSError:
                 continue
 
         return vulnerabilities

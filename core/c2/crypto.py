@@ -88,7 +88,8 @@ class C2Crypto:
         self,
         algorithm: str = 'aes256_gcm',
         key: Optional[bytes] = None,
-        derive_key: bool = True
+        derive_key: bool = True,
+        kdf_salt: Optional[bytes] = None
     ):
         """
         初始化加密器
@@ -97,9 +98,11 @@ class C2Crypto:
             algorithm: 加密算法
             key: 加密密钥（32字节），如果为 None 则自动生成
             derive_key: 是否从密钥派生（用于短密钥/密码）
+            kdf_salt: KDF盐值，如果为 None 则自动生成（用于密钥派生）
         """
         self.algorithm = CryptoAlgorithm(algorithm.lower().replace('-', '_'))
         self._derive_key = derive_key
+        self._kdf_salt = kdf_salt
 
         # 初始化或派生密钥
         if key is None:
@@ -139,8 +142,12 @@ class C2Crypto:
         Returns:
             派生的密钥
         """
-        # 使用固定盐值（实际应用中应该使用随机盐）
-        salt = b'c2_crypto_salt_v1'
+        # 使用提供的盐值或生成随机盐值
+        if self._kdf_salt is None:
+            self._kdf_salt = os.urandom(16)
+            logger.debug("Generated new KDF salt")
+
+        salt = self._kdf_salt
 
         if HAS_CRYPTOGRAPHY:
             from cryptography.hazmat.primitives import hashes
@@ -157,6 +164,15 @@ class C2Crypto:
         else:
             # 回退到简单 SHA256 派生
             return hashlib.pbkdf2_hmac('sha256', password, salt, 100000, self.KEY_SIZE)
+
+    def get_kdf_salt(self) -> Optional[bytes]:
+        """
+        获取KDF盐值（用于密钥交换/同步）
+
+        Returns:
+            盐值字节，如果未使用密钥派生则返回None
+        """
+        return self._kdf_salt
 
     def _generate_iv(self, size: int = None) -> bytes:
         """生成随机 IV/Nonce"""

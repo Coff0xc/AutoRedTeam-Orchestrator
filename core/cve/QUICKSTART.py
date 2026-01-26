@@ -230,7 +230,7 @@ def export_report():
         "cves": [cve.to_dict() for cve in results]
     }
 
-    with open("cve_report.json", "w") as f:
+    with open("cve_report.json", "w", encoding='utf-8') as f:
         json.dump(report, f, indent=2)
 
 

@@ -207,7 +207,7 @@ class PasswordFinder:
         try:
             if file_path.stat().st_size > self.max_file_size:
                 return True
-        except Exception:
+        except (OSError, FileNotFoundError):
             return True
 
         # 检查是否为二进制文件

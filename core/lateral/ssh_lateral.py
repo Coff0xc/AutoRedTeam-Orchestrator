@@ -160,7 +160,7 @@ class SSHConnection:
         for key_class in key_classes:
             try:
                 return key_class.from_private_key_file(key_file, password=passphrase)
-            except Exception:
+            except (paramiko.SSHException, ValueError, IOError):
                 continue
 
         return None
@@ -176,7 +176,7 @@ class SSHConnection:
             try:
                 key_file.seek(0)
                 return key_class.from_private_key(key_file, password=passphrase)
-            except Exception:
+            except (paramiko.SSHException, ValueError):
                 continue
 
         return None
@@ -617,7 +617,7 @@ class SSHLateral:
 
                     if conn.connect(creds):
                         success[target] = creds
-                        logger.info(f"Valid SSH creds: {username}:{password}@{target}")
+                        logger.info(f"Valid SSH creds found: {username}@{target}")
                         conn.close()
                         break
 

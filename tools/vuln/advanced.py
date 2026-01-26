@@ -91,7 +91,7 @@ def request_smuggling_detect(url: str) -> dict:
                         "url": url
                     })
 
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
     except ImportError:
@@ -167,7 +167,7 @@ def prototype_pollution_detect(url: str, param: str = None) -> dict:
                 })
                 break
 
-        except Exception:
+        except (requests.RequestException, OSError):
             logger.warning("Suppressed exception", exc_info=True)
 
     return {
@@ -257,10 +257,10 @@ def waf_detect(url: str) -> dict:
 
                     break
 
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
 
     return {
@@ -331,10 +331,10 @@ def access_control_test(url: str, protected_paths: list = None, auth_cookie: str
                             "url": test_url
                         })
                         break
-                except Exception:
+                except (requests.RequestException, OSError):
                     logger.warning("Suppressed exception", exc_info=True)
 
-        except Exception:
+        except (requests.RequestException, OSError):
             logger.warning("Suppressed exception", exc_info=True)
 
     return {
@@ -372,7 +372,7 @@ def logic_vuln_check(url: str, test_type: str = "all") -> dict:
                             "value": value,
                             "url": test_url
                         })
-                except Exception:
+                except (requests.RequestException, OSError):
                     logger.warning("Suppressed exception", exc_info=True)
 
     # 负数量测试
@@ -390,7 +390,7 @@ def logic_vuln_check(url: str, test_type: str = "all") -> dict:
                         "param": param,
                         "url": test_url
                     })
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
     # 竞态条件测试提示
@@ -458,7 +458,7 @@ def file_upload_detect(url: str, param: str = "file") -> dict:
                         "url": url
                     })
 
-        except Exception:
+        except (requests.RequestException, OSError):
             logger.warning("Suppressed exception", exc_info=True)
 
     # 绕过测试
@@ -475,7 +475,7 @@ def file_upload_detect(url: str, param: str = "file") -> dict:
                     "url": url
                 })
 
-        except Exception:
+        except (requests.RequestException, OSError):
             logger.warning("Suppressed exception", exc_info=True)
 
     return {
@@ -563,7 +563,7 @@ def browser_scan(url: str) -> dict:
                     "recommendation": "为iframe添加sandbox属性"
                 })
 
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
 
     return {

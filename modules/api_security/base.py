@@ -244,12 +244,36 @@ class BaseAPITester(ABC):
         self.config = config or {}
         self._results: List[APITestResult] = []
         self._http_client = None
+        self._owns_client = False  # 标记是否拥有客户端（需要关闭）
 
         # 从配置中提取常用选项
         self.timeout = self.config.get('timeout', 10.0)
         self.proxy = self.config.get('proxy')
         self.extra_headers = self.config.get('headers', {})
         self.verify_ssl = self.config.get('verify_ssl', True)
+
+    def __del__(self):
+        """析构时关闭HTTP客户端"""
+        self.close()
+
+    def close(self):
+        """关闭HTTP客户端，释放资源"""
+        if self._http_client is not None and self._owns_client:
+            try:
+                self._http_client.close()
+            except (AttributeError, OSError):
+                pass  # 客户端可能没有close方法或已关闭
+            self._http_client = None
+            self._owns_client = False
+
+    def __enter__(self):
+        """支持上下文管理器"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """退出时关闭资源"""
+        self.close()
+        return False
 
     @abstractmethod
     def test(self) -> List[APITestResult]:
@@ -347,11 +371,13 @@ class BaseAPITester(ABC):
                 config.verify_ssl = self.verify_ssl
 
                 self._http_client = get_client()
+                self._owns_client = False  # 共享客户端，不需要关闭
             except ImportError:
                 # 回退到requests
                 import requests
                 self._http_client = requests.Session()
                 self._http_client.verify = self.verify_ssl
+                self._owns_client = True  # 自己创建的，需要关闭
 
         return self._http_client
 

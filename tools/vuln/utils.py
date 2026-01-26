@@ -31,7 +31,7 @@ def vuln_check(url: str) -> dict:
         resp = requests.get(test_url, timeout=5, verify=get_verify_ssl())
         if "root:" in resp.text:
             vulns.append({"type": "Path Traversal", "severity": "HIGH", "url": test_url})
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
 
     # 2. 检测信息泄露
@@ -42,7 +42,7 @@ def vuln_check(url: str) -> dict:
             resp = requests.get(test_url, timeout=5, verify=get_verify_ssl())
             if resp.status_code == 200 and len(resp.content) > 100:
                 vulns.append({"type": "Information Disclosure", "severity": "MEDIUM", "url": test_url, "path": path})
-        except Exception:
+        except (requests.RequestException, OSError):
             logger.warning("Suppressed exception", exc_info=True)
 
     # 3. 检测CORS配置
@@ -52,7 +52,7 @@ def vuln_check(url: str) -> dict:
             origin = resp.headers.get("access-control-allow-origin")
             if origin == "*" or origin == "https://evil.com":
                 vulns.append({"type": "CORS Misconfiguration", "severity": "MEDIUM", "detail": f"ACAO: {origin}"})
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
 
     # 4. 检测安全头缺失
@@ -67,7 +67,7 @@ def vuln_check(url: str) -> dict:
             missing_headers.append("X-XSS-Protection")
         if missing_headers:
             vulns.append({"type": "Missing Security Headers", "severity": "LOW", "headers": missing_headers})
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
 
     # 5. 检测HTTP方法
@@ -78,7 +78,7 @@ def vuln_check(url: str) -> dict:
             dangerous = [m for m in ["PUT", "DELETE", "TRACE"] if m in methods.upper()]
             if dangerous:
                 vulns.append({"type": "Dangerous HTTP Methods", "severity": "MEDIUM", "methods": dangerous})
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
 
     return {"success": True, "url": url, "vulnerabilities": vulns, "total": len(vulns)}
@@ -100,7 +100,7 @@ def get_baseline_response(url: str, num_samples: int = 3) -> tuple:
             elapsed = time.time() - start
             baseline_lengths.append(len(resp.text))
             baseline_times.append(elapsed)
-        except Exception:
+        except (requests.RequestException, OSError):
             logger.warning("Suppressed exception", exc_info=True)
     
     if not baseline_lengths:
@@ -169,7 +169,7 @@ def safe_request(method: str, url: str, **kwargs) -> Optional[requests.Response]
         kwargs.setdefault("timeout", GLOBAL_CONFIG.get("request_timeout", 10))
         kwargs.setdefault("verify", get_verify_ssl())
         return requests.request(method, url, **kwargs)
-    except Exception:
+    except (requests.RequestException, OSError):
         logger.warning("Suppressed exception", exc_info=True)
         return None
 

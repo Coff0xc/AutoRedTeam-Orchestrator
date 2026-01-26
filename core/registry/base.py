@@ -189,7 +189,7 @@ class ToolParameter:
             try:
                 if not check_func(value):
                     return False, f"参数 '{self.name}' 类型必须是 {self.type.value}"
-            except Exception:
+            except (TypeError, ValueError, AttributeError):
                 return False, f"参数 '{self.name}' 类型验证失败"
 
         return True, None
@@ -200,7 +200,7 @@ class ToolParameter:
         try:
             result = urlparse(value)
             return all([result.scheme, result.netloc])
-        except Exception:
+        except (ValueError, AttributeError):
             return False
 
     @staticmethod
@@ -256,7 +256,7 @@ class ToolParameter:
                 start, end = value.split('-', 1)
                 return 1 <= int(start) <= int(end) <= 65535
             return ToolParameter._validate_port(value)
-        except Exception:
+        except (ValueError, TypeError):
             return False
 
     @staticmethod
@@ -829,7 +829,7 @@ class FunctionTool(BaseTool):
         # 尝试获取类型注解
         try:
             hints = get_type_hints(fn)
-        except Exception:
+        except (NameError, TypeError, AttributeError):
             hints = {}
 
         for param_name, param in sig.parameters.items():

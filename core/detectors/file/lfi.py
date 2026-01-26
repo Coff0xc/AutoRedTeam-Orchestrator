@@ -129,7 +129,7 @@ class LFIDetector(BaseDetector):
             self.payloads = self._enhance_payloads(
                 get_payloads(PayloadCategory.LFI)
             )
-        except Exception:
+        except (ImportError, KeyError, AttributeError):
             # 如果 PayloadCategory.LFI 不存在,使用内置 payloads
             logger.debug(f"[{self.name}] 使用内置 LFI payloads")
             self.payloads = [p[0] for p in self.LFI_PAYLOADS]

@@ -39,6 +39,17 @@ from .secrets_manager import (
     set_secret
 )
 
+from .mcp_auth_middleware import (
+    require_auth as mcp_require_auth,
+    require_safe_auth,
+    require_moderate_auth,
+    require_dangerous_auth,
+    require_critical_auth,
+    set_auth_mode,
+    AuthMode,
+    get_api_key_from_env,
+)
+
 __all__ = [
     # 输入验证
     "InputValidator",
@@ -71,4 +82,14 @@ __all__ = [
     "get_secrets_manager",
     "get_secret",
     "set_secret",
+
+    # MCP授权中间件
+    "mcp_require_auth",
+    "require_safe_auth",
+    "require_moderate_auth",
+    "require_dangerous_auth",
+    "require_critical_auth",
+    "set_auth_mode",
+    "AuthMode",
+    "get_api_key_from_env",
 ]

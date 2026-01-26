@@ -419,7 +419,7 @@ class SSHLateral(BaseLateralModule):
         sudo_password: Optional[str] = None
     ) -> ExecutionResult:
         """
-        以 sudo 执行命令
+        以 sudo 执行命令 (安全方式: 通过 stdin 传递密码)
 
         Args:
             command: 命令
@@ -429,8 +429,45 @@ class SSHLateral(BaseLateralModule):
         if not password:
             return ExecutionResult(success=False, error="需要 sudo 密码")
 
-        sudo_command = f'echo {password} | sudo -S {command}'
-        return self.execute(sudo_command)
+        if not self._client:
+            return ExecutionResult(success=False, error="未连接")
+
+        start_time = time.time()
+        try:
+            # 安全方式: 使用 -S 从 stdin 读取密码，避免在进程列表中暴露
+            # -p '' 设置空提示符避免干扰输出
+            sudo_command = f"sudo -S -p '' {command}"
+            stdin, stdout, stderr = self._client.exec_command(sudo_command, get_pty=True)
+
+            # 通过 stdin 安全地发送密码
+            stdin.write(f"{password}\n")
+            stdin.flush()
+
+            # 读取输出
+            output = stdout.read().decode('utf-8', errors='replace')
+            error_output = stderr.read().decode('utf-8', errors='replace')
+            exit_code = stdout.channel.recv_exit_status()
+
+            # 组合输出，过滤掉可能的密码回显
+            combined_output = output
+            if error_output and "password" not in error_output.lower():
+                combined_output += f"\n{error_output}"
+
+            return ExecutionResult(
+                success=exit_code == 0,
+                output=combined_output.strip(),
+                exit_code=exit_code,
+                duration=time.time() - start_time,
+                method=ExecutionMethod.SSH.value
+            )
+
+        except (SSHException, socket.error, socket.timeout) as e:
+            return ExecutionResult(
+                success=False,
+                error=f"SSH sudo 执行错误: {e}",
+                duration=time.time() - start_time,
+                method=ExecutionMethod.SSH.value
+            )
 
     def _get_sftp(self) -> Optional['SFTPClient']:
         """获取或创建 SFTP 客户端"""

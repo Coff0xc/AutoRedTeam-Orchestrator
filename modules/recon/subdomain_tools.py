@@ -114,7 +114,7 @@ class AmassEnumTool(BaseTool):
             
             subdomains = []
             if os.path.exists(output_file):
-                with open(output_file, 'r') as f:
+                with open(output_file, 'r', encoding='utf-8') as f:
                     subdomains = [line.strip() for line in f if line.strip()]
             
             return {

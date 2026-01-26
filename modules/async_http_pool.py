@@ -85,6 +85,9 @@ class RateLimiter:
 class AsyncHTTPPool:
     """异步HTTP连接池"""
 
+    # 域名统计的最大数量限制
+    MAX_DOMAIN_STATS = 500
+
     def __init__(self, config: Optional[PoolConfig] = None):
         self.config = config or PoolConfig()
         self._client: Optional[Any] = None
@@ -93,7 +96,16 @@ class AsyncHTTPPool:
             rate=1.0 / max(self.config.rate_limit, 0.01),
             burst=10
         )
-        self._domain_stats: Dict[str, RequestStats] = defaultdict(RequestStats)
+        self._domain_stats: Dict[str, RequestStats] = {}  # 改为普通dict，手动限制大小
+
+    async def __aenter__(self):
+        """异步上下文管理器入口"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """异步上下文管理器退出"""
+        await self.close()
+        return False
 
     async def _get_client(self):
         """获取或创建HTTP客户端"""
@@ -225,7 +237,18 @@ class AsyncHTTPPool:
             self._stats.total_time / self._stats.total_requests
         )
 
-        # 域名级别统计
+        # 域名级别统计（带大小限制）
+        if domain not in self._domain_stats:
+            # 如果超过限制，清理最旧的条目
+            if len(self._domain_stats) >= self.MAX_DOMAIN_STATS:
+                # 删除请求数最少的域名统计
+                min_domain = min(
+                    self._domain_stats.keys(),
+                    key=lambda d: self._domain_stats[d].total_requests
+                )
+                del self._domain_stats[min_domain]
+            self._domain_stats[domain] = RequestStats()
+
         ds = self._domain_stats[domain]
         ds.total_requests += 1
         ds.total_time += elapsed

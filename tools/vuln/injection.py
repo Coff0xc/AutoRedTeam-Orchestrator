@@ -89,7 +89,7 @@ def sqli_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
         try:
             baseline_resp = requests.get(base_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
             baseline_lengths.append(len(baseline_resp.text))
-        except Exception:
+        except (requests.RequestException, OSError):
             logger.warning("Suppressed exception", exc_info=True)
 
     baseline_length = sum(baseline_lengths) / len(baseline_lengths) if baseline_lengths else 0
@@ -113,7 +113,7 @@ def sqli_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
                             "url": test_url
                         })
                         break
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
         if not deep_scan:
@@ -131,7 +131,7 @@ def sqli_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
                         base_start = time.time()
                         requests.get(base_url, timeout=GLOBAL_CONFIG["request_timeout"], verify=get_verify_ssl())
                         baseline_times.append(time.time() - base_start)
-                    except Exception:
+                    except (requests.RequestException, OSError):
                         logger.warning("Suppressed exception", exc_info=True)
 
                 if len(baseline_times) < 2:
@@ -157,7 +157,7 @@ def sqli_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
                             start_v = time.time()
                             requests.get(test_url, timeout=delay + 10, verify=get_verify_ssl())
                             verify_times.append(time.time() - start_v)
-                        except Exception:
+                        except (requests.RequestException, OSError):
                             logger.warning("Suppressed exception", exc_info=True)
 
                     if len(verify_times) >= 2:
@@ -176,7 +176,7 @@ def sqli_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
                                 "confidence": confidence,
                             })
                             break
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
         # 布尔盲注检测
@@ -212,7 +212,7 @@ def sqli_detect(url: str, param: str = None, deep_scan: bool = True) -> dict:
                             "verified": True
                         })
                         break
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
     return {"success": True, "url": url, "sqli_vulns": vulns, "total": len(vulns), "deep_scan": deep_scan}
@@ -302,7 +302,7 @@ def cmd_inject_detect(url: str, param: str = None) -> dict:
                             "url": test_url
                         })
                         break
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
     return {"success": True, "url": url, "cmd_vulns": vulns, "total": len(vulns)}
@@ -435,7 +435,7 @@ def nosql_detect(url: str, param: str = None, db_type: str = "auto") -> dict:
                                 "method": "POST"
                             })
                             break
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.warning("Suppressed exception", exc_info=True)
 
     return {

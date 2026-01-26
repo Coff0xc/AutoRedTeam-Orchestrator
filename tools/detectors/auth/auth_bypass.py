@@ -14,6 +14,14 @@ from typing import Dict, List, Any, Optional
 
 import sys
 import os
+
+# 导入 requests 用于异常处理
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
 from tools.detectors.base import BaseDetector, Vulnerability
@@ -203,7 +211,7 @@ class AuthBypassDetector(BaseDetector):
                     }
                 ))
 
-            except Exception:
+            except (requests.RequestException, OSError) if HAS_REQUESTS else OSError:
                 continue
 
         return vulnerabilities
@@ -267,7 +275,7 @@ class AuthBypassDetector(BaseDetector):
                     }
                 ))
 
-            except Exception:
+            except (requests.RequestException, OSError) if HAS_REQUESTS else OSError:
                 continue
 
         return vulnerabilities
@@ -321,7 +329,7 @@ class AuthBypassDetector(BaseDetector):
                         }
                     ))
 
-            except Exception:
+            except (requests.RequestException, OSError) if HAS_REQUESTS else OSError:
                 continue
 
         return vulnerabilities
