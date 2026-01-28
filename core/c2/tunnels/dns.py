@@ -20,6 +20,7 @@ import socket
 import struct
 import time
 import random
+import secrets
 import hashlib
 import logging
 from typing import Optional, List, Dict, Any
@@ -339,8 +340,8 @@ class DNSTunnel(BaseTunnel):
         Returns:
             DNS 查询包
         """
-        # Transaction ID
-        tid = random.randint(0, 65535)
+        # Transaction ID - 使用密码学安全随机数
+        tid = secrets.randbelow(65536)
         packet = struct.pack(">H", tid)
 
         # Flags (标准查询, 递归请求)

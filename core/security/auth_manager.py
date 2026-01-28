@@ -67,6 +67,25 @@ class AuditLog:
 class AuthManager:
     """认证授权管理器"""
 
+    # 敏感字段列表 - 这些字段在审计日志中会被脱敏
+    SENSITIVE_FIELDS = frozenset({
+        # 密码相关
+        'password', 'passwd', 'pwd', 'pass',
+        # 密钥相关
+        'secret', 'api_key', 'apikey', 'api-key', 'token', 'access_token',
+        'refresh_token', 'private_key', 'privatekey', 'secret_key', 'secretkey',
+        # 凭证相关
+        'credential', 'credentials', 'auth', 'authorization',
+        # 会话相关
+        'cookie', 'cookies', 'session', 'session_id', 'sessionid',
+        # 其他敏感信息
+        'key', 'hash', 'salt', 'nonce', 'otp', 'pin', 'ssn',
+        'credit_card', 'creditcard', 'cvv', 'card_number',
+    })
+
+    # 脱敏替换值
+    REDACTED_VALUE = "[REDACTED]"
+
     # 工具危险等级映射
     TOOL_LEVELS = {
         # SAFE - 信息收集
@@ -252,6 +271,42 @@ class AuthManager:
 
         return False
 
+    def _sanitize_params(self, params: Dict) -> Dict:
+        """
+        过滤参数中的敏感字段
+
+        对于敏感字段，将其值替换为 [REDACTED]
+        支持嵌套字典的递归处理
+
+        Args:
+            params: 原始参数字典
+
+        Returns:
+            脱敏后的参数字典
+        """
+        if not params:
+            return params
+
+        sanitized = {}
+        for key, value in params.items():
+            # 检查键名是否为敏感字段（不区分大小写）
+            key_lower = key.lower().replace('-', '_')
+            if key_lower in self.SENSITIVE_FIELDS:
+                sanitized[key] = self.REDACTED_VALUE
+            elif isinstance(value, dict):
+                # 递归处理嵌套字典
+                sanitized[key] = self._sanitize_params(value)
+            elif isinstance(value, list):
+                # 处理列表中的字典
+                sanitized[key] = [
+                    self._sanitize_params(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
+            else:
+                sanitized[key] = value
+
+        return sanitized
+
     def audit(self, key_id: str, tool_name: str, params: Dict,
              success: bool, error: str = None, ip_address: str = None):
         """
@@ -260,16 +315,19 @@ class AuthManager:
         Args:
             key_id: 密钥ID
             tool_name: 工具名称
-            params: 参数
+            params: 参数（敏感字段将被自动脱敏）
             success: 是否成功
             error: 错误信息
             ip_address: IP地址
         """
+        # 对参数进行脱敏处理
+        sanitized_params = self._sanitize_params(params) if params else {}
+
         log = AuditLog(
             timestamp=datetime.now(),
             key_id=key_id,
             tool_name=tool_name,
-            params=params,
+            params=sanitized_params,
             success=success,
             error=error,
             ip_address=ip_address

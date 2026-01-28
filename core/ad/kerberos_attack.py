@@ -12,6 +12,9 @@ ATT&CK Techniques:
 
 注意: 仅用于授权的渗透测试和安全研究
 """
+import logging
+
+logger = logging.getLogger(__name__)
 
 import socket
 import struct
@@ -19,7 +22,7 @@ import os
 import hashlib
 import hmac
 import time
-import random
+import secrets
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -345,7 +348,8 @@ class KerberosClient:
         if enc_types is None:
             enc_types = [KerberosEncType.RC4_HMAC]
 
-        nonce = random.randint(0, 2**32 - 1)
+        # 使用密码学安全随机数生成 nonce
+        nonce = secrets.randbelow(2**32)
 
         # KDC-REQ-BODY
         req_body = self._encode_kdc_req_body(
@@ -488,7 +492,7 @@ class KerberosAttacker:
 
     def _log(self, message: str):
         if self.verbose:
-            print(f"[Kerberos] {message}")
+            logger.debug(f"[Kerberos] {message}")
 
     def asrep_roast(self, usernames: List[str]) -> AttackResult:
         """
@@ -703,11 +707,12 @@ def kerberos_attack(
 
 if __name__ == "__main__":
     import sys
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     if len(sys.argv) < 4:
-        print("Usage: python kerberos_attack.py <domain> <dc_ip> <attack_type> [targets...]")
-        print("Attack types: asrep, kerberoast, spray, enum")
-        print("Example: python kerberos_attack.py contoso.com 192.168.1.1 asrep user1 user2 user3")
+        logger.info("Usage: python kerberos_attack.py <domain> <dc_ip> <attack_type> [targets...]")
+        logger.info("Attack types: asrep, kerberoast, spray, enum")
+        logger.info("Example: python kerberos_attack.py contoso.com 192.168.1.1 asrep user1 user2 user3")
         sys.exit(1)
 
     domain = sys.argv[1]
@@ -715,6 +720,6 @@ if __name__ == "__main__":
     attack_type = sys.argv[3]
     targets = sys.argv[4:] if len(sys.argv) > 4 else []
 
-    print(f"=== Kerberos Attack: {attack_type} ===")
+    logger.info(f"=== Kerberos Attack: {attack_type} ===")
     result = kerberos_attack(domain, dc_ip, attack_type, targets, verbose=True)
-    print(json.dumps(result, indent=2, ensure_ascii=False))
+    logger.info(json.dumps(result, indent=2, ensure_ascii=False))

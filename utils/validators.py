@@ -45,6 +45,7 @@ from typing import Any, Callable, Optional, List, Tuple, Union, Dict
 from urllib.parse import urlparse, unquote
 from pathlib import Path
 from functools import wraps
+import inspect
 
 logger = logging.getLogger(__name__)
 
@@ -322,17 +323,27 @@ def sanitize_path(path: str) -> str:
     return decoded
 
 
-def sanitize_command(cmd: str) -> str:
+def sanitize_command(cmd: str, strict: bool = True) -> str:
     """
-    清理命令字符串，移除危险字符
-
-    注意：这不能完全防止命令注入，最好使用参数化命令
+    清理命令字符串，防止命令注入
 
     Args:
         cmd: 原始命令
+        strict: 严格模式 (默认True)
+                - True: 如果包含危险字符则抛出 ValidationError
+                - False: 移除危险字符 (不推荐，可能被绕过)
 
     Returns:
         清理后的命令
+
+    Raises:
+        ValidationError: 严格模式下检测到危险字符
+
+    安全警告:
+        此函数不能完全防止命令注入。最佳实践是:
+        1. 使用参数化命令 (subprocess 的列表形式)
+        2. 使用白名单验证允许的命令
+        3. 避免将用户输入直接用于命令
     """
     if not cmd:
         return ''
@@ -344,11 +355,22 @@ def sanitize_command(cmd: str) -> str:
         '\x00', '\t', '\x0b', '\x0c',
     ]
 
-    result = cmd
-    for char in dangerous_chars:
-        result = result.replace(char, '')
-
-    return result.strip()
+    if strict:
+        # 严格模式：检测到危险字符则拒绝
+        for char in dangerous_chars:
+            if char in cmd:
+                raise ValidationError(
+                    f"命令包含危险字符: {repr(char)}",
+                    field="command"
+                )
+        return cmd.strip()
+    else:
+        # 宽松模式：移除危险字符 (不推荐)
+        logger.warning("sanitize_command 使用宽松模式 - 可能存在绕过风险")
+        result = cmd
+        for char in dangerous_chars:
+            result = result.replace(char, '')
+        return result.strip()
 
 
 def sanitize_filename(filename: str) -> str:
@@ -610,6 +632,104 @@ class InputValidator:
         except Exception as e:
             return False, f"Base64格式无效: {e}"
 
+    @staticmethod
+    def validate_string(
+        value: str,
+        min_length: int = 0,
+        max_length: int = 1000,
+        pattern: str = None,
+        allow_empty: bool = False
+    ) -> str:
+        """
+        验证字符串
+
+        Args:
+            value: 待验证的字符串
+            min_length: 最小长度
+            max_length: 最大长度
+            pattern: 正则模式名称（对应 VALIDATION_PATTERNS）
+            allow_empty: 是否允许空字符串
+
+        Returns:
+            验证后的字符串
+
+        Raises:
+            ValidationError: 验证失败
+        """
+        if not isinstance(value, str):
+            raise ValidationError(f"期望字符串类型，实际为 {type(value)}")
+
+        if not allow_empty and not value:
+            raise ValidationError("字符串不能为空")
+
+        if len(value) < min_length:
+            raise ValidationError(f"字符串长度不能小于 {min_length}")
+
+        if len(value) > max_length:
+            raise ValidationError(f"字符串长度不能大于 {max_length}")
+
+        if pattern and pattern in VALIDATION_PATTERNS:
+            if not VALIDATION_PATTERNS[pattern].match(value):
+                raise ValidationError(f"字符串格式不符合 {pattern} 规则")
+
+        return value
+
+    @staticmethod
+    def validate_command_args(
+        args: List[str],
+        whitelist: Optional[List[str]] = None
+    ) -> List[str]:
+        """
+        验证命令参数（防止命令注入）
+
+        Args:
+            args: 命令参数列表
+            whitelist: 允许的命令白名单
+
+        Returns:
+            验证后的参数列表
+
+        Raises:
+            ValidationError: 验证失败
+        """
+        if not args:
+            raise ValidationError("命令参数不能为空")
+
+        # 检查命令是否在白名单中
+        if whitelist and args[0] not in whitelist:
+            raise ValidationError(f"命令 {args[0]} 不在白名单中")
+
+        # 检查每个参数
+        for arg in args:
+            if not isinstance(arg, str):
+                raise ValidationError(f"参数必须是字符串类型: {type(arg)}")
+
+            # 检查危险字符
+            for dangerous in DANGEROUS_CHARS["command"]:
+                if dangerous in arg:
+                    raise ValidationError(f"参数包含危险字符: {dangerous}")
+
+        return args
+
+    @staticmethod
+    def sanitize_html(html: str) -> str:
+        """
+        清理HTML（防止XSS）
+
+        Args:
+            html: 待清理的HTML
+
+        Returns:
+            清理后的HTML（HTML实体转义）
+        """
+        html = html.replace('&', '&amp;')
+        html = html.replace('<', '&lt;')
+        html = html.replace('>', '&gt;')
+        html = html.replace('"', '&quot;')
+        html = html.replace("'", '&#x27;')
+        html = html.replace('/', '&#x2F;')
+        return html
+
 
 # 便捷验证函数
 def validate_and_raise(
@@ -638,8 +758,172 @@ def validate_and_raise(
     return value
 
 
+# =============================================================================
+# 装饰器
+# =============================================================================
+
+def validate_params(**validators):
+    """
+    参数验证装饰器
+
+    用法:
+        @validate_params(
+            url=lambda x: InputValidator.validate_url(x),
+            port=lambda x: InputValidator.validate_port(x)
+        )
+        def scan(url: str, port: int):
+            pass
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # 获取函数参数名
+            sig = inspect.signature(func)
+            bound = sig.bind(*args, **kwargs)
+            bound.apply_defaults()
+
+            # 验证每个参数
+            for param_name, validator in validators.items():
+                if param_name in bound.arguments:
+                    value = bound.arguments[param_name]
+                    try:
+                        validated = validator(value)
+                        bound.arguments[param_name] = validated
+                    except ValidationError as e:
+                        logger.error(f"参数验证失败 [{param_name}]: {e}")
+                        raise
+
+            return func(**bound.arguments)
+        return wrapper
+    return decorator
+
+
+def require_auth(func: Callable) -> Callable:
+    """
+    认证装饰器
+
+    需要配合 core.security.auth_manager 使用。
+    支持同步和异步函数。
+    """
+    def _get_auth_manager():
+        from core.security.auth_manager import AuthManager
+        if not hasattr(_get_auth_manager, "_instance"):
+            _get_auth_manager._instance = AuthManager()
+        return _get_auth_manager._instance
+
+    def _extract_api_key(kwargs: Dict[str, Any]) -> Optional[str]:
+        return kwargs.get("api_key") or os.environ.get("AUTOREDTEAM_API_KEY")
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        api_key = _extract_api_key(kwargs)
+        if not api_key:
+            raise ValidationError("缺少 API Key（请设置 AUTOREDTEAM_API_KEY 或传入 api_key）")
+
+        manager = _get_auth_manager()
+        key_obj = manager.verify_key(api_key)
+        if not key_obj:
+            raise ValidationError("API Key 无效或已过期")
+        if not manager.check_permission(key_obj, func.__name__):
+            raise ValidationError("API Key 权限不足")
+
+        return func(*args, **kwargs)
+
+    @wraps(func)
+    async def async_wrapper(*args, **kwargs):
+        api_key = _extract_api_key(kwargs)
+        if not api_key:
+            raise ValidationError("缺少 API Key（请设置 AUTOREDTEAM_API_KEY 或传入 api_key）")
+
+        manager = _get_auth_manager()
+        key_obj = manager.verify_key(api_key)
+        if not key_obj:
+            raise ValidationError("API Key 无效或已过期")
+        if not manager.check_permission(key_obj, func.__name__):
+            raise ValidationError("API Key 权限不足")
+
+        return await func(*args, **kwargs)
+
+    if inspect.iscoroutinefunction(func):
+        return async_wrapper
+    return wrapper
+
+
+# =============================================================================
+# 便捷函数
+# =============================================================================
+
+def safe_path_join(base: str, *paths: str) -> str:
+    """
+    安全的路径拼接（防止路径遍历）
+
+    Args:
+        base: 基础目录
+        *paths: 要拼接的路径部分
+
+    Returns:
+        安全的绝对路径
+
+    Raises:
+        ValidationError: 路径遍历检测
+    """
+    result = Path(base).resolve()
+
+    for part in paths:
+        # 验证每个部分
+        if '..' in part or part.startswith('/') or part.startswith('\\'):
+            raise ValidationError(f"路径部分包含危险字符: {part}")
+
+        result = result / part
+
+    # 确保最终路径在基础目录内
+    try:
+        result.resolve().relative_to(Path(base).resolve())
+    except ValueError:
+        raise ValidationError("路径遍历攻击检测")
+
+    return str(result.resolve())
+
+
+def validate_target(target: str) -> Dict[str, str]:
+    """
+    验证扫描目标（URL、IP或域名）
+
+    Args:
+        target: 目标字符串
+
+    Returns:
+        包含 type 和 value 的字典
+
+    Raises:
+        ValidationError: 验证失败
+    """
+    target = target.strip()
+
+    # 尝试作为URL验证
+    if target.startswith(('http://', 'https://')):
+        if validate_url(target):
+            return {"type": "url", "value": target}
+
+    # 尝试作为IP验证
+    if validate_ip(target):
+        return {"type": "ip", "value": target}
+
+    # 尝试作为CIDR验证
+    if validate_cidr(target):
+        return {"type": "cidr", "value": target}
+
+    # 尝试作为域名验证
+    if validate_domain(target):
+        return {"type": "domain", "value": target}
+
+    raise ValidationError(f"无效的目标格式: {target}")
+
+
 __all__ = [
+    # 异常类
     'ValidationError',
+    # 快捷验证函数
     'validate_url',
     'validate_ip',
     'validate_ipv4',
@@ -649,9 +933,20 @@ __all__ = [
     'validate_port_range',
     'validate_domain',
     'validate_email',
+    # 清理函数
     'sanitize_path',
     'sanitize_command',
     'sanitize_filename',
+    # 验证器类
     'InputValidator',
+    # 便捷函数
     'validate_and_raise',
+    'validate_target',
+    'safe_path_join',
+    # 装饰器
+    'validate_params',
+    'require_auth',
+    # 常量
+    'VALIDATION_PATTERNS',
+    'DANGEROUS_CHARS',
 ]

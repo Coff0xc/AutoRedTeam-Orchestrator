@@ -6,6 +6,7 @@ DNS枚举和侦察工具集
 import subprocess
 import json
 import logging
+import re
 from typing import Any, Dict, List
 from dataclasses import dataclass, field
 
@@ -17,9 +18,40 @@ try:
 except ImportError:
     DNS_AVAILABLE = False
 
-from core.tool_registry import BaseTool, ToolCategory, ToolParameter
+from core.registry import BaseTool, ToolCategory, ToolParameter
 
 logger = logging.getLogger(__name__)
+
+# 域名验证正则表达式 - 防止命令注入
+DOMAIN_PATTERN = re.compile(
+    r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
+)
+
+
+def validate_domain(domain: str) -> bool:
+    """
+    验证域名格式，防止命令注入
+
+    Args:
+        domain: 待验证的域名
+
+    Returns:
+        域名是否有效
+    """
+    if not domain or not isinstance(domain, str):
+        return False
+    # 检查长度
+    if len(domain) > 253:
+        return False
+    # 检查格式
+    if not DOMAIN_PATTERN.match(domain):
+        return False
+    # 检查危险字符
+    dangerous_chars = [';', '|', '&', '$', '`', '\n', '\r', '>', '<', "'", '"', '\\']
+    for char in dangerous_chars:
+        if char in domain:
+            return False
+    return True
 
 
 @dataclass
@@ -39,8 +71,13 @@ class DNSEnumTool(BaseTool):
     def execute(self, params: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
         if not DNS_AVAILABLE:
             return {"success": False, "error": "dnspython库未安装，请运行: pip install dnspython"}
-        
+
         domain = params["domain"]
+
+        # 输入验证 - 防止潜在的安全问题
+        if not validate_domain(domain):
+            return {"success": False, "error": f"无效的域名格式: {domain}"}
+
         record_types = params.get("record_types", "A,AAAA,MX,NS,TXT,CNAME,SOA").split(",")
         nameserver = params.get("nameserver")
         
@@ -112,7 +149,20 @@ class DNSReconTool(BaseTool):
         domain = params["domain"]
         scan_type = params.get("scan_type", "std")
         threads = params.get("threads", 10)
-        
+
+        # 输入验证 - 防止命令注入
+        if not validate_domain(domain):
+            return {"success": False, "error": f"无效的域名格式: {domain}"}
+
+        # 验证 scan_type 参数
+        allowed_scan_types = ["std", "brt", "srv", "axfr", "bing", "yand", "crt", "snoop"]
+        if scan_type not in allowed_scan_types:
+            return {"success": False, "error": f"无效的扫描类型: {scan_type}"}
+
+        # 验证 threads 参数
+        if not isinstance(threads, int) or threads < 1 or threads > 100:
+            threads = 10
+
         cmd = ["dnsrecon", "-d", domain, "-t", scan_type, "--threads", str(threads), "-j", "-"]
         
         try:
@@ -168,9 +218,27 @@ class DnsxTool(BaseTool):
         record_type = params.get("record_type", "A")
         resolver = params.get("resolver")
         wildcard = params.get("wildcard", False)
-        
+
+        # 输入验证 - 验证每个域名
+        validated_domains = []
+        for domain in domains:
+            domain = domain.strip()
+            if not domain:
+                continue
+            if not validate_domain(domain):
+                return {"success": False, "error": f"无效的域名格式: {domain}"}
+            validated_domains.append(domain)
+
+        if not validated_domains:
+            return {"success": False, "error": "未提供有效的域名"}
+
+        # 验证 record_type
+        allowed_record_types = ["a", "aaaa", "cname", "ns", "txt", "mx", "ptr", "soa"]
+        if record_type.lower() not in allowed_record_types:
+            return {"success": False, "error": f"无效的记录类型: {record_type}"}
+
         # 将域名写入临时输入
-        domain_input = "\n".join([d.strip() for d in domains])
+        domain_input = "\n".join(validated_domains)
         
         cmd = ["dnsx", "-silent", "-json"]
         cmd.extend(["-" + record_type.lower()])
@@ -231,10 +299,14 @@ class ZoneTransferTool(BaseTool):
     def execute(self, params: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
         if not DNS_AVAILABLE:
             return {"success": False, "error": "dnspython库未安装"}
-        
+
         domain = params["domain"]
         nameserver = params.get("nameserver")
-        
+
+        # 输入验证 - 防止潜在的安全问题
+        if not validate_domain(domain):
+            return {"success": False, "error": f"无效的域名格式: {domain}"}
+
         results = {
             "success": True,
             "domain": domain,

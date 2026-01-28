@@ -72,15 +72,27 @@ class GRPCSecurityTester:
         "x-request-id",
     ]
 
-    def __init__(self, timeout: float = 10.0):
+    def __init__(self, timeout: float = 10.0, verify_ssl: bool = False):
         """
         初始化gRPC安全测试器
 
         Args:
             timeout: 请求超时时间
+            verify_ssl: 是否验证 SSL 证书 (安全测试时通常禁用以测试自签名证书)
+                       警告: 在生产环境中应始终启用 SSL 验证
+
+        安全说明:
+            verify_ssl=False 仅应在以下场景使用:
+            - 测试自签名证书的服务
+            - 渗透测试/安全评估
+            - 开发环境调试
         """
         self.timeout = timeout
+        self.verify_ssl = verify_ssl
         self._findings: List[GRPCFinding] = []
+
+        if not verify_ssl:
+            logger.warning("SSL 证书验证已禁用 - 仅应在安全测试场景使用")
 
     def _parse_grpc_url(self, url: str) -> Tuple[str, int, bool]:
         """解析gRPC URL
@@ -131,8 +143,10 @@ class GRPCSecurityTester:
 
             if use_tls:
                 context = ssl.create_default_context()
-                context.check_hostname = False
-                context.verify_mode = ssl.CERT_NONE
+                if not self.verify_ssl:
+                    # 安全测试场景 - 禁用证书验证
+                    context.check_hostname = False
+                    context.verify_mode = ssl.CERT_NONE
                 sock = context.wrap_socket(sock, server_hostname=host)
 
             sock.connect((host, port))
@@ -297,8 +311,10 @@ class GRPCSecurityTester:
         # 测试TLS连接
         try:
             context = ssl.create_default_context()
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
+            if not self.verify_ssl:
+                # 安全测试场景 - 禁用证书验证
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
 
             with socket.create_connection((host, port), timeout=self.timeout) as raw_sock:
                 with context.wrap_socket(raw_sock, server_hostname=host) as sock:
@@ -713,6 +729,7 @@ def scan_grpc(target: str) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     import sys
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     if len(sys.argv) > 1:
         target = sys.argv[1]
@@ -722,5 +739,5 @@ if __name__ == "__main__":
     tester = GRPCSecurityTester()
     result = tester.full_scan(target)
 
-    print(f"发现问题数: {result['summary']['vulnerable_count']}")
-    print(f"最高严重性: {result['summary']['highest_severity']}")
+    logger.info(f"发现问题数: {result['summary']['vulnerable_count']}")
+    logger.info(f"最高严重性: {result['summary']['highest_severity']}")
