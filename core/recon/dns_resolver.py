@@ -370,7 +370,7 @@ class DNSResolver:
                                 pass
 
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
-            pass
+            self._logger.debug("External DNS tool not available for MX query")
         except Exception as e:
             self._logger.debug(f"MX query error: {e}")
 
@@ -405,7 +405,7 @@ class DNSResolver:
                             results.append(ns)
 
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
-            pass
+            self._logger.debug("External DNS tool not available for NS query")
         except Exception as e:
             self._logger.debug(f"NS query error: {e}")
 
@@ -442,7 +442,7 @@ class DNSResolver:
                         results.append(txt)
 
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
-            pass
+            self._logger.debug("External DNS tool not available for TXT query")
         except Exception as e:
             self._logger.debug(f"TXT query error: {e}")
 

@@ -7,7 +7,7 @@ Linux 持久化模块 - Linux Persistence
 
 import os
 import base64
-import random
+import secrets
 import string
 import logging
 from pathlib import Path
@@ -68,7 +68,7 @@ class LinuxPersistence:
     """
 
     def __init__(self):
-        self._random_suffix = ''.join(random.choices(string.ascii_lowercase, k=4))
+        self._random_suffix = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(4))
 
     def _generate_name(self, prefix: str = "sys") -> str:
         """生成随机名称"""
@@ -657,9 +657,12 @@ def list_linux_persistence_methods() -> List[Dict[str, str]]:
 
 
 if __name__ == "__main__":
-    print("Linux Persistence Module")
-    print("=" * 50)
-    print("\nAvailable methods:")
+    # 配置测试用日志
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logger.info("Linux Persistence Module")
+    logger.info("=" * 50)
+    logger.info("Available methods:")
     for m in list_linux_persistence_methods():
         root = "[Root]" if m["root_required"] else "[User]"
-        print(f"  {root} {m['method']}: {m['description']} (stealth: {m['stealth']})")
+        logger.info(f"  {root} {m['method']}: {m['description']} (stealth: {m['stealth']})")

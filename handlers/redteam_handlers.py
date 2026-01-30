@@ -16,6 +16,7 @@ from .error_handling import (
     ErrorCategory,
     extract_target,
     extract_file_path,
+    validate_inputs,
 )
 
 # 授权中间件
@@ -65,6 +66,7 @@ def register_redteam_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_critical_auth
+    @validate_inputs(target='target')
     @handle_errors(logger, ErrorCategory.REDTEAM, extract_target)
     async def lateral_smb(
         target: str,
@@ -88,7 +90,7 @@ def register_redteam_tools(mcp, counter, logger):
         Returns:
             执行结果
         """
-        from core.lateral.smb_lateral import smb_exec
+        from core.lateral.smb import smb_exec
 
         return smb_exec(
             target=target,

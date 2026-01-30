@@ -536,7 +536,8 @@ def ensure_credentials(creds: CredentialsType) -> Credentials:
 
 if __name__ == '__main__':
     # 测试数据结构
-    print("=== Lateral Movement Base Module ===")
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logger.info("=== Lateral Movement Base Module ===")
 
     # 测试 Credentials
     creds = Credentials(
@@ -544,10 +545,10 @@ if __name__ == '__main__':
         ntlm_hash='aad3b435b51404eeaad3b435b51404ee:8846f7eaee8fb117ad06bdd830b7586c',
         domain='WORKGROUP'
     )
-    print(f"\nCredentials: {creds}")
-    print(f"  Method: {creds.method.value}")
-    print(f"  LM Hash: {creds.lm_hash}")
-    print(f"  NT Hash: {creds.nt_hash}")
+    logger.info(f"Credentials: {creds}")
+    logger.info(f"  Method: {creds.method.value}")
+    logger.info(f"  LM Hash: {creds.lm_hash}")
+    logger.info(f"  NT Hash: {creds.nt_hash}")
 
     # 测试 ExecutionResult
     result = ExecutionResult(
@@ -556,8 +557,8 @@ if __name__ == '__main__':
         exit_code=0,
         duration=0.5
     )
-    print(f"\nExecutionResult: {result.to_dict()}")
+    logger.info(f"ExecutionResult: {result.to_dict()}")
 
     # 测试 LateralConfig
     config = LateralConfig(timeout=60.0, smb_share='C$')
-    print(f"\nLateralConfig: {config.to_dict()}")
+    logger.info(f"LateralConfig: {config.to_dict()}")

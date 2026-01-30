@@ -71,8 +71,8 @@ class ICMPExfiltration(BaseExfiltration):
             self._socket.settimeout(self.config.timeout)
 
             # 生成 ICMP ID
-            import random
-            self._id = random.randint(1, 65535)
+            import secrets
+            self._id = secrets.randbelow(65535) + 1
             self._seq = 0
 
             return True

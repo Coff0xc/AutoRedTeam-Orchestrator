@@ -537,6 +537,7 @@ def generate_sbom(project_path: str,
 if __name__ == "__main__":
     # 测试示例
     import sys
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     if len(sys.argv) > 1:
         path = sys.argv[1]
@@ -547,8 +548,8 @@ if __name__ == "__main__":
 
     # 检测生态系统
     ecosystems = generator.detect_ecosystems()
-    print(f"检测到的生态系统: {[e.value for e in ecosystems]}")
+    logger.info(f"检测到的生态系统: {[e.value for e in ecosystems]}")
 
     # 生成SBOM
     sbom = generator.generate(SBOMFormat.SIMPLE)
-    print(f"依赖总数: {sbom['total']}")
+    logger.info(f"依赖总数: {sbom['total']}")

@@ -102,6 +102,65 @@ def example_tool(target: str, option: bool = False) -> dict:
     pass
 ```
 
+### 异常处理规范
+
+项目使用 `core/exceptions/` 统一异常体系。请遵循以下规范：
+
+#### 使用具体异常类型
+
+```python
+# ❌ 错误 - 泛型异常捕获
+try:
+    response = requests.get(url)
+except Exception:
+    pass
+
+# ✅ 正确 - 捕获具体异常
+from core.exceptions import HTTPError, TimeoutError, ConnectionError
+
+try:
+    response = requests.get(url)
+except requests.Timeout as e:
+    raise TimeoutError("请求超时", url=url, cause=e)
+except requests.ConnectionError as e:
+    raise ConnectionError("连接失败", url=url, cause=e)
+```
+
+#### 使用异常装饰器
+
+```python
+from core.exceptions import handle_exceptions, TimeoutError
+
+# ✅ 推荐 - 使用装饰器处理异常
+@handle_exceptions(logger=logger, reraise=True)
+async def fetch_data(url: str):
+    ...
+```
+
+#### 异常层次结构
+
+| 异常基类 | 子异常 | 使用场景 |
+|---------|-------|---------|
+| `AutoRedTeamError` | - | 所有自定义异常的基类 |
+| `HTTPError` | `TimeoutError`, `ConnectionError`, `SSLError` | 网络请求错误 |
+| `AuthError` | `InvalidCredentials`, `PermissionDenied` | 认证/授权错误 |
+| `ScanError` | `TargetUnreachable`, `RateLimited` | 扫描过程错误 |
+| `ExploitError` | `ExploitFailed`, `ShellError` | 漏洞利用错误 |
+| `LateralError` | `SMBError`, `SSHError`, `WMIError` | 横向移动错误 |
+
+#### 何时可以使用 `except Exception`
+
+1. **顶层错误处理器** - 如 `handlers/error_handling.py` 中的装饰器
+2. **清理代码** - 确保资源释放的 finally 替代方案
+3. **必须记录日志** - 捕获后必须记录异常信息
+
+```python
+# ✅ 可接受 - 顶层处理器记录所有未预期错误
+except Exception as e:
+    logger.exception(f"未预期的错误: {e}")
+    return {'success': False, 'error': str(e)}
+```
+
 ---
 
 ## 分支策略

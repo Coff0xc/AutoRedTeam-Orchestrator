@@ -431,12 +431,13 @@ def scan_dependencies(project_path: str) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     # 测试示例
     scanner = DependencyScanner()
 
     # 测试单个包
     vulns = scanner.check_osv("requests", "2.25.0", "PyPI")
-    print(f"requests 2.25.0 漏洞数: {len(vulns)}")
+    logger.info(f"requests 2.25.0 漏洞数: {len(vulns)}")
 
     for v in vulns:
-        print(f"  - {v.vuln_id}: {v.title}")
+        logger.info(f"  - {v.vuln_id}: {v.title}")

@@ -35,35 +35,28 @@ class ReportGenerator:
         return self._load_report_source(session_id)
 
     def _load_report_source(self, session_id: str) -> Any:
-        """加载报告源数据，优先使用新版会话系统"""
-        # 新版会话管理器
+        """加载报告源数据"""
+        from core.session import get_session_manager
+
+        manager = get_session_manager()
+
+        # 优先获取扫描结果
+        result = manager.get_result(session_id)
+        if result:
+            return result
+
+        # 尝试获取会话上下文
+        context = manager.get_session(session_id)
+        if context:
+            return context
+
+        # 尝试从存储加载
         try:
-            from core.session import get_session_manager
-
-            manager = get_session_manager()
-            result = manager.get_result(session_id)
-            if result:
-                return result
-            context = manager.get_session(session_id)
-            if context:
-                return context
-        except Exception as exc:  # 兼容缺失模块或初始化失败
-            logger.debug("加载新版会话失败: %s", exc)
-
-        # 旧版会话管理器
-        try:
-            from core.session_manager import SessionManager
-
-            legacy_manager = SessionManager()
-            try:
-                session = legacy_manager.load_session(session_id)
-            except FileNotFoundError:
-                session = legacy_manager.get_session(session_id)
-
+            session = manager.load_session(session_id)
             if session:
                 return session
-        except Exception as exc:
-            logger.debug("加载旧版会话失败: %s", exc)
+        except FileNotFoundError:
+            pass
 
         raise ValueError(f"会话不存在: {session_id}")
 

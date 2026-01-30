@@ -574,7 +574,9 @@ class SessionManager:
             try:
                 callback(*args)
             except Exception as e:
-                logger.error(f"回调执行失败 [{event}]: {e}")
+                # 注意：此处使用泛化异常是有意的
+                # 回调函数可能抛出任何类型的异常，不应影响其他回调的执行
+                logger.error(f"回调执行失败 [{event}]: {type(e).__name__}: {e}")
 
     # ========== 持久化操作 ==========
 
@@ -603,8 +605,11 @@ class SessionManager:
 
                 return True
 
-            except Exception as e:
-                logger.error(f"保存会话失败: {e}")
+            except (OSError, TypeError, ValueError) as e:
+                # OSError: 文件系统错误
+                # TypeError: 序列化错误
+                # ValueError: 数据验证错误
+                logger.error(f"保存会话失败: {type(e).__name__}: {e}")
                 return False
 
     def load_session(self, session_id: str) -> Optional[ScanContext]:

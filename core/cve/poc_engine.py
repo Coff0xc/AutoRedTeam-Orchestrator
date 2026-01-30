@@ -9,6 +9,7 @@ PoC 执行引擎
 
 import re
 import random
+import secrets
 import string
 import logging
 import time
@@ -90,13 +91,14 @@ class VariableReplacer:
 
     @staticmethod
     def generate_random_string(length: int = 8) -> str:
-        """生成随机字符串"""
-        return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+        """生成密码学安全的随机字符串（用于漏洞探测标识符）"""
+        charset = string.ascii_lowercase + string.digits
+        return ''.join(secrets.choice(charset) for _ in range(length))
 
     @staticmethod
     def generate_random_int(min_val: int = 1, max_val: int = 999999) -> int:
-        """生成随机整数"""
-        return random.randint(min_val, max_val)
+        """生成密码学安全的随机整数"""
+        return min_val + secrets.randbelow(max_val - min_val + 1)
 
     @staticmethod
     def generate_interactsh_url() -> str:
@@ -877,9 +879,10 @@ def execute_poc_batch(
 # CLI 入口
 if __name__ == '__main__':
     import sys
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-    print("PoC Engine Test")
-    print("=" * 50)
+    logger.info("PoC Engine Test")
+    logger.info("=" * 50)
 
     # 示例模板
     sample_template_data = {
@@ -904,28 +907,28 @@ if __name__ == '__main__':
     template = engine.load_template_from_dict(sample_template_data)
 
     if template:
-        print(f"[+] 加载模板: {template.id}")
-        print(f"    名称: {template.name}")
-        print(f"    严重性: {template.severity.value}")
+        logger.info(f"[+] 加载模板: {template.id}")
+        logger.info(f"    名称: {template.name}")
+        logger.info(f"    严重性: {template.severity.value}")
 
     # 变量替换测试
-    print("\n[+] 变量替换测试:")
+    logger.info("[+] 变量替换测试:")
     test_url = "https://example.com:8443/api/v1"
     test_text = "URL: {{BaseURL}}, Host: {{Host}}, Random: {{randstr}}"
     replaced = VariableReplacer.replace(test_text, test_url)
-    print(f"    原始: {test_text}")
-    print(f"    替换: {replaced}")
+    logger.info(f"    原始: {test_text}")
+    logger.info(f"    替换: {replaced}")
 
     # 如果提供了目标，执行测试
     if len(sys.argv) > 1:
         target = sys.argv[1]
-        print(f"\n[+] 执行测试: {target}")
+        logger.info(f"[+] 执行测试: {target}")
 
         if template:
             result = engine.execute(target, template)
-            print(f"    成功: {result.success}")
-            print(f"    漏洞: {result.vulnerable}")
-            print(f"    耗时: {result.execution_time_ms:.1f}ms")
+            logger.info(f"    成功: {result.success}")
+            logger.info(f"    漏洞: {result.vulnerable}")
+            logger.info(f"    耗时: {result.execution_time_ms:.1f}ms")
 
             if result.error:
-                print(f"    错误: {result.error}")
+                logger.info(f"    错误: {result.error}")

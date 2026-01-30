@@ -5,6 +5,7 @@
 
 from typing import Any, Dict
 from .tooling import tool
+from .error_handling import handle_errors, ErrorCategory, validate_inputs
 
 
 def register_report_tools(mcp, counter, logger):
@@ -17,6 +18,8 @@ def register_report_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
+    @validate_inputs(session_id='session_id')
+    @handle_errors(logger, category=ErrorCategory.REPORT)
     async def generate_report(
         session_id: str,
         format: str = "json",
@@ -32,49 +35,48 @@ def register_report_tools(mcp, counter, logger):
         Returns:
             报告内容或路径
         """
-        try:
-            from utils.report_generator import ReportGenerator
+        from utils.report_generator import ReportGenerator
 
-            generator = ReportGenerator()
-            source = generator.load_source(session_id)
-            fmt = (format or "json").lower()
+        generator = ReportGenerator()
+        source = generator.load_source(session_id)
+        fmt = (format or "json").lower()
 
-            if fmt == 'json':
-                report = generator.to_dict(source)
-            elif fmt == 'html':
-                report = generator.to_html(source)
-            elif fmt == 'markdown':
-                report = generator.to_markdown(source)
-            elif fmt == 'executive':
-                report = generator.to_executive(source)
-            else:
-                return {'success': False, 'error': f'不支持的报告格式: {format}'}
+        if fmt == 'json':
+            report = generator.to_dict(source)
+        elif fmt == 'html':
+            report = generator.to_html(source)
+        elif fmt == 'markdown':
+            report = generator.to_markdown(source)
+        elif fmt == 'executive':
+            report = generator.to_executive(source)
+        else:
+            return {'success': False, 'error': f'不支持的报告格式: {format}'}
 
-            if output_path:
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    if isinstance(report, dict):
-                        import json
-                        json.dump(report, f, indent=2, ensure_ascii=False)
-                    else:
-                        f.write(report)
-
-                return {
-                    'success': True,
-                    'session_id': session_id,
-                    'format': fmt,
-                    'output_path': output_path
-                }
+        if output_path:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                if isinstance(report, dict):
+                    import json
+                    json.dump(report, f, indent=2, ensure_ascii=False)
+                else:
+                    f.write(report)
 
             return {
                 'success': True,
                 'session_id': session_id,
                 'format': fmt,
-                'report': report
+                'output_path': output_path
             }
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
+
+        return {
+            'success': True,
+            'session_id': session_id,
+            'format': fmt,
+            'report': report
+        }
 
     @tool(mcp)
+    @validate_inputs(session_id='session_id')
+    @handle_errors(logger, category=ErrorCategory.REPORT)
     async def export_findings(
         session_id: str,
         severity: str = None,
@@ -90,28 +92,25 @@ def register_report_tools(mcp, counter, logger):
         Returns:
             漏洞列表
         """
-        try:
-            from core.session import get_session_manager
+        from core.session import get_session_manager
 
-            manager = get_session_manager()
-            context = manager.get_session(session_id)
+        manager = get_session_manager()
+        context = manager.get_session(session_id)
 
-            if not context:
-                return {'success': False, 'error': f'会话不存在: {session_id}'}
+        if not context:
+            return {'success': False, 'error': f'会话不存在: {session_id}'}
 
-            vulns = context.vulnerabilities
+        vulns = context.vulnerabilities
 
-            if severity:
-                vulns = [v for v in vulns if v.severity.value.lower() == severity.lower()]
+        if severity:
+            vulns = [v for v in vulns if v.severity.value.lower() == severity.lower()]
 
-            return {
-                'success': True,
-                'session_id': session_id,
-                'vulnerabilities': [v.to_dict() for v in vulns],
-                'count': len(vulns)
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
+        return {
+            'success': True,
+            'session_id': session_id,
+            'vulnerabilities': [v.to_dict() for v in vulns],
+            'count': len(vulns)
+        }
 
     counter.add('report', 2)
     logger.info("[Report] 已注册 2 个报告工具")

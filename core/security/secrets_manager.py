@@ -303,7 +303,11 @@ class EnvironmentManager:
         "CENSYS_API_ID",
         "CENSYS_API_SECRET",
         "VT_API_KEY",
+        "VIRUSTOTAL_API_KEY",
+        "NVD_API_KEY",
+        "GITHUB_TOKEN",
         "REDTEAM_MASTER_KEY",
+        "AUTOREDTEAM_API_KEY",
         "DATABASE_PASSWORD",
         "JWT_SECRET",
     ]

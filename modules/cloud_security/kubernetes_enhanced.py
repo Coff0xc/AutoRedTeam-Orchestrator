@@ -680,11 +680,12 @@ def scan_k8s_namespace(namespace: str = "default",
 
 if __name__ == "__main__":
     import sys
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     namespace = sys.argv[1] if len(sys.argv) > 1 else "default"
 
     tester = KubernetesSecurityTester()
     result = tester.full_scan(namespace)
 
-    print(f"发现问题数: {result['total_findings']}")
-    print(f"严重性分布: {result['by_severity']}")
+    logger.info(f"发现问题数: {result['total_findings']}")
+    logger.info(f"严重性分布: {result['by_severity']}")

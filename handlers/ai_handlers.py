@@ -5,6 +5,7 @@ AI辅助工具处理器
 
 from typing import Any, Dict
 from .tooling import tool
+from .error_handling import handle_errors, ErrorCategory, extract_target, validate_inputs
 
 
 def register_ai_tools(mcp, counter, logger):
@@ -17,6 +18,8 @@ def register_ai_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
+    @validate_inputs(target='target')
+    @handle_errors(logger, category=ErrorCategory.AI, context_extractor=extract_target)
     async def smart_analyze(target: str, context: str = None) -> Dict[str, Any]:
         """智能分析 - AI辅助分析目标并推荐测试策略
 
@@ -27,21 +30,20 @@ def register_ai_tools(mcp, counter, logger):
         Returns:
             分析结果和建议
         """
-        try:
-            from core.ai_engine import AIAnalyzer
+        from core.ai_engine import AIAnalyzer
 
-            analyzer = AIAnalyzer()
-            result = analyzer.analyze(target, context)
+        analyzer = AIAnalyzer()
+        result = analyzer.analyze(target, context)
 
-            return {
-                'success': True,
-                'target': target,
-                'analysis': result
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'target': target}
+        return {
+            'success': True,
+            'target': target,
+            'analysis': result
+        }
 
     @tool(mcp)
+    @validate_inputs(target='target')
+    @handle_errors(logger, category=ErrorCategory.AI, context_extractor=extract_target)
     async def attack_chain_plan(
         target: str,
         reconnaissance_data: Dict[str, Any] = None
@@ -55,52 +57,50 @@ def register_ai_tools(mcp, counter, logger):
         Returns:
             推荐的攻击链
         """
-        try:
-            from core.attack_chain import AttackChainEngine
-            from urllib.parse import urlparse
+        from core.attack_chain import AttackChainEngine
+        from urllib.parse import urlparse
 
-            # 判断目标类型
-            if target.startswith(('http://', 'https://')):
-                parsed = urlparse(target)
-                target_type = 'url'
-                domain = parsed.netloc
-            elif '.' in target and not target.replace('.', '').isdigit():
-                target_type = 'domain'
-                domain = target
-            else:
-                target_type = 'ip'
-                domain = target
+        # 判断目标类型
+        if target.startswith(('http://', 'https://')):
+            parsed = urlparse(target)
+            target_type = 'url'
+            domain = parsed.netloc
+        elif '.' in target and not target.replace('.', '').isdigit():
+            target_type = 'domain'
+            domain = target
+        else:
+            target_type = 'ip'
+            domain = target
 
-            # 创建攻击链引擎 (tool_registry 可为 None，引擎会使用内置工具映射)
-            engine = AttackChainEngine(tool_registry=None)
-            chain = engine.create_chain(target, target_type)
+        # 创建攻击链引擎 (tool_registry 可为 None，引擎会使用内置工具映射)
+        engine = AttackChainEngine(tool_registry=None)
+        chain = engine.create_chain(target, target_type)
 
-            # 返回攻击链信息
-            return {
-                'success': True,
-                'target': target,
-                'target_type': target_type,
-                'attack_chain': {
-                    'id': chain.id,
-                    'name': chain.name,
-                    'nodes': [
-                        {
-                            'id': node.id,
-                            'phase': node.phase.value,
-                            'technique': node.technique,
-                            'tool': node.tool,
-                            'params': node.params,
-                            'dependencies': node.dependencies
-                        }
-                        for node in chain.nodes
-                    ],
-                    'total_nodes': len(chain.nodes)
-                }
+        # 返回攻击链信息
+        return {
+            'success': True,
+            'target': target,
+            'target_type': target_type,
+            'attack_chain': {
+                'id': chain.id,
+                'name': chain.name,
+                'nodes': [
+                    {
+                        'id': node.id,
+                        'phase': node.phase.value,
+                        'technique': node.technique,
+                        'tool': node.tool,
+                        'params': node.params,
+                        'dependencies': node.dependencies
+                    }
+                    for node in chain.nodes
+                ],
+                'total_nodes': len(chain.nodes)
             }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'target': target}
+        }
 
     @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
     async def smart_payload(
         vuln_type: str,
         context: Dict[str, Any] = None,
@@ -116,24 +116,22 @@ def register_ai_tools(mcp, counter, logger):
         Returns:
             推荐的payloads
         """
-        try:
-            from modules.smart_payload_engine import SmartPayloadEngine
+        from modules.payload import get_payload_engine, smart_select_payloads
 
-            engine = SmartPayloadEngine()
-            payloads = engine.generate(
-                vuln_type=vuln_type,
-                context=context,
-                waf_bypass=waf_detected
-            )
+        # 使用统一的 Payload 引擎
+        waf = context.get("waf") if context else None
+        payloads = smart_select_payloads(
+            vuln_type=vuln_type,
+            waf=waf if waf_detected else None,
+            top_n=20
+        )
 
-            return {
-                'success': True,
-                'vuln_type': vuln_type,
-                'payloads': payloads,
-                'count': len(payloads)
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
+        return {
+            'success': True,
+            'vuln_type': vuln_type,
+            'payloads': payloads,
+            'count': len(payloads)
+        }
 
     counter.add('ai', 3)
     logger.info("[AI] 已注册 3 个AI辅助工具")

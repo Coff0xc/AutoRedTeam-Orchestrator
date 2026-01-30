@@ -18,7 +18,7 @@ from core.result import (
 )
 
 # 工具注册表 (无循环依赖 - 仅使用标准库)
-from core.tool_registry import (
+from core.registry import (
     ToolRegistry,
     BaseTool,
     FunctionTool,
@@ -26,7 +26,7 @@ from core.tool_registry import (
     ToolParameter,
     MCPBridge,
     get_registry,
-    get_bridge,
+    get_global_bridge as get_bridge,  # 向后兼容别名
 )
 
 # AI决策引擎 (无循环依赖 - 仅使用标准库+可选第三方)
@@ -115,4 +115,4 @@ __all__ = [
     "SessionStorage",
 ]
 
-__version__ = '3.0.0'
+__version__ = '3.0.1'

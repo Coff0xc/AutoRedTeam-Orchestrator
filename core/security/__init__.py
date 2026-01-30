@@ -3,7 +3,8 @@
 安全加固模块初始化文件
 """
 
-from .input_validator import (
+# 从统一的验证器模块导入（原 input_validator.py 已废弃）
+from utils.validators import (
     InputValidator,
     ValidationError,
     validate_params,

@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 import requests
 
-from core.tool_registry import BaseTool, ToolCategory, ToolParameter
+from core.registry import BaseTool, ToolCategory, ToolParameter
 
 logger = logging.getLogger(__name__)
 

@@ -2,10 +2,22 @@
 漏洞检测工具处理器
 包含: vuln_scan, sqli_scan, xss_scan, ssrf_scan, rce_scan, path_traversal_scan,
       ssti_scan, xxe_scan, idor_scan, cors_scan, security_headers_scan
+
+重构说明 (2026-01):
+    使用 handle_errors 装饰器替代手动 try-except，实现:
+    - 异常自动分类和日志记录
+    - 标准化错误响应格式
+    - 减少代码重复
 """
 
 from typing import Any, Dict, List
 from .tooling import tool
+from .error_handling import (
+    handle_errors,
+    ErrorCategory,
+    extract_url,
+    validate_inputs,
+)
 
 
 def register_detector_tools(mcp, counter, logger):
@@ -18,6 +30,8 @@ def register_detector_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
+    @validate_inputs(url='url')
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def vuln_scan(
         url: str,
         params: Dict[str, str] = None,
@@ -35,39 +49,38 @@ def register_detector_tools(mcp, counter, logger):
         Returns:
             发现的漏洞列表
         """
-        try:
-            from core.detectors import DetectorFactory, DetectorPresets
+        from core.detectors import DetectorFactory, DetectorPresets
 
-            if detectors:
-                composite = DetectorFactory.create_composite(detectors)
-            else:
-                composite = DetectorPresets.owasp_top10()
+        if detectors:
+            composite = DetectorFactory.create_composite(detectors)
+        else:
+            composite = DetectorPresets.owasp_top10()
 
-            results = await composite.async_detect(url, params=params or {})
+        results = await composite.async_detect(url, params=params or {})
 
-            vulnerabilities = [
-                {
-                    'type': r.vuln_type,
-                    'severity': r.severity.value,
-                    'param': r.param,
-                    'payload': r.payload,
-                    'evidence': r.evidence[:200] if r.evidence else None,
-                    'remediation': r.remediation
-                }
-                for r in results if r.vulnerable
-            ]
-
-            return {
-                'success': True,
-                'url': url,
-                'vulnerabilities': vulnerabilities,
-                'total_vulns': len(vulnerabilities),
-                'detectors_used': detectors or ['owasp_top10']
+        vulnerabilities = [
+            {
+                'type': r.vuln_type,
+                'severity': r.severity.value,
+                'param': r.param,
+                'payload': r.payload,
+                'evidence': r.evidence[:200] if r.evidence else None,
+                'remediation': r.remediation
             }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'url': url}
+            for r in results if r.vulnerable
+        ]
+
+        return {
+            'success': True,
+            'url': url,
+            'vulnerabilities': vulnerabilities,
+            'total_vulns': len(vulnerabilities),
+            'detectors_used': detectors or ['owasp_top10']
+        }
 
     @tool(mcp)
+    @validate_inputs(url='url')
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def sqli_scan(url: str, params: Dict[str, str] = None, method: str = "GET") -> Dict[str, Any]:
         """SQL注入检测 - 检测SQL注入漏洞
 
@@ -81,32 +94,31 @@ def register_detector_tools(mcp, counter, logger):
         Returns:
             SQL注入检测结果
         """
-        try:
-            from core.detectors import SQLiDetector
+        from core.detectors import SQLiDetector
 
-            detector = SQLiDetector()
-            results = await detector.async_detect(url, params=params or {}, method=method)
+        detector = SQLiDetector()
+        results = await detector.async_detect(url, params=params or {}, method=method)
 
-            findings = [
-                {
-                    'param': r.param,
-                    'payload': r.payload,
-                    'type': r.injection_type if hasattr(r, 'injection_type') else 'unknown',
-                    'evidence': r.evidence[:200] if r.evidence else None
-                }
-                for r in results if r.vulnerable
-            ]
-
-            return {
-                'success': True,
-                'vulnerable': len(findings) > 0,
-                'url': url,
-                'findings': findings
+        findings = [
+            {
+                'param': r.param,
+                'payload': r.payload,
+                'type': r.injection_type if hasattr(r, 'injection_type') else 'unknown',
+                'evidence': r.evidence[:200] if r.evidence else None
             }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'url': url}
+            for r in results if r.vulnerable
+        ]
+
+        return {
+            'success': True,
+            'vulnerable': len(findings) > 0,
+            'url': url,
+            'findings': findings
+        }
 
     @tool(mcp)
+    @validate_inputs(url='url')
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def xss_scan(url: str, params: Dict[str, str] = None) -> Dict[str, Any]:
         """XSS漏洞检测 - 检测跨站脚本攻击漏洞
 
@@ -119,32 +131,31 @@ def register_detector_tools(mcp, counter, logger):
         Returns:
             XSS检测结果
         """
-        try:
-            from core.detectors import XSSDetector
+        from core.detectors import XSSDetector
 
-            detector = XSSDetector()
-            results = await detector.async_detect(url, params=params or {})
+        detector = XSSDetector()
+        results = await detector.async_detect(url, params=params or {})
 
-            findings = [
-                {
-                    'param': r.param,
-                    'payload': r.payload,
-                    'context': r.context if hasattr(r, 'context') else None,
-                    'evidence': r.evidence[:200] if r.evidence else None
-                }
-                for r in results if r.vulnerable
-            ]
-
-            return {
-                'success': True,
-                'vulnerable': len(findings) > 0,
-                'url': url,
-                'findings': findings
+        findings = [
+            {
+                'param': r.param,
+                'payload': r.payload,
+                'context': r.context if hasattr(r, 'context') else None,
+                'evidence': r.evidence[:200] if r.evidence else None
             }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'url': url}
+            for r in results if r.vulnerable
+        ]
+
+        return {
+            'success': True,
+            'vulnerable': len(findings) > 0,
+            'url': url,
+            'findings': findings
+        }
 
     @tool(mcp)
+    @validate_inputs(url='url')
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def ssrf_scan(url: str, params: Dict[str, str] = None) -> Dict[str, Any]:
         """SSRF漏洞检测 - 检测服务端请求伪造漏洞
 
@@ -155,24 +166,23 @@ def register_detector_tools(mcp, counter, logger):
         Returns:
             SSRF检测结果
         """
-        try:
-            from core.detectors import SSRFDetector
+        from core.detectors import SSRFDetector
 
-            detector = SSRFDetector()
-            results = await detector.async_detect(url, params=params or {})
+        detector = SSRFDetector()
+        results = await detector.async_detect(url, params=params or {})
 
-            findings = [r.to_dict() for r in results if r.vulnerable]
+        findings = [r.to_dict() for r in results if r.vulnerable]
 
-            return {
-                'success': True,
-                'vulnerable': len(findings) > 0,
-                'url': url,
-                'findings': findings
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'url': url}
+        return {
+            'success': True,
+            'vulnerable': len(findings) > 0,
+            'url': url,
+            'findings': findings
+        }
 
     @tool(mcp)
+    @validate_inputs(url='url')
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def rce_scan(url: str, params: Dict[str, str] = None) -> Dict[str, Any]:
         """命令注入检测 - 检测远程命令执行漏洞
 
@@ -183,24 +193,23 @@ def register_detector_tools(mcp, counter, logger):
         Returns:
             RCE检测结果
         """
-        try:
-            from core.detectors import RCEDetector
+        from core.detectors import RCEDetector
 
-            detector = RCEDetector()
-            results = await detector.async_detect(url, params=params or {})
+        detector = RCEDetector()
+        results = await detector.async_detect(url, params=params or {})
 
-            findings = [r.to_dict() for r in results if r.vulnerable]
+        findings = [r.to_dict() for r in results if r.vulnerable]
 
-            return {
-                'success': True,
-                'vulnerable': len(findings) > 0,
-                'url': url,
-                'findings': findings
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'url': url}
+        return {
+            'success': True,
+            'vulnerable': len(findings) > 0,
+            'url': url,
+            'findings': findings
+        }
 
     @tool(mcp)
+    @validate_inputs(url='url')
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def path_traversal_scan(url: str, params: Dict[str, str] = None) -> Dict[str, Any]:
         """路径遍历检测 - 检测目录遍历/LFI漏洞
 
@@ -211,24 +220,23 @@ def register_detector_tools(mcp, counter, logger):
         Returns:
             路径遍历检测结果
         """
-        try:
-            from core.detectors import PathTraversalDetector
+        from core.detectors import PathTraversalDetector
 
-            detector = PathTraversalDetector()
-            results = await detector.async_detect(url, params=params or {})
+        detector = PathTraversalDetector()
+        results = await detector.async_detect(url, params=params or {})
 
-            findings = [r.to_dict() for r in results if r.vulnerable]
+        findings = [r.to_dict() for r in results if r.vulnerable]
 
-            return {
-                'success': True,
-                'vulnerable': len(findings) > 0,
-                'url': url,
-                'findings': findings
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'url': url}
+        return {
+            'success': True,
+            'vulnerable': len(findings) > 0,
+            'url': url,
+            'findings': findings
+        }
 
     @tool(mcp)
+    @validate_inputs(url='url')
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def ssti_scan(url: str, params: Dict[str, str] = None) -> Dict[str, Any]:
         """模板注入检测 - 检测服务端模板注入漏洞
 
@@ -241,24 +249,23 @@ def register_detector_tools(mcp, counter, logger):
         Returns:
             SSTI检测结果
         """
-        try:
-            from core.detectors import SSTIDetector
+        from core.detectors import SSTIDetector
 
-            detector = SSTIDetector()
-            results = await detector.async_detect(url, params=params or {})
+        detector = SSTIDetector()
+        results = await detector.async_detect(url, params=params or {})
 
-            findings = [r.to_dict() for r in results if r.vulnerable]
+        findings = [r.to_dict() for r in results if r.vulnerable]
 
-            return {
-                'success': True,
-                'vulnerable': len(findings) > 0,
-                'url': url,
-                'findings': findings
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'url': url}
+        return {
+            'success': True,
+            'vulnerable': len(findings) > 0,
+            'url': url,
+            'findings': findings
+        }
 
     @tool(mcp)
+    @validate_inputs(url='url')
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def xxe_scan(url: str, content_type: str = "application/xml") -> Dict[str, Any]:
         """XXE漏洞检测 - 检测XML外部实体注入漏洞
 
@@ -269,24 +276,23 @@ def register_detector_tools(mcp, counter, logger):
         Returns:
             XXE检测结果
         """
-        try:
-            from core.detectors import XXEDetector
+        from core.detectors import XXEDetector
 
-            detector = XXEDetector()
-            results = await detector.async_detect(url, content_type=content_type)
+        detector = XXEDetector()
+        results = await detector.async_detect(url, content_type=content_type)
 
-            findings = [r.to_dict() for r in results if r.vulnerable]
+        findings = [r.to_dict() for r in results if r.vulnerable]
 
-            return {
-                'success': True,
-                'vulnerable': len(findings) > 0,
-                'url': url,
-                'findings': findings
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'url': url}
+        return {
+            'success': True,
+            'vulnerable': len(findings) > 0,
+            'url': url,
+            'findings': findings
+        }
 
     @tool(mcp)
+    @validate_inputs(url='url')
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def idor_scan(url: str, id_param: str = "id", test_ids: List[str] = None) -> Dict[str, Any]:
         """IDOR漏洞检测 - 检测不安全的直接对象引用
 
@@ -298,24 +304,23 @@ def register_detector_tools(mcp, counter, logger):
         Returns:
             IDOR检测结果
         """
-        try:
-            from core.detectors import IDORDetector
+        from core.detectors import IDORDetector
 
-            detector = IDORDetector()
-            results = await detector.async_detect(url, id_param=id_param, test_ids=test_ids)
+        detector = IDORDetector()
+        results = await detector.async_detect(url, id_param=id_param, test_ids=test_ids)
 
-            findings = [r.to_dict() for r in results if r.vulnerable]
+        findings = [r.to_dict() for r in results if r.vulnerable]
 
-            return {
-                'success': True,
-                'vulnerable': len(findings) > 0,
-                'url': url,
-                'findings': findings
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'url': url}
+        return {
+            'success': True,
+            'vulnerable': len(findings) > 0,
+            'url': url,
+            'findings': findings
+        }
 
     @tool(mcp)
+    @validate_inputs(url='url')
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def cors_scan(url: str) -> Dict[str, Any]:
         """CORS配置检测 - 检测跨域资源共享配置问题
 
@@ -327,24 +332,23 @@ def register_detector_tools(mcp, counter, logger):
         Returns:
             CORS检测结果
         """
-        try:
-            from core.detectors import CORSDetector
+        from core.detectors import CORSDetector
 
-            detector = CORSDetector()
-            results = await detector.async_detect(url)
+        detector = CORSDetector()
+        results = await detector.async_detect(url)
 
-            findings = [r.to_dict() for r in results if r.vulnerable]
+        findings = [r.to_dict() for r in results if r.vulnerable]
 
-            return {
-                'success': True,
-                'vulnerable': len(findings) > 0,
-                'url': url,
-                'findings': findings
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'url': url}
+        return {
+            'success': True,
+            'vulnerable': len(findings) > 0,
+            'url': url,
+            'findings': findings
+        }
 
     @tool(mcp)
+    @validate_inputs(url='url')
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def security_headers_scan(url: str) -> Dict[str, Any]:
         """安全头检测 - 检测HTTP安全响应头配置
 
@@ -356,19 +360,16 @@ def register_detector_tools(mcp, counter, logger):
         Returns:
             安全头检测结果
         """
-        try:
-            from core.detectors import SecurityHeadersDetector
+        from core.detectors import SecurityHeadersDetector
 
-            detector = SecurityHeadersDetector()
-            results = await detector.async_detect(url)
+        detector = SecurityHeadersDetector()
+        results = await detector.async_detect(url)
 
-            return {
-                'success': True,
-                'url': url,
-                'findings': [r.to_dict() for r in results]
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'url': url}
+        return {
+            'success': True,
+            'url': url,
+            'findings': [r.to_dict() for r in results]
+        }
 
     counter.add('detector', 11)
     logger.info("[Detector] 已注册 11 个漏洞检测工具")

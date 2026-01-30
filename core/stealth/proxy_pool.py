@@ -658,17 +658,18 @@ def get_free_proxy_sources() -> List[str]:
 
 if __name__ == "__main__":
     # 测试
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     pool = ProxyPool(auto_validate=False)
 
     # 添加测试代理
     pool.add_proxy("http://127.0.0.1:8080")
     pool.add_proxy("socks5://127.0.0.1:1080")
 
-    print(f"Total proxies: {pool.count}")
-    print(f"Stats: {pool.get_stats()}")
+    logger.info(f"Total proxies: {pool.count}")
+    logger.info(f"Stats: {pool.get_stats()}")
 
     # 获取代理
     proxy = pool.get_proxy()
     if proxy:
-        print(f"Selected proxy: {proxy.url}")
-        print(f"Dict format: {proxy.dict_format}")
+        logger.info(f"Selected proxy: {proxy.url}")
+        logger.info(f"Dict format: {proxy.dict_format}")

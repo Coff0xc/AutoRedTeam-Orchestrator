@@ -675,11 +675,9 @@ def create_chain_from_pool(pool: ProxyPool,
 
 if __name__ == "__main__":
     # 测试代码
-    from utils.logger import configure_root_logger
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-    configure_root_logger(level=logging.INFO, log_to_file=True, log_to_console=True)
-
-    print("=== ProxyChain Test ===\n")
+    logger.info("=== ProxyChain Test ===")
 
     # 1. 创建代理链
     chain = ProxyChain(name="test_chain", strategy=ChainStrategy.DYNAMIC)
@@ -688,20 +686,20 @@ if __name__ == "__main__":
     chain.add_proxy("http://127.0.0.1:8080")
     chain.add_proxy("socks5://127.0.0.1:1080")
 
-    print(f"Proxy chain: {chain.get_chain()}")
+    logger.info(f"Proxy chain: {chain.get_chain()}")
 
     # 3. 验证代理
-    print("\nVerifying proxies...")
+    logger.info("Verifying proxies...")
     result = chain.verify_all(timeout=5)
-    print(f"Verification result: {json.dumps(result, indent=2)}")
+    logger.info(f"Verification result: {json.dumps(result, indent=2)}")
 
     # 4. 获取状态
-    print("\nChain status:")
+    logger.info("Chain status:")
     status = chain.get_status()
-    print(json.dumps(status, indent=2))
+    logger.info(json.dumps(status, indent=2))
 
     # 5. 测试代理链管理器
-    print("\n=== ProxyChainManager Test ===\n")
+    logger.info("=== ProxyChainManager Test ===")
 
     manager = ProxyChainManager(load_balance=LoadBalanceMode.ROUND_ROBIN)
 
@@ -714,7 +712,7 @@ if __name__ == "__main__":
 
     # 获取统计
     stats = manager.get_stats()
-    print("Manager stats:")
-    print(json.dumps(stats, indent=2))
+    logger.info("Manager stats:")
+    logger.info(json.dumps(stats, indent=2))
 
-    print("\nTest completed successfully")
+    logger.info("Test completed successfully")

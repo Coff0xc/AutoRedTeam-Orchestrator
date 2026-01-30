@@ -5,7 +5,15 @@
 
 from typing import Any, Dict, List
 from .tooling import tool
-from .error_handling import handle_errors, ErrorCategory, extract_target, extract_url, extract_domain
+from .error_handling import (
+    handle_errors,
+    ErrorCategory,
+    extract_target,
+    extract_url,
+    extract_domain,
+    validate_inputs,
+    require_non_empty,
+)
 
 
 def register_recon_tools(mcp, counter, logger):
@@ -18,6 +26,7 @@ def register_recon_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
+    @validate_inputs(target='target')
     @handle_errors(logger, ErrorCategory.RECON, extract_target)
     async def full_recon(target: str, quick_mode: bool = False) -> Dict[str, Any]:
         """完整侦察扫描 - 执行全面的目标信息收集
@@ -44,6 +53,7 @@ def register_recon_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @validate_inputs(target='target', ports='port_range')
     @handle_errors(logger, ErrorCategory.RECON, extract_target)
     async def port_scan(target: str, ports: str = "1-1000", timeout: float = 2.0) -> Dict[str, Any]:
         """端口扫描 - 探测目标开放端口和服务
@@ -79,6 +89,7 @@ def register_recon_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @validate_inputs(url='url')
     @handle_errors(logger, ErrorCategory.RECON, extract_url)
     async def fingerprint(url: str) -> Dict[str, Any]:
         """Web指纹识别 - 识别目标Web应用的技术栈
@@ -111,6 +122,7 @@ def register_recon_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @validate_inputs(domain='domain')
     @handle_errors(logger, ErrorCategory.RECON, extract_domain)
     async def subdomain_enum(domain: str, methods: List[str] = None, limit: int = 100) -> Dict[str, Any]:
         """子域名枚举 - 发现目标域名的子域名
@@ -146,6 +158,7 @@ def register_recon_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @validate_inputs(url='url')
     @handle_errors(logger, ErrorCategory.RECON, extract_url)
     async def dir_scan(url: str, wordlist: str = "common", extensions: List[str] = None) -> Dict[str, Any]:
         """目录扫描 - 发现Web应用的隐藏路径
@@ -180,6 +193,7 @@ def register_recon_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @validate_inputs(domain='domain')
     @handle_errors(logger, ErrorCategory.RECON, extract_domain)
     async def dns_lookup(domain: str, record_types: List[str] = None) -> Dict[str, Any]:
         """DNS查询 - 获取域名的DNS记录
@@ -202,6 +216,7 @@ def register_recon_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @validate_inputs(url='url')
     @handle_errors(logger, ErrorCategory.RECON, extract_url)
     async def tech_detect(url: str) -> Dict[str, Any]:
         """技术栈检测 - 识别网站使用的技术
@@ -231,6 +246,7 @@ def register_recon_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @validate_inputs(url='url')
     @handle_errors(logger, ErrorCategory.RECON, extract_url)
     async def waf_detect(url: str) -> Dict[str, Any]:
         """WAF检测 - 识别目标是否有Web应用防火墙

@@ -148,6 +148,10 @@ from .utils import (
     COMMON_PORTS,
 )
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # 版本信息
 __version__ = '2.0.0'
 __author__ = 'AutoRedTeam'
@@ -280,23 +284,26 @@ def get_module_info() -> dict:
 
 
 if __name__ == '__main__':
-    print("=" * 60)
-    print("AutoRedTeam Lateral Movement Module")
-    print("=" * 60)
+    # 配置测试用日志
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logger.info("=" * 60)
+    logger.info("AutoRedTeam Lateral Movement Module")
+    logger.info("=" * 60)
 
     info = get_module_info()
 
-    print(f"\n版本: {info['version']}")
-    print("\n模块状态:")
+    logger.info(f"\n版本: {info['version']}")
+    logger.info("模块状态:")
 
     for module, status in info['modules'].items():
         available = "可用" if status['available'] else "不可用"
         deps = ', '.join(f"{k}={'已安装' if v else '未安装'}"
                          for k, v in status.items() if k != 'available')
-        print(f"  {module}: {available} ({deps})")
+        logger.info(f"  {module}: {available} ({deps})")
 
-    print(f"\n认证方式: {', '.join(info['auth_methods'])}")
+    logger.info(f"\n认证方式: {', '.join(info['auth_methods'])}")
 
-    print("\n使用示例:")
-    print("  from core.lateral import SMBLateral, Credentials, smb_exec")
-    print("  result = smb_exec('192.168.1.100', 'admin', 'password', command='whoami')")
+    logger.info("使用示例:")
+    logger.info("  from core.lateral import SMBLateral, Credentials, smb_exec")
+    logger.info("  result = smb_exec('192.168.1.100', 'admin', 'password', command='whoami')")

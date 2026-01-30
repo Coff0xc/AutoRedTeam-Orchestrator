@@ -535,6 +535,7 @@ def create_stealth_request(url: str,
 
 if __name__ == "__main__":
     # 测试
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     mutator = TrafficMutator()
 
     result = mutator.mutate_request(
@@ -542,8 +543,8 @@ if __name__ == "__main__":
         params={"id": "1", "name": "test"}
     )
 
-    print("Mutated Request:")
-    print(f"  URL: {result['url']}")
-    print(f"  Headers: {list(result['headers'].keys())}")
-    print(f"  Params: {result['params']}")
-    print(f"  Delay: {result['delay']:.2f}s")
+    logger.info("Mutated Request:")
+    logger.info(f"  URL: {result['url']}")
+    logger.info(f"  Headers: {list(result['headers'].keys())}")
+    logger.info(f"  Params: {result['params']}")
+    logger.info(f"  Delay: {result['delay']:.2f}s")

@@ -738,13 +738,14 @@ def wmi_recon(
 
 
 if __name__ == '__main__':
-    print("=== WMI Lateral Movement Module ===")
-    print(f"impacket 可用: {HAS_IMPACKET}")
-    print(f"本地 WMI 可用: {HAS_LOCAL_WMI}")
-    print("\n使用示例:")
-    print("  from core.lateral import WMILateral, Credentials, wmi_exec")
-    print("  result = wmi_exec('192.168.1.100', 'admin', 'password', 'whoami')")
-    print("\n常用 WQL 查询:")
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logger.info("=== WMI Lateral Movement Module ===")
+    logger.info(f"impacket 可用: {HAS_IMPACKET}")
+    logger.info(f"本地 WMI 可用: {HAS_LOCAL_WMI}")
+    logger.info("使用示例:")
+    logger.info("  from core.lateral import WMILateral, Credentials, wmi_exec")
+    logger.info("  result = wmi_exec('192.168.1.100', 'admin', 'password', 'whoami')")
+    logger.info("常用 WQL 查询:")
     for name in dir(WQLQueries):
         if not name.startswith('_'):
-            print(f"  {name}")
+            logger.info(f"  {name}")

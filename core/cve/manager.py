@@ -471,17 +471,18 @@ def reset_cve_manager():
 async def _cli_main():
     """CLI 入口"""
     import sys
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     if len(sys.argv) < 2:
-        print("CVE Manager CLI")
-        print("=" * 50)
-        print("用法:")
-        print("  python manager.py sync [days]     # 同步数据 (默认7天)")
-        print("  python manager.py search <keyword> # 搜索 CVE")
-        print("  python manager.py get <cve_id>    # 获取 CVE 详情")
-        print("  python manager.py stats           # 查看统计")
-        print("  python manager.py recent [limit]  # 最近的 CVE")
-        print("  python manager.py poc [limit]     # 有 PoC 的 CVE")
+        logger.info("CVE Manager CLI")
+        logger.info("=" * 50)
+        logger.info("用法:")
+        logger.info("  python manager.py sync [days]     # 同步数据 (默认7天)")
+        logger.info("  python manager.py search <keyword> # 搜索 CVE")
+        logger.info("  python manager.py get <cve_id>    # 获取 CVE 详情")
+        logger.info("  python manager.py stats           # 查看统计")
+        logger.info("  python manager.py recent [limit]  # 最近的 CVE")
+        logger.info("  python manager.py poc [limit]     # 有 PoC 的 CVE")
         return
 
     manager = get_cve_manager()
@@ -490,75 +491,75 @@ async def _cli_main():
     if command == 'sync':
         days = int(sys.argv[2]) if len(sys.argv) > 2 else 7
         results = await manager.sync(days=days)
-        print(f"\n同步完成:")
+        logger.info("\n同步完成:")
         for source, status in results.items():
-            print(f"  {source}: {status.status} "
+            logger.info(f"  {source}: {status.status} "
                   f"(新增: {status.new_count}, 更新: {status.updated_count})")
 
     elif command == 'search':
         keyword = sys.argv[2] if len(sys.argv) > 2 else ''
         entries = manager.search(keyword=keyword, limit=10)
-        print(f"\n搜索结果 ({len(entries)} 条):")
+        logger.info(f"\n搜索结果 ({len(entries)} 条):")
         for entry in entries:
             severity = entry.severity.value.upper()
             cvss = entry.cvss.score if entry.cvss else 0.0
             poc = "✓" if entry.has_poc else "✗"
-            print(f"  [{severity}] {entry.cve_id} (CVSS: {cvss:.1f}) PoC: {poc}")
-            print(f"    {entry.description[:80]}...")
+            logger.info(f"  [{severity}] {entry.cve_id} (CVSS: {cvss:.1f}) PoC: {poc}")
+            logger.info(f"    {entry.description[:80]}...")
 
     elif command == 'get':
         cve_id = sys.argv[2] if len(sys.argv) > 2 else ''
         entry = await manager.get_detail(cve_id.upper(), refresh=True)
         if entry:
-            print(f"\n{entry.cve_id}")
-            print("=" * 50)
-            print(f"标题: {entry.title}")
-            print(f"严重性: {entry.severity.value.upper()}")
+            logger.info(f"\n{entry.cve_id}")
+            logger.info("=" * 50)
+            logger.info(f"标题: {entry.title}")
+            logger.info(f"严重性: {entry.severity.value.upper()}")
             if entry.cvss:
-                print(f"CVSS: {entry.cvss.score} ({entry.cvss.version})")
-            print(f"描述: {entry.description[:200]}...")
-            print(f"有 PoC: {'是' if entry.has_poc else '否'}")
+                logger.info(f"CVSS: {entry.cvss.score} ({entry.cvss.version})")
+            logger.info(f"描述: {entry.description[:200]}...")
+            logger.info(f"有 PoC: {'是' if entry.has_poc else '否'}")
             if entry.poc_urls:
-                print(f"PoC 链接:")
+                logger.info("PoC 链接:")
                 for url in entry.poc_urls[:3]:
-                    print(f"  - {url}")
+                    logger.info(f"  - {url}")
         else:
-            print(f"未找到: {cve_id}")
+            logger.info(f"未找到: {cve_id}")
 
     elif command == 'stats':
         stats = manager.stats()
-        print(f"\n统计信息:")
-        print(f"  总 CVE 数: {stats.total_count}")
-        print(f"  有 PoC 的: {stats.poc_available_count}")
-        print(f"\n按严重性:")
+        logger.info("\n统计信息:")
+        logger.info(f"  总 CVE 数: {stats.total_count}")
+        logger.info(f"  有 PoC 的: {stats.poc_available_count}")
+        logger.info("\n按严重性:")
         for severity, count in stats.by_severity.items():
-            print(f"    {severity}: {count}")
-        print(f"\n按来源:")
+            logger.info(f"    {severity}: {count}")
+        logger.info("\n按来源:")
         for source, count in stats.by_source.items():
-            print(f"    {source}: {count}")
+            logger.info(f"    {source}: {count}")
 
     elif command == 'recent':
         limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
         entries = manager.get_recent(limit=limit)
-        print(f"\n最近的 CVE ({len(entries)} 条):")
+        logger.info(f"\n最近的 CVE ({len(entries)} 条):")
         for entry in entries:
             severity = entry.severity.value.upper()
             cvss = entry.cvss.score if entry.cvss else 0.0
-            print(f"  [{severity}] {entry.cve_id} (CVSS: {cvss:.1f})")
+            logger.info(f"  [{severity}] {entry.cve_id} (CVSS: {cvss:.1f})")
 
     elif command == 'poc':
         limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
         entries = manager.get_with_poc(limit=limit)
-        print(f"\n有 PoC 的 CVE ({len(entries)} 条):")
+        logger.info(f"\n有 PoC 的 CVE ({len(entries)} 条):")
         for entry in entries:
             severity = entry.severity.value.upper()
             cvss = entry.cvss.score if entry.cvss else 0.0
-            print(f"  [{severity}] {entry.cve_id} (CVSS: {cvss:.1f})")
+            logger.info(f"  [{severity}] {entry.cve_id} (CVSS: {cvss:.1f})")
             if entry.poc_urls:
-                print(f"    PoC: {entry.poc_urls[0]}")
+                logger.info(f"    PoC: {entry.poc_urls[0]}")
 
     else:
-        print(f"未知命令: {command}")
+        logger.warning(f"未知命令: {command}")
 
 
 if __name__ == '__main__':

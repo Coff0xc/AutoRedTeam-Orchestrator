@@ -12,6 +12,8 @@ ATT&CK Technique: T1003 - OS Credential Dumping
 """
 import logging
 
+logger = logging.getLogger(__name__)
+
 import os
 import re
 import sys
@@ -119,7 +121,7 @@ class CredentialDumper:
     def _log(self, message: str):
         """日志输出"""
         if self.verbose:
-            print(f"[CredDump] {message}")
+            logger.debug(f"[CredDump] {message}")
 
     # ==================== Windows凭证提取 ====================
 
@@ -802,11 +804,12 @@ def dump_credentials(categories: List[str] = None, verbose: bool = False) -> Dic
 
 if __name__ == "__main__":
     # 测试
-    print("=== Credential Dumper Test ===")
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logger.info("=== Credential Dumper Test ===")
     dumper = CredentialDumper(verbose=True)
 
     # 只测试安全的提取方法
     results = dumper.dump_all(['env', 'ssh'])
 
-    print(f"\nTotal credentials found: {len(dumper.credentials)}")
-    print(dumper.export_json())
+    logger.info(f"Total credentials found: {len(dumper.credentials)}")
+    logger.info(dumper.export_json())

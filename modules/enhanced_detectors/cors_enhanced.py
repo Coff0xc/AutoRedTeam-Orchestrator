@@ -539,6 +539,7 @@ def quick_cors_scan(url: str) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     # 测试示例
     test_url = "https://example.com/api/user"
 
@@ -546,7 +547,7 @@ if __name__ == "__main__":
 
     # 测试单个Origin
     result = tester.test_single_origin(test_url, "https://evil.com")
-    print(f"Single test vulnerable: {result.get('vulnerable')}")
+    logger.info(f"Single test vulnerable: {result.get('vulnerable')}")
 
     # 完整扫描
     # full_result = tester.test_all_bypasses(test_url)

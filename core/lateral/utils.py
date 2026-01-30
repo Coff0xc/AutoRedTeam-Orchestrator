@@ -575,14 +575,15 @@ def format_result(result: ExecutionResult, verbose: bool = False) -> str:
 
 
 if __name__ == '__main__':
-    print("=== Lateral Movement Utilities ===")
-    print(f"\n本地平台: {get_local_platform().value}")
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logger.info("=== Lateral Movement Utilities ===")
+    logger.info(f"本地平台: {get_local_platform().value}")
 
-    print("\n常见横向移动端口:")
+    logger.info("常见横向移动端口:")
     for port, (name, desc) in COMMON_PORTS.items():
-        print(f"  {port}: {name} ({desc})")
+        logger.info(f"  {port}: {name} ({desc})")
 
-    print("\n使用示例:")
-    print("  from core.lateral.utils import check_port, detect_os, create_lateral")
-    print("  status = check_port('192.168.1.100', 445)")
-    print("  os_type = detect_os('192.168.1.100')")
+    logger.info("使用示例:")
+    logger.info("  from core.lateral.utils import check_port, detect_os, create_lateral")
+    logger.info("  status = check_port('192.168.1.100', 445)")
+    logger.info("  os_type = detect_os('192.168.1.100')")

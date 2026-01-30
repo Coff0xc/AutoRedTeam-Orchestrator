@@ -599,8 +599,9 @@ def psexec_upload_exec(
 
 
 if __name__ == '__main__':
-    print("=== PsExec Lateral Movement Module ===")
-    print(f"impacket 可用: {HAS_IMPACKET}")
-    print("\n使用示例:")
-    print("  from core.lateral import PsExecLateral, Credentials, psexec")
-    print("  result = psexec('192.168.1.100', 'admin', 'password', command='whoami')")
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logger.info("=== PsExec Lateral Movement Module ===")
+    logger.info(f"impacket 可用: {HAS_IMPACKET}")
+    logger.info("使用示例:")
+    logger.info("  from core.lateral import PsExecLateral, Credentials, psexec")
+    logger.info("  result = psexec('192.168.1.100', 'admin', 'password', command='whoami')")

@@ -14,10 +14,13 @@ import time
 import threading
 import logging
 import random
+import secrets
 import select
 from typing import Dict, List, Optional, Any, Callable, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
+
+from core.defaults import DNSDefaults
 import os
 
 logger = logging.getLogger(__name__)
@@ -146,8 +149,8 @@ class DNSTunnel:
                     # 发送 DNS 查询
                     resolver = dns.resolver.Resolver()
                     resolver.nameservers = [self.nameserver]
-                    resolver.timeout = 5
-                    resolver.lifetime = 5
+                    resolver.timeout = DNSDefaults.TIMEOUT
+                    resolver.lifetime = DNSDefaults.TIMEOUT
 
                     # 使用 A 记录查询 (也可以用 TXT)
                     resolver.resolve(query_name, 'A')
@@ -200,8 +203,8 @@ class DNSTunnel:
 
     def _build_dns_query(self, domain: str, qtype: int = 1) -> bytes:
         """构建 DNS 查询包"""
-        # Transaction ID
-        tid = random.randint(0, 65535)
+        # Transaction ID - 使用密码学安全随机数防止 DNS 欺骗
+        tid = secrets.randbelow(65536)
         packet = struct.pack(">H", tid)
 
         # Flags (标准查询)
@@ -548,11 +551,12 @@ def create_http_tunnel(server_url: str,
 
 
 if __name__ == "__main__":
-    print("Covert Channel Tunnels Module")
-    print("=" * 50)
-    print(f"dnspython available: {HAS_DNSPYTHON}")
-    print("\n[!] This module is for authorized penetration testing only!")
-    print("\nAvailable tunnels:")
-    print("  - DNSTunnel: Exfiltrate data via DNS queries")
-    print("  - ICMPTunnel: Tunnel data through ICMP packets")
-    print("  - HTTPTunnel: Hide data in HTTP traffic")
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logger.info("Covert Channel Tunnels Module")
+    logger.info("=" * 50)
+    logger.info(f"dnspython available: {HAS_DNSPYTHON}")
+    logger.warning("[!] This module is for authorized penetration testing only!")
+    logger.info("Available tunnels:")
+    logger.info("  - DNSTunnel: Exfiltrate data via DNS queries")
+    logger.info("  - ICMPTunnel: Tunnel data through ICMP packets")
+    logger.info("  - HTTPTunnel: Hide data in HTTP traffic")

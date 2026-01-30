@@ -227,7 +227,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
                     evidence=f"Binary: {binary}"
                 )
             except (subprocess.TimeoutExpired, OSError, ValueError) as e:
-                pass
+                logger.debug(f"Capability exploit attempt failed: {e}")
 
         return EscalationResult(
             success=False,

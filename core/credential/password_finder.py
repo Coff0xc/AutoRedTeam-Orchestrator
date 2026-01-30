@@ -14,6 +14,8 @@ ATT&CK Technique: T1552 - Unsecured Credentials
 """
 import logging
 
+logger = logging.getLogger(__name__)
+
 import os
 import re
 import json
@@ -190,7 +192,7 @@ class PasswordFinder:
     def _log(self, message: str):
         """日志输出"""
         if self.verbose:
-            print(f"[SecretFinder] {message}")
+            logger.debug(f"[SecretFinder] {message}")
 
     def _should_skip_file(self, file_path: Path) -> bool:
         """判断是否跳过文件"""
@@ -621,19 +623,20 @@ def find_secrets(
 
 if __name__ == "__main__":
     import sys
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     if len(sys.argv) > 1:
         target_path = sys.argv[1]
     else:
         target_path = "."
 
-    print(f"=== Secret Finder - Scanning: {target_path} ===")
+    logger.info(f"=== Secret Finder - Scanning: {target_path} ===")
     finder = PasswordFinder(verbose=True)
     findings = finder.scan_directory(target_path)
 
-    print(f"\n=== Summary ===")
+    logger.info("=== Summary ===")
     summary = finder.get_summary()
-    print(f"Total findings: {summary['total_findings']}")
-    print(f"By type: {summary['by_type']}")
-    print(f"By confidence: {summary['by_confidence']}")
-    print(f"Files affected: {len(summary['files_affected'])}")
+    logger.info(f"Total findings: {summary['total_findings']}")
+    logger.info(f"By type: {summary['by_type']}")
+    logger.info(f"By confidence: {summary['by_confidence']}")
+    logger.info(f"Files affected: {len(summary['files_affected'])}")

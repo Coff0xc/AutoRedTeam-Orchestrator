@@ -788,6 +788,7 @@ class CVEUpdateManager:
 async def main():
     """CLI测试入口"""
     import sys
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     manager = CVEUpdateManager()
 
@@ -799,26 +800,26 @@ async def main():
         elif command == "search":
             keyword = sys.argv[2] if len(sys.argv) > 2 else ""
             results = manager.search(keyword=keyword, poc_only=True)
-            print(f"\n找到 {len(results)} 条结果:\n")
+            logger.info(f"\n找到 {len(results)} 条结果:\n")
             for cve in results[:10]:
-                print(f"[{cve.severity}] {cve.cve_id} (CVSS: {cve.cvss})")
-                print(f"  {cve.description[:100]}...")
+                logger.info(f"[{cve.severity}] {cve.cve_id} (CVSS: {cve.cvss})")
+                logger.info(f"  {cve.description[:100]}...")
                 if cve.poc_path:
-                    print(f"  PoC: {cve.poc_path}")
-                print()
+                    logger.info(f"  PoC: {cve.poc_path}")
+                logger.info("")
         elif command == "stats":
             stats = manager.get_stats()
-            print("\n数据库统计:")
-            print(f"  总CVE数: {stats.get('total_cves', 0)}")
-            print(f"  有PoC: {stats.get('poc_available', 0)}")
-            print(f"\n按严重性:")
+            logger.info("\n数据库统计:")
+            logger.info(f"  总CVE数: {stats.get('total_cves', 0)}")
+            logger.info(f"  有PoC: {stats.get('poc_available', 0)}")
+            logger.info("\n按严重性:")
             for severity, count in stats.get('by_severity', {}).items():
-                print(f"    {severity}: {count}")
+                logger.info(f"    {severity}: {count}")
     else:
-        print("用法:")
-        print("  python update_manager.py sync       # 同步所有数据源")
-        print("  python update_manager.py search <keyword>  # 搜索CVE")
-        print("  python update_manager.py stats      # 查看统计")
+        logger.info("用法:")
+        logger.info("  python update_manager.py sync       # 同步所有数据源")
+        logger.info("  python update_manager.py search <keyword>  # 搜索CVE")
+        logger.info("  python update_manager.py stats      # 查看统计")
 
 
 if __name__ == "__main__":

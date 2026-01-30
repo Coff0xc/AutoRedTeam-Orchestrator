@@ -5,7 +5,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any, AsyncIterator, Type
+from typing import List, Optional, Dict, Any, AsyncIterator
 import asyncio
 import logging
 import time
@@ -56,14 +56,29 @@ class BaseDetector(ABC):
     detector_type: DetectorType = DetectorType.MISC
     version: str = '1.0.0'
 
-    # 默认配置
+    # 默认配置 - 使用集中常量
     default_config: Dict[str, Any] = {
-        'timeout': 30,
-        'max_payloads': 50,
+        'timeout': 30,       # see core.defaults.DetectorDefaults.TIMEOUT
+        'max_payloads': 50,  # see core.defaults.DetectorDefaults.MAX_PAYLOADS
         'verify_ssl': False,
         'follow_redirects': True,
         'max_redirects': 5,
     }
+
+    @classmethod
+    def _load_defaults(cls) -> Dict[str, Any]:
+        """从集中配置加载默认值"""
+        try:
+            from core.defaults import DetectorDefaults
+            return {
+                'timeout': DetectorDefaults.TIMEOUT,
+                'max_payloads': DetectorDefaults.MAX_PAYLOADS,
+                'verify_ssl': False,
+                'follow_redirects': True,
+                'max_redirects': 5,
+            }
+        except ImportError:
+            return cls.default_config
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """初始化检测器
@@ -71,7 +86,8 @@ class BaseDetector(ABC):
         Args:
             config: 检测器配置，会与默认配置合并
         """
-        self.config = {**self.default_config, **(config or {})}
+        defaults = self._load_defaults()
+        self.config = {**defaults, **(config or {})}
         self.results: List[DetectionResult] = []
         self._http_client = None
         self._start_time: Optional[float] = None
@@ -181,15 +197,10 @@ class BaseDetector(ABC):
 
         mutated: List[str] = []
         try:
-            if source == 'smart':
-                from modules.smart_payload_engine import PayloadMutator as SmartMutator
-                for payload in payloads:
-                    mutated.extend(SmartMutator.mutate(payload, waf_type))
-            else:
-                from modules.adaptive_payload_engine import AdaptivePayloadEngine
-                engine = AdaptivePayloadEngine()
-                for payload in payloads:
-                    mutated.extend(engine.mutate_payload(payload, waf_type))
+            # 使用统一的 Payload 模块
+            from modules.payload import PayloadMutator
+            for payload in payloads:
+                mutated.extend(PayloadMutator.mutate(payload, waf=waf_type))
         except Exception as e:
             logger.debug(f"[{self.name}] 智能Payload扩展失败: {e}")
             return payloads

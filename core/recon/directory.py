@@ -416,8 +416,8 @@ class DirectoryScanner:
                     if "not found" in body.lower() or "404" in body:
                         self._404_signature = body[:500]
 
-        except urllib.error.HTTPError:
-            pass
+        except urllib.error.HTTPError as e:
+            self._logger.debug(f"HTTPError during 404 detection: {e.code}")
         except Exception as e:
             self._logger.debug(f"404 detection error: {e}")
 

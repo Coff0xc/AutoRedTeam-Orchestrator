@@ -663,6 +663,7 @@ def quick_jwt_scan(token: str, url: str = "") -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     # 测试示例
     test_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
 
@@ -670,9 +671,9 @@ if __name__ == "__main__":
 
     # 测试解码
     info = tester.decode_jwt(test_token)
-    print(f"Algorithm: {info.algorithm}")
-    print(f"Payload: {info.payload}")
+    logger.info(f"Algorithm: {info.algorithm}")
+    logger.info(f"Payload: {info.payload}")
 
     # 测试弱密钥
     weak_result = tester.test_weak_secrets(test_token)
-    print(f"Weak secret found: {weak_result.get('found_secret', 'None')}")
+    logger.info(f"Weak secret found: {weak_result.get('found_secret', 'None')}")

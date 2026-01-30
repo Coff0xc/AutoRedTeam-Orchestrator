@@ -82,18 +82,18 @@ class SafeExecutor:
             description="SQLMap注入检测"
         ),
 
-        # 系统工具
+        # 系统工具 - 注意: 禁止 -c 参数以防止任意代码执行
         "python": CommandWhitelist(
             command="python",
-            allowed_args=["-c", "-m"],
+            allowed_args=["-m", "-V", "--version"],  # 仅允许模块执行和版本查询
             max_args=10,
-            description="Python解释器"
+            description="Python解释器（受限）"
         ),
         "python3": CommandWhitelist(
             command="python3",
-            allowed_args=["-c", "-m"],
+            allowed_args=["-m", "-V", "--version"],  # 仅允许模块执行和版本查询
             max_args=10,
-            description="Python3解释器"
+            description="Python3解释器（受限）"
         ),
     }
 
@@ -732,40 +732,43 @@ def sandbox_execute(cmd: List[str], timeout: int = 60, **kwargs) -> Dict:
 # ========== 测试 ==========
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("安全执行器测试")
-    print("=" * 60)
+    # 配置测试用日志
+    logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
+
+    logger.info("=" * 60)
+    logger.info("安全执行器测试")
+    logger.info("=" * 60)
 
     # 测试 SafeExecutor
     executor = SafeExecutor(policy=ExecutionPolicy.STRICT)
 
     # 测试安全命令
-    print("\n[测试1] 安全命令 (nmap)")
+    logger.info("[测试1] 安全命令 (nmap)")
     result = executor.execute(["nmap", "-sV", "127.0.0.1"])
-    print(f"  结果: {result.get('success', 'N/A')}")
+    logger.info(f"  结果: {result.get('success', 'N/A')}")
     if result.get('error'):
-        print(f"  错误: {result['error']}")
+        logger.error(f"  错误: {result['error']}")
 
     # 测试危险命令
-    print("\n[测试2] 危险命令（应该被阻止）")
+    logger.info("[测试2] 危险命令（应该被阻止）")
     try:
         result = executor.execute(["rm", "-rf", "/"])
-        print(f"  意外通过: {result}")
+        logger.warning(f"  意外通过: {result}")
     except SecurityError as e:
-        print(f"  预期阻止: {e}")
+        logger.info(f"  预期阻止: {e}")
 
     # 测试命令注入
-    print("\n[测试3] 命令注入（应该被阻止）")
+    logger.info("[测试3] 命令注入（应该被阻止）")
     try:
         result = executor.execute(["nmap", "-sV; rm -rf /"])
-        print(f"  意外通过: {result}")
+        logger.warning(f"  意外通过: {result}")
     except SecurityError as e:
-        print(f"  预期阻止: {e}")
+        logger.info(f"  预期阻止: {e}")
 
     # 测试 SandboxExecutor
-    print("\n" + "=" * 60)
-    print("沙箱执行器测试")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("沙箱执行器测试")
+    logger.info("=" * 60)
 
     sandbox = SandboxExecutor(
         max_memory_mb=256,
@@ -774,29 +777,29 @@ if __name__ == "__main__":
     )
 
     # 测试沙箱中的安全命令
-    print("\n[测试4] 沙箱安全命令 (echo)")
+    logger.info("[测试4] 沙箱安全命令 (echo)")
     result = sandbox.execute(["echo", "Hello from sandbox"])
-    print(f"  结果: {result.get('success', 'N/A')}")
+    logger.info(f"  结果: {result.get('success', 'N/A')}")
     if result.get('stdout'):
-        print(f"  输出: {result['stdout'].strip()}")
+        logger.info(f"  输出: {result['stdout'].strip()}")
 
     # 测试沙箱黑名单
-    print("\n[测试5] 沙箱黑名单（应该被阻止）")
+    logger.info("[测试5] 沙箱黑名单（应该被阻止）")
     result = sandbox.execute(["rm", "-rf", "/tmp/test"])
-    print(f"  结果: {result.get('success', 'N/A')}")
+    logger.info(f"  结果: {result.get('success', 'N/A')}")
     if result.get('error'):
-        print(f"  错误: {result['error']}")
+        logger.info(f"  错误: {result['error']}")
 
     # 测试路径遍历检测
-    print("\n[测试6] 路径遍历检测（应该被阻止）")
+    logger.info("[测试6] 路径遍历检测（应该被阻止）")
     result = sandbox.execute(["cat", "../../etc/passwd"])
-    print(f"  结果: {result.get('success', 'N/A')}")
+    logger.info(f"  结果: {result.get('success', 'N/A')}")
     if result.get('error'):
-        print(f"  错误: {result['error']}")
+        logger.info(f"  错误: {result['error']}")
 
-    print("\n" + "=" * 60)
-    print("测试完成")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("测试完成")
+    logger.info("=" * 60)
 
 
 # ========== 模块导出 ==========

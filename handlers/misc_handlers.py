@@ -6,6 +6,7 @@
 import platform
 from typing import Any, Dict
 from .tooling import tool
+from .error_handling import handle_errors, ErrorCategory, extract_url, validate_inputs
 
 
 def register_misc_tools(mcp, counter, logger):
@@ -48,6 +49,8 @@ def register_misc_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @validate_inputs(url='url')
+    @handle_errors(logger, category=ErrorCategory.MISC, context_extractor=extract_url)
     async def js_analyze(url: str) -> Dict[str, Any]:
         """JS代码分析 - 分析JavaScript代码中的敏感信息
 
@@ -59,19 +62,16 @@ def register_misc_tools(mcp, counter, logger):
         Returns:
             分析结果
         """
-        try:
-            from modules.js_analyzer import JSAnalyzer
+        from modules.js_analyzer import JSAnalyzer
 
-            analyzer = JSAnalyzer()
-            results = analyzer.analyze(url)
+        analyzer = JSAnalyzer()
+        results = analyzer.analyze(url)
 
-            return {
-                'success': True,
-                'url': url,
-                'findings': results
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'url': url}
+        return {
+            'success': True,
+            'url': url,
+            'findings': results
+        }
 
     counter.add('misc', 3)
     logger.info("[Misc] 已注册 3 个杂项工具")

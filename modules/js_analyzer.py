@@ -355,16 +355,17 @@ async def test_js_analyzer():
     """
 
     endpoints = JSAnalyzer.extract_api_endpoints(test_code)
-    print(f"✅ API 端点: {endpoints}")
+    logger.info(f"✅ API 端点: {endpoints}")
 
     # 测试 2: 敏感信息提取
+    # 注意: 以下为测试用的假密钥示例，格式仿真但非真实密钥
     secret_code = """
-    const apiKey = 'AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe';
+    const apiKey = 'AIzaSyFAKE_TEST_KEY_NOT_REAL_1234567890';
     const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
     """
 
     secrets = JSAnalyzer.extract_secrets(secret_code)
-    print(f"✅ 敏感信息: {secrets}")
+    logger.info(f"✅ 敏感信息: {secrets}")
 
     # 测试 3: 实际 URL 分析 (需要联网)
     # result = await JSAnalyzer.analyze_url("https://example.com")

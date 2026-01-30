@@ -308,7 +308,8 @@ class KerberosClient:
         if enc_types is None:
             enc_types = [KerberosEncType.RC4_HMAC]
 
-        nonce = random.randint(0, 2**32 - 1)
+        # 使用密码学安全随机数生成 nonce
+        nonce = secrets.randbelow(2**32)
 
         # KDC-REQ-BODY
         req_body = self._encode_kdc_req_body(

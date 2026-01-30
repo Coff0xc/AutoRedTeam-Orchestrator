@@ -4,7 +4,7 @@ Nmap扫描工具集
 """
 
 import subprocess
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET  # 防止 XXE 攻击
 import json
 import logging
 import tempfile
@@ -12,7 +12,7 @@ import os
 from typing import Any, Dict, List
 from dataclasses import dataclass, field
 
-from core.tool_registry import BaseTool, ToolCategory, ToolParameter
+from core.registry import BaseTool, ToolCategory, ToolParameter
 from utils.terminal_output import run_with_realtime_output
 
 logger = logging.getLogger(__name__)

@@ -445,44 +445,45 @@ def register_v25_tools(mcp):
 
 # 独立测试
 if __name__ == "__main__":
-    print("v2.5 工具模块测试")
-    print("=" * 50)
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logger.info("v2.5 工具模块测试")
+    logger.info("=" * 50)
 
     # 测试导入
-    print("\n1. 测试JS分析模块:")
+    logger.info("\n1. 测试JS分析模块:")
     try:
         from modules.js_analyzer import JSAnalyzer
-        print("   [OK] JSAnalyzer 导入成功")
+        logger.info("   [OK] JSAnalyzer 导入成功")
     except Exception as e:
-        print(f"   [FAIL] {e}")
+        logger.error(f"   [FAIL] {e}")
 
-    print("\n2. 测试CVE模块:")
+    logger.info("\n2. 测试CVE模块:")
     try:
         from core.cve import CVEUpdateManager
-        print("   [OK] CVEUpdateManager 导入成功")
+        logger.info("   [OK] CVEUpdateManager 导入成功")
     except Exception as e:
-        print(f"   [FAIL] {e}")
+        logger.error(f"   [FAIL] {e}")
 
-    print("\n3. 测试PoC模块:")
+    logger.info("\n3. 测试PoC模块:")
     try:
         from core.cve import PoCEngine, load_poc
-        print("   [OK] PoCEngine 导入成功")
+        logger.info("   [OK] PoCEngine 导入成功")
     except Exception as e:
-        print(f"   [FAIL] {e}")
+        logger.error(f"   [FAIL] {e}")
 
-    print("\n4. 测试WebSocket隧道:")
+    logger.info("\n4. 测试WebSocket隧道:")
     try:
         from core.c2 import WebSocketTunnel
-        print("   [OK] WebSocketTunnel 导入成功")
+        logger.info("   [OK] WebSocketTunnel 导入成功")
     except Exception as e:
-        print(f"   [FAIL] {e}")
+        logger.error(f"   [FAIL] {e}")
 
-    print("\n5. 测试分块传输:")
+    logger.info("\n5. 测试分块传输:")
     try:
         from core.c2 import ChunkEncoder
-        print("   [OK] ChunkEncoder 导入成功")
+        logger.info("   [OK] ChunkEncoder 导入成功")
     except Exception as e:
-        print(f"   [FAIL] {e}")
+        logger.error(f"   [FAIL] {e}")
 
-    print("\n" + "=" * 50)
-    print("测试完成!")
+    logger.info("\n" + "=" * 50)
+    logger.info("测试完成!")

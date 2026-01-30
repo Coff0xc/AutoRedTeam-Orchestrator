@@ -7,8 +7,12 @@ Nuclei全量集成模块 - 支持所有Nuclei模板的扫描
 import subprocess
 import json
 import os
+import logging
 from typing import Dict, List, Optional
 from datetime import datetime
+
+# 模块 logger
+logger = logging.getLogger(__name__)
 
 
 class NucleiScanner:
@@ -170,23 +174,23 @@ class NucleiScanner:
             except subprocess.TimeoutExpired:
                 last_error = "Timeout"
                 if attempt < retries:
-                    print(f"[!] 超时，重试 {attempt + 1}/{retries}...")
+                    logger.warning("超时，重试 %d/%d...", attempt + 1, retries)
                     continue
             except FileNotFoundError:
                 return {"success": False, "error": "Nuclei not found. Install: go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"}
             except Exception as e:
                 last_error = str(e)
                 if attempt < retries:
-                    print(f"[!] 错误: {e}，重试 {attempt + 1}/{retries}...")
+                    logger.warning("错误: %s，重试 %d/%d...", e, attempt + 1, retries)
                     continue
         return {"success": False, "error": last_error}
     
     def update_templates(self) -> Dict:
         """更新Nuclei模板到最新"""
-        print("[*] 更新Nuclei模板...")
+        logger.info("更新Nuclei模板...")
         result = self._run_nuclei(["nuclei", "-ut"], timeout=300)
         if result["success"]:
-            print("[+] 模板更新完成")
+            logger.info("模板更新完成")
         return result
     
     def list_templates(self, tags: str = None) -> Dict:
@@ -260,10 +264,10 @@ class NucleiScanner:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_file = os.path.join(self.output_dir, f"scan_{timestamp}.json")
         cmd.extend(["-o", output_file])
-        
-        print(f"[*] 执行Nuclei扫描: {target}")
-        print(f"[*] 预设: {preset}, 严重性: {config.get('severity')}")
-        print(f"[*] 命令: {' '.join(cmd)}")
+
+        logger.info("执行Nuclei扫描: %s", target)
+        logger.info("预设: %s, 严重性: %s", preset, config.get('severity'))
+        logger.debug("命令: %s", ' '.join(cmd))
         
         result = self._run_nuclei(cmd, timeout=config.get("timeout", 15) * 100)
         
@@ -304,8 +308,8 @@ class NucleiScanner:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_file = os.path.join(self.output_dir, f"multi_scan_{timestamp}.json")
         cmd.extend(["-o", output_file])
-        
-        print(f"[*] 扫描 {len(targets)} 个目标...")
+
+        logger.info("扫描 %d 个目标...", len(targets))
         
         result = self._run_nuclei(cmd, timeout=3600)
         
@@ -369,7 +373,7 @@ class NucleiScanner:
                 tags.add(tech_lower)
         
         if tags:
-            print(f"[*] 智能扫描: 基于技术栈 {detected_tech} 选择模板标签: {list(tags)}")
+            logger.info("智能扫描: 基于技术栈 %s 选择模板标签: %s", detected_tech, list(tags))
             return self.scan(target, tags=",".join(tags), severity="medium,high,critical")
         
         return self.scan(target, preset="quick")
@@ -548,10 +552,10 @@ class NucleiScanner:
                                 "timestamp": vuln.get("timestamp", ""),
                             })
                         except json.JSONDecodeError as e:
-                            print(f"[!] JSON解析错误: {e}")
+                            logger.warning("JSON解析错误: %s", e)
                             continue
         except IOError as e:
-            print(f"[!] 文件读取错误: {e}")
+            logger.warning("文件读取错误: %s", e)
 
         self.results = vulns
         return vulns

@@ -7,6 +7,7 @@ Payload 混淆模块 - Payload Obfuscation Engine
 
 import base64
 import random
+import secrets
 import string
 import zlib
 import hashlib
@@ -102,11 +103,9 @@ class XOREncoder(BaseEncoder):
         self.key = key or self._generate_key()
 
     def _generate_key(self, length: int = 16) -> str:
-        """生成随机密钥"""
-        return ''.join(random.choices(
-            string.ascii_letters + string.digits,
-            k=length
-        ))
+        """生成密码学安全的随机密钥"""
+        charset = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(charset) for _ in range(length))
 
     def encode(self, data: bytes) -> bytes:
         key_bytes = self.key.encode()
@@ -136,10 +135,9 @@ class AESEncoder(BaseEncoder):
         self._key_bytes = hashlib.sha256(self.key.encode()).digest()
 
     def _generate_key(self, length: int = 32) -> str:
-        return ''.join(random.choices(
-            string.ascii_letters + string.digits,
-            k=length
-        ))
+        """生成密码学安全的随机密钥"""
+        charset = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(charset) for _ in range(length))
 
     def encode(self, data: bytes) -> bytes:
         iv = os.urandom(16)
@@ -325,8 +323,8 @@ class PayloadObfuscator:
     def _generate_var_name(self) -> str:
         """生成随机变量名"""
         self._var_counter += 1
-        prefix = random.choice(['_', '__', '___'])
-        chars = ''.join(random.choices(string.ascii_lowercase, k=4))
+        prefix = secrets.choice(['_', '__', '___'])
+        chars = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(4))
         return f"{prefix}{chars}{self._var_counter}"
 
     def obfuscate(self,
@@ -500,9 +498,8 @@ class VariableObfuscator:
     def _generate_name(self) -> str:
         """生成混淆变量名"""
         self._counter += 1
-        chars = ''.join(random.choices(
-            string.ascii_lowercase, k=random.randint(4, 8)
-        ))
+        name_len = secrets.randbelow(5) + 4  # 4-8
+        chars = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(name_len))
         return f"{self.prefix}{chars}{self._counter}"
 
     def obfuscate_code(self, code: str) -> Tuple[str, Dict[str, str]]:
@@ -580,10 +577,10 @@ class CodeTransformer:
             result_lines.append(line)
 
             # 按比例插入垃圾代码
-            if random.random() < ratio and line.strip():
-                var = ''.join(random.choices(string.ascii_lowercase, k=4))
-                val = random.randint(0, 9999)
-                template = random.choice(junk_templates)
+            if secrets.randbelow(100) < int(ratio * 100) and line.strip():
+                var = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(4))
+                val = secrets.randbelow(10000)
+                template = secrets.choice(junk_templates)
                 junk = template.format(var=var, val=val)
                 result_lines.append(junk)
 
@@ -768,8 +765,8 @@ class PowerShellObfuscator:
         """变量名混淆"""
         # 简化实现：替换常见变量
         replacements = {
-            '$_': f'${random.choice(string.ascii_lowercase)}',
-            '$args': f'${random.choice(string.ascii_lowercase)}rgs',
+            '$_': f'${secrets.choice(string.ascii_lowercase)}',
+            '$args': f'${secrets.choice(string.ascii_lowercase)}rgs',
         }
 
         for old, new in replacements.items():
@@ -930,12 +927,15 @@ ctypes.CFUNCTYPE(ctypes.c_void_p)(ctypes.addressof(ctypes.c_char.from_buffer(mem
 
 
 if __name__ == "__main__":
-    print("Payload Obfuscation Module")
-    print("=" * 50)
-    print(f"AES available: {HAS_CRYPTO}")
-    print("\nUsage:")
-    print("  from core.evasion import obfuscate_payload, obfuscate_python_code")
-    print("  result = obfuscate_payload('print(\"hello\")', encoding='xor')")
-    print("\nSupported encodings:")
+    # 配置测试用日志
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logger.info("Payload Obfuscation Module")
+    logger.info("=" * 50)
+    logger.info(f"AES available: {HAS_CRYPTO}")
+    logger.info("Usage:")
+    logger.info("  from core.evasion import obfuscate_payload, obfuscate_python_code")
+    logger.info("  result = obfuscate_payload('print(\"hello\")', encoding='xor')")
+    logger.info("Supported encodings:")
     for enc in EncodingType:
-        print(f"  - {enc.value}")
+        logger.info(f"  - {enc.value}")

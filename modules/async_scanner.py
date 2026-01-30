@@ -8,6 +8,7 @@ import asyncio
 import socket
 import time
 import logging
+import threading
 from typing import Any, Dict, List, Optional, Callable
 from dataclasses import dataclass, field
 from urllib.parse import urlparse, urljoin
@@ -54,38 +55,42 @@ class ScannerStats:
 
 
 class CircuitBreaker:
-    """熔断器 - 防止对不可用目标持续请求"""
-    
+    """熔断器 - 防止对不可用目标持续请求（线程安全）"""
+
     def __init__(self, failure_threshold: int = 5, recovery_time: float = 30.0):
         self.failure_threshold = failure_threshold
         self.recovery_time = recovery_time
         self._failures: Dict[str, int] = {}
         self._open_time: Dict[str, float] = {}
-    
+        self._lock = threading.Lock()
+
     def record_failure(self, key: str):
-        """记录失败"""
-        self._failures[key] = self._failures.get(key, 0) + 1
-        if self._failures[key] >= self.failure_threshold:
-            self._open_time[key] = time.time()
-    
+        """记录失败（线程安全）"""
+        with self._lock:
+            self._failures[key] = self._failures.get(key, 0) + 1
+            if self._failures[key] >= self.failure_threshold:
+                self._open_time[key] = time.time()
+
     def record_success(self, key: str):
-        """记录成功"""
-        self._failures[key] = 0
-        self._open_time.pop(key, None)
-    
+        """记录成功（线程安全）"""
+        with self._lock:
+            self._failures[key] = 0
+            self._open_time.pop(key, None)
+
     def is_open(self, key: str) -> bool:
-        """检查熔断器是否开启"""
-        if key not in self._open_time:
-            return False
-        if time.time() - self._open_time[key] > self.recovery_time:
-            # 半开状态，允许尝试
-            return False
-        return True
+        """检查熔断器是否开启（线程安全）"""
+        with self._lock:
+            if key not in self._open_time:
+                return False
+            if time.time() - self._open_time[key] > self.recovery_time:
+                # 半开状态，允许尝试
+                return False
+            return True
 
 
 class AdaptiveConcurrencyController:
-    """自适应并发控制器"""
-    
+    """自适应并发控制器（线程安全）"""
+
     def __init__(self, initial: int = 50, min_concurrency: int = 5, max_concurrency: int = 200):
         self.current = initial
         self.min = min_concurrency
@@ -93,27 +98,29 @@ class AdaptiveConcurrencyController:
         self._response_times: deque = deque(maxlen=100)
         self._error_count = 0
         self._success_count = 0
-    
+        self._lock = threading.Lock()
+
     def record_response(self, response_time: float, success: bool):
-        """记录响应"""
-        self._response_times.append(response_time)
-        if success:
-            self._success_count += 1
-        else:
-            self._error_count += 1
-        
-        # 每50个请求调整一次
-        if (self._success_count + self._error_count) % 50 == 0:
-            self._adjust()
-    
-    def _adjust(self):
-        """调整并发数"""
+        """记录响应（线程安全）"""
+        with self._lock:
+            self._response_times.append(response_time)
+            if success:
+                self._success_count += 1
+            else:
+                self._error_count += 1
+
+            # 每50个请求调整一次
+            if (self._success_count + self._error_count) % 50 == 0:
+                self._adjust_unlocked()
+
+    def _adjust_unlocked(self):
+        """调整并发数（内部方法，调用者需持有锁）"""
         if not self._response_times:
             return
-        
+
         avg_time = sum(self._response_times) / len(self._response_times)
         error_rate = self._error_count / max(self._success_count + self._error_count, 1)
-        
+
         if error_rate > 0.3:
             # 错误率过高，降低并发
             self.current = max(self.min, int(self.current * 0.7))
@@ -122,38 +129,44 @@ class AdaptiveConcurrencyController:
             # 表现良好，提高并发
             self.current = min(self.max, int(self.current * 1.2))
             logger.debug(f"性能良好，提升并发至 {self.current}")
-        
+
         # 重置计数器
         self._error_count = 0
         self._success_count = 0
 
 
 class AsyncScanner:
-    """异步扫描器基类 - 增强版"""
+    """异步扫描器基类 - 增强版（并发安全）"""
 
-    def __init__(self, concurrency: int = 50, timeout: float = 10.0, 
+    def __init__(self, concurrency: int = 50, timeout: float = 10.0,
                  max_retries: int = 2, adaptive: bool = True):
         self.concurrency = concurrency
         self.timeout = timeout
         self.max_retries = max_retries
         self.adaptive = adaptive
         self._semaphore: Optional[asyncio.Semaphore] = None
+        self._semaphore_lock = asyncio.Lock()
         self._stats = ScannerStats()
+        self._stats_lock = threading.Lock()
         self._circuit_breaker = CircuitBreaker()
         self._concurrency_controller = AdaptiveConcurrencyController(concurrency) if adaptive else None
 
     async def _get_semaphore(self) -> asyncio.Semaphore:
+        """获取信号量（双重检查锁定模式）"""
         if self._semaphore is None:
-            concurrency = self._concurrency_controller.current if self._concurrency_controller else self.concurrency
-            self._semaphore = asyncio.Semaphore(concurrency)
+            async with self._semaphore_lock:
+                if self._semaphore is None:
+                    concurrency = self._concurrency_controller.current if self._concurrency_controller else self.concurrency
+                    self._semaphore = asyncio.Semaphore(concurrency)
         return self._semaphore
-    
+
     async def _update_semaphore(self):
-        """动态更新信号量"""
+        """动态更新信号量（线程安全）"""
         if self._concurrency_controller:
-            new_concurrency = self._concurrency_controller.current
-            if self._semaphore._value != new_concurrency:
-                self._semaphore = asyncio.Semaphore(new_concurrency)
+            async with self._semaphore_lock:
+                new_concurrency = self._concurrency_controller.current
+                if self._semaphore is not None and self._semaphore._value != new_concurrency:
+                    self._semaphore = asyncio.Semaphore(new_concurrency)
     
     async def _retry_with_backoff(self, coro_func: Callable, *args, **kwargs):
         """带退避的重试机制"""
@@ -272,6 +285,15 @@ class AsyncDirScanner(AsyncScanner):
     def __init__(self, concurrency: int = 20, timeout: float = 5.0):
         super().__init__(concurrency, timeout)
         self._client = None
+
+    async def __aenter__(self):
+        """异步上下文管理器入口"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """异步上下文管理器出口 - 确保资源清理"""
+        await self.close()
+        return False
 
     async def _get_client(self):
         if self._client is None:
@@ -400,6 +422,15 @@ class AsyncVulnScanner(AsyncScanner):
     def __init__(self, concurrency: int = 10, timeout: float = 10.0):
         super().__init__(concurrency, timeout)
         self._client = None
+
+    async def __aenter__(self):
+        """异步上下文管理器入口"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """异步上下文管理器出口 - 确保资源清理"""
+        await self.close()
+        return False
 
     async def _get_client(self):
         if self._client is None and HAS_HTTPX:

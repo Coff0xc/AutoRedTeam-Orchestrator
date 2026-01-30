@@ -8,6 +8,8 @@
 """
 import logging
 
+logger = logging.getLogger(__name__)
+
 import os
 import sys
 import time
@@ -404,8 +406,9 @@ def list_running_scans() -> List[Dict]:
 
 # 快速测试
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     terminal.header("扫描监控模块测试")
-    
+
     # 测试正常执行
     result = run_monitored_scan(
         ["echo", "Hello from monitored scan!"],
@@ -413,8 +416,8 @@ if __name__ == "__main__":
         "test",
         timeout=10
     )
-    print(f"结果: {result['success']}")
-    
+    logger.info(f"结果: {result['success']}")
+
     # 测试超时
     terminal.info("测试超时场景...")
     result = run_monitored_scan(
@@ -423,4 +426,4 @@ if __name__ == "__main__":
         "test",
         timeout=3
     )
-    print(f"超时测试结果: {result}")
+    logger.info(f"超时测试结果: {result}")

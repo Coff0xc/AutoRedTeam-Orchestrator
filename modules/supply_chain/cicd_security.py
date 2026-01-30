@@ -465,6 +465,7 @@ def scan_cicd(project_path: str) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     import sys
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     if len(sys.argv) > 1:
         path = sys.argv[1]
@@ -474,5 +475,5 @@ if __name__ == "__main__":
     scanner = CICDSecurityScanner(path)
     result = scanner.scan_all()
 
-    print(f"发现问题数: {result['total_findings']}")
-    print(f"严重性分布: {result['by_severity']}")
+    logger.info(f"发现问题数: {result['total_findings']}")
+    logger.info(f"严重性分布: {result['by_severity']}")

@@ -337,3 +337,66 @@ def reload_config():
     if _config_manager is None:
         _config_manager = ConfigManager()
     _config_manager.reload()
+
+
+# ============================================================================
+# 公开的路径工具函数 (跨平台支持)
+# ============================================================================
+
+def get_project_root() -> Path:
+    """
+    获取项目根目录 (公开接口)
+
+    Returns:
+        项目根目录的 Path 对象
+    """
+    return _get_project_root()
+
+
+def get_wordlist_dir() -> Path:
+    """
+    获取字典目录 (公开接口)
+
+    优先顺序:
+    1. 项目内 wordlists 目录
+    2. Linux: /usr/share/wordlists, /usr/share/seclists
+    3. 用户 home 目录下的 wordlists
+
+    Returns:
+        字典目录的 Path 对象
+    """
+    return _get_default_wordlist_dir()
+
+
+def get_wordlist_path(filename: str, subdir: str = "") -> str:
+    """
+    获取字典文件路径 (公开接口)
+
+    Args:
+        filename: 文件名
+        subdir: 子目录名 (可选)
+
+    Returns:
+        字典文件的绝对路径字符串
+    """
+    return _get_platform_wordlist_path(filename, subdir)
+
+
+def get_temp_dir() -> Path:
+    """
+    获取跨平台临时目录 (公开接口)
+
+    Returns:
+        临时目录的 Path 对象
+    """
+    return Path(_get_temp_dir())
+
+
+def get_output_dir() -> Path:
+    """
+    获取输出目录 (公开接口)
+
+    Returns:
+        输出目录的 Path 对象
+    """
+    return Path(_get_default_output_dir())

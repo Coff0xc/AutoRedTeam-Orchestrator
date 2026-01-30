@@ -32,16 +32,25 @@ testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 addopts = """
     --verbose
     --strict-markers
     --tb=short
+    -ra
 """
 markers = [
     "slow: 标记慢速测试",
     "integration: 集成测试",
     "e2e: 端到端测试",
     "network: 需要网络的测试",
+    "unit: 单元测试",
+    "security: 安全相关测试",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
 ]
 
 [tool.coverage.run]
@@ -119,7 +128,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autoredteam-orchestrator"
-version = "3.0.0"
+version = "3.0.1"
 description = "AI-driven automated penetration testing framework based on MCP"
 readme = "README.md"
 requires-python = ">=3.10"

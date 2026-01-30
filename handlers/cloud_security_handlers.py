@@ -5,6 +5,7 @@
 
 from typing import Any, Dict, List
 from .tooling import tool
+from .error_handling import handle_errors, ErrorCategory, extract_target, validate_inputs
 
 
 def register_cloud_security_tools(mcp, counter, logger):
@@ -17,6 +18,7 @@ def register_cloud_security_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.CLOUD)
     async def k8s_scan(manifest_path: str = None, namespace: str = "default") -> Dict[str, Any]:
         """Kubernetes安全扫描 - 检测K8s配置安全问题
 
@@ -29,26 +31,25 @@ def register_cloud_security_tools(mcp, counter, logger):
         Returns:
             安全发现
         """
-        try:
-            from modules.cloud_security import KubernetesTester, scan_k8s_manifest
+        from modules.cloud_security import KubernetesTester, scan_k8s_manifest
 
-            if manifest_path:
-                findings = scan_k8s_manifest(manifest_path)
-            else:
-                tester = KubernetesTester(config={'namespace': namespace})
-                findings = tester.scan()
+        if manifest_path:
+            findings = scan_k8s_manifest(manifest_path)
+        else:
+            tester = KubernetesTester(config={'namespace': namespace})
+            findings = tester.scan()
 
-            return {
-                'success': True,
-                'findings': [f.to_dict() for f in findings],
-                'critical': len([f for f in findings if f.severity.value == 'critical']),
-                'high': len([f for f in findings if f.severity.value == 'high']),
-                'total': len(findings)
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
+        return {
+            'success': True,
+            'findings': [f.to_dict() for f in findings],
+            'critical': len([f for f in findings if f.severity.value == 'critical']),
+            'high': len([f for f in findings if f.severity.value == 'high']),
+            'total': len(findings)
+        }
 
     @tool(mcp)
+    @validate_inputs(target='target')
+    @handle_errors(logger, category=ErrorCategory.CLOUD, context_extractor=extract_target)
     async def grpc_scan(target: str) -> Dict[str, Any]:
         """gRPC安全扫描 - 检测gRPC服务安全问题
 
@@ -60,20 +61,18 @@ def register_cloud_security_tools(mcp, counter, logger):
         Returns:
             安全发现
         """
-        try:
-            from modules.cloud_security import GRPCTester, scan_grpc
+        from modules.cloud_security import GRPCTester, scan_grpc
 
-            result = scan_grpc(target)
+        result = scan_grpc(target)
 
-            return {
-                'success': True,
-                'target': target,
-                'findings': result if isinstance(result, list) else [result]
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'target': target}
+        return {
+            'success': True,
+            'target': target,
+            'findings': result if isinstance(result, list) else [result]
+        }
 
     @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.CLOUD)
     async def aws_scan(region: str = "us-east-1", services: List[str] = None) -> Dict[str, Any]:
         """AWS安全扫描 - 检测AWS配置安全问题
 
@@ -86,18 +85,15 @@ def register_cloud_security_tools(mcp, counter, logger):
         Returns:
             安全发现
         """
-        try:
-            from modules.cloud_security import AWSTester, scan_aws
+        from modules.cloud_security import AWSTester, scan_aws
 
-            result = scan_aws(region=region, services=services)
+        result = scan_aws(region=region, services=services)
 
-            return {
-                'success': True,
-                'region': region,
-                'findings': result if isinstance(result, list) else [result]
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'region': region}
+        return {
+            'success': True,
+            'region': region,
+            'findings': result if isinstance(result, list) else [result]
+        }
 
     counter.add('cloud_security', 3)
     logger.info("[Cloud Security] 已注册 3 个云安全工具")

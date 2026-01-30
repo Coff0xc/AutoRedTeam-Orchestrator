@@ -20,13 +20,16 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 black bandit
+          pip install flake8 black isort
 
       - name: Check code style with Black
-        run: black --check --line-length 120 *.py || true
+        run: black --check --line-length 100 core/ modules/ utils/ handlers/
+
+      - name: Check import sorting with isort
+        run: isort --check-only --profile black core/ modules/ utils/ handlers/
 
       - name: Lint with flake8
-        run: flake8 --max-line-length 120 --ignore=E501,W503 *.py || true
+        run: flake8 --max-line-length 100 --ignore=E501,W503,E402,E203,W504 --extend-ignore=E722 core/ modules/ utils/ handlers/
 
   security:
     runs-on: ubuntu-latest
@@ -42,16 +45,99 @@ jobs:
         run: pip install bandit pip-audit safety
 
       - name: Security scan with Bandit
-        run: bandit -r . -x ./tests,./venv --severity-level medium || true
+        run: bandit -r core/ modules/ utils/ handlers/ -x ./tests,./venv --severity-level medium -f json -o bandit-report.json
+        continue-on-error: true
+
+      - name: Upload Bandit Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: bandit-report.json
 
       - name: Dependency vulnerability scan with pip-audit
-        run: pip-audit -r requirements.txt || true
-
-      - name: Dependency check with Safety
-        run: safety check -r requirements.txt --full-report || true
+        run: pip-audit -r requirements.txt
+        continue-on-error: true
 
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install pytest-asyncio pytest-timeout
+
+      - name: Check syntax
+        run: python -m py_compile mcp_stdio_server.py
+
+      - name: Run unit tests (fast)
+        run: |
+          pytest tests/ \
+            --verbose \
+            --tb=short \
+            --ignore=tests/test_performance_integration.py \
+            -m "not slow and not integration and not network" \
+            --timeout=30 \
+            --maxfail=5
+
+      - name: Run integration tests
+        if: success()
+        run: |
+          pytest tests/ \
+            --verbose \
+            --tb=short \
+            -m "integration" \
+            --timeout=120 \
+            --maxfail=3
+
+      - name: Run tests with coverage
+        if: matrix.python-version == '3.10'
+        run: |
+          pytest tests/ \
+            --cov=core \
+            --cov=modules \
+            --cov=utils \
+            --cov=handlers \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-report=term-missing \
+            --cov-fail-under=50 \
+            --ignore=tests/test_performance_integration.py \
+            --timeout=60
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.10' && always()
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            htmlcov/
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.10' && success()
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
     steps:
       - uses: actions/checkout@v4
 
@@ -60,11 +146,16 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt || true
-          pip install pytest
+          pip install build wheel
 
-      - name: Check syntax
-        run: python -m py_compile mcp_stdio_server.py
+      - name: Build package
+        run: python -m build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/

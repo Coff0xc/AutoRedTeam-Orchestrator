@@ -552,17 +552,18 @@ def register_advanced_tools(mcp):
 # 测试
 if __name__ == "__main__":
     import asyncio
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     async def test():
         # 测试隐蔽请求
         result = await stealth_request("http://example.com/api/user", stealth_level=3)
-        print("Stealth Request Config:")
-        print(f"  URL: {result['url']}")
-        print(f"  Browser: {result['browser_profile']}")
-        print(f"  Headers: {list(result['headers'].keys())[:5]}...")
+        logger.info("Stealth Request Config:")
+        logger.info(f"  URL: {result['url']}")
+        logger.info(f"  Browser: {result['browser_profile']}")
+        logger.info(f"  Headers: {list(result['headers'].keys())[:5]}...")
 
         # 测试指纹
         fp = await browser_fingerprint("chrome")
-        print(f"\nBrowser Fingerprint: {fp['browser']}")
+        logger.info(f"\nBrowser Fingerprint: {fp['browser']}")
 
     asyncio.run(test())

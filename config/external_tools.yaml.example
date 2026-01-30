@@ -1,0 +1,127 @@
+# 外部安全工具配置 (示例模板)
+# AutoRedTeam-Orchestrator v3.0
+#
+# 使用说明:
+# 1. 复制此文件为 external_tools.yaml
+# 2. 配置工具的实际安装路径
+# 3. 工具会按优先级查找: 自定义路径 > 系统PATH > 内置回退
+
+# 工具基础目录 (根据你的实际安装位置修改)
+# Windows 示例: "C:/Tools/Security"
+# Linux 示例: "/opt/security-tools"
+# macOS 示例: "/usr/local/security-tools"
+base_path: "/path/to/your/security-tools"
+
+# 各工具配置
+tools:
+  # ===== 端口扫描 =====
+  nmap:
+    enabled: true
+    path: "${base_path}/nmap/nmap"  # Windows: nmap.exe
+    description: "端口扫描与服务识别"
+    priority: 1
+    default_args:
+      quick: ["-sT", "-T4", "--open"]
+      full: ["-sT", "-sV", "-sC", "-T4", "--open"]
+      stealth: ["-sS", "-T2", "--open"]
+      version: ["-sV", "-sC"]
+      vuln: ["-sV", "--script=vuln"]
+
+  masscan:
+    enabled: true
+    path: "${base_path}/masscan/masscan"  # Windows: masscan.exe
+    description: "超高速端口扫描"
+    priority: 2
+    requires_root: true  # Linux/macOS 需要 sudo
+    default_args:
+      quick: ["--rate=10000"]
+      full: ["--rate=1000", "-p1-65535"]
+
+  # ===== 漏洞扫描 =====
+  nuclei:
+    enabled: true
+    path: "${base_path}/nuclei/nuclei"  # Windows: nuclei.exe
+    description: "基于模板的漏洞扫描"
+    priority: 1
+    templates_path: null  # 可选，nuclei 会自动下载模板
+    default_args:
+      quick: ["-silent", "-severity", "critical,high"]
+      full: ["-silent"]
+      cve: ["-silent", "-tags", "cve"]
+
+  sqlmap:
+    enabled: true
+    path: "${base_path}/sqlmap/sqlmap.py"
+    python_script: true
+    description: "SQL注入检测与利用"
+    priority: 1
+    default_args:
+      detect: ["--batch", "--level=2", "--risk=1"]
+      exploit: ["--batch", "--level=5", "--risk=3", "--dump"]
+      tamper: ["--batch", "--tamper=space2comment,randomcase"]
+
+  # ===== 目录/参数爆破 =====
+  ffuf:
+    enabled: true
+    path: "${base_path}/ffuf/ffuf"  # Windows: ffuf.exe
+    description: "Web模糊测试"
+    priority: 1
+    default_args:
+      dir: ["-t", "50", "-fc", "404"]
+      param: ["-t", "50", "-mc", "200,301,302"]
+      vhost: ["-t", "50", "-H", "Host: FUZZ.target.com"]
+
+  # ===== 可选工具 (按需启用) =====
+  gobuster:
+    enabled: false
+    path: null
+    description: "目录扫描"
+    fallback: "ffuf"
+
+  subfinder:
+    enabled: false
+    path: null
+    description: "子域名枚举"
+    fallback: "internal"
+
+  httpx:
+    enabled: false
+    path: null
+    description: "HTTP探测"
+    fallback: "internal"
+
+# 工具链配置 - 定义工具组合策略
+chains:
+  full_recon:
+    - name: "masscan"
+      purpose: "快速发现开放端口"
+      args: ["--rate=10000", "-p1-10000"]
+    - name: "nmap"
+      purpose: "详细服务识别"
+      args: ["-sV", "-sC"]
+      depends_on: "masscan"
+
+  vuln_scan:
+    - name: "nuclei"
+      purpose: "CVE和已知漏洞"
+      args: ["-severity", "critical,high,medium"]
+    - name: "sqlmap"
+      purpose: "SQL注入深度检测"
+      condition: "has_params"
+
+  content_discovery:
+    - name: "ffuf"
+      purpose: "目录和文件发现"
+      wordlist: "${project_root}/wordlists/directories/common.txt"
+
+# 性能配置
+performance:
+  max_concurrent_tools: 3
+  default_timeout: 300
+  cache_ttl: 3600
+
+# 输出配置
+output:
+  results_dir: "${project_root}/data/tool_results"
+  save_raw_output: true
+  log_level: "INFO"

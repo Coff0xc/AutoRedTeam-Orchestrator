@@ -10,7 +10,8 @@ import re
 from typing import Any, Dict, List
 from dataclasses import dataclass, field
 
-from core.tool_registry import BaseTool, ToolCategory, ToolParameter
+from core.registry import BaseTool, ToolCategory, ToolParameter
+from utils.config_manager import get_wordlist_path
 
 logger = logging.getLogger(__name__)
 
@@ -41,21 +42,21 @@ class HydraTool(BaseTool):
     parameters: List[ToolParameter] = field(default_factory=lambda: [
         ToolParameter("target", "string", "目标IP或主机名", required=True),
         ToolParameter("service", "string", "目标服务", required=True,
-                     choices=["ssh", "ftp", "telnet", "mysql", "mssql", "postgres", 
-                             "rdp", "smb", "vnc", "http-get", "http-post-form", 
+                     choices=["ssh", "ftp", "telnet", "mysql", "mssql", "postgres",
+                             "rdp", "smb", "vnc", "http-get", "http-post-form",
                              "smtp", "pop3", "imap", "ldap"]),
         ToolParameter("port", "integer", "目标端口(可选)", required=False, default=0),
         ToolParameter("username", "string", "用户名", required=False, default=""),
         ToolParameter("username_list", "string", "用户名字典", required=False, default=""),
         ToolParameter("password", "string", "密码", required=False, default=""),
-        ToolParameter("password_list", "string", "密码字典", required=False, 
-                     default="/usr/share/wordlists/rockyou.txt"),
+        ToolParameter("password_list", "string", "密码字典", required=False,
+                     default=""),  # 运行时动态获取
         ToolParameter("threads", "integer", "线程数", required=False, default=4),
         ToolParameter("http_form", "string", "HTTP表单参数(用户^密码^失败标识)", required=False, default=""),
         ToolParameter("stop_on_success", "boolean", "成功后停止", required=False, default=True),
     ])
     timeout: int = 3600
-    
+
     def execute(self, params: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
         target = params["target"]
         service = params["service"]
@@ -63,7 +64,8 @@ class HydraTool(BaseTool):
         username = params.get("username", "")
         username_list = params.get("username_list", "")
         password = params.get("password", "")
-        password_list = params.get("password_list", "/usr/share/wordlists/rockyou.txt")
+        # 使用跨平台路径获取默认字典
+        password_list = params.get("password_list") or get_wordlist_path("passwords.txt")
         threads = params.get("threads", 4)
         http_form = params.get("http_form", "")
         stop_on_success = params.get("stop_on_success", True)

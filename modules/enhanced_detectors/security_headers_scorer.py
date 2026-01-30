@@ -518,6 +518,7 @@ def get_header_grade(url: str) -> Tuple[str, int]:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     # 测试示例
     test_url = "https://example.com"
 
@@ -525,8 +526,8 @@ if __name__ == "__main__":
 
     # 分析
     result = scorer.analyze(test_url)
-    print(f"Score: {result.get('score')}/{result.get('max_score')}")
-    print(f"Grade: {result.get('grade')}")
+    logger.info(f"Score: {result.get('score')}/{result.get('max_score')}")
+    logger.info(f"Grade: {result.get('grade')}")
 
     # 生成报告
     # report = scorer.generate_report(test_url)

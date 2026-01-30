@@ -36,6 +36,7 @@ data/sessions/
 config/config.yaml
 config/api_keys.yaml
 config/*.local.yaml
+config/external_tools.yaml
 
 # System
 .DS_Store

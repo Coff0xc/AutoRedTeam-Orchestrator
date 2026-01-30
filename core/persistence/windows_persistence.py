@@ -7,7 +7,7 @@ Windows 持久化模块 - Windows Persistence
 
 import os
 import base64
-import random
+import secrets
 import string
 import logging
 from typing import Dict, List, Optional, Any
@@ -63,12 +63,12 @@ class WindowsPersistence:
     """
 
     def __init__(self):
-        self._random_prefix = ''.join(random.choices(string.ascii_letters, k=4))
+        self._random_prefix = ''.join(secrets.choice(string.ascii_letters) for _ in range(4))
 
     def _generate_name(self, prefix: str = "Win") -> str:
         """生成随机名称"""
         suffixes = ["Update", "Service", "Helper", "Manager", "Monitor", "Agent"]
-        return f"{prefix}{random.choice(suffixes)}"
+        return f"{prefix}{secrets.choice(suffixes)}"
 
     # ==================== 注册表持久化 ====================
 
@@ -561,9 +561,12 @@ def list_persistence_methods() -> List[Dict[str, str]]:
 
 
 if __name__ == "__main__":
-    print("Windows Persistence Module")
-    print("=" * 50)
-    print("\nAvailable methods:")
+    # 配置测试用日志
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logger.info("Windows Persistence Module")
+    logger.info("=" * 50)
+    logger.info("Available methods:")
     for m in list_persistence_methods():
         admin = "[Admin]" if m["admin_required"] else "[User]"
-        print(f"  {admin} {m['method']}: {m['description']} (stealth: {m['stealth']})")
+        logger.info(f"  {admin} {m['method']}: {m['description']} (stealth: {m['stealth']})")

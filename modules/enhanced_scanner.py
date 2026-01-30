@@ -3,7 +3,6 @@
 增强型扫描器 - 集成资产探测、组件识别、智能Payload、漏洞验证
 """
 import logging
-
 import subprocess
 import json
 import re
@@ -15,6 +14,9 @@ from concurrent.futures import ThreadPoolExecutor
 from .payload_library import PayloadLibrary
 from .component_fingerprint import ComponentIdentifier, FINGERPRINTS
 from .vuln_verifier import VulnerabilityVerifier, VerificationResult
+
+# 模块 logger
+logger = logging.getLogger(__name__)
 
 
 class EnhancedScanner:
@@ -48,23 +50,23 @@ class EnhancedScanner:
     
     def full_asset_scan(self, domain: str) -> Dict:
         """全量资产扫描"""
-        print(f"\n{'='*60}")
-        print(f"🔍 全量资产扫描: {domain}")
-        print(f"{'='*60}\n")
-        
+        logger.info("=" * 60)
+        logger.info("全量资产扫描: %s", domain)
+        logger.info("=" * 60)
+
         self.results["target"] = domain
-        assets = {"domain": domain, "subdomains": [], "ips": [], "ports": [], 
+        assets = {"domain": domain, "subdomains": [], "ips": [], "ports": [],
                  "urls": [], "technologies": [], "waf": None}
-        
+
         # 1. 子域名
-        print("[1/6] 子域名枚举...")
+        logger.info("[1/6] 子域名枚举...")
         r = self._run(["subfinder", "-d", domain, "-silent"], 120)
         if r["ok"]:
             assets["subdomains"] = [s.strip() for s in r["out"].split('\n') if s.strip()]
-        print(f"    ✓ 发现 {len(assets['subdomains'])} 个子域名")
-        
+        logger.info("    发现 %d 个子域名", len(assets['subdomains']))
+
         # 2. DNS解析
-        print("[2/6] DNS解析...")
+        logger.info("[2/6] DNS解析...")
         for sub in assets["subdomains"][:30]:
             r = self._run(["dig", "+short", sub, "A"], 10)
             if r["ok"]:
@@ -73,10 +75,10 @@ class EnhancedScanner:
                     if ip and re.match(r'\d+\.\d+\.\d+\.\d+', ip):
                         if ip not in assets["ips"]:
                             assets["ips"].append(ip)
-        print(f"    ✓ 解析到 {len(assets['ips'])} 个IP")
-        
+        logger.info("    解析到 %d 个IP", len(assets['ips']))
+
         # 3. HTTP探测
-        print("[3/6] HTTP服务探测...")
+        logger.info("[3/6] HTTP服务探测...")
         if assets["subdomains"]:
             targets = "\n".join(assets["subdomains"][:50])
             try:
@@ -98,53 +100,53 @@ class EnhancedScanner:
                                 if t not in assets["technologies"]:
                                     assets["technologies"].append(t)
                         except Exception as exc:
-                            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+                            logger.warning("HTTP探测解析异常", exc_info=True)
 
             except Exception as exc:
-                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+                logger.warning("HTTP探测执行异常", exc_info=True)
 
-        print(f"    ✓ 发现 {len(assets['urls'])} 个活跃URL")
-        
+        logger.info("    发现 %d 个活跃URL", len(assets['urls']))
+
         # 4. 端口扫描
-        print("[4/6] 端口扫描...")
+        logger.info("[4/6] 端口扫描...")
         for ip in assets["ips"][:5]:
             r = self._run(["nmap", "-T4", "-F", "--open", ip, "-oG", "-"], 120)
             if r["ok"]:
                 for match in re.findall(r'(\d+)/open/tcp//([^/]*)', r["out"]):
                     assets["ports"].append({"ip": ip, "port": match[0], "service": match[1]})
-        print(f"    ✓ 发现 {len(assets['ports'])} 个开放端口")
-        
+        logger.info("    发现 %d 个开放端口", len(assets['ports']))
+
         # 5. WhatWeb
-        print("[5/6] 技术栈识别...")
+        logger.info("[5/6] 技术栈识别...")
         r = self._run(["whatweb", "-a", "3", "--color=never", f"https://{domain}"], 60)
         if r["ok"]:
             techs = re.findall(r'\[([^\]]+)\]', r["out"])
             for t in techs:
                 if t not in assets["technologies"]:
                     assets["technologies"].append(t)
-        print(f"    ✓ 识别到 {len(assets['technologies'])} 种技术")
-        
+        logger.info("    识别到 %d 种技术", len(assets['technologies']))
+
         # 6. WAF检测
-        print("[6/6] WAF检测...")
+        logger.info("[6/6] WAF检测...")
         r = self._run(["wafw00f", f"https://{domain}"], 30)
         if r["ok"] and "is behind" in r["out"]:
             match = re.search(r'is behind (.+?)(?:\s|$)', r["out"])
             if match:
                 assets["waf"] = match.group(1)
-                print(f"    ⚠ 检测到WAF: {assets['waf']}")
-        
+                logger.warning("检测到WAF: %s", assets['waf'])
+
         self.results["assets"] = assets
         return assets
     
     def identify_components(self, assets: Dict) -> List[Dict]:
         """组件识别与分析"""
-        print(f"\n{'='*60}")
-        print("🔬 组件识别与Payload匹配")
-        print(f"{'='*60}\n")
-        
+        logger.info("=" * 60)
+        logger.info("组件识别与Payload匹配")
+        logger.info("=" * 60)
+
         detected = []
         seen = set()
-        
+
         # 从技术栈识别
         for tech in assets.get("technologies", []):
             tech_lower = tech.lower()
@@ -164,32 +166,31 @@ class EnhancedScanner:
                             "cves": fp.get("cves", [])
                         })
                         break
-        
-        # 打印结果
-        print("检测到的组件:")
-        print("-" * 40)
+
+        # 记录结果
+        logger.info("检测到的组件:")
+        logger.info("-" * 40)
         for c in detected:
-            print(f"  • {c['name'].upper()}")
-            print(f"    版本: {c['version'] or '未知'}")
+            logger.info("  %s", c['name'].upper())
+            logger.info("    版本: %s", c['version'] or '未知')
             if c['cves']:
-                print(f"    CVE: {', '.join(c['cves'][:3])}")
+                logger.info("    CVE: %s", ', '.join(c['cves'][:3]))
             if c['payloads']:
-                print(f"    Payload类型: {', '.join(c['payloads'][:3])}")
-            print()
-        
+                logger.info("    Payload类型: %s", ', '.join(c['payloads'][:3]))
+
         self.results["components"] = detected
         return detected
     
     def smart_vuln_scan(self, target: str, components: List[Dict]) -> List[Dict]:
         """智能漏洞扫描"""
-        print(f"\n{'='*60}")
-        print("🎯 智能漏洞扫描")
-        print(f"{'='*60}\n")
-        
+        logger.info("=" * 60)
+        logger.info("智能漏洞扫描")
+        logger.info("=" * 60)
+
         vulns = []
-        
+
         # 1. Nuclei扫描
-        print("[1/3] Nuclei漏洞扫描...")
+        logger.info("[1/3] Nuclei漏洞扫描...")
         tags = ["cve", "exposure"] + [c["name"] for c in components[:5]]
         cmd = ["nuclei", "-u", target, "-json", "-silent", "-severity", "medium,high,critical",
                "-tags", ",".join(tags[:10])]
@@ -211,10 +212,10 @@ class EnhancedScanner:
                     except Exception as exc:
                         logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
-        print(f"    ✓ Nuclei发现 {len(vulns)} 个漏洞")
-        
+        logger.info("    Nuclei发现 %d 个漏洞", len(vulns))
+
         # 2. 组件CVE检测
-        print("[2/3] CVE漏洞检测...")
+        logger.info("[2/3] CVE漏洞检测...")
         cve_count = 0
         for comp in components:
             for cve in comp.get("cves", [])[:3]:
@@ -229,31 +230,31 @@ class EnhancedScanner:
                         "component": comp["name"],
                         "verified": True
                     })
-        print(f"    ✓ CVE检测发现 {cve_count} 个")
-        
+        logger.info("    CVE检测发现 %d 个", cve_count)
+
         # 3. 自定义Payload测试准备
-        print("[3/3] Payload测试准备...")
+        logger.info("[3/3] Payload测试准备...")
         payload_count = self.payloads.count()
-        print(f"    ✓ 已加载 {payload_count['total']} 个Payload")
+        logger.info("    已加载 %d 个Payload", payload_count['total'])
         for k, v in payload_count.items():
             if k != "total":
-                print(f"       - {k.upper()}: {v}")
+                logger.info("       - %s: %d", k.upper(), v)
         
         self.results["vulnerabilities"] = vulns
         return vulns
     
     def verify_vulnerabilities(self, vulns: List[Dict]) -> List[Dict]:
         """验证漏洞真实性"""
-        print(f"\n{'='*60}")
-        print("✅ 漏洞真实性验证")
-        print(f"{'='*60}\n")
-        
+        logger.info("=" * 60)
+        logger.info("漏洞真实性验证")
+        logger.info("=" * 60)
+
         verified = []
-        
+
         for v in vulns:
             is_real = v.get("verified", False)
             confidence = "high" if is_real else "needs_manual"
-            
+
             verified.append({
                 "name": v.get("name"),
                 "severity": v.get("severity"),
@@ -262,9 +263,9 @@ class EnhancedScanner:
                 "source": v.get("source"),
                 "url": v.get("url", "")
             })
-            
-            status = "✓ 已确认" if is_real else "? 待验证"
-            print(f"  {status} [{v.get('severity', '?').upper()}] {v.get('name')}")
+
+            status = "已确认" if is_real else "待验证"
+            logger.info("  %s [%s] %s", status, v.get('severity', '?').upper(), v.get('name'))
         
         self.results["verified"] = verified
         return verified
@@ -363,27 +364,27 @@ class EnhancedScanner:
     
     def run_full_scan(self, domain: str) -> str:
         """执行完整扫描流程"""
-        print("\n" + "🚀 " * 20)
-        print("        增强型安全扫描开始")
-        print("🚀 " * 20 + "\n")
-        
+        logger.info("=" * 60)
+        logger.info("        增强型安全扫描开始")
+        logger.info("=" * 60)
+
         # 1. 资产探测
         assets = self.full_asset_scan(domain)
-        
+
         # 2. 组件识别
         components = self.identify_components(assets)
-        
+
         # 3. 漏洞扫描
         target = f"https://{domain}"
         vulns = self.smart_vuln_scan(target, components)
-        
+
         # 4. 漏洞验证
         self.verify_vulnerabilities(vulns)
-        
+
         # 5. 生成报告
         report = self.generate_report()
-        print(report)
-        
+        logger.info(report)
+
         return report
 
 

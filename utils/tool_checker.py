@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 """
 工具依赖检查器 - 检查系统中安装的安全工具
+
+增强功能:
+- 工具可用性检查缓存（避免重复查询）
+- 统一的工具检查接口
 """
 
-import subprocess
 import shutil
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
+
 
 class ToolChecker:
-    """工具检查器"""
-    
+    """工具检查器（带缓存）"""
+
+    # 缓存已检查的工具状态
+    _cache: Dict[str, bool] = {}
+    _path_cache: Dict[str, Optional[str]] = {}
+
     # 必需工具列表
     REQUIRED_TOOLS = {
         "nmap": {"package": "nmap", "description": "端口扫描"},
@@ -17,7 +25,7 @@ class ToolChecker:
         "dig": {"package": "dnsutils", "description": "DNS查询"},
         "curl": {"package": "curl", "description": "HTTP请求"},
     }
-    
+
     # 推荐工具列表
     RECOMMENDED_TOOLS = {
         "subfinder": {"package": "subfinder", "description": "子域名枚举", "install": "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"},
@@ -31,12 +39,50 @@ class ToolChecker:
         "sqlmap": {"package": "sqlmap", "description": "SQL注入", "install": "apt install sqlmap"},
         "hydra": {"package": "hydra", "description": "密码爆破", "install": "apt install hydra"},
     }
-    
+
     @classmethod
-    def check_tool(cls, tool_name: str) -> bool:
-        """检查单个工具是否可用"""
-        return shutil.which(tool_name) is not None
-    
+    def check_tool(cls, tool_name: str, use_cache: bool = True) -> bool:
+        """检查单个工具是否可用
+
+        Args:
+            tool_name: 工具名称
+            use_cache: 是否使用缓存（默认True）
+
+        Returns:
+            工具是否可用
+        """
+        if use_cache and tool_name in cls._cache:
+            return cls._cache[tool_name]
+
+        result = shutil.which(tool_name) is not None
+        cls._cache[tool_name] = result
+        return result
+
+    @classmethod
+    def get_tool_path(cls, tool_name: str, use_cache: bool = True) -> Optional[str]:
+        """获取工具的完整路径
+
+        Args:
+            tool_name: 工具名称
+            use_cache: 是否使用缓存
+
+        Returns:
+            工具路径，不存在返回None
+        """
+        if use_cache and tool_name in cls._path_cache:
+            return cls._path_cache[tool_name]
+
+        path = shutil.which(tool_name)
+        cls._path_cache[tool_name] = path
+        cls._cache[tool_name] = path is not None
+        return path
+
+    @classmethod
+    def clear_cache(cls) -> None:
+        """清除缓存"""
+        cls._cache.clear()
+        cls._path_cache.clear()
+
     @classmethod
     def check_all(cls) -> Tuple[Dict[str, bool], Dict[str, bool]]:
         """检查所有工具"""
@@ -53,7 +99,7 @@ class ToolChecker:
         return missing_required, missing_recommended
     
     @classmethod
-    def print_status(cls):
+    def print_status(cls) -> None:
         """打印工具状态"""
         required, recommended = cls.check_all()
         

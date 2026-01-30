@@ -11,7 +11,7 @@ import time
 import logging
 import base64
 from typing import Optional, List, Dict, Any
-from xml.etree import ElementTree
+import defusedxml.ElementTree as ElementTree  # 防止 XXE 攻击
 
 from .base import (
     BaseLateralModule,
@@ -719,10 +719,11 @@ def winrm_ps(
 
 
 if __name__ == '__main__':
-    print("=== WinRM Lateral Movement Module ===")
-    print(f"pywinrm 可用: {HAS_WINRM}")
-    print(f"NTLM 认证可用: {HAS_NTLM}")
-    print(f"Kerberos 认证可用: {HAS_KERBEROS}")
-    print("\n使用示例:")
-    print("  from core.lateral import WinRMLateral, Credentials, winrm_exec")
-    print("  result = winrm_exec('192.168.1.100', 'admin', 'password', 'whoami')")
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logger.info("=== WinRM Lateral Movement Module ===")
+    logger.info(f"pywinrm 可用: {HAS_WINRM}")
+    logger.info(f"NTLM 认证可用: {HAS_NTLM}")
+    logger.info(f"Kerberos 认证可用: {HAS_KERBEROS}")
+    logger.info("使用示例:")
+    logger.info("  from core.lateral import WinRMLateral, Credentials, winrm_exec")
+    logger.info("  result = winrm_exec('192.168.1.100', 'admin', 'password', 'whoami')")

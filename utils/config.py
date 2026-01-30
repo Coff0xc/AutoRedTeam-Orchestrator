@@ -23,10 +23,13 @@
 import os
 import sys
 import json
+import logging
 import tempfile
 from dataclasses import dataclass, field, asdict
 from typing import Optional, Dict, Any, List, Union
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -218,7 +221,7 @@ class GlobalConfig:
                     return json.loads(content)
 
         except Exception as e:
-            print(f"警告: 加载配置文件失败 {path}: {e}", file=sys.stderr)
+            logger.warning(f"加载配置文件失败 {path}: {e}")
             return {}
 
     @classmethod

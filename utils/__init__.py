@@ -248,6 +248,22 @@ from utils.scan_monitor import (
 )
 
 # =============================================================================
+# Responses - 统一响应格式化
+# =============================================================================
+from utils.responses import (
+    success as resp_success,
+    error as resp_error,
+    tool_not_found as resp_tool_not_found,
+    validation_error as resp_validation_error,
+    import_error as resp_import_error,
+)
+
+# =============================================================================
+# Tool Checker - 工具可用性检查（带缓存）
+# =============================================================================
+from utils.tool_checker import ToolChecker
+
+# =============================================================================
 # 公共导出
 # =============================================================================
 __all__ = [
@@ -431,10 +447,20 @@ __all__ = [
     'list_running_scans',
     'ScanStatus',
     'ScanTask',
+
+    # Responses - 统一响应格式化
+    'resp_success',
+    'resp_error',
+    'resp_tool_not_found',
+    'resp_validation_error',
+    'resp_import_error',
+
+    # Tool Checker - 工具检查
+    'ToolChecker',
 ]
 
 # =============================================================================
 # 版本信息
 # =============================================================================
-__version__ = '2.0.0'
+__version__ = '3.0.1'
 __author__ = 'AutoRedTeam'

@@ -8,13 +8,16 @@ AutoRedTeam-Orchestrator 工具模块
 使用方式:
     from tools import register_all_tools
     registered = register_all_tools(mcp)
-    print(f"已注册 {len(registered)} 个工具")
+    # 注册结果会通过 logger 输出
 """
 
+import logging
 from typing import List
 
 from utils.mcp_tooling import patch_mcp_tool
 from utils.decorators import deprecated
+
+logger = logging.getLogger(__name__)
 
 
 @deprecated(version="3.0.0", replacement="mcp_stdio_server.py + handlers")
@@ -35,110 +38,110 @@ def register_all_tools(mcp) -> List[str]:
         from .config_tools import register_config_tools
         tools = register_config_tools(mcp)
         all_tools.extend(tools)
-        print(f"[+] 配置工具已注册: {len(tools)} 个")
+        logger.info(f"配置工具已注册: {len(tools)} 个")
     except ImportError as e:
-        print(f"[-] 配置工具注册失败: {e}")
+        logger.error(f"配置工具注册失败: {e}")
 
     # 2. 信息收集工具
     try:
         from .recon_tools import register_recon_tools
         tools = register_recon_tools(mcp)
         all_tools.extend(tools)
-        print(f"[+] 侦察工具已注册: {len(tools)} 个")
+        logger.info(f"侦察工具已注册: {len(tools)} 个")
     except ImportError as e:
-        print(f"[-] 侦察工具注册失败: {e}")
+        logger.error(f"侦察工具注册失败: {e}")
 
     # 3. Payload生成工具
     try:
         from .payload_tools import register_payload_tools
         tools = register_payload_tools(mcp)
         all_tools.extend(tools)
-        print(f"[+] Payload工具已注册: {len(tools)} 个")
+        logger.info(f"Payload工具已注册: {len(tools)} 个")
     except ImportError as e:
-        print(f"[-] Payload工具注册失败: {e}")
+        logger.error(f"Payload工具注册失败: {e}")
 
     # 4. 漏洞检测工具
     try:
         from .vuln_tools import register_vuln_tools
         tools = register_vuln_tools(mcp)
         all_tools.extend(tools)
-        print(f"[+] 漏洞检测工具已注册: {len(tools)} 个")
+        logger.info(f"漏洞检测工具已注册: {len(tools)} 个")
     except ImportError as e:
-        print(f"[-] 漏洞检测工具注册失败: {e}")
+        logger.error(f"漏洞检测工具注册失败: {e}")
 
     # 5. 会话管理工具
     try:
         from .session_tools import register_session_tools
         tools = register_session_tools(mcp)
         all_tools.extend(tools)
-        print(f"[+] 会话工具已注册: {len(tools)} 个")
+        logger.info(f"会话工具已注册: {len(tools)} 个")
     except ImportError as e:
-        print(f"[-] 会话工具注册失败: {e}")
+        logger.error(f"会话工具注册失败: {e}")
 
     # 6. 任务队列工具
     try:
         from .task_tools import register_task_tools
         tools = register_task_tools(mcp)
         all_tools.extend(tools)
-        print(f"[+] 任务工具已注册: {len(tools)} 个")
+        logger.info(f"任务工具已注册: {len(tools)} 个")
     except ImportError as e:
-        print(f"[-] 任务工具注册失败: {e}")
+        logger.error(f"任务工具注册失败: {e}")
 
     # 7. CVE情报工具
     try:
         from .cve_tools import register_cve_tools
         tools = register_cve_tools(mcp)
         all_tools.extend(tools)
-        print(f"[+] CVE工具已注册: {len(tools)} 个")
+        logger.info(f"CVE工具已注册: {len(tools)} 个")
     except ImportError as e:
-        print(f"[-] CVE工具注册失败: {e}")
+        logger.error(f"CVE工具注册失败: {e}")
 
     # 8. AI决策工具
     try:
         from .ai_tools import register_ai_tools
         tools = register_ai_tools(mcp)
         all_tools.extend(tools)
-        print(f"[+] AI工具已注册: {len(tools)} 个")
+        logger.info(f"AI工具已注册: {len(tools)} 个")
     except ImportError as e:
-        print(f"[-] AI工具注册失败: {e}")
+        logger.error(f"AI工具注册失败: {e}")
 
     # 9. 渗透测试工具
     try:
         from .pentest_tools import register_pentest_tools
         tools = register_pentest_tools(mcp)
         all_tools.extend(tools)
-        print(f"[+] 渗透测试工具已注册: {len(tools)} 个")
+        logger.info(f"渗透测试工具已注册: {len(tools)} 个")
     except ImportError as e:
-        print(f"[-] 渗透测试工具注册失败: {e}")
+        logger.error(f"渗透测试工具注册失败: {e}")
 
     # 10. 外部工具集成 (nmap, nuclei, sqlmap等)
     try:
         from .external_tools import register_external_tools
         tools = register_external_tools(mcp)
         all_tools.extend(tools)
-        print(f"[+] 外部工具已注册: {len(tools)} 个")
+        logger.info(f"外部工具已注册: {len(tools)} 个")
     except ImportError as e:
-        print(f"[-] 外部工具注册失败: {e}")
+        logger.error(f"外部工具注册失败: {e}")
 
     # 11. 流水线工具 (指纹→POC→弱口令→攻击链联动)
     try:
         from .pipeline_tools import register_pipeline_tools
         tools = register_pipeline_tools(mcp)
         all_tools.extend(tools if tools else [])
-        print(f"[+] 流水线工具已注册")
+        logger.info("流水线工具已注册")
     except ImportError as e:
-        print(f"[-] 流水线工具注册失败: {e}")
+        logger.error(f"流水线工具注册失败: {e}")
 
     # 12. Web 扫描工具 (攻面发现 + 编排式扫描)
     try:
         from .web_scan_tools import register_web_scan_tools
         tools = register_web_scan_tools(mcp)
         all_tools.extend(tools if tools else [])
-        print(f"[+] Web扫描工具已注册: {len(tools) if tools else 0} 个")
+        logger.info(f"Web扫描工具已注册: {len(tools) if tools else 0} 个")
     except ImportError as e:
-        print(f"[-] Web扫描工具注册失败: {e}")
+        logger.error(f"Web扫描工具注册失败: {e}")
 
-    print(f"\n[*] 工具注册完成，共 {len(all_tools)} 个工具")
+    logger.info(f"工具注册完成，共 {len(all_tools)} 个工具")
     return all_tools
 
 

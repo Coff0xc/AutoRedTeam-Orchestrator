@@ -5,6 +5,7 @@
 
 from typing import Any, Dict
 from .tooling import tool
+from .error_handling import handle_errors, ErrorCategory, extract_file_path
 
 
 def register_supply_chain_tools(mcp, counter, logger):
@@ -17,6 +18,7 @@ def register_supply_chain_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.SUPPLY_CHAIN, context_extractor=extract_file_path)
     async def sbom_generate(project_path: str, output_format: str = "cyclonedx") -> Dict[str, Any]:
         """生成SBOM - 生成软件物料清单
 
@@ -29,22 +31,20 @@ def register_supply_chain_tools(mcp, counter, logger):
         Returns:
             SBOM数据
         """
-        try:
-            from modules.supply_chain.sbom_generator import SBOMGenerator
+        from modules.supply_chain.sbom_generator import SBOMGenerator
 
-            generator = SBOMGenerator()
-            sbom = generator.generate(project_path, format=output_format)
+        generator = SBOMGenerator()
+        sbom = generator.generate(project_path, format=output_format)
 
-            return {
-                'success': True,
-                'project': project_path,
-                'format': output_format,
-                'sbom': sbom if isinstance(sbom, dict) else sbom.to_dict()
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'project': project_path}
+        return {
+            'success': True,
+            'project': project_path,
+            'format': output_format,
+            'sbom': sbom if isinstance(sbom, dict) else sbom.to_dict()
+        }
 
     @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.SUPPLY_CHAIN, context_extractor=extract_file_path)
     async def dependency_audit(project_path: str) -> Dict[str, Any]:
         """依赖审计 - 检查项目依赖的已知漏洞
 
@@ -56,22 +56,20 @@ def register_supply_chain_tools(mcp, counter, logger):
         Returns:
             依赖漏洞报告
         """
-        try:
-            from modules.supply_chain.dependency_scanner import DependencyScanner
+        from modules.supply_chain.dependency_scanner import DependencyScanner
 
-            scanner = DependencyScanner()
-            results = scanner.scan(project_path)
+        scanner = DependencyScanner()
+        results = scanner.scan(project_path)
 
-            return {
-                'success': True,
-                'project': project_path,
-                'vulnerabilities': results if isinstance(results, list) else [results],
-                'total': len(results) if isinstance(results, list) else 1
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'project': project_path}
+        return {
+            'success': True,
+            'project': project_path,
+            'vulnerabilities': results if isinstance(results, list) else [results],
+            'total': len(results) if isinstance(results, list) else 1
+        }
 
     @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.SUPPLY_CHAIN, context_extractor=extract_file_path)
     async def cicd_scan(config_path: str) -> Dict[str, Any]:
         """CI/CD配置扫描 - 检测CI/CD配置安全问题
 
@@ -83,20 +81,17 @@ def register_supply_chain_tools(mcp, counter, logger):
         Returns:
             安全发现
         """
-        try:
-            from modules.supply_chain.cicd_security import CICDScanner
+        from modules.supply_chain.cicd_security import CICDScanner
 
-            scanner = CICDScanner()
-            findings = scanner.scan(config_path)
+        scanner = CICDScanner()
+        findings = scanner.scan(config_path)
 
-            return {
-                'success': True,
-                'config': config_path,
-                'findings': findings if isinstance(findings, list) else [findings],
-                'total': len(findings) if isinstance(findings, list) else 1
-            }
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'config': config_path}
+        return {
+            'success': True,
+            'config': config_path,
+            'findings': findings if isinstance(findings, list) else [findings],
+            'total': len(findings) if isinstance(findings, list) else 1
+        }
 
     counter.add('supply_chain', 3)
     logger.info("[Supply Chain] 已注册 3 个供应链安全工具")

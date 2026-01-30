@@ -435,8 +435,8 @@ class PortScanner:
                     )
                     if data:
                         banner = data.decode("utf-8", errors="replace").strip()
-                except (asyncio.TimeoutError, Exception):
-                    pass
+                except asyncio.TimeoutError:
+                    pass  # Banner grab timeout is expected
 
             writer.close()
             await writer.wait_closed()

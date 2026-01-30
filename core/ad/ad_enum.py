@@ -14,6 +14,8 @@ ATT&CK Technique: T1087 - Account Discovery
 """
 import logging
 
+logger = logging.getLogger(__name__)
+
 import socket
 import struct
 import ssl
@@ -294,9 +296,9 @@ class SimpleLDAPClient:
                     break
 
         except socket.timeout:
-            pass
+            logger.debug("LDAP search timed out")
         except Exception as e:
-            pass
+            logger.debug(f"LDAP search failed: {e}")
 
         return results
 
@@ -486,7 +488,7 @@ class ADEnumerator:
     def _log(self, message: str):
         """日志输出"""
         if self.verbose:
-            print(f"[ADEnum] {message}")
+            logger.debug(f"[ADEnum] {message}")
 
     def _domain_to_dn(self, domain: str) -> str:
         """将域名转换为DN"""
@@ -843,17 +845,23 @@ def ad_enumerate(
 
 if __name__ == "__main__":
     import sys
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     if len(sys.argv) < 2:
-        print("Usage: python ad_enum.py <domain> [dc_ip] [username] [password]")
-        print("Example: python ad_enum.py contoso.com 192.168.1.1 admin P@ssw0rd")
+        logger.info("Usage: python ad_enum.py <domain> [dc_ip] [username]")
+        logger.info("Example: python ad_enum.py contoso.com 192.168.1.1 admin")
+        logger.info("Password will be prompted or read from AD_PASSWORD env var")
         sys.exit(1)
 
+    import getpass as _getpass
     domain = sys.argv[1]
     dc_ip = sys.argv[2] if len(sys.argv) > 2 else None
     username = sys.argv[3] if len(sys.argv) > 3 else ""
-    password = sys.argv[4] if len(sys.argv) > 4 else ""
+    # 安全方式获取密码：优先环境变量，否则提示输入
+    password = os.environ.get('AD_PASSWORD', '')
+    if not password and username:
+        password = _getpass.getpass(f"Password for {username}: ")
 
-    print(f"=== AD Enumeration: {domain} ===")
+    logger.info(f"=== AD Enumeration: {domain} ===")
     result = ad_enumerate(domain, dc_ip, username, password, "all", verbose=True)
-    print(json.dumps(result, indent=2, ensure_ascii=False))
+    logger.info(json.dumps(result, indent=2, ensure_ascii=False))

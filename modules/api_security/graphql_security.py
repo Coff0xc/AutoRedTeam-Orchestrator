@@ -591,6 +591,7 @@ def quick_graphql_scan(url: str) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     # 测试示例
     test_url = "https://example.com/graphql"
 
@@ -598,4 +599,4 @@ if __name__ == "__main__":
 
     # 测试内省
     result = tester.test_introspection(test_url)
-    print(f"Introspection enabled: {result.get('vulnerable')}")
+    logger.info(f"Introspection enabled: {result.get('vulnerable')}")

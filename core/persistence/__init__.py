@@ -19,7 +19,8 @@ from .windows_persistence import (
 from .linux_persistence import (
     LinuxPersistence,
     LinuxPersistMethod,
-    PersistenceResult as LinuxPersistenceResult
+    PersistenceResult as LinuxPersistenceResult,
+    linux_persist
 )
 
 from .webshell_manager import (
@@ -40,6 +41,7 @@ __all__ = [
     'LinuxPersistence',
     'LinuxPersistMethod',
     'LinuxPersistenceResult',
+    'linux_persist',
     # Webshell
     'WebshellGenerator',
     'WebshellType',

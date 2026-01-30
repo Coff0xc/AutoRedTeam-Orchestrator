@@ -478,15 +478,16 @@ def get_stealth_ssl_context(browser: str = "chrome") -> ssl.SSLContext:
 
 if __name__ == "__main__":
     # 测试
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     spoofer = FingerprintSpoofer(BrowserType.CHROME)
 
-    print("Browser Profile:")
-    print(f"  Type: {spoofer.profile.browser_type.value}")
-    print(f"  Version: {spoofer.profile.version}")
-    print(f"  User-Agent: {spoofer.profile.user_agent[:60]}...")
+    logger.info("Browser Profile:")
+    logger.info(f"  Type: {spoofer.profile.browser_type.value}")
+    logger.info(f"  Version: {spoofer.profile.version}")
+    logger.info(f"  User-Agent: {spoofer.profile.user_agent[:60]}...")
 
-    print("\nHeaders:")
+    logger.info("Headers:")
     for k, v in spoofer.get_headers().items():
-        print(f"  {k}: {v[:50]}..." if len(str(v)) > 50 else f"  {k}: {v}")
+        logger.info(f"  {k}: {v[:50]}..." if len(str(v)) > 50 else f"  {k}: {v}")
 
-    print(f"\nJA3 Fingerprint: {spoofer.ja3_spoofer.get_ja3_fingerprint()[:50]}...")
+    logger.info(f"JA3 Fingerprint: {spoofer.ja3_spoofer.get_ja3_fingerprint()[:50]}...")

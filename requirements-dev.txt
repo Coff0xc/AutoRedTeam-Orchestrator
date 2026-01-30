@@ -7,6 +7,7 @@ pytest-cov>=4.1.0        # 覆盖率
 pytest-xdist>=3.3.0      # 并行测试
 pytest-mock>=3.11.0      # Mock 支持
 pytest-asyncio>=0.21.0   # 异步测试
+pytest-timeout>=2.2.0    # 测试超时控制
 
 # 代码质量
 black>=23.12.0           # 代码格式化

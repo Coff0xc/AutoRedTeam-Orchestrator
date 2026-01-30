@@ -117,6 +117,7 @@ class SSHLateral(BaseLateralModule):
         self._transport: Optional['Transport'] = None
         self._sftp: Optional['SFTPClient'] = None
         self._tunnels: List[TunnelInfo] = []
+        self._tunnels_lock = threading.Lock()  # 保护 _tunnels 列表
 
     @property
     def port(self) -> int:
@@ -253,9 +254,10 @@ class SSHLateral(BaseLateralModule):
         """断开 SSH 连接"""
         self._set_status(LateralStatus.DISCONNECTING)
 
-        # 关闭隧道
-        for tunnel in self._tunnels:
-            tunnel.is_active = False
+        # 关闭隧道（线程安全）
+        with self._tunnels_lock:
+            for tunnel in self._tunnels:
+                tunnel.is_active = False
 
         # 关闭 SFTP
         if self._sftp:
@@ -717,7 +719,8 @@ class SSHLateral(BaseLateralModule):
         thread.start()
 
         tunnel_info.thread = thread
-        self._tunnels.append(tunnel_info)
+        with self._tunnels_lock:
+            self._tunnels.append(tunnel_info)
         return tunnel_info
 
     def _create_remote_forward(self, config: TunnelConfig) -> Optional[TunnelInfo]:
@@ -742,7 +745,8 @@ class SSHLateral(BaseLateralModule):
                 f"localhost:{config.remote_port}"
             )
 
-            self._tunnels.append(tunnel_info)
+            with self._tunnels_lock:
+                self._tunnels.append(tunnel_info)
             return tunnel_info
 
         except (SSHException, socket.error) as e:
@@ -792,7 +796,8 @@ class SSHLateral(BaseLateralModule):
         thread.start()
 
         tunnel_info.thread = thread
-        self._tunnels.append(tunnel_info)
+        with self._tunnels_lock:
+            self._tunnels.append(tunnel_info)
         return tunnel_info
 
     def _handle_socks_client(self, client_sock: socket.socket, tunnel_info: TunnelInfo):
@@ -898,15 +903,17 @@ class SSHLateral(BaseLateralModule):
                 pass  # 清理时忽略错误
 
     def close_tunnel(self, tunnel: TunnelInfo) -> bool:
-        """关闭隧道"""
+        """关闭隧道（线程安全）"""
         tunnel.is_active = False
-        if tunnel in self._tunnels:
-            self._tunnels.remove(tunnel)
+        with self._tunnels_lock:
+            if tunnel in self._tunnels:
+                self._tunnels.remove(tunnel)
         return True
 
     def get_tunnels(self) -> List[TunnelInfo]:
-        """获取活跃隧道列表"""
-        return [t for t in self._tunnels if t.is_active]
+        """获取活跃隧道列表（线程安全）"""
+        with self._tunnels_lock:
+            return [t for t in self._tunnels if t.is_active]
 
 
 # 便捷函数
@@ -1058,8 +1065,9 @@ def ssh_download(
 
 
 if __name__ == '__main__':
-    print("=== SSH Lateral Movement Module ===")
-    print(f"paramiko 可用: {HAS_PARAMIKO}")
-    print("\n使用示例:")
-    print("  from core.lateral import SSHLateral, Credentials, ssh_exec")
-    print("  result = ssh_exec('192.168.1.100', 'root', 'password', command='id')")
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logger.info("=== SSH Lateral Movement Module ===")
+    logger.info(f"paramiko 可用: {HAS_PARAMIKO}")
+    logger.info("使用示例:")
+    logger.info("  from core.lateral import SSHLateral, Credentials, ssh_exec")
+    logger.info("  result = ssh_exec('192.168.1.100', 'root', 'password', command='id')")

@@ -87,6 +87,28 @@ from .poc_engine import (
     execute_poc_batch,
 )
 
+# AI PoC 生成器
+from .ai_poc_generator import (
+    AIPoCGenerator,
+    VulnType,
+    CVEInfo,
+    KeywordMatcher,
+    CVEParser,
+    PoCTemplateGenerator,
+    generate_poc,
+)
+
+# CVE 自动利用引擎
+from .auto_exploit import (
+    CVEAutoExploitEngine,
+    AutoExploitResult,
+    AutoExploitStatus,
+    get_auto_exploit_engine,
+    auto_exploit_cve,
+    exploit_cve_with_description,
+    generate_cve_poc,
+)
+
 
 __all__ = [
     # === 数据模型 ===
@@ -151,6 +173,24 @@ __all__ = [
     'load_poc',
     'execute_poc',
     'execute_poc_batch',
+
+    # === AI PoC 生成器 ===
+    'AIPoCGenerator',
+    'VulnType',
+    'CVEInfo',
+    'KeywordMatcher',
+    'CVEParser',
+    'PoCTemplateGenerator',
+    'generate_poc',
+
+    # === CVE 自动利用引擎 ===
+    'CVEAutoExploitEngine',
+    'AutoExploitResult',
+    'AutoExploitStatus',
+    'get_auto_exploit_engine',
+    'auto_exploit_cve',
+    'exploit_cve_with_description',
+    'generate_cve_poc',
 ]
 
 

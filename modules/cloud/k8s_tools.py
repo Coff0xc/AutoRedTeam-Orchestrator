@@ -9,7 +9,7 @@ import logging
 from typing import Any, Dict, List
 from dataclasses import dataclass, field
 
-from core.tool_registry import BaseTool, ToolCategory, ToolParameter
+from core.registry import BaseTool, ToolCategory, ToolParameter
 
 logger = logging.getLogger(__name__)
 

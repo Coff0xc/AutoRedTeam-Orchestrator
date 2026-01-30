@@ -104,9 +104,8 @@ class DNSTunnel(BaseTunnel):
         self._expected_chunks = 0
 
     def _generate_session_id(self) -> str:
-        """生成会话 ID"""
-        unique = f"{time.time()}-{random.randint(0, 99999)}"
-        return hashlib.md5(unique.encode()).hexdigest()[:8]
+        """生成加密安全的会话 ID"""
+        return secrets.token_hex(4)  # 8 字符的十六进制
 
     def connect(self) -> bool:
         """
