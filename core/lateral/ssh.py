@@ -6,29 +6,29 @@ SSH 横向移动模块 - SSH Lateral Movement
 用于授权安全测试，仅限合法渗透测试使用
 """
 
+import io
+import logging
+import os
+import select
 import socket
 import struct
-import os
-import io
-import time
 import threading
-import select
-import logging
-from typing import Optional, List, Dict, Any, Tuple, Callable
+import time
 from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .base import (
+    AuthenticationError,
+    AuthMethod,
     BaseLateralModule,
+    ConnectionError,
     Credentials,
+    ExecutionMethod,
     ExecutionResult,
     FileTransferResult,
     LateralConfig,
-    LateralStatus,
-    AuthMethod,
-    ExecutionMethod,
     LateralModuleError,
-    AuthenticationError,
-    ConnectionError,
+    LateralStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,10 +37,18 @@ logger = logging.getLogger(__name__)
 try:
     import paramiko
     from paramiko import (
-        SSHClient, RSAKey, DSSKey, ECDSAKey, Ed25519Key,
-        Transport, SFTPClient, AuthenticationException,
-        SSHException, Channel
+        AuthenticationException,
+        Channel,
+        DSSKey,
+        ECDSAKey,
+        Ed25519Key,
+        RSAKey,
+        SFTPClient,
+        SSHClient,
+        SSHException,
+        Transport,
     )
+
     HAS_PARAMIKO = True
 except ImportError:
     HAS_PARAMIKO = False
@@ -50,16 +58,18 @@ except ImportError:
 @dataclass
 class TunnelConfig:
     """SSH 隧道配置"""
+
     local_port: int
     remote_host: str
     remote_port: int
-    bind_address: str = '127.0.0.1'
-    tunnel_type: str = 'local'  # local, remote, dynamic
+    bind_address: str = "127.0.0.1"
+    tunnel_type: str = "local"  # local, remote, dynamic
 
 
 @dataclass
 class TunnelInfo:
     """隧道信息"""
+
     tunnel_type: str
     local_bind: str
     remote_target: str
@@ -100,22 +110,19 @@ class SSHLateral(BaseLateralModule):
             )
     """
 
-    name = 'ssh'
-    description = 'SSH 横向移动，支持密钥认证和端口转发'
+    name = "ssh"
+    description = "SSH 横向移动，支持密钥认证和端口转发"
     default_port = 22
     supported_auth = [AuthMethod.PASSWORD, AuthMethod.KEY, AuthMethod.AGENT]
     supports_file_transfer = True  # 支持 SFTP 文件传输
 
     def __init__(
-        self,
-        target: str,
-        credentials: Credentials,
-        config: Optional[LateralConfig] = None
+        self, target: str, credentials: Credentials, config: Optional[LateralConfig] = None
     ):
         super().__init__(target, credentials, config)
-        self._client: Optional['SSHClient'] = None
-        self._transport: Optional['Transport'] = None
-        self._sftp: Optional['SFTPClient'] = None
+        self._client: Optional["SSHClient"] = None
+        self._transport: Optional["Transport"] = None
+        self._sftp: Optional["SFTPClient"] = None
         self._tunnels: List[TunnelInfo] = []
         self._tunnels_lock = threading.Lock()  # 保护 _tunnels 列表
 
@@ -138,10 +145,10 @@ class SSHLateral(BaseLateralModule):
 
             # 根据配置设置主机密钥策略
             host_key_policy = self.config.ssh_host_key_policy
-            if host_key_policy == 'reject':
+            if host_key_policy == "reject":
                 # 严格模式：仅接受已知主机
                 self._client.set_missing_host_key_policy(paramiko.RejectPolicy())
-            elif host_key_policy == 'warning':
+            elif host_key_policy == "warning":
                 # 警告模式：接受但记录警告
                 self._client.set_missing_host_key_policy(paramiko.WarningPolicy())
             else:
@@ -166,30 +173,30 @@ class SSHLateral(BaseLateralModule):
                     pass  # 忽略加载失败（文件不存在或权限问题）
 
             connect_kwargs = {
-                'hostname': self.target,
-                'port': self.port,
-                'username': self.credentials.username,
-                'timeout': self.config.ssh_timeout,
-                'banner_timeout': self.config.ssh_banner_timeout,
-                'auth_timeout': self.config.ssh_auth_timeout,
-                'allow_agent': self.config.ssh_allow_agent,
-                'look_for_keys': self.config.ssh_look_for_keys,
+                "hostname": self.target,
+                "port": self.port,
+                "username": self.credentials.username,
+                "timeout": self.config.ssh_timeout,
+                "banner_timeout": self.config.ssh_banner_timeout,
+                "auth_timeout": self.config.ssh_auth_timeout,
+                "allow_agent": self.config.ssh_allow_agent,
+                "look_for_keys": self.config.ssh_look_for_keys,
             }
 
             # 根据认证方式设置参数
             if self.credentials.method == AuthMethod.KEY:
                 key = self._load_private_key()
                 if key:
-                    connect_kwargs['pkey'] = key
+                    connect_kwargs["pkey"] = key
                 elif self.credentials.ssh_key:
-                    connect_kwargs['key_filename'] = self.credentials.ssh_key
+                    connect_kwargs["key_filename"] = self.credentials.ssh_key
                     if self.credentials.ssh_passphrase:
-                        connect_kwargs['passphrase'] = self.credentials.ssh_passphrase
+                        connect_kwargs["passphrase"] = self.credentials.ssh_passphrase
             elif self.credentials.method == AuthMethod.AGENT:
-                connect_kwargs['allow_agent'] = True
+                connect_kwargs["allow_agent"] = True
             else:
                 # 密码认证
-                connect_kwargs['password'] = self.credentials.password
+                connect_kwargs["password"] = self.credentials.password
 
             self._client.connect(**connect_kwargs)
             self._transport = self._client.get_transport()
@@ -216,7 +223,7 @@ class SSHLateral(BaseLateralModule):
             self._set_status(LateralStatus.FAILED)
             return False
 
-    def _load_private_key(self) -> Optional['paramiko.PKey']:
+    def _load_private_key(self) -> Optional["paramiko.PKey"]:
         """加载私钥"""
         if not HAS_PARAMIKO:
             return None
@@ -229,8 +236,7 @@ class SSHLateral(BaseLateralModule):
             for key_class in key_classes:
                 try:
                     return key_class.from_private_key_file(
-                        self.credentials.ssh_key,
-                        password=passphrase
+                        self.credentials.ssh_key, password=passphrase
                     )
                 except (IOError, OSError, SSHException):
                     continue  # 尝试下一个密钥类型
@@ -241,10 +247,7 @@ class SSHLateral(BaseLateralModule):
             for key_class in key_classes:
                 try:
                     key_file.seek(0)
-                    return key_class.from_private_key(
-                        key_file,
-                        password=passphrase
-                    )
+                    return key_class.from_private_key(key_file, password=passphrase)
                 except (ValueError, SSHException):
                     continue  # 尝试下一个密钥类型
 
@@ -292,11 +295,7 @@ class SSHLateral(BaseLateralModule):
             ExecutionResult 对象
         """
         if not self._client:
-            return ExecutionResult(
-                success=False,
-                error="未连接",
-                method=ExecutionMethod.SSH.value
-            )
+            return ExecutionResult(success=False, error="未连接", method=ExecutionMethod.SSH.value)
 
         self._set_status(LateralStatus.EXECUTING)
         self._update_activity()
@@ -304,14 +303,11 @@ class SSHLateral(BaseLateralModule):
         timeout = timeout or self.config.timeout
 
         try:
-            stdin, stdout, stderr = self._client.exec_command(
-                command,
-                timeout=timeout
-            )
+            stdin, stdout, stderr = self._client.exec_command(command, timeout=timeout)
 
             exit_code = stdout.channel.recv_exit_status()
-            stdout_text = stdout.read().decode('utf-8', errors='ignore')
-            stderr_text = stderr.read().decode('utf-8', errors='ignore')
+            stdout_text = stdout.read().decode("utf-8", errors="ignore")
+            stderr_text = stderr.read().decode("utf-8", errors="ignore")
 
             self._set_status(LateralStatus.CONNECTED)
 
@@ -321,7 +317,7 @@ class SSHLateral(BaseLateralModule):
                 error=stderr_text,
                 exit_code=exit_code,
                 duration=time.time() - start_time,
-                method=ExecutionMethod.SSH.value
+                method=ExecutionMethod.SSH.value,
             )
 
         except socket.timeout:
@@ -330,7 +326,7 @@ class SSHLateral(BaseLateralModule):
                 success=False,
                 error="命令执行超时",
                 duration=time.time() - start_time,
-                method=ExecutionMethod.SSH.value
+                method=ExecutionMethod.SSH.value,
             )
         except SSHException as e:
             self._set_status(LateralStatus.CONNECTED)
@@ -338,7 +334,7 @@ class SSHLateral(BaseLateralModule):
                 success=False,
                 error=f"SSH 错误: {e}",
                 duration=time.time() - start_time,
-                method=ExecutionMethod.SSH.value
+                method=ExecutionMethod.SSH.value,
             )
         except socket.error as e:
             self._set_status(LateralStatus.CONNECTED)
@@ -346,14 +342,11 @@ class SSHLateral(BaseLateralModule):
                 success=False,
                 error=f"网络错误: {e}",
                 duration=time.time() - start_time,
-                method=ExecutionMethod.SSH.value
+                method=ExecutionMethod.SSH.value,
             )
 
     def execute_interactive(
-        self,
-        command: str,
-        input_data: Optional[str] = None,
-        timeout: float = 60.0
+        self, command: str, input_data: Optional[str] = None, timeout: float = 60.0
     ) -> ExecutionResult:
         """
         交互式命令执行
@@ -378,15 +371,15 @@ class SSHLateral(BaseLateralModule):
 
             if input_data:
                 time.sleep(0.5)  # 等待提示
-                channel.send(input_data + '\n')
+                channel.send(input_data + "\n")
 
-            output = ''
+            output = ""
             while True:
                 if channel.recv_ready():
                     data = channel.recv(4096)
                     if not data:
                         break
-                    output += data.decode('utf-8', errors='ignore')
+                    output += data.decode("utf-8", errors="ignore")
 
                 if channel.exit_status_ready():
                     break
@@ -404,7 +397,7 @@ class SSHLateral(BaseLateralModule):
                 output=output,
                 exit_code=exit_code,
                 duration=time.time() - start_time,
-                method=ExecutionMethod.SSH.value
+                method=ExecutionMethod.SSH.value,
             )
 
         except (SSHException, socket.error, socket.timeout) as e:
@@ -412,14 +405,10 @@ class SSHLateral(BaseLateralModule):
                 success=False,
                 error=f"SSH/网络错误: {e}",
                 duration=time.time() - start_time,
-                method=ExecutionMethod.SSH.value
+                method=ExecutionMethod.SSH.value,
             )
 
-    def execute_sudo(
-        self,
-        command: str,
-        sudo_password: Optional[str] = None
-    ) -> ExecutionResult:
+    def execute_sudo(self, command: str, sudo_password: Optional[str] = None) -> ExecutionResult:
         """
         以 sudo 执行命令 (安全方式: 通过 stdin 传递密码)
 
@@ -446,8 +435,8 @@ class SSHLateral(BaseLateralModule):
             stdin.flush()
 
             # 读取输出
-            output = stdout.read().decode('utf-8', errors='replace')
-            error_output = stderr.read().decode('utf-8', errors='replace')
+            output = stdout.read().decode("utf-8", errors="replace")
+            error_output = stderr.read().decode("utf-8", errors="replace")
             exit_code = stdout.channel.recv_exit_status()
 
             # 组合输出，过滤掉可能的密码回显
@@ -460,7 +449,7 @@ class SSHLateral(BaseLateralModule):
                 output=combined_output.strip(),
                 exit_code=exit_code,
                 duration=time.time() - start_time,
-                method=ExecutionMethod.SSH.value
+                method=ExecutionMethod.SSH.value,
             )
 
         except (SSHException, socket.error, socket.timeout) as e:
@@ -468,10 +457,10 @@ class SSHLateral(BaseLateralModule):
                 success=False,
                 error=f"SSH sudo 执行错误: {e}",
                 duration=time.time() - start_time,
-                method=ExecutionMethod.SSH.value
+                method=ExecutionMethod.SSH.value,
             )
 
-    def _get_sftp(self) -> Optional['SFTPClient']:
+    def _get_sftp(self) -> Optional["SFTPClient"]:
         """获取或创建 SFTP 客户端"""
         if self._sftp is None and self._client:
             try:
@@ -491,10 +480,7 @@ class SSHLateral(BaseLateralModule):
         """
         if not self._client:
             return FileTransferResult(
-                success=False,
-                source=local_path,
-                destination=remote_path,
-                error="未连接"
+                success=False, source=local_path, destination=remote_path, error="未连接"
             )
 
         sftp = self._get_sftp()
@@ -503,7 +489,7 @@ class SSHLateral(BaseLateralModule):
                 success=False,
                 source=local_path,
                 destination=remote_path,
-                error="无法创建 SFTP 连接"
+                error="无法创建 SFTP 连接",
             )
 
         self._set_status(LateralStatus.UPLOADING)
@@ -522,7 +508,7 @@ class SSHLateral(BaseLateralModule):
                 source=local_path,
                 destination=remote_path,
                 size=file_size,
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
         except FileNotFoundError as e:
@@ -532,7 +518,7 @@ class SSHLateral(BaseLateralModule):
                 source=local_path,
                 destination=remote_path,
                 error=f"文件不存在: {e}",
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
         except (IOError, OSError) as e:
             self._set_status(LateralStatus.CONNECTED)
@@ -541,7 +527,7 @@ class SSHLateral(BaseLateralModule):
                 source=local_path,
                 destination=remote_path,
                 error=f"文件操作错误: {e}",
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
         except SSHException as e:
             self._set_status(LateralStatus.CONNECTED)
@@ -550,7 +536,7 @@ class SSHLateral(BaseLateralModule):
                 source=local_path,
                 destination=remote_path,
                 error=f"SFTP 错误: {e}",
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
     def download(self, remote_path: str, local_path: str) -> FileTransferResult:
@@ -563,10 +549,7 @@ class SSHLateral(BaseLateralModule):
         """
         if not self._client:
             return FileTransferResult(
-                success=False,
-                source=remote_path,
-                destination=local_path,
-                error="未连接"
+                success=False, source=remote_path, destination=local_path, error="未连接"
             )
 
         sftp = self._get_sftp()
@@ -575,7 +558,7 @@ class SSHLateral(BaseLateralModule):
                 success=False,
                 source=remote_path,
                 destination=local_path,
-                error="无法创建 SFTP 连接"
+                error="无法创建 SFTP 连接",
             )
 
         self._set_status(LateralStatus.DOWNLOADING)
@@ -594,7 +577,7 @@ class SSHLateral(BaseLateralModule):
                 source=remote_path,
                 destination=local_path,
                 size=file_size,
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
         except FileNotFoundError as e:
@@ -604,7 +587,7 @@ class SSHLateral(BaseLateralModule):
                 source=remote_path,
                 destination=local_path,
                 error=f"远程文件不存在: {e}",
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
         except (IOError, OSError) as e:
             self._set_status(LateralStatus.CONNECTED)
@@ -613,7 +596,7 @@ class SSHLateral(BaseLateralModule):
                 source=remote_path,
                 destination=local_path,
                 error=f"文件操作错误: {e}",
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
         except SSHException as e:
             self._set_status(LateralStatus.CONNECTED)
@@ -622,10 +605,10 @@ class SSHLateral(BaseLateralModule):
                 source=remote_path,
                 destination=local_path,
                 error=f"SFTP 错误: {e}",
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
-    def list_dir(self, path: str = '.') -> List[str]:
+    def list_dir(self, path: str = ".") -> List[str]:
         """列出目录内容"""
         sftp = self._get_sftp()
         if not sftp:
@@ -650,11 +633,11 @@ class SSHLateral(BaseLateralModule):
         if not self._transport:
             return None
 
-        if config.tunnel_type == 'local':
+        if config.tunnel_type == "local":
             return self._create_local_forward(config)
-        elif config.tunnel_type == 'remote':
+        elif config.tunnel_type == "remote":
             return self._create_remote_forward(config)
-        elif config.tunnel_type == 'dynamic':
+        elif config.tunnel_type == "dynamic":
             return self._create_socks_proxy(config)
 
         return None
@@ -662,9 +645,9 @@ class SSHLateral(BaseLateralModule):
     def _create_local_forward(self, config: TunnelConfig) -> Optional[TunnelInfo]:
         """创建本地端口转发 (SSH -L)"""
         tunnel_info = TunnelInfo(
-            tunnel_type='local',
+            tunnel_type="local",
             local_bind=f"{config.bind_address}:{config.local_port}",
-            remote_target=f"{config.remote_host}:{config.remote_port}"
+            remote_target=f"{config.remote_host}:{config.remote_port}",
         )
 
         def forward_handler():
@@ -688,9 +671,7 @@ class SSHLateral(BaseLateralModule):
 
                     try:
                         channel = self._transport.open_channel(
-                            'direct-tcpip',
-                            (config.remote_host, config.remote_port),
-                            addr
+                            "direct-tcpip", (config.remote_host, config.remote_port), addr
                         )
 
                         if channel is None:
@@ -699,8 +680,7 @@ class SSHLateral(BaseLateralModule):
 
                         # 启动双向转发
                         forward_thread = threading.Thread(
-                            target=self._forward_data,
-                            args=(client_sock, channel, tunnel_info)
+                            target=self._forward_data, args=(client_sock, channel, tunnel_info)
                         )
                         forward_thread.daemon = True
                         forward_thread.start()
@@ -729,16 +709,13 @@ class SSHLateral(BaseLateralModule):
             return None
 
         tunnel_info = TunnelInfo(
-            tunnel_type='remote',
+            tunnel_type="remote",
             local_bind=f"{config.bind_address}:{config.local_port}",
-            remote_target=f"localhost:{config.remote_port}"
+            remote_target=f"localhost:{config.remote_port}",
         )
 
         try:
-            self._transport.request_port_forward(
-                config.bind_address,
-                config.local_port
-            )
+            self._transport.request_port_forward(config.bind_address, config.local_port)
 
             self.logger.info(
                 f"远程转发: {config.bind_address}:{config.local_port} -> "
@@ -756,9 +733,9 @@ class SSHLateral(BaseLateralModule):
     def _create_socks_proxy(self, config: TunnelConfig) -> Optional[TunnelInfo]:
         """创建 SOCKS5 代理 (SSH -D)"""
         tunnel_info = TunnelInfo(
-            tunnel_type='dynamic',
+            tunnel_type="dynamic",
             local_bind=f"{config.bind_address}:{config.local_port}",
-            remote_target='SOCKS5'
+            remote_target="SOCKS5",
         )
 
         def socks_handler():
@@ -769,9 +746,7 @@ class SSHLateral(BaseLateralModule):
                 server.listen(5)
                 server.settimeout(1.0)
 
-                self.logger.info(
-                    f"SOCKS5 代理: {config.bind_address}:{config.local_port}"
-                )
+                self.logger.info(f"SOCKS5 代理: {config.bind_address}:{config.local_port}")
 
                 while tunnel_info.is_active:
                     try:
@@ -780,8 +755,7 @@ class SSHLateral(BaseLateralModule):
                         continue
 
                     handler_thread = threading.Thread(
-                        target=self._handle_socks_client,
-                        args=(client_sock, tunnel_info)
+                        target=self._handle_socks_client, args=(client_sock, tunnel_info)
                     )
                     handler_thread.daemon = True
                     handler_thread.start()
@@ -813,7 +787,7 @@ class SSHLateral(BaseLateralModule):
             methods = client_sock.recv(nmethods)
 
             # 无认证
-            client_sock.send(b'\x05\x00')
+            client_sock.send(b"\x05\x00")
 
             # 获取请求
             data = client_sock.recv(4)
@@ -834,27 +808,25 @@ class SSHLateral(BaseLateralModule):
                 client_sock.close()
                 return
 
-            port = int.from_bytes(client_sock.recv(2), 'big')
+            port = int.from_bytes(client_sock.recv(2), "big")
 
             # 打开 SSH 通道
             try:
                 channel = self._transport.open_channel(
-                    'direct-tcpip',
-                    (addr, port),
-                    client_sock.getpeername()
+                    "direct-tcpip", (addr, port), client_sock.getpeername()
                 )
             except SSHException:
-                client_sock.send(b'\x05\x05\x00\x01\x00\x00\x00\x00\x00\x00')
+                client_sock.send(b"\x05\x05\x00\x01\x00\x00\x00\x00\x00\x00")
                 client_sock.close()
                 return
 
             if channel is None:
-                client_sock.send(b'\x05\x05\x00\x01\x00\x00\x00\x00\x00\x00')
+                client_sock.send(b"\x05\x05\x00\x01\x00\x00\x00\x00\x00\x00")
                 client_sock.close()
                 return
 
             # 发送成功响应
-            client_sock.send(b'\x05\x00\x00\x01\x00\x00\x00\x00\x00\x00')
+            client_sock.send(b"\x05\x00\x00\x01\x00\x00\x00\x00\x00\x00")
 
             # 转发数据
             self._forward_data(client_sock, channel, tunnel_info)
@@ -867,12 +839,7 @@ class SSHLateral(BaseLateralModule):
             except (socket.error, OSError):
                 pass  # 清理时忽略错误
 
-    def _forward_data(
-        self,
-        sock: socket.socket,
-        channel: 'Channel',
-        tunnel_info: TunnelInfo
-    ):
+    def _forward_data(self, sock: socket.socket, channel: "Channel", tunnel_info: TunnelInfo):
         """双向数据转发"""
         try:
             while tunnel_info.is_active:
@@ -920,10 +887,10 @@ class SSHLateral(BaseLateralModule):
 def ssh_exec(
     target: str,
     username: str,
-    password: str = '',
-    key_file: str = '',
-    command: str = 'whoami',
-    port: int = 22
+    password: str = "",
+    key_file: str = "",
+    command: str = "whoami",
+    port: int = 22,
 ) -> Dict[str, Any]:
     """
     SSH 命令执行 (便捷函数)
@@ -939,32 +906,27 @@ def ssh_exec(
     creds = Credentials(
         username=username,
         password=password if password else None,
-        ssh_key=key_file if key_file else None
+        ssh_key=key_file if key_file else None,
     )
 
     config = LateralConfig(ssh_port=port)
     ssh = SSHLateral(target, creds, config)
 
     if not ssh.connect():
-        return {
-            'success': False,
-            'error': '连接失败',
-            'target': target,
-            'command': command
-        }
+        return {"success": False, "error": "连接失败", "target": target, "command": command}
 
     result = ssh.execute(command)
     ssh.disconnect()
 
     return {
-        'success': result.success,
-        'output': result.output,
-        'error': result.error,
-        'exit_code': result.exit_code,
-        'duration': result.duration,
-        'target': target,
-        'command': command,
-        'method': result.method
+        "success": result.success,
+        "output": result.output,
+        "error": result.error,
+        "exit_code": result.exit_code,
+        "duration": result.duration,
+        "target": target,
+        "command": command,
+        "method": result.method,
     }
 
 
@@ -975,7 +937,7 @@ def ssh_tunnel(
     local_port: int,
     remote_host: str,
     remote_port: int,
-    port: int = 22
+    port: int = 22,
 ) -> Dict[str, Any]:
     """
     创建 SSH 隧道 (便捷函数)
@@ -995,36 +957,29 @@ def ssh_tunnel(
     ssh = SSHLateral(target, creds, config)
 
     if not ssh.connect():
-        return {'success': False, 'error': '连接失败'}
+        return {"success": False, "error": "连接失败"}
 
     tunnel_config = TunnelConfig(
-        local_port=local_port,
-        remote_host=remote_host,
-        remote_port=remote_port
+        local_port=local_port, remote_host=remote_host, remote_port=remote_port
     )
 
     tunnel = ssh.create_tunnel(tunnel_config)
 
     if tunnel:
         return {
-            'success': True,
-            'local_bind': tunnel.local_bind,
-            'remote_target': tunnel.remote_target,
-            'tunnel_type': tunnel.tunnel_type,
-            'ssh_server': target
+            "success": True,
+            "local_bind": tunnel.local_bind,
+            "remote_target": tunnel.remote_target,
+            "tunnel_type": tunnel.tunnel_type,
+            "ssh_server": target,
         }
     else:
         ssh.disconnect()
-        return {'success': False, 'error': '隧道创建失败'}
+        return {"success": False, "error": "隧道创建失败"}
 
 
 def ssh_upload(
-    target: str,
-    username: str,
-    password: str,
-    local_path: str,
-    remote_path: str,
-    port: int = 22
+    target: str, username: str, password: str, local_path: str, remote_path: str, port: int = 22
 ) -> Dict[str, Any]:
     """SSH 文件上传"""
     creds = Credentials(username=username, password=password)
@@ -1033,7 +988,7 @@ def ssh_upload(
     ssh = SSHLateral(target, creds, config)
 
     if not ssh.connect():
-        return {'success': False, 'error': '连接失败'}
+        return {"success": False, "error": "连接失败"}
 
     result = ssh.upload(local_path, remote_path)
     ssh.disconnect()
@@ -1042,12 +997,7 @@ def ssh_upload(
 
 
 def ssh_download(
-    target: str,
-    username: str,
-    password: str,
-    remote_path: str,
-    local_path: str,
-    port: int = 22
+    target: str, username: str, password: str, remote_path: str, local_path: str, port: int = 22
 ) -> Dict[str, Any]:
     """SSH 文件下载"""
     creds = Credentials(username=username, password=password)
@@ -1056,7 +1006,7 @@ def ssh_download(
     ssh = SSHLateral(target, creds, config)
 
     if not ssh.connect():
-        return {'success': False, 'error': '连接失败'}
+        return {"success": False, "error": "连接失败"}
 
     result = ssh.download(remote_path, local_path)
     ssh.disconnect()
@@ -1064,8 +1014,8 @@ def ssh_download(
     return result.to_dict()
 
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("=== SSH Lateral Movement Module ===")
     logger.info(f"paramiko 可用: {HAS_PARAMIKO}")
     logger.info("使用示例:")

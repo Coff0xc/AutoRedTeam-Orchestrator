@@ -6,7 +6,7 @@ AutoRedTeam-Orchestrator 认证异常
 
 from __future__ import annotations
 
-from typing import Optional, Any
+from typing import Any, Optional
 
 from .base import AutoRedTeamError
 
@@ -20,6 +20,7 @@ class AuthError(AutoRedTeamError):
     示例:
         >>> raise AuthError("认证失败")
     """
+
     pass
 
 
@@ -33,6 +34,7 @@ class InvalidCredentials(AuthError):
         >>> raise InvalidCredentials("用户名或密码错误")
         >>> raise InvalidCredentials("API密钥无效", details={"key_prefix": "sk-xxx..."})
     """
+
     pass
 
 
@@ -47,10 +49,7 @@ class TokenExpired(AuthError):
     """
 
     def __init__(
-        self,
-        message: str = "认证令牌已过期",
-        expired_at: Optional[str] = None,
-        **kwargs: Any
+        self, message: str = "认证令牌已过期", expired_at: Optional[str] = None, **kwargs: Any
     ):
         """
         初始化Token过期错误
@@ -63,7 +62,7 @@ class TokenExpired(AuthError):
         super().__init__(message, **kwargs)
         self.expired_at = expired_at
         if expired_at:
-            self.details['expired_at'] = expired_at
+            self.details["expired_at"] = expired_at
 
 
 class PermissionDenied(AuthError):
@@ -76,6 +75,7 @@ class PermissionDenied(AuthError):
         >>> raise PermissionDenied("需要管理员权限")
         >>> raise PermissionDenied("无权访问该资源", details={"resource": "/admin/users", "required_role": "admin"})
     """
+
     pass
 
 
@@ -84,10 +84,10 @@ SecurityError = AuthError
 
 
 __all__ = [
-    'AuthError',
-    'InvalidCredentials',
-    'TokenExpired',
-    'PermissionDenied',
+    "AuthError",
+    "InvalidCredentials",
+    "TokenExpired",
+    "PermissionDenied",
     # 向后兼容
-    'SecurityError',
+    "SecurityError",
 ]

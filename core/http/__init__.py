@@ -39,72 +39,71 @@
 from .client import (
     HTTPClient,
     HTTPResponse,
+    async_client_context,
+    client_context,
     get_client,
     reset_client,
-    client_context,
-    async_client_context,
-)
-
-# 配置
-from .config import (
-    HTTPConfig,
-    RetryConfig,
-    RetryStrategy,
-    ProxyConfig,
-    PoolConfig,
-    ConfigPresets,
-)
-
-# 会话管理
-from .session import (
-    HTTPSession,
-    AuthType,
-    AuthConfig,
-    Cookie,
-    CookieJar,
-)
-
-# 中间件
-from .middleware import (
-    Middleware,
-    AsyncMiddleware,
-    RequestContext,
-    ResponseContext,
-    LoggingMiddleware,
-    RetryMiddleware,
-    RateLimitMiddleware,
-    AsyncRateLimitMiddleware,
-    HeadersMiddleware,
-    AuthMiddleware,
-    MetricsMiddleware,
-    MiddlewareChain,
-)
-
-# 异常
-from .exceptions import (
-    HTTPError,
-    TimeoutError,
-    ConnectionError,
-    SSLError,
-    ProxyError,
-    RedirectError,
-    RequestError,
-    ResponseError,
-    RateLimitError,
-    AuthenticationError,
-    ServerError,
-    ClientError,
-    exception_from_status_code,
 )
 
 # 向后兼容 - 保留旧的工厂接口
 from .client_factory import (
-    HTTPClientFactory,
     ClientType,
-    get_sync_client,
+    HTTPClientFactory,
     get_async_client,
+    get_sync_client,
 )
 
+# 配置
+from .config import (
+    ConfigPresets,
+    HTTPConfig,
+    PoolConfig,
+    ProxyConfig,
+    RetryConfig,
+    RetryStrategy,
+)
+
+# 异常
+from .exceptions import (
+    AuthenticationError,
+    ClientError,
+    ConnectionError,
+    HTTPError,
+    ProxyError,
+    RateLimitError,
+    RedirectError,
+    RequestError,
+    ResponseError,
+    ServerError,
+    SSLError,
+    TimeoutError,
+    exception_from_status_code,
+)
+
+# 中间件
+from .middleware import (
+    AsyncMiddleware,
+    AsyncRateLimitMiddleware,
+    AuthMiddleware,
+    HeadersMiddleware,
+    LoggingMiddleware,
+    MetricsMiddleware,
+    Middleware,
+    MiddlewareChain,
+    RateLimitMiddleware,
+    RequestContext,
+    ResponseContext,
+    RetryMiddleware,
+)
+
+# 会话管理
+from .session import (
+    AuthConfig,
+    AuthType,
+    Cookie,
+    CookieJar,
+    HTTPSession,
+)
 
 __all__ = [
     # 客户端
@@ -114,7 +113,6 @@ __all__ = [
     "reset_client",
     "client_context",
     "async_client_context",
-
     # 配置
     "HTTPConfig",
     "RetryConfig",
@@ -122,14 +120,12 @@ __all__ = [
     "ProxyConfig",
     "PoolConfig",
     "ConfigPresets",
-
     # 会话
     "HTTPSession",
     "AuthType",
     "AuthConfig",
     "Cookie",
     "CookieJar",
-
     # 中间件
     "Middleware",
     "AsyncMiddleware",
@@ -143,7 +139,6 @@ __all__ = [
     "AuthMiddleware",
     "MetricsMiddleware",
     "MiddlewareChain",
-
     # 异常
     "HTTPError",
     "TimeoutError",
@@ -158,7 +153,6 @@ __all__ = [
     "ServerError",
     "ClientError",
     "exception_from_status_code",
-
     # 向后兼容
     "HTTPClientFactory",
     "ClientType",

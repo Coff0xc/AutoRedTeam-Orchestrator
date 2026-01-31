@@ -22,14 +22,14 @@
         f.write("temp content")
 """
 
+import json
 import os
 import shutil
 import tempfile
-import json
-from pathlib import Path
-from typing import Union, Optional, Iterator, List, Any, Generator
 from contextlib import contextmanager
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Generator, Iterator, List, Optional, Union
 
 
 def ensure_dir(path: Union[str, Path]) -> Path:
@@ -50,10 +50,7 @@ def ensure_dir(path: Union[str, Path]) -> Path:
 
 
 def safe_write(
-    path: Union[str, Path],
-    content: Union[str, bytes],
-    encoding: str = 'utf-8',
-    atomic: bool = True
+    path: Union[str, Path], content: Union[str, bytes], encoding: str = "utf-8", atomic: bool = True
 ) -> None:
     """
     安全写入文件
@@ -73,7 +70,7 @@ def safe_write(
 
     if atomic:
         # 原子写入：先写临时文件，再重命名
-        temp_path = path.with_suffix(path.suffix + '.tmp')
+        temp_path = path.with_suffix(path.suffix + ".tmp")
 
         try:
             if isinstance(content, bytes):
@@ -98,9 +95,7 @@ def safe_write(
 
 
 def safe_read(
-    path: Union[str, Path],
-    encoding: str = 'utf-8',
-    default: Optional[str] = None
+    path: Union[str, Path], encoding: str = "utf-8", default: Optional[str] = None
 ) -> Optional[str]:
     """
     安全读取文件
@@ -123,10 +118,7 @@ def safe_read(
         return default
 
 
-def safe_read_bytes(
-    path: Union[str, Path],
-    default: Optional[bytes] = None
-) -> Optional[bytes]:
+def safe_read_bytes(path: Union[str, Path], default: Optional[bytes] = None) -> Optional[bytes]:
     """
     安全读取文件（字节模式）
 
@@ -146,9 +138,7 @@ def safe_read_bytes(
 
 
 def safe_read_json(
-    path: Union[str, Path],
-    default: Optional[Any] = None,
-    encoding: str = 'utf-8'
+    path: Union[str, Path], default: Optional[Any] = None, encoding: str = "utf-8"
 ) -> Any:
     """
     安全读取JSON文件
@@ -175,9 +165,9 @@ def safe_read_json(
 def safe_write_json(
     path: Union[str, Path],
     data: Any,
-    encoding: str = 'utf-8',
+    encoding: str = "utf-8",
     indent: int = 2,
-    ensure_ascii: bool = False
+    ensure_ascii: bool = False,
 ) -> None:
     """
     安全写入JSON文件
@@ -195,10 +185,10 @@ def safe_write_json(
 
 @contextmanager
 def temp_file(
-    suffix: str = '',
-    prefix: str = 'art_',
+    suffix: str = "",
+    prefix: str = "art_",
     dir: Optional[Union[str, Path]] = None,
-    delete: bool = True
+    delete: bool = True,
 ) -> Generator[Path, None, None]:
     """
     创建临时文件上下文管理器
@@ -233,9 +223,7 @@ def temp_file(
 
 @contextmanager
 def temp_dir(
-    prefix: str = 'art_',
-    dir: Optional[Union[str, Path]] = None,
-    delete: bool = True
+    prefix: str = "art_", dir: Optional[Union[str, Path]] = None, delete: bool = True
 ) -> Generator[Path, None, None]:
     """
     创建临时目录上下文管理器
@@ -265,10 +253,10 @@ def temp_dir(
 
 
 def create_temp_file(
-    suffix: str = '',
-    prefix: str = 'art_',
+    suffix: str = "",
+    prefix: str = "art_",
     dir: Optional[Union[str, Path]] = None,
-    content: Optional[Union[str, bytes]] = None
+    content: Optional[Union[str, bytes]] = None,
 ) -> Path:
     """
     创建临时文件（不自动删除）
@@ -293,15 +281,12 @@ def create_temp_file(
         if isinstance(content, bytes):
             temp_path.write_bytes(content)
         else:
-            temp_path.write_text(content, encoding='utf-8')
+            temp_path.write_text(content, encoding="utf-8")
 
     return temp_path
 
 
-def create_temp_dir(
-    prefix: str = 'art_',
-    dir: Optional[Union[str, Path]] = None
-) -> Path:
+def create_temp_dir(prefix: str = "art_", dir: Optional[Union[str, Path]] = None) -> Path:
     """
     创建临时目录（不自动删除）
 
@@ -320,9 +305,9 @@ def create_temp_dir(
 
 def iter_files(
     directory: Union[str, Path],
-    pattern: str = '*',
+    pattern: str = "*",
     recursive: bool = False,
-    exclude_dirs: Optional[List[str]] = None
+    exclude_dirs: Optional[List[str]] = None,
 ) -> Iterator[Path]:
     """
     迭代目录中的文件
@@ -358,9 +343,7 @@ def iter_files(
 
 
 def iter_dirs(
-    directory: Union[str, Path],
-    recursive: bool = False,
-    exclude: Optional[List[str]] = None
+    directory: Union[str, Path], recursive: bool = False, exclude: Optional[List[str]] = None
 ) -> Iterator[Path]:
     """
     迭代目录中的子目录
@@ -377,7 +360,7 @@ def iter_dirs(
     exclude = set(exclude or [])
 
     if recursive:
-        for item in directory.rglob('*'):
+        for item in directory.rglob("*"):
             if item.is_dir() and item.name not in exclude:
                 yield item
     else:
@@ -386,11 +369,7 @@ def iter_dirs(
                 yield item
 
 
-def copy_file(
-    src: Union[str, Path],
-    dst: Union[str, Path],
-    overwrite: bool = False
-) -> Path:
+def copy_file(src: Union[str, Path], dst: Union[str, Path], overwrite: bool = False) -> Path:
     """
     复制文件
 
@@ -418,11 +397,7 @@ def copy_file(
     return dst
 
 
-def move_file(
-    src: Union[str, Path],
-    dst: Union[str, Path],
-    overwrite: bool = False
-) -> Path:
+def move_file(src: Union[str, Path], dst: Union[str, Path], overwrite: bool = False) -> Path:
     """
     移动文件
 
@@ -465,11 +440,7 @@ def delete_file(path: Union[str, Path], missing_ok: bool = True) -> bool:
         return False
 
 
-def delete_dir(
-    path: Union[str, Path],
-    missing_ok: bool = True,
-    recursive: bool = True
-) -> bool:
+def delete_dir(path: Union[str, Path], missing_ok: bool = True, recursive: bool = True) -> bool:
     """
     删除目录
 
@@ -509,31 +480,31 @@ def file_info(path: Union[str, Path]) -> dict:
     path = Path(path)
 
     if not path.exists():
-        return {'exists': False}
+        return {"exists": False}
 
     stat = path.stat()
 
     return {
-        'exists': True,
-        'name': path.name,
-        'stem': path.stem,
-        'suffix': path.suffix,
-        'path': str(path.absolute()),
-        'parent': str(path.parent),
-        'is_file': path.is_file(),
-        'is_dir': path.is_dir(),
-        'is_symlink': path.is_symlink(),
-        'size': stat.st_size,
-        'size_human': _human_readable_size(stat.st_size),
-        'created': datetime.fromtimestamp(stat.st_ctime).isoformat(),
-        'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(),
-        'accessed': datetime.fromtimestamp(stat.st_atime).isoformat(),
+        "exists": True,
+        "name": path.name,
+        "stem": path.stem,
+        "suffix": path.suffix,
+        "path": str(path.absolute()),
+        "parent": str(path.parent),
+        "is_file": path.is_file(),
+        "is_dir": path.is_dir(),
+        "is_symlink": path.is_symlink(),
+        "size": stat.st_size,
+        "size_human": _human_readable_size(stat.st_size),
+        "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+        "accessed": datetime.fromtimestamp(stat.st_atime).isoformat(),
     }
 
 
 def _human_readable_size(size: int) -> str:
     """转换为人类可读的大小"""
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
         if size < 1024:
             return f"{size:.2f} {unit}"
         size /= 1024
@@ -548,7 +519,7 @@ def find_files(
     max_size: Optional[int] = None,
     modified_after: Optional[datetime] = None,
     modified_before: Optional[datetime] = None,
-    recursive: bool = True
+    recursive: bool = True,
 ) -> List[Path]:
     """
     查找文件
@@ -570,11 +541,11 @@ def find_files(
     results = []
 
     # 确定匹配模式
-    pattern = name if name else '*'
+    pattern = name if name else "*"
     if extension:
-        if not extension.startswith('.'):
-            extension = '.' + extension
-        pattern = f'*{extension}' if pattern == '*' else pattern
+        if not extension.startswith("."):
+            extension = "." + extension
+        pattern = f"*{extension}" if pattern == "*" else pattern
 
     # 遍历文件
     for file_path in iter_files(directory, pattern, recursive):
@@ -607,10 +578,7 @@ def get_project_root() -> Path:
     Returns:
         项目根目录Path对象
     """
-    markers = [
-        'pyproject.toml', 'setup.py', 'setup.cfg',
-        '.git', 'requirements.txt', 'Makefile'
-    ]
+    markers = ["pyproject.toml", "setup.py", "setup.cfg", ".git", "requirements.txt", "Makefile"]
 
     current = Path(__file__).resolve().parent
 
@@ -635,24 +603,24 @@ def get_temp_dir() -> Path:
 
 
 __all__ = [
-    'ensure_dir',
-    'safe_write',
-    'safe_read',
-    'safe_read_bytes',
-    'safe_read_json',
-    'safe_write_json',
-    'temp_file',
-    'temp_dir',
-    'create_temp_file',
-    'create_temp_dir',
-    'iter_files',
-    'iter_dirs',
-    'copy_file',
-    'move_file',
-    'delete_file',
-    'delete_dir',
-    'file_info',
-    'find_files',
-    'get_project_root',
-    'get_temp_dir',
+    "ensure_dir",
+    "safe_write",
+    "safe_read",
+    "safe_read_bytes",
+    "safe_read_json",
+    "safe_write_json",
+    "temp_file",
+    "temp_dir",
+    "create_temp_file",
+    "create_temp_dir",
+    "iter_files",
+    "iter_dirs",
+    "copy_file",
+    "move_file",
+    "delete_file",
+    "delete_dir",
+    "file_info",
+    "find_files",
+    "get_project_root",
+    "get_temp_dir",
 ]

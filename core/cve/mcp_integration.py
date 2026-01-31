@@ -5,9 +5,10 @@ CVE管理器 - MCP集成示例
 展示如何在MCP Server中集成CVE管理功能
 """
 
-from typing import Dict, List, Optional
 import asyncio
-from core.cve import CVEUpdateManager, CVEEntry
+from typing import Dict, List, Optional
+
+from core.cve import CVEEntry, CVEUpdateManager
 
 # 全局实例 (在MCP服务器启动时初始化)
 cve_manager = None
@@ -28,6 +29,7 @@ def init_cve_manager(db_path: Optional[str] = None) -> CVEUpdateManager:
 # ============================================================================
 # MCP工具函数 (复制到 mcp_stdio_server.py)
 # ============================================================================
+
 
 async def cve_sync_all(days_back: int = 7) -> Dict:
     """
@@ -59,13 +61,10 @@ async def cve_sync_all(days_back: int = 7) -> Dict:
         return {
             "status": "success",
             "results": {k: list(v) for k, v in results.items()},
-            "stats": stats
+            "stats": stats,
         }
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
 
 
 def cve_search(
@@ -73,7 +72,7 @@ def cve_search(
     severity: str = "",
     min_cvss: float = 0.0,
     poc_only: bool = False,
-    limit: int = 50
+    limit: int = 50,
 ) -> Dict:
     """
     MCP工具: 搜索CVE
@@ -99,19 +98,16 @@ def cve_search(
             keyword=keyword,
             severity=severity.upper() if severity else None,
             min_cvss=min_cvss,
-            poc_only=poc_only
+            poc_only=poc_only,
         )
 
         return {
             "status": "success",
             "total": len(results),
-            "cves": [cve.to_dict() for cve in results[:limit]]
+            "cves": [cve.to_dict() for cve in results[:limit]],
         }
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
 
 
 def cve_stats() -> Dict:
@@ -132,15 +128,9 @@ def cve_stats() -> Dict:
 
     try:
         stats = manager.get_stats()
-        return {
-            "status": "success",
-            **stats
-        }
+        return {"status": "success", **stats}
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
 
 
 def cve_get(cve_id: str) -> Dict:
@@ -162,20 +152,11 @@ def cve_get(cve_id: str) -> Dict:
         cve = manager._get_cve(cve_id.upper())
 
         if cve:
-            return {
-                "status": "success",
-                "cve": cve.to_dict()
-            }
+            return {"status": "success", "cve": cve.to_dict()}
         else:
-            return {
-                "status": "not_found",
-                "message": f"CVE {cve_id} not found in database"
-            }
+            return {"status": "not_found", "message": f"CVE {cve_id} not found in database"}
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
 
 
 # ============================================================================
@@ -277,8 +258,8 @@ if __name__ == "__main__":
         print("3. 测试同步 (最近1天)")
         result = await cve_sync_all(days_back=1)
         print(f"   状态: {result['status']}")
-        if result['status'] == 'success':
-            for source, counts in result['results'].items():
+        if result["status"] == "success":
+            for source, counts in result["results"].items():
                 print(f"   {source}: 新增 {counts[0]}, 更新 {counts[1]}")
         print()
 
@@ -286,7 +267,7 @@ if __name__ == "__main__":
         print("4. 测试搜索 (CRITICAL)")
         result = cve_search(severity="CRITICAL", limit=5)
         print(f"   找到 {result['total']} 条结果")
-        for cve in result.get('cves', [])[:3]:
+        for cve in result.get("cves", [])[:3]:
             print(f"   • {cve['cve_id']} [CVSS: {cve['cvss']}]")
 
     asyncio.run(test())

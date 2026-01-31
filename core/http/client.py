@@ -5,23 +5,32 @@
 基于 httpx 实现，支持连接池、重试、中间件等功能
 """
 
-import time
+import asyncio
 import json as json_module
 import logging
+import time
 import warnings
-import asyncio
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
 from typing import (
-    Optional, Dict, Any, Union, List, Tuple, Callable,
-    TypeVar, AsyncIterator, Iterator
+    Any,
+    AsyncIterator,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
 )
-from contextlib import contextmanager, asynccontextmanager
 
 logger = logging.getLogger(__name__)
 
 # 尝试导入 httpx
 try:
     import httpx
+
     HTTPX_AVAILABLE = True
 except ImportError:
     HTTPX_AVAILABLE = False
@@ -32,6 +41,7 @@ try:
     import requests
     from requests.adapters import HTTPAdapter
     from urllib3.util.retry import Retry
+
     REQUESTS_AVAILABLE = True
 except ImportError:
     REQUESTS_AVAILABLE = False
@@ -39,6 +49,7 @@ except ImportError:
 
 try:
     import aiohttp
+
     AIOHTTP_AVAILABLE = True
 except ImportError:
     AIOHTTP_AVAILABLE = False
@@ -47,9 +58,15 @@ except ImportError:
 
 from .config import HTTPConfig, RetryStrategy
 from .exceptions import (
-    HTTPError, TimeoutError, ConnectionError, SSLError,
-    ProxyError, RequestError, ResponseError, RateLimitError,
-    exception_from_status_code
+    ConnectionError,
+    HTTPError,
+    ProxyError,
+    RateLimitError,
+    RequestError,
+    ResponseError,
+    SSLError,
+    TimeoutError,
+    exception_from_status_code,
 )
 from .middleware import MiddlewareChain, RequestContext, ResponseContext
 
@@ -57,6 +74,7 @@ from .middleware import MiddlewareChain, RequestContext, ResponseContext
 @dataclass
 class HTTPResponse:
     """统一响应对象"""
+
     status_code: int
     headers: Dict[str, str]
     text: str
@@ -118,7 +136,7 @@ class HTTPResponse:
             raise exception_from_status_code(
                 self.status_code,
                 url=self.url,
-                details={"text": self.text[:500] if self.text else None}
+                details={"text": self.text[:500] if self.text else None},
             )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -140,9 +158,7 @@ class HTTPClient:
     """统一 HTTP 客户端 - 支持同步和异步"""
 
     def __init__(
-        self,
-        config: Optional[HTTPConfig] = None,
-        middlewares: Optional[List[Any]] = None
+        self, config: Optional[HTTPConfig] = None, middlewares: Optional[List[Any]] = None
     ):
         """
         初始化 HTTP 客户端
@@ -170,10 +186,9 @@ class HTTPClient:
         """发出 SSL 禁用警告"""
         if not self._ssl_warning_shown and not self.config.verify_ssl:
             warnings.warn(
-                "SSL 验证已禁用！可能存在中间人攻击风险。"
-                "仅在测试环境或明确信任的网络中使用。",
+                "SSL 验证已禁用！可能存在中间人攻击风险。" "仅在测试环境或明确信任的网络中使用。",
                 UserWarning,
-                stacklevel=4
+                stacklevel=4,
             )
             logger.warning("SSL 验证已禁用")
             self._ssl_warning_shown = True
@@ -181,6 +196,7 @@ class HTTPClient:
             # 禁用 urllib3 的 SSL 警告
             try:
                 import urllib3
+
                 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
             except Exception as exc:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
@@ -198,15 +214,19 @@ class HTTPClient:
                 connect=self.config.connect_timeout,
                 read=self.config.read_timeout,
                 write=self.config.write_timeout,
-                pool=self.config.timeout
+                pool=self.config.timeout,
             )
             limits = httpx.Limits(
                 max_connections=self.config.pool.max_connections,
-                max_keepalive_connections=self.config.pool.max_keepalive
+                max_keepalive_connections=self.config.pool.max_keepalive,
             )
             # httpx 0.24+ 使用 proxy 而不是 proxies
             proxy_config = self.config.proxy.to_dict()
-            proxy_url = proxy_config.get("https://") or proxy_config.get("http://") if proxy_config else None
+            proxy_url = (
+                proxy_config.get("https://") or proxy_config.get("http://")
+                if proxy_config
+                else None
+            )
             self._sync_client = httpx.Client(
                 timeout=timeout,
                 limits=limits,
@@ -228,11 +248,10 @@ class HTTPClient:
                 total=self.config.retry.max_retries,
                 backoff_factor=self.config.retry.backoff_factor,
                 status_forcelist=list(self.config.retry.retry_status_codes),
-                allowed_methods=["HEAD", "GET", "OPTIONS", "POST", "PUT", "DELETE", "PATCH"]
+                allowed_methods=["HEAD", "GET", "OPTIONS", "POST", "PUT", "DELETE", "PATCH"],
             )
             adapter = HTTPAdapter(
-                max_retries=retry_strategy,
-                pool_maxsize=self.config.pool.max_connections
+                max_retries=retry_strategy, pool_maxsize=self.config.pool.max_connections
             )
             session.mount("http://", adapter)
             session.mount("https://", adapter)
@@ -263,15 +282,19 @@ class HTTPClient:
                 connect=self.config.connect_timeout,
                 read=self.config.read_timeout,
                 write=self.config.write_timeout,
-                pool=self.config.timeout
+                pool=self.config.timeout,
             )
             limits = httpx.Limits(
                 max_connections=self.config.pool.max_connections,
-                max_keepalive_connections=self.config.pool.max_keepalive
+                max_keepalive_connections=self.config.pool.max_keepalive,
             )
             # httpx 0.24+ 使用 proxy 而不是 proxies
             proxy_config = self.config.proxy.to_dict()
-            proxy_url = proxy_config.get("https://") or proxy_config.get("http://") if proxy_config else None
+            proxy_url = (
+                proxy_config.get("https://") or proxy_config.get("http://")
+                if proxy_config
+                else None
+            )
             self._async_client = httpx.AsyncClient(
                 timeout=timeout,
                 limits=limits,
@@ -291,7 +314,7 @@ class HTTPClient:
             )
             connector = aiohttp.TCPConnector(
                 limit=self.config.pool.max_connections,
-                ssl=self.config.verify_ssl if self.config.verify_ssl else False
+                ssl=self.config.verify_ssl if self.config.verify_ssl else False,
             )
             self._async_client = aiohttp.ClientSession(
                 timeout=timeout,
@@ -319,10 +342,7 @@ class HTTPClient:
             return RequestError(str(e), url=url)
 
     def _build_response(
-        self,
-        raw_response: Any,
-        elapsed: float,
-        backend: str = "httpx"
+        self, raw_response: Any, elapsed: float, backend: str = "httpx"
     ) -> HTTPResponse:
         """构建统一响应对象"""
         if backend == "httpx":
@@ -349,10 +369,7 @@ class HTTPClient:
             raise ValueError(f"未知的后端: {backend}")
 
     async def _build_response_async(
-        self,
-        raw_response: Any,
-        elapsed: float,
-        backend: str = "httpx"
+        self, raw_response: Any, elapsed: float, backend: str = "httpx"
     ) -> HTTPResponse:
         """异步构建统一响应对象"""
         if backend == "httpx":
@@ -388,7 +405,7 @@ class HTTPClient:
         data: Optional[Any] = None,
         json: Optional[Any] = None,
         timeout: Optional[float] = None,
-        **kwargs
+        **kwargs,
     ) -> HTTPResponse:
         """
         发送同步 HTTP 请求
@@ -443,7 +460,7 @@ class HTTPClient:
                         data=request_ctx.data,
                         json=request_ctx.json,
                         timeout=request_ctx.timeout,
-                        **kwargs
+                        **kwargs,
                     )
                     elapsed = time.time() - start_time
                     response = self._build_response(raw_response, elapsed, "httpx")
@@ -457,7 +474,7 @@ class HTTPClient:
                         data=request_ctx.data,
                         json=request_ctx.json,
                         timeout=request_ctx.timeout,
-                        **kwargs
+                        **kwargs,
                     )
                     elapsed = time.time() - start_time
                     response = self._build_response(raw_response, elapsed, "requests")
@@ -485,8 +502,7 @@ class HTTPClient:
                 # 日志
                 if self.config.log_responses:
                     logger.info(
-                        f"[HTTP] {response.status_code} {method} {url} "
-                        f"({elapsed*1000:.2f}ms)"
+                        f"[HTTP] {response.status_code} {method} {url} " f"({elapsed*1000:.2f}ms)"
                     )
 
                 return response
@@ -510,8 +526,7 @@ class HTTPClient:
                 # 检查是否应该重试
                 exc_type = type(e).__name__
                 should_retry = (
-                    attempt < max_attempts and
-                    exc_type in self.config.retry.retry_exceptions
+                    attempt < max_attempts and exc_type in self.config.retry.retry_exceptions
                 )
 
                 if should_retry:
@@ -540,7 +555,7 @@ class HTTPClient:
         data: Optional[Any] = None,
         json: Optional[Any] = None,
         timeout: Optional[float] = None,
-        **kwargs
+        **kwargs,
     ) -> HTTPResponse:
         """
         发送异步 HTTP 请求
@@ -595,7 +610,7 @@ class HTTPClient:
                         data=request_ctx.data,
                         json=request_ctx.json,
                         timeout=request_ctx.timeout,
-                        **kwargs
+                        **kwargs,
                     )
                     elapsed = time.time() - start_time
                     response = await self._build_response_async(raw_response, elapsed, "httpx")
@@ -609,10 +624,12 @@ class HTTPClient:
                         data=request_ctx.data,
                         json=request_ctx.json,
                         timeout=aiohttp.ClientTimeout(total=request_ctx.timeout),
-                        **kwargs
+                        **kwargs,
                     ) as raw_response:
                         elapsed = time.time() - start_time
-                        response = await self._build_response_async(raw_response, elapsed, "aiohttp")
+                        response = await self._build_response_async(
+                            raw_response, elapsed, "aiohttp"
+                        )
 
                 else:
                     raise ImportError("需要安装 httpx 或 aiohttp")
@@ -639,8 +656,7 @@ class HTTPClient:
                 # 日志
                 if self.config.log_responses:
                     logger.info(
-                        f"[HTTP] {response.status_code} {method} {url} "
-                        f"({elapsed*1000:.2f}ms)"
+                        f"[HTTP] {response.status_code} {method} {url} " f"({elapsed*1000:.2f}ms)"
                     )
 
                 return response
@@ -664,8 +680,7 @@ class HTTPClient:
                 # 检查是否应该重试
                 exc_type = type(e).__name__
                 should_retry = (
-                    attempt < max_attempts and
-                    exc_type in self.config.retry.retry_exceptions
+                    attempt < max_attempts and exc_type in self.config.retry.retry_exceptions
                 )
 
                 if should_retry:
@@ -746,7 +761,7 @@ class HTTPClient:
         self,
         requests_list: List[Dict[str, Any]],
         concurrency: int = 10,
-        raise_on_error: bool = False
+        raise_on_error: bool = False,
     ) -> List[Union[HTTPResponse, Exception]]:
         """
         批量发送异步请求
@@ -786,9 +801,7 @@ class HTTPClient:
         return results
 
     def batch(
-        self,
-        requests_list: List[Dict[str, Any]],
-        raise_on_error: bool = False
+        self, requests_list: List[Dict[str, Any]], raise_on_error: bool = False
     ) -> List[Union[HTTPResponse, Exception]]:
         """
         批量发送同步请求
@@ -853,10 +866,7 @@ class HTTPClient:
         await self.aclose()
 
     def __repr__(self) -> str:
-        return (
-            f"HTTPClient(timeout={self.config.timeout}, "
-            f"verify_ssl={self.config.verify_ssl})"
-        )
+        return f"HTTPClient(timeout={self.config.timeout}, " f"verify_ssl={self.config.verify_ssl})"
 
 
 # 全局单例

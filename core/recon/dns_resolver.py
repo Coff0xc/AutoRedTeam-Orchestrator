@@ -18,31 +18,31 @@ dns_resolver.py - DNS解析模块
     ips = await resolver.async_resolve("example.com")
 """
 
-import socket
 import asyncio
 import logging
-import struct
 import random
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any, Tuple, Set
-from enum import Enum
+import socket
+import struct
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class DNSRecordType(Enum):
     """DNS记录类型"""
-    A = 1       # IPv4地址
-    AAAA = 28   # IPv6地址
-    CNAME = 5   # 别名
-    MX = 15     # 邮件交换
-    NS = 2      # 名称服务器
-    TXT = 16    # 文本记录
-    SOA = 6     # 起始授权
-    PTR = 12    # 指针记录
-    SRV = 33    # 服务记录
+
+    A = 1  # IPv4地址
+    AAAA = 28  # IPv6地址
+    CNAME = 5  # 别名
+    MX = 15  # 邮件交换
+    NS = 2  # 名称服务器
+    TXT = 16  # 文本记录
+    SOA = 6  # 起始授权
+    PTR = 12  # 指针记录
+    SRV = 33  # 服务记录
 
 
 @dataclass
@@ -57,6 +57,7 @@ class DNSRecord:
         priority: 优先级(MX/SRV)
         metadata: 额外元数据
     """
+
     type: str
     name: str
     value: str
@@ -94,6 +95,7 @@ class DNSResult:
         cname_records: CNAME记录
         errors: 错误列表
     """
+
     domain: str
     records: List[DNSRecord] = field(default_factory=list)
     ip_addresses: List[str] = field(default_factory=list)
@@ -132,21 +134,18 @@ class DNSResolver:
 
     # 公共DNS服务器
     PUBLIC_DNS_SERVERS: List[str] = [
-        "8.8.8.8",          # Google
-        "8.8.4.4",          # Google
-        "1.1.1.1",          # Cloudflare
-        "1.0.0.1",          # Cloudflare
-        "9.9.9.9",          # Quad9
-        "208.67.222.222",   # OpenDNS
+        "8.8.8.8",  # Google
+        "8.8.4.4",  # Google
+        "1.1.1.1",  # Cloudflare
+        "1.0.0.1",  # Cloudflare
+        "9.9.9.9",  # Quad9
+        "208.67.222.222",  # OpenDNS
         "114.114.114.114",  # 114DNS (中国)
-        "223.5.5.5",        # 阿里DNS
+        "223.5.5.5",  # 阿里DNS
     ]
 
     def __init__(
-        self,
-        timeout: float = 5.0,
-        nameservers: Optional[List[str]] = None,
-        use_tcp: bool = False
+        self, timeout: float = 5.0, nameservers: Optional[List[str]] = None, use_tcp: bool = False
     ):
         """初始化DNS解析器
 
@@ -193,10 +192,7 @@ class DNSResolver:
         loop = asyncio.get_event_loop()
         try:
             # 使用线程池执行阻塞的DNS查询
-            result = await loop.run_in_executor(
-                None,
-                lambda: socket.gethostbyname_ex(hostname)
-            )
+            result = await loop.run_in_executor(None, lambda: socket.gethostbyname_ex(hostname))
             return list(result[2])
         except socket.gaierror:
             return []
@@ -213,9 +209,7 @@ class DNSResolver:
             IPv6地址列表
         """
         try:
-            results = socket.getaddrinfo(
-                hostname, None, socket.AF_INET6, socket.SOCK_STREAM
-            )
+            results = socket.getaddrinfo(hostname, None, socket.AF_INET6, socket.SOCK_STREAM)
             return list(set(r[4][0] for r in results))
         except socket.gaierror:
             return []
@@ -246,33 +240,22 @@ class DNSResolver:
         ips = self.resolve(domain)
         result.ip_addresses = ips
         for ip in ips:
-            result.records.append(DNSRecord(
-                type="A",
-                name=domain,
-                value=ip
-            ))
+            result.records.append(DNSRecord(type="A", name=domain, value=ip))
 
         # AAAA记录
         ipv6s = self.resolve_ipv6(domain)
         result.ipv6_addresses = ipv6s
         for ip in ipv6s:
-            result.records.append(DNSRecord(
-                type="AAAA",
-                name=domain,
-                value=ip
-            ))
+            result.records.append(DNSRecord(type="AAAA", name=domain, value=ip))
 
         # MX记录
         try:
             mx_records = self._query_mx(domain)
             result.mail_servers = mx_records
             for priority, server in mx_records:
-                result.records.append(DNSRecord(
-                    type="MX",
-                    name=domain,
-                    value=server,
-                    priority=priority
-                ))
+                result.records.append(
+                    DNSRecord(type="MX", name=domain, value=server, priority=priority)
+                )
         except Exception as e:
             result.errors.append(f"MX query failed: {e}")
 
@@ -281,11 +264,7 @@ class DNSResolver:
             ns_records = self._query_ns(domain)
             result.nameservers = ns_records
             for ns in ns_records:
-                result.records.append(DNSRecord(
-                    type="NS",
-                    name=domain,
-                    value=ns
-                ))
+                result.records.append(DNSRecord(type="NS", name=domain, value=ns))
         except Exception as e:
             result.errors.append(f"NS query failed: {e}")
 
@@ -294,11 +273,7 @@ class DNSResolver:
             txt_records = self._query_txt(domain)
             result.txt_records = txt_records
             for txt in txt_records:
-                result.records.append(DNSRecord(
-                    type="TXT",
-                    name=domain,
-                    value=txt
-                ))
+                result.records.append(DNSRecord(type="TXT", name=domain, value=txt))
         except Exception as e:
             result.errors.append(f"TXT query failed: {e}")
 
@@ -307,11 +282,7 @@ class DNSResolver:
             cname = self._query_cname(domain)
             if cname:
                 result.cname_records = [cname]
-                result.records.append(DNSRecord(
-                    type="CNAME",
-                    name=domain,
-                    value=cname
-                ))
+                result.records.append(DNSRecord(type="CNAME", name=domain, value=cname))
         except Exception as e:
             result.errors.append(f"CNAME query failed: {e}")
 
@@ -334,8 +305,8 @@ class DNSResolver:
             (优先级, 服务器) 元组列表
         """
         # 尝试使用nslookup命令（跨平台兼容）
-        import subprocess
         import platform
+        import subprocess
 
         results: List[Tuple[int, str]] = []
 
@@ -346,9 +317,7 @@ class DNSResolver:
                 cmd = ["nslookup", "-type=mx", domain]
 
             output = subprocess.check_output(
-                cmd,
-                stderr=subprocess.DEVNULL,
-                timeout=self.timeout
+                cmd, stderr=subprocess.DEVNULL, timeout=self.timeout
             ).decode("utf-8", errors="replace")
 
             # 解析输出
@@ -378,8 +347,8 @@ class DNSResolver:
 
     def _query_ns(self, domain: str) -> List[str]:
         """查询NS记录"""
-        import subprocess
         import platform
+        import subprocess
 
         results: List[str] = []
 
@@ -390,9 +359,7 @@ class DNSResolver:
                 cmd = ["nslookup", "-type=ns", domain]
 
             output = subprocess.check_output(
-                cmd,
-                stderr=subprocess.DEVNULL,
-                timeout=self.timeout
+                cmd, stderr=subprocess.DEVNULL, timeout=self.timeout
             ).decode("utf-8", errors="replace")
 
             for line in output.split("\n"):
@@ -413,8 +380,8 @@ class DNSResolver:
 
     def _query_txt(self, domain: str) -> List[str]:
         """查询TXT记录"""
-        import subprocess
         import platform
+        import subprocess
 
         results: List[str] = []
 
@@ -425,9 +392,7 @@ class DNSResolver:
                 cmd = ["nslookup", "-type=txt", domain]
 
             output = subprocess.check_output(
-                cmd,
-                stderr=subprocess.DEVNULL,
-                timeout=self.timeout
+                cmd, stderr=subprocess.DEVNULL, timeout=self.timeout
             ).decode("utf-8", errors="replace")
 
             for line in output.split("\n"):
@@ -486,11 +451,7 @@ class DNSResolver:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.reverse_lookup, ip)
 
-    def batch_resolve(
-        self,
-        hostnames: List[str],
-        threads: int = 10
-    ) -> Dict[str, List[str]]:
+    def batch_resolve(self, hostnames: List[str], threads: int = 10) -> Dict[str, List[str]]:
         """批量解析域名
 
         Args:
@@ -503,25 +464,25 @@ class DNSResolver:
         results: Dict[str, List[str]] = {}
 
         with ThreadPoolExecutor(max_workers=threads) as executor:
-            futures = {
-                executor.submit(self.resolve, hostname): hostname
-                for hostname in hostnames
-            }
+            futures = {executor.submit(self.resolve, hostname): hostname for hostname in hostnames}
 
             for future in as_completed(futures):
                 hostname = futures[future]
                 try:
                     ips = future.result()
                     results[hostname] = ips
-                except (socket.gaierror, socket.timeout, OSError, concurrent.futures.CancelledError):
+                except (
+                    socket.gaierror,
+                    socket.timeout,
+                    OSError,
+                    concurrent.futures.CancelledError,
+                ):
                     results[hostname] = []
 
         return results
 
     async def async_batch_resolve(
-        self,
-        hostnames: List[str],
-        concurrency: int = 50
+        self, hostnames: List[str], concurrency: int = 50
     ) -> Dict[str, List[str]]:
         """异步批量解析域名
 

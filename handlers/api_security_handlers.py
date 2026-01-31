@@ -5,14 +5,15 @@ API安全工具处理器
 """
 
 from typing import Any, Dict
-from .tooling import tool
+
 from .error_handling import (
-    handle_errors,
     ErrorCategory,
-    extract_url,
     extract_target,
+    extract_url,
+    handle_errors,
     validate_inputs,
 )
+from .tooling import tool
 
 
 def register_api_security_tools(mcp, counter, logger):
@@ -38,7 +39,7 @@ def register_api_security_tools(mcp, counter, logger):
         Returns:
             JWT安全问题
         """
-        from modules.api_security import JWTTester, quick_jwt_test, decode_jwt
+        from modules.api_security import JWTTester, decode_jwt, quick_jwt_test
 
         # 先解码查看基本信息
         decoded = decode_jwt(token)
@@ -53,14 +54,14 @@ def register_api_security_tools(mcp, counter, logger):
             vulns = quick_jwt_test(token)
 
         return {
-            'success': True,
-            'decoded': decoded,
-            'vulnerabilities': vulns,
-            'total_issues': len(vulns)
+            "success": True,
+            "decoded": decoded,
+            "vulnerabilities": vulns,
+            "total_issues": len(vulns),
         }
 
     @tool(mcp)
-    @validate_inputs(url='url')
+    @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.API_SECURITY, context_extractor=extract_url)
     async def cors_deep_scan(url: str) -> Dict[str, Any]:
         """CORS深度扫描 - 全面检测CORS配置问题
@@ -80,15 +81,10 @@ def register_api_security_tools(mcp, counter, logger):
 
         vulns = [r.to_dict() for r in results if r.vulnerable]
 
-        return {
-            'success': True,
-            'url': url,
-            'vulnerabilities': vulns,
-            'total_issues': len(vulns)
-        }
+        return {"success": True, "url": url, "vulnerabilities": vulns, "total_issues": len(vulns)}
 
     @tool(mcp)
-    @validate_inputs(url='url')
+    @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.API_SECURITY, context_extractor=extract_url)
     async def graphql_scan(url: str) -> Dict[str, Any]:
         """GraphQL安全扫描 - 检测GraphQL API安全问题
@@ -108,15 +104,10 @@ def register_api_security_tools(mcp, counter, logger):
 
         vulns = [r.to_dict() for r in results if r.vulnerable]
 
-        return {
-            'success': True,
-            'url': url,
-            'vulnerabilities': vulns,
-            'total_issues': len(vulns)
-        }
+        return {"success": True, "url": url, "vulnerabilities": vulns, "total_issues": len(vulns)}
 
     @tool(mcp)
-    @validate_inputs(url='url')
+    @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.API_SECURITY, context_extractor=extract_url)
     async def websocket_scan(url: str) -> Dict[str, Any]:
         """WebSocket安全扫描 - 检测WebSocket安全问题
@@ -136,15 +127,10 @@ def register_api_security_tools(mcp, counter, logger):
 
         vulns = [r.to_dict() for r in results if r.vulnerable]
 
-        return {
-            'success': True,
-            'url': url,
-            'vulnerabilities': vulns,
-            'total_issues': len(vulns)
-        }
+        return {"success": True, "url": url, "vulnerabilities": vulns, "total_issues": len(vulns)}
 
     @tool(mcp)
-    @validate_inputs(url='url')
+    @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.API_SECURITY, context_extractor=extract_url)
     async def oauth_scan(url: str, client_id: str = None) -> Dict[str, Any]:
         """OAuth安全扫描 - 检测OAuth 2.0实现问题
@@ -165,15 +151,10 @@ def register_api_security_tools(mcp, counter, logger):
 
         vulns = [r.to_dict() for r in results if r.vulnerable]
 
-        return {
-            'success': True,
-            'url': url,
-            'vulnerabilities': vulns,
-            'total_issues': len(vulns)
-        }
+        return {"success": True, "url": url, "vulnerabilities": vulns, "total_issues": len(vulns)}
 
     @tool(mcp)
-    @validate_inputs(url='url')
+    @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.API_SECURITY, context_extractor=extract_url)
     async def security_headers_score(url: str) -> Dict[str, Any]:
         """安全头评分 - 评估网站的安全头配置
@@ -193,16 +174,16 @@ def register_api_security_tools(mcp, counter, logger):
         summary = tester.get_summary()
 
         return {
-            'success': True,
-            'url': url,
-            'score': summary.score if hasattr(summary, 'score') else 0,
-            'grade': summary.grade if hasattr(summary, 'grade') else 'N/A',
-            'headers': summary.to_dict() if hasattr(summary, 'to_dict') else {},
-            'recommendations': [r.to_dict() for r in results]
+            "success": True,
+            "url": url,
+            "score": summary.score if hasattr(summary, "score") else 0,
+            "grade": summary.grade if hasattr(summary, "grade") else "N/A",
+            "headers": summary.to_dict() if hasattr(summary, "to_dict") else {},
+            "recommendations": [r.to_dict() for r in results],
         }
 
     @tool(mcp)
-    @validate_inputs(target='target')
+    @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.API_SECURITY, context_extractor=extract_target)
     async def full_api_scan(target: str, jwt_token: str = None) -> Dict[str, Any]:
         """完整API安全扫描 - 执行全面的API安全测试
@@ -220,11 +201,7 @@ def register_api_security_tools(mcp, counter, logger):
 
         result = _full_api_scan(target, jwt_token=jwt_token)
 
-        return {
-            'success': True,
-            'target': target,
-            **result
-        }
+        return {"success": True, "target": target, **result}
 
-    counter.add('api_security', 7)
+    counter.add("api_security", 7)
     logger.info("[API Security] 已注册 7 个API安全工具")

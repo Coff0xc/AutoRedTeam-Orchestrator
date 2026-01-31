@@ -5,12 +5,12 @@
 """
 
 import asyncio
-import time
 import logging
-from typing import Any, Dict, List, Optional, Callable
-from dataclasses import dataclass, field
+import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -18,12 +18,14 @@ logger = logging.getLogger(__name__)
 # 尝试导入httpx，降级到aiohttp或requests
 try:
     import httpx
+
     HAS_HTTPX = True
 except ImportError:
     HAS_HTTPX = False
 
 try:
     import aiohttp
+
     HAS_AIOHTTP = True
 except ImportError:
     HAS_AIOHTTP = False
@@ -32,6 +34,7 @@ except ImportError:
 @dataclass
 class RequestStats:
     """请求统计"""
+
     total_requests: int = 0
     successful_requests: int = 0
     failed_requests: int = 0
@@ -42,6 +45,7 @@ class RequestStats:
 @dataclass
 class PoolConfig:
     """连接池配置"""
+
     max_connections: int = 100
     max_keepalive: int = 20
     timeout: float = 10.0
@@ -92,10 +96,7 @@ class AsyncHTTPPool:
         self.config = config or PoolConfig()
         self._client: Optional[Any] = None
         self._stats = RequestStats()
-        self._rate_limiter = RateLimiter(
-            rate=1.0 / max(self.config.rate_limit, 0.01),
-            burst=10
-        )
+        self._rate_limiter = RateLimiter(rate=1.0 / max(self.config.rate_limit, 0.01), burst=10)
         self._domain_stats: Dict[str, RequestStats] = {}  # 改为普通dict，手动限制大小
 
     async def __aenter__(self):
@@ -114,30 +115,26 @@ class AsyncHTTPPool:
                 self._client = httpx.AsyncClient(
                     limits=httpx.Limits(
                         max_connections=self.config.max_connections,
-                        max_keepalive_connections=self.config.max_keepalive
+                        max_keepalive_connections=self.config.max_keepalive,
                     ),
-                    timeout=httpx.Timeout(
-                        self.config.timeout,
-                        connect=self.config.connect_timeout
-                    ),
+                    timeout=httpx.Timeout(self.config.timeout, connect=self.config.connect_timeout),
                     verify=self.config.verify_ssl,
                     headers={"User-Agent": self.config.user_agent},
-                    follow_redirects=True
+                    follow_redirects=True,
                 )
             elif HAS_AIOHTTP:
                 connector = aiohttp.TCPConnector(
                     limit=self.config.max_connections,
                     limit_per_host=self.config.max_keepalive,
-                    ssl=self.config.verify_ssl
+                    ssl=self.config.verify_ssl,
                 )
                 timeout = aiohttp.ClientTimeout(
-                    total=self.config.timeout,
-                    connect=self.config.connect_timeout
+                    total=self.config.timeout, connect=self.config.connect_timeout
                 )
                 self._client = aiohttp.ClientSession(
                     connector=connector,
                     timeout=timeout,
-                    headers={"User-Agent": self.config.user_agent}
+                    headers={"User-Agent": self.config.user_agent},
                 )
             else:
                 raise RuntimeError("需要安装 httpx 或 aiohttp: pip install httpx")
@@ -159,7 +156,7 @@ class AsyncHTTPPool:
         json_data: Optional[Dict] = None,
         params: Optional[Dict] = None,
         timeout: Optional[float] = None,
-        retry: bool = True
+        retry: bool = True,
     ) -> Dict[str, Any]:
         """发送HTTP请求"""
         await self._rate_limiter.acquire()
@@ -178,7 +175,7 @@ class AsyncHTTPPool:
                         data=data,
                         json=json_data,
                         params=params,
-                        timeout=timeout or self.config.timeout
+                        timeout=timeout or self.config.timeout,
                     )
                     result = {
                         "success": True,
@@ -186,7 +183,7 @@ class AsyncHTTPPool:
                         "headers": dict(response.headers),
                         "text": response.text,
                         "url": str(response.url),
-                        "elapsed": time.monotonic() - start_time
+                        "elapsed": time.monotonic() - start_time,
                     }
                 else:  # aiohttp
                     async with client.request(
@@ -195,7 +192,7 @@ class AsyncHTTPPool:
                         headers=headers,
                         data=data,
                         json=json_data,
-                        params=params
+                        params=params,
                     ) as response:
                         text = await response.text()
                         result = {
@@ -204,7 +201,7 @@ class AsyncHTTPPool:
                             "headers": dict(response.headers),
                             "text": text,
                             "url": str(response.url),
-                            "elapsed": time.monotonic() - start_time
+                            "elapsed": time.monotonic() - start_time,
                         }
 
                 self._update_stats(domain, True, result["elapsed"])
@@ -217,11 +214,7 @@ class AsyncHTTPPool:
 
                 elapsed = time.monotonic() - start_time
                 self._update_stats(domain, False, elapsed)
-                return {
-                    "success": False,
-                    "error": str(e),
-                    "elapsed": elapsed
-                }
+                return {"success": False, "error": str(e), "elapsed": elapsed}
 
     def _update_stats(self, domain: str, success: bool, elapsed: float):
         """更新统计信息"""
@@ -233,9 +226,7 @@ class AsyncHTTPPool:
         else:
             self._stats.failed_requests += 1
 
-        self._stats.avg_response_time = (
-            self._stats.total_time / self._stats.total_requests
-        )
+        self._stats.avg_response_time = self._stats.total_time / self._stats.total_requests
 
         # 域名级别统计（带大小限制）
         if domain not in self._domain_stats:
@@ -243,8 +234,7 @@ class AsyncHTTPPool:
             if len(self._domain_stats) >= self.MAX_DOMAIN_STATS:
                 # 删除请求数最少的域名统计
                 min_domain = min(
-                    self._domain_stats.keys(),
-                    key=lambda d: self._domain_stats[d].total_requests
+                    self._domain_stats.keys(), key=lambda d: self._domain_stats[d].total_requests
                 )
                 del self._domain_stats[min_domain]
             self._domain_stats[domain] = RequestStats()
@@ -264,9 +254,7 @@ class AsyncHTTPPool:
         return await self.request("POST", url, **kwargs)
 
     async def batch_request(
-        self,
-        requests: List[Dict[str, Any]],
-        concurrency: int = 10
+        self, requests: List[Dict[str, Any]], concurrency: int = 10
     ) -> List[Dict[str, Any]]:
         """批量并发请求"""
         semaphore = asyncio.Semaphore(concurrency)
@@ -288,16 +276,16 @@ class AsyncHTTPPool:
                 "avg_time": round(self._stats.avg_response_time, 3),
                 "success_rate": round(
                     self._stats.successful_requests / max(self._stats.total_requests, 1), 2
-                )
+                ),
             },
             "by_domain": {
                 domain: {
                     "total": stats.total_requests,
                     "success": stats.successful_requests,
-                    "avg_time": round(stats.total_time / max(stats.total_requests, 1), 3)
+                    "avg_time": round(stats.total_time / max(stats.total_requests, 1), 3),
                 }
                 for domain, stats in self._domain_stats.items()
-            }
+            },
         }
 
 
@@ -312,8 +300,7 @@ class AsyncPortScanner:
         """扫描单个端口"""
         try:
             _, writer = await asyncio.wait_for(
-                asyncio.open_connection(host, port),
-                timeout=self.timeout
+                asyncio.open_connection(host, port), timeout=self.timeout
             )
             writer.close()
             await writer.wait_closed()
@@ -345,6 +332,7 @@ class AsyncDNSResolver:
         """解析DNS记录"""
         try:
             import dns.asyncresolver
+
             resolver = dns.asyncresolver.Resolver()
             resolver.timeout = self.timeout
             resolver.lifetime = self.timeout
@@ -354,11 +342,11 @@ class AsyncDNSResolver:
         except ImportError:
             # 降级到同步解析
             import socket
+
             loop = asyncio.get_event_loop()
             try:
                 result = await asyncio.wait_for(
-                    loop.getaddrinfo(domain, None),
-                    timeout=self.timeout
+                    loop.getaddrinfo(domain, None), timeout=self.timeout
                 )
                 return list(set(r[4][0] for r in result))
             except Exception:
@@ -367,9 +355,7 @@ class AsyncDNSResolver:
             return []
 
     async def batch_resolve(
-        self,
-        domains: List[str],
-        record_type: str = "A"
+        self, domains: List[str], record_type: str = "A"
     ) -> Dict[str, List[str]]:
         """批量DNS解析"""
         semaphore = asyncio.Semaphore(self.concurrency)
@@ -386,6 +372,7 @@ class AsyncDNSResolver:
 
 # 全局连接池实例
 _pool_instance: Optional[AsyncHTTPPool] = None
+
 
 def get_http_pool(config: Optional[PoolConfig] = None) -> AsyncHTTPPool:
     """获取HTTP连接池单例"""
@@ -407,6 +394,7 @@ def sync_request(method: str, url: str, **kwargs) -> Dict[str, Any]:
     try:
         asyncio.get_running_loop()
         import concurrent.futures
+
         with concurrent.futures.ThreadPoolExecutor() as pool:
             return pool.submit(asyncio.run, async_request(method, url, **kwargs)).result()
     except RuntimeError:

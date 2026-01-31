@@ -5,55 +5,55 @@ target.py - 目标定义模块
 定义扫描目标的数据结构，支持多种目标类型的解析和标准化。
 """
 
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any
-from enum import Enum
-from datetime import datetime
-from urllib.parse import urlparse, urlunparse
 import ipaddress
 import re
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse, urlunparse
 
 
 class TargetType(Enum):
     """目标类型枚举"""
-    URL = 'url'           # 完整URL: http://example.com/path
-    IP = 'ip'             # IP地址: 192.168.1.1
-    DOMAIN = 'domain'     # 域名: example.com
-    CIDR = 'cidr'         # CIDR网段: 192.168.1.0/24
-    HOST_PORT = 'host_port'  # 主机:端口: example.com:8080
+
+    URL = "url"  # 完整URL: http://example.com/path
+    IP = "ip"  # IP地址: 192.168.1.1
+    DOMAIN = "domain"  # 域名: example.com
+    CIDR = "cidr"  # CIDR网段: 192.168.1.0/24
+    HOST_PORT = "host_port"  # 主机:端口: example.com:8080
 
 
 class TargetStatus(Enum):
     """目标状态枚举"""
-    PENDING = 'pending'       # 等待扫描
-    SCANNING = 'scanning'     # 正在扫描
-    COMPLETED = 'completed'   # 扫描完成
-    FAILED = 'failed'         # 扫描失败
-    SKIPPED = 'skipped'       # 已跳过
+
+    PENDING = "pending"  # 等待扫描
+    SCANNING = "scanning"  # 正在扫描
+    COMPLETED = "completed"  # 扫描完成
+    FAILED = "failed"  # 扫描失败
+    SKIPPED = "skipped"  # 已跳过
 
 
 # IP地址正则
 IP_PATTERN = re.compile(
-    r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}'
-    r'(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+    r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}"
+    r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
 )
 
 # CIDR网段正则
 CIDR_PATTERN = re.compile(
-    r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}'
-    r'(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/([0-9]|[1-2][0-9]|3[0-2])$'
+    r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}"
+    r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/([0-9]|[1-2][0-9]|3[0-2])$"
 )
 
 # 域名正则
 DOMAIN_PATTERN = re.compile(
-    r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*'
-    r'[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$'
+    r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*"
+    r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$"
 )
 
 # Host:Port 正则
-HOST_PORT_PATTERN = re.compile(
-    r'^(.+):(\d{1,5})$'
-)
+HOST_PORT_PATTERN = re.compile(r"^(.+):(\d{1,5})$")
 
 
 @dataclass
@@ -76,15 +76,16 @@ class Target:
         tags: 标签列表
         metadata: 扩展元数据
     """
-    value: str                                    # 原始值
-    type: TargetType                              # 目标类型
-    status: TargetStatus = TargetStatus.PENDING   # 目标状态
+
+    value: str  # 原始值
+    type: TargetType  # 目标类型
+    status: TargetStatus = TargetStatus.PENDING  # 目标状态
 
     # 解析后的属性
-    scheme: Optional[str] = None                  # http/https
-    host: Optional[str] = None                    # 主机名或IP
-    port: Optional[int] = None                    # 端口
-    path: Optional[str] = None                    # 路径
+    scheme: Optional[str] = None  # http/https
+    host: Optional[str] = None  # 主机名或IP
+    port: Optional[int] = None  # 端口
+    path: Optional[str] = None  # 路径
 
     # 元数据
     created_at: datetime = field(default_factory=datetime.now)
@@ -101,7 +102,7 @@ class Target:
             self.metadata = {}
 
     @classmethod
-    def parse(cls, value: str) -> 'Target':
+    def parse(cls, value: str) -> "Target":
         """
         解析目标字符串，自动识别目标类型
 
@@ -123,7 +124,7 @@ class Target:
             raise ValueError("目标值不能为空")
 
         # 1. 尝试解析为URL
-        if value.startswith(('http://', 'https://', '//')):
+        if value.startswith(("http://", "https://", "//")):
             return cls._parse_url(value)
 
         # 2. 尝试解析为CIDR
@@ -149,37 +150,37 @@ class Target:
             return cls._parse_domain(value)
 
         # 6. 无法识别，尝试作为URL处理
-        if '/' in value or ':' in value:
+        if "/" in value or ":" in value:
             return cls._parse_url(f"http://{value}")
 
         # 7. 最后尝试作为域名
         return cls._parse_domain(value)
 
     @classmethod
-    def _parse_url(cls, value: str) -> 'Target':
+    def _parse_url(cls, value: str) -> "Target":
         """解析URL类型目标"""
         # 处理 // 开头的URL
-        if value.startswith('//'):
-            value = 'http:' + value
+        if value.startswith("//"):
+            value = "http:" + value
 
         parsed = urlparse(value)
 
         # 提取端口
         port = parsed.port
         if port is None:
-            port = 443 if parsed.scheme == 'https' else 80
+            port = 443 if parsed.scheme == "https" else 80
 
         return cls(
             value=value,
             type=TargetType.URL,
-            scheme=parsed.scheme or 'http',
-            host=parsed.hostname or '',
+            scheme=parsed.scheme or "http",
+            host=parsed.hostname or "",
             port=port,
-            path=parsed.path or '/'
+            path=parsed.path or "/",
         )
 
     @classmethod
-    def _parse_ip(cls, value: str) -> 'Target':
+    def _parse_ip(cls, value: str) -> "Target":
         """解析IP类型目标"""
         # 验证IP地址有效性
         try:
@@ -187,23 +188,15 @@ class Target:
         except ValueError as e:
             raise ValueError(f"无效的IP地址: {value}") from e
 
-        return cls(
-            value=value,
-            type=TargetType.IP,
-            host=value
-        )
+        return cls(value=value, type=TargetType.IP, host=value)
 
     @classmethod
-    def _parse_domain(cls, value: str) -> 'Target':
+    def _parse_domain(cls, value: str) -> "Target":
         """解析域名类型目标"""
-        return cls(
-            value=value,
-            type=TargetType.DOMAIN,
-            host=value
-        )
+        return cls(value=value, type=TargetType.DOMAIN, host=value)
 
     @classmethod
-    def _parse_cidr(cls, value: str) -> 'Target':
+    def _parse_cidr(cls, value: str) -> "Target":
         """解析CIDR网段类型目标"""
         # 验证CIDR有效性
         try:
@@ -211,21 +204,12 @@ class Target:
         except ValueError as e:
             raise ValueError(f"无效的CIDR网段: {value}") from e
 
-        return cls(
-            value=value,
-            type=TargetType.CIDR,
-            host=value.split('/')[0]
-        )
+        return cls(value=value, type=TargetType.CIDR, host=value.split("/")[0])
 
     @classmethod
-    def _parse_host_port(cls, value: str, host: str, port: int) -> 'Target':
+    def _parse_host_port(cls, value: str, host: str, port: int) -> "Target":
         """解析 Host:Port 类型目标"""
-        return cls(
-            value=value,
-            type=TargetType.HOST_PORT,
-            host=host,
-            port=port
-        )
+        return cls(value=value, type=TargetType.HOST_PORT, host=host, port=port)
 
     @property
     def base_url(self) -> str:
@@ -241,30 +225,29 @@ class Target:
             'http://example.com:8080'
         """
         if self.type == TargetType.URL:
-            scheme = self.scheme or 'http'
-            host = self.host or ''
+            scheme = self.scheme or "http"
+            host = self.host or ""
             port = self.port
 
             # 判断是否需要显示端口
             if port and not (
-                (scheme == 'http' and port == 80) or
-                (scheme == 'https' and port == 443)
+                (scheme == "http" and port == 80) or (scheme == "https" and port == 443)
             ):
                 return f"{scheme}://{host}:{port}"
             return f"{scheme}://{host}"
 
         elif self.type == TargetType.HOST_PORT:
-            scheme = self.scheme or 'http'
+            scheme = self.scheme or "http"
             return f"{scheme}://{self.host}:{self.port}"
 
         elif self.type in (TargetType.IP, TargetType.DOMAIN):
-            scheme = self.scheme or 'http'
+            scheme = self.scheme or "http"
             if self.port:
                 return f"{scheme}://{self.host}:{self.port}"
             return f"{scheme}://{self.host}"
 
         # CIDR类型返回空字符串
-        return ''
+        return ""
 
     @property
     def netloc(self) -> str:
@@ -280,7 +263,7 @@ class Target:
             'example.com:8080'
         """
         if not self.host:
-            return ''
+            return ""
 
         if self.port and self.port not in (80, 443):
             return f"{self.host}:{self.port}"
@@ -296,11 +279,11 @@ class Target:
         """
         base = self.base_url
         if not base:
-            return ''
+            return ""
 
-        path = self.path or '/'
-        if not path.startswith('/'):
-            path = '/' + path
+        path = self.path or "/"
+        if not path.startswith("/"):
+            path = "/" + path
 
         return base + path
 
@@ -365,7 +348,7 @@ class Target:
         """
         return self.metadata.get(key, default)
 
-    def expand_cidr(self) -> List['Target']:
+    def expand_cidr(self) -> List["Target"]:
         """
         展开CIDR网段为IP列表
 
@@ -387,7 +370,7 @@ class Target:
                 type=TargetType.IP,
                 host=str(ip),
                 tags=self.tags.copy(),
-                metadata={**self.metadata, 'parent_cidr': self.value}
+                metadata={**self.metadata, "parent_cidr": self.value},
             )
             targets.append(target)
 
@@ -401,21 +384,21 @@ class Target:
             Dict[str, Any]: 字典表示
         """
         return {
-            'value': self.value,
-            'type': self.type.value,
-            'status': self.status.value,
-            'scheme': self.scheme,
-            'host': self.host,
-            'port': self.port,
-            'path': self.path,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'tags': self.tags,
-            'metadata': self.metadata,
+            "value": self.value,
+            "type": self.type.value,
+            "status": self.status.value,
+            "scheme": self.scheme,
+            "host": self.host,
+            "port": self.port,
+            "path": self.path,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "tags": self.tags,
+            "metadata": self.metadata,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Target':
+    def from_dict(cls, data: Dict[str, Any]) -> "Target":
         """
         从字典创建目标对象
 
@@ -426,17 +409,23 @@ class Target:
             Target: 目标对象
         """
         return cls(
-            value=data['value'],
-            type=TargetType(data['type']),
-            status=TargetStatus(data.get('status', 'pending')),
-            scheme=data.get('scheme'),
-            host=data.get('host'),
-            port=data.get('port'),
-            path=data.get('path'),
-            created_at=datetime.fromisoformat(data['created_at']) if data.get('created_at') else datetime.now(),
-            updated_at=datetime.fromisoformat(data['updated_at']) if data.get('updated_at') else None,
-            tags=data.get('tags', []),
-            metadata=data.get('metadata', {}),
+            value=data["value"],
+            type=TargetType(data["type"]),
+            status=TargetStatus(data.get("status", "pending")),
+            scheme=data.get("scheme"),
+            host=data.get("host"),
+            port=data.get("port"),
+            path=data.get("path"),
+            created_at=(
+                datetime.fromisoformat(data["created_at"])
+                if data.get("created_at")
+                else datetime.now()
+            ),
+            updated_at=(
+                datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else None
+            ),
+            tags=data.get("tags", []),
+            metadata=data.get("metadata", {}),
         )
 
     def __str__(self) -> str:

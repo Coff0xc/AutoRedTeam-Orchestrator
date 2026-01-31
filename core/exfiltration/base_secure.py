@@ -3,13 +3,13 @@
 防御路径遍历、符号链接、TOCTOU等攻击
 """
 
-import os
 import errno
 import logging
+import os
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Tuple
-from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ExfilResult:
     """外泄结果"""
+
     success: bool
     channel: str
     data: Optional[bytes] = None
@@ -50,12 +51,12 @@ class SecureFileExfiltrator(ABC):
 
     def __init__(self, config):
         self.config = config
-        self.channel = getattr(config, 'channel', 'unknown')
+        self.channel = getattr(config, "channel", "unknown")
         self._validate_config()
 
     def _validate_config(self):
         """验证配置"""
-        if hasattr(self.config, 'allowed_base_path') and self.config.allowed_base_path:
+        if hasattr(self.config, "allowed_base_path") and self.config.allowed_base_path:
             try:
                 allowed_base = Path(self.config.allowed_base_path).resolve(strict=True)
                 if not allowed_base.is_dir():
@@ -124,7 +125,7 @@ class SecureFileExfiltrator(ABC):
             True if path traversal detected, False otherwise
         """
         # 检查是否包含 ..
-        if '..' in Path(file_path).parts:
+        if ".." in Path(file_path).parts:
             return True
 
         # 检查规范化前后是否一致
@@ -207,7 +208,7 @@ class SecureFileExfiltrator(ABC):
             # O_NOFOLLOW: 如果是符号链接则失败
             # O_RDONLY: 只读模式
             flags = os.O_RDONLY
-            if hasattr(os, 'O_NOFOLLOW'):
+            if hasattr(os, "O_NOFOLLOW"):
                 flags |= os.O_NOFOLLOW  # Windows 可能不支持
 
             fd = os.open(str(path), flags)
@@ -215,11 +216,12 @@ class SecureFileExfiltrator(ABC):
                 # 使用 fstat 检查是否为普通文件
                 stat_info = os.fstat(fd)
                 import stat as stat_module
+
                 if not stat_module.S_ISREG(stat_info.st_mode):
                     raise IsADirectoryError(f"Not a regular file: {path}")
 
                 # 读取文件内容
-                with os.fdopen(fd, 'rb') as f:
+                with os.fdopen(fd, "rb") as f:
                     return f.read()
             except (OSError, IOError, IsADirectoryError, MemoryError) as e:
                 os.close(fd)
@@ -251,11 +253,7 @@ class SecureFileExfiltrator(ABC):
         # 1. 验证路径安全性
         validated_path, error = self._validate_file_path(file_path)
         if error:
-            return ExfilResult(
-                success=False,
-                channel=self.channel,
-                error=error
-            )
+            return ExfilResult(success=False, channel=self.channel, error=error)
 
         # 2. 安全读取文件
         try:
@@ -268,26 +266,16 @@ class SecureFileExfiltrator(ABC):
             # 预期的错误，记录警告
             logger.warning(f"File access failed: {validated_path}, error: {type(e).__name__}")
             return ExfilResult(
-                success=False,
-                channel=self.channel,
-                error="Access denied"  # 不泄露具体原因
+                success=False, channel=self.channel, error="Access denied"  # 不泄露具体原因
             )
         except OSError as e:
             # 文件系统错误
             logger.error(f"File operation failed: {validated_path}, error: {e}")
-            return ExfilResult(
-                success=False,
-                channel=self.channel,
-                error="File operation failed"
-            )
+            return ExfilResult(success=False, channel=self.channel, error="File operation failed")
         except Exception as e:
             # 未预期的错误
             logger.exception(f"Unexpected error during file exfiltration: {validated_path}")
-            return ExfilResult(
-                success=False,
-                channel=self.channel,
-                error="Internal error"
-            )
+            return ExfilResult(success=False, channel=self.channel, error="Internal error")
 
     @abstractmethod
     def exfiltrate(self, data: bytes) -> ExfilResult:
@@ -345,12 +333,7 @@ if __name__ == "__main__":
     class HTTPExfiltrator(SecureFileExfiltrator):
         def exfiltrate(self, data: bytes) -> ExfilResult:
             # 实现 HTTP 外泄逻辑
-            return ExfilResult(
-                success=True,
-                channel=self.channel,
-                data=data,
-                size=len(data)
-            )
+            return ExfilResult(success=True, channel=self.channel, data=data, size=len(data))
 
     # 测试
     config = Config()

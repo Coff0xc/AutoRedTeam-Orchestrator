@@ -13,11 +13,12 @@ Active Directory攻击工具处理器
 """
 
 from typing import Any, Dict, List
-from .tooling import tool
-from .error_handling import handle_errors, ErrorCategory
 
 # 授权中间件
 from core.security import require_critical_auth
+
+from .error_handling import ErrorCategory, handle_errors
+from .tooling import tool
 
 
 def register_ad_tools(mcp, counter, logger):
@@ -33,11 +34,7 @@ def register_ad_tools(mcp, counter, logger):
     @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def ad_enumerate(
-        domain: str,
-        dc_ip: str,
-        username: str = None,
-        password: str = None,
-        enum_type: str = "all"
+        domain: str, dc_ip: str, username: str = None, password: str = None, enum_type: str = "all"
     ) -> Dict[str, Any]:
         """AD枚举 - 枚举Active Directory对象
 
@@ -69,10 +66,10 @@ def register_ad_tools(mcp, counter, logger):
         result = _ad_enumerate(
             domain=domain,
             dc_ip=dc_ip,
-            username=username or '',
-            password=password or '',
+            username=username or "",
+            password=password or "",
             enum_type=enum_type,
-            verbose=False
+            verbose=False,
         )
 
         # ad_enumerate 返回 dict
@@ -80,35 +77,35 @@ def register_ad_tools(mcp, counter, logger):
             # 如果是 all 类型，结果结构不同
             if enum_type == "all":
                 return {
-                    'success': True,
-                    'domain': domain,
-                    'dc_ip': dc_ip,
-                    'enum_type': enum_type,
-                    'results': result,
-                    'statistics': {
-                        'users': result.get('users', {}).get('count', 0),
-                        'groups': result.get('groups', {}).get('count', 0),
-                        'computers': result.get('computers', {}).get('count', 0),
-                    }
+                    "success": True,
+                    "domain": domain,
+                    "dc_ip": dc_ip,
+                    "enum_type": enum_type,
+                    "results": result,
+                    "statistics": {
+                        "users": result.get("users", {}).get("count", 0),
+                        "groups": result.get("groups", {}).get("count", 0),
+                        "computers": result.get("computers", {}).get("count", 0),
+                    },
                 }
             else:
                 return {
-                    'success': result.get('success', True),
-                    'domain': domain,
-                    'dc_ip': dc_ip,
-                    'enum_type': enum_type,
-                    'count': result.get('count', 0),
-                    'objects': result.get('objects', []),
-                    'error': result.get('error')
+                    "success": result.get("success", True),
+                    "domain": domain,
+                    "dc_ip": dc_ip,
+                    "enum_type": enum_type,
+                    "count": result.get("count", 0),
+                    "objects": result.get("objects", []),
+                    "error": result.get("error"),
                 }
 
         # 兼容返回对象的情况
         return {
-            'success': getattr(result, 'success', False),
-            'domain': domain,
-            'dc_ip': dc_ip,
-            'enum_type': enum_type,
-            'error': getattr(result, 'error', None)
+            "success": getattr(result, "success", False),
+            "domain": domain,
+            "dc_ip": dc_ip,
+            "enum_type": enum_type,
+            "error": getattr(result, "error", None),
         }
 
     @tool(mcp)
@@ -120,7 +117,7 @@ def register_ad_tools(mcp, counter, logger):
         attack_type: str = "asrep",
         username: str = None,
         password: str = None,
-        targets: List[str] = None
+        targets: List[str] = None,
     ) -> Dict[str, Any]:
         """Kerberos攻击 - 执行Kerberos协议攻击
 
@@ -164,42 +161,38 @@ def register_ad_tools(mcp, counter, logger):
             dc_ip=dc_ip,
             attack_type=core_attack,
             targets=targets or [],
-            password=password or '',
-            verbose=False
+            password=password or "",
+            verbose=False,
         )
 
         # kerberos_attack 返回 dict
         if isinstance(result, dict):
             return {
-                'success': result.get('success', False),
-                'domain': domain,
-                'dc_ip': dc_ip,
-                'attack_type': attack_type,
-                'hashes': result.get('hashes', []),
-                'hash_count': result.get('hash_count', len(result.get('hashes', []))),
-                'valid_users': result.get('valid_users', []),
-                'error': result.get('error')
+                "success": result.get("success", False),
+                "domain": domain,
+                "dc_ip": dc_ip,
+                "attack_type": attack_type,
+                "hashes": result.get("hashes", []),
+                "hash_count": result.get("hash_count", len(result.get("hashes", []))),
+                "valid_users": result.get("valid_users", []),
+                "error": result.get("error"),
             }
 
         return {
-            'success': getattr(result, 'success', False),
-            'domain': domain,
-            'dc_ip': dc_ip,
-            'attack_type': attack_type,
-            'hashes': getattr(result, 'hashes', []),
-            'hash_count': len(getattr(result, 'hashes', [])),
-            'error': getattr(result, 'error', None)
+            "success": getattr(result, "success", False),
+            "domain": domain,
+            "dc_ip": dc_ip,
+            "attack_type": attack_type,
+            "hashes": getattr(result, "hashes", []),
+            "hash_count": len(getattr(result, "hashes", [])),
+            "error": getattr(result, "error", None),
         }
 
     @tool(mcp)
     @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def ad_spn_scan(
-        domain: str,
-        dc_ip: str,
-        username: str,
-        password: str = None,
-        service_class: str = None
+        domain: str, dc_ip: str, username: str, password: str = None, service_class: str = None
     ) -> Dict[str, Any]:
         """SPN扫描 - 扫描域内SPN服务
 
@@ -219,10 +212,7 @@ def register_ad_tools(mcp, counter, logger):
         from core.ad import ADEnumerator
 
         enumerator = ADEnumerator(
-            domain=domain,
-            dc_ip=dc_ip,
-            username=username,
-            password=password or ''
+            domain=domain, dc_ip=dc_ip, username=username, password=password or ""
         )
 
         try:
@@ -238,41 +228,43 @@ def register_ad_tools(mcp, counter, logger):
                 spns.append(spn_data)
 
                 # 检查是否可Kerberoast
-                attrs = spn_data.get('attributes', {})
-                if attrs.get('kerberoastable', False):
+                attrs = spn_data.get("attributes", {})
+                if attrs.get("kerberoastable", False):
                     kerberoastable.append(spn_data)
 
             # 如果指定了服务类型，过滤结果
             if service_class:
                 spns = [
-                    s for s in spns
-                    if service_class.upper() in s.get('attributes', {}).get('spn', '').upper()
+                    s
+                    for s in spns
+                    if service_class.upper() in s.get("attributes", {}).get("spn", "").upper()
                 ]
                 kerberoastable = [
-                    s for s in kerberoastable
-                    if service_class.upper() in s.get('attributes', {}).get('spn', '').upper()
+                    s
+                    for s in kerberoastable
+                    if service_class.upper() in s.get("attributes", {}).get("spn", "").upper()
                 ]
 
             # 提取服务类型
             service_classes = set()
             for spn in spns:
-                spn_str = spn.get('attributes', {}).get('spn', '')
-                if '/' in spn_str:
-                    service_classes.add(spn_str.split('/')[0])
+                spn_str = spn.get("attributes", {}).get("spn", "")
+                if "/" in spn_str:
+                    service_classes.add(spn_str.split("/")[0])
 
             return {
-                'success': result.success,
-                'domain': domain,
-                'total_spns': len(spns),
-                'spns': spns,
-                'kerberoastable': kerberoastable,
-                'kerberoastable_count': len(kerberoastable),
-                'service_classes': list(service_classes),
-                'error': result.error if hasattr(result, 'error') else None
+                "success": result.success,
+                "domain": domain,
+                "total_spns": len(spns),
+                "spns": spns,
+                "kerberoastable": kerberoastable,
+                "kerberoastable_count": len(kerberoastable),
+                "service_classes": list(service_classes),
+                "error": result.error if hasattr(result, "error") else None,
             }
 
         finally:
             enumerator.close()
 
-    counter.add('ad', 3)
+    counter.add("ad", 3)
     logger.info("[AD] 已注册 3 个Active Directory攻击工具")

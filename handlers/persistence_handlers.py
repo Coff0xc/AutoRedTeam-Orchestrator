@@ -12,11 +12,12 @@
 """
 
 from typing import Any, Dict, List
-from .tooling import tool
-from .error_handling import handle_errors, ErrorCategory
 
 # 授权中间件
 from core.security import require_critical_auth
+
+from .error_handling import ErrorCategory, handle_errors
+from .tooling import tool
 
 
 def register_persistence_tools(mcp, counter, logger):
@@ -35,7 +36,7 @@ def register_persistence_tools(mcp, counter, logger):
         method: str = "registry",
         payload: str = None,
         name: str = "WindowsUpdate",
-        trigger: str = "logon"
+        trigger: str = "logon",
     ) -> Dict[str, Any]:
         """Windows持久化 - 在Windows系统上建立持久化
 
@@ -82,34 +83,29 @@ def register_persistence_tools(mcp, counter, logger):
         if core_method == "task" and trigger:
             kwargs["trigger"] = trigger
 
-        result = windows_persist(
-            payload_path=payload,
-            method=core_method,
-            name=name,
-            **kwargs
-        )
+        result = windows_persist(payload_path=payload, method=core_method, name=name, **kwargs)
 
         # windows_persist 返回 dict，直接使用
         if isinstance(result, dict):
             return {
-                'success': result.get('success', False),
-                'method': method,
-                'name': name,
-                'location': result.get('location'),
-                'trigger': trigger if core_method == 'task' else None,
-                'cleanup_command': result.get('cleanup_command'),
-                'error': result.get('error')
+                "success": result.get("success", False),
+                "method": method,
+                "name": name,
+                "location": result.get("location"),
+                "trigger": trigger if core_method == "task" else None,
+                "cleanup_command": result.get("cleanup_command"),
+                "error": result.get("error"),
             }
 
         # 兼容返回对象的情况
         return {
-            'success': getattr(result, 'success', False),
-            'method': method,
-            'name': name,
-            'location': getattr(result, 'location', None),
-            'trigger': trigger if core_method == 'task' else None,
-            'cleanup_command': getattr(result, 'cleanup_command', None),
-            'error': getattr(result, 'error', None)
+            "success": getattr(result, "success", False),
+            "method": method,
+            "name": name,
+            "location": getattr(result, "location", None),
+            "trigger": trigger if core_method == "task" else None,
+            "cleanup_command": getattr(result, "cleanup_command", None),
+            "error": getattr(result, "error", None),
         }
 
     @tool(mcp)
@@ -119,7 +115,7 @@ def register_persistence_tools(mcp, counter, logger):
         method: str = "crontab",
         payload: str = None,
         name: str = "system-update",
-        schedule: str = "*/5 * * * *"
+        schedule: str = "*/5 * * * *",
     ) -> Dict[str, Any]:
         """Linux持久化 - 在Linux系统上建立持久化
 
@@ -171,33 +167,29 @@ def register_persistence_tools(mcp, counter, logger):
         if core_method == "crontab" and schedule:
             kwargs["schedule"] = schedule
 
-        result = linux_persist(
-            command=payload,
-            method=core_method,
-            **kwargs
-        )
+        result = linux_persist(command=payload, method=core_method, **kwargs)
 
         # linux_persist 返回 dict
         if isinstance(result, dict):
             return {
-                'success': result.get('success', False),
-                'method': method,
-                'name': name,
-                'location': result.get('location'),
-                'schedule': schedule if core_method == 'crontab' else None,
-                'install_command': result.get('install_command'),
-                'cleanup_command': result.get('cleanup_command'),
-                'error': result.get('error')
+                "success": result.get("success", False),
+                "method": method,
+                "name": name,
+                "location": result.get("location"),
+                "schedule": schedule if core_method == "crontab" else None,
+                "install_command": result.get("install_command"),
+                "cleanup_command": result.get("cleanup_command"),
+                "error": result.get("error"),
             }
 
         return {
-            'success': getattr(result, 'success', False),
-            'method': method,
-            'name': name,
-            'location': getattr(result, 'location', None),
-            'schedule': schedule if core_method == 'crontab' else None,
-            'cleanup_command': getattr(result, 'cleanup_command', None),
-            'error': getattr(result, 'error', None)
+            "success": getattr(result, "success", False),
+            "method": method,
+            "name": name,
+            "location": getattr(result, "location", None),
+            "schedule": schedule if core_method == "crontab" else None,
+            "cleanup_command": getattr(result, "cleanup_command", None),
+            "error": getattr(result, "error", None),
         }
 
     @tool(mcp)
@@ -207,7 +199,7 @@ def register_persistence_tools(mcp, counter, logger):
         shell_type: str = "php",
         password: str = "pass",
         obfuscation: str = "medium",
-        features: List[str] = None
+        features: List[str] = None,
     ) -> Dict[str, Any]:
         """Webshell生成 - 生成各类Webshell
 
@@ -254,43 +246,43 @@ def register_persistence_tools(mcp, counter, logger):
         core_type = type_map.get(shell_type, shell_type)
 
         # 调用便捷函数 - obfuscation 是字符串，不是枚举
-        result = generate_webshell(
-            shell_type=core_type,
-            password=password,
-            obfuscation=obfuscation
-        )
+        result = generate_webshell(shell_type=core_type, password=password, obfuscation=obfuscation)
 
         # generate_webshell 返回 dict
         if isinstance(result, dict):
             # 生成文件名
             ext_map = {
-                "php": "php", "php_memshell": "php",
-                "jsp": "jsp", "aspx": "aspx",
-                "python": "py", "behinder": "php", "godzilla": "php"
+                "php": "php",
+                "php_memshell": "php",
+                "jsp": "jsp",
+                "aspx": "aspx",
+                "python": "py",
+                "behinder": "php",
+                "godzilla": "php",
             }
             ext = ext_map.get(core_type, shell_type)
 
             return {
-                'success': result.get('success', False),
-                'type': shell_type,
-                'obfuscation': obfuscation,
-                'code': result.get('content'),
-                'filename': result.get('filename', f"shell.{ext}"),
-                'usage': result.get('usage'),
-                'features': features or ['cmd', 'file'],
-                'error': result.get('error')
+                "success": result.get("success", False),
+                "type": shell_type,
+                "obfuscation": obfuscation,
+                "code": result.get("content"),
+                "filename": result.get("filename", f"shell.{ext}"),
+                "usage": result.get("usage"),
+                "features": features or ["cmd", "file"],
+                "error": result.get("error"),
             }
 
         return {
-            'success': getattr(result, 'success', False),
-            'type': shell_type,
-            'obfuscation': obfuscation,
-            'code': getattr(result, 'content', None),
-            'filename': getattr(result, 'filename', f"shell.{shell_type}"),
-            'usage': getattr(result, 'usage', None),
-            'features': features or ['cmd', 'file'],
-            'error': getattr(result, 'error', None)
+            "success": getattr(result, "success", False),
+            "type": shell_type,
+            "obfuscation": obfuscation,
+            "code": getattr(result, "content", None),
+            "filename": getattr(result, "filename", f"shell.{shell_type}"),
+            "usage": getattr(result, "usage", None),
+            "features": features or ["cmd", "file"],
+            "error": getattr(result, "error", None),
         }
 
-    counter.add('persistence', 3)
+    counter.add("persistence", 3)
     logger.info("[Persistence] 已注册 3 个持久化工具")

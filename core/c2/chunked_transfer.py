@@ -11,13 +11,14 @@ import gzip
 import hashlib
 import random
 import time
-from typing import Callable, List, Optional, Tuple
 from dataclasses import dataclass
+from typing import Callable, List, Optional, Tuple
 
 
 @dataclass
 class TransferStats:
     """传输统计信息"""
+
     total_chunks: int = 0
     sent_chunks: int = 0
     retries: int = 0
@@ -52,7 +53,7 @@ class ChunkedTransfer:
         chunk_size: int = 1024,
         delay_range: Tuple[float, float] = (0.5, 2.0),
         max_retries: int = 3,
-        enable_compression: bool = True
+        enable_compression: bool = True,
     ):
         """
         初始化分块传输器
@@ -116,7 +117,7 @@ class ChunkedTransfer:
                 "checksum": self._calculate_checksum(chunk_data),
                 "data": base64.b64encode(chunk_data).decode(),
                 "timestamp": int(time.time()),
-                "compressed": self.enable_compression
+                "compressed": self.enable_compression,
             }
             chunks.append(chunk)
 
@@ -157,10 +158,7 @@ class ChunkedTransfer:
         return reassembled
 
     async def _send_with_retry(
-        self,
-        chunk: dict,
-        send_func: Callable,
-        retry_count: int = 0
+        self, chunk: dict, send_func: Callable, retry_count: int = 0
     ) -> bool:
         """
         带重试的发送
@@ -184,11 +182,7 @@ class ChunkedTransfer:
                 return await self._send_with_retry(chunk, send_func, retry_count + 1)
             return False
 
-    async def send_chunked(
-        self,
-        data: bytes,
-        send_func: Callable
-    ) -> bool:
+    async def send_chunked(self, data: bytes, send_func: Callable) -> bool:
         """
         分块发送数据
 
@@ -224,9 +218,7 @@ class ChunkedTransfer:
         return True
 
     async def receive_chunked(
-        self,
-        receive_func: Callable,
-        timeout: float = 60.0
+        self, receive_func: Callable, timeout: float = 60.0
     ) -> Optional[bytes]:
         """
         接收分块数据
@@ -256,8 +248,7 @@ class ChunkedTransfer:
 
             try:
                 chunk = await asyncio.wait_for(
-                    receive_func(),
-                    timeout=max(1.0, timeout - (time.time() - start_time))
+                    receive_func(), timeout=max(1.0, timeout - (time.time() - start_time))
                 )
                 chunks.append(chunk)
             except asyncio.TimeoutError:
@@ -278,5 +269,5 @@ class ChunkedTransfer:
             "sent_chunks": self.stats.sent_chunks,
             "retries": self.stats.retries,
             "duration": round(self.stats.duration, 2),
-            "success_rate": round(self.stats.success_rate, 2)
+            "success_rate": round(self.stats.success_rate, 2),
         }

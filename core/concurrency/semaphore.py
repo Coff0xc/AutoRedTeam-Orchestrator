@@ -5,11 +5,11 @@
 """
 
 import asyncio
-import threading
-from typing import Optional, Dict, Any
-from contextlib import contextmanager, asynccontextmanager
 import logging
+import threading
 import time
+from contextlib import asynccontextmanager, contextmanager
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class BoundedSemaphore:
     - 提供统计信息
     """
 
-    def __init__(self, value: int = 10, name: str = 'default'):
+    def __init__(self, value: int = 10, name: str = "default"):
         """
         初始化有界信号量
 
@@ -127,16 +127,16 @@ class BoundedSemaphore:
         """获取统计信息"""
         with self._lock:
             return {
-                'name': self.name,
-                'max_value': self.value,
-                'acquired_count': self._acquired_count,
-                'released_count': self._released_count,
-                'wait_count': self._wait_count,
-                'timeout_count': self._timeout_count,
-                'current_held': self._acquired_count - self._released_count
+                "name": self.name,
+                "max_value": self.value,
+                "acquired_count": self._acquired_count,
+                "released_count": self._released_count,
+                "wait_count": self._wait_count,
+                "timeout_count": self._timeout_count,
+                "current_held": self._acquired_count - self._released_count,
             }
 
-    def __enter__(self) -> 'BoundedSemaphore':
+    def __enter__(self) -> "BoundedSemaphore":
         self.acquire()
         return self
 
@@ -151,7 +151,7 @@ class AsyncSemaphore:
     用于异步环境中的并发控制
     """
 
-    def __init__(self, value: int = 10, name: str = 'default'):
+    def __init__(self, value: int = 10, name: str = "default"):
         """
         初始化异步信号量
 
@@ -253,15 +253,15 @@ class AsyncSemaphore:
     def stats(self) -> Dict[str, Any]:
         """获取统计信息"""
         return {
-            'name': self.name,
-            'max_value': self.value,
-            'acquired_count': self._acquired_count,
-            'released_count': self._released_count,
-            'current_held': self._acquired_count - self._released_count,
-            'locked': self.locked
+            "name": self.name,
+            "max_value": self.value,
+            "acquired_count": self._acquired_count,
+            "released_count": self._released_count,
+            "current_held": self._acquired_count - self._released_count,
+            "locked": self.locked,
         }
 
-    async def __aenter__(self) -> 'AsyncSemaphore':
+    async def __aenter__(self) -> "AsyncSemaphore":
         await self.acquire()
         return self
 
@@ -287,11 +287,7 @@ class SemaphoreGroup:
         self._semaphores: Dict[str, BoundedSemaphore] = {}
         self._lock = threading.Lock()
 
-    def get(
-        self,
-        name: str,
-        value: Optional[int] = None
-    ) -> BoundedSemaphore:
+    def get(self, name: str, value: Optional[int] = None) -> BoundedSemaphore:
         """
         获取或创建命名信号量
 
@@ -305,10 +301,7 @@ class SemaphoreGroup:
         with self._lock:
             if name not in self._semaphores:
                 actual_value = value if value is not None else self.default_value
-                self._semaphores[name] = BoundedSemaphore(
-                    value=actual_value,
-                    name=name
-                )
+                self._semaphores[name] = BoundedSemaphore(value=actual_value, name=name)
             return self._semaphores[name]
 
     def remove(self, name: str) -> bool:
@@ -335,10 +328,7 @@ class SemaphoreGroup:
     def get_all_stats(self) -> Dict[str, Any]:
         """获取所有信号量的统计信息"""
         with self._lock:
-            return {
-                name: sem.stats
-                for name, sem in self._semaphores.items()
-            }
+            return {name: sem.stats for name, sem in self._semaphores.items()}
 
     @contextmanager
     def acquire(self, name: str, timeout: Optional[float] = None):
@@ -373,11 +363,7 @@ class AsyncSemaphoreGroup:
         self._semaphores: Dict[str, AsyncSemaphore] = {}
         self._lock = asyncio.Lock()
 
-    async def get(
-        self,
-        name: str,
-        value: Optional[int] = None
-    ) -> AsyncSemaphore:
+    async def get(self, name: str, value: Optional[int] = None) -> AsyncSemaphore:
         """
         获取或创建命名异步信号量
 
@@ -391,10 +377,7 @@ class AsyncSemaphoreGroup:
         async with self._lock:
             if name not in self._semaphores:
                 actual_value = value if value is not None else self.default_value
-                self._semaphores[name] = AsyncSemaphore(
-                    value=actual_value,
-                    name=name
-                )
+                self._semaphores[name] = AsyncSemaphore(value=actual_value, name=name)
             return self._semaphores[name]
 
     async def remove(self, name: str) -> bool:
@@ -419,17 +402,10 @@ class AsyncSemaphoreGroup:
 
     def get_all_stats(self) -> Dict[str, Any]:
         """获取所有信号量的统计信息"""
-        return {
-            name: sem.stats
-            for name, sem in self._semaphores.items()
-        }
+        return {name: sem.stats for name, sem in self._semaphores.items()}
 
     @asynccontextmanager
-    async def acquire(
-        self,
-        name: str,
-        timeout: Optional[float] = None
-    ):
+    async def acquire(self, name: str, timeout: Optional[float] = None):
         """
         获取命名信号量的异步上下文管理器
 
@@ -453,10 +429,7 @@ class ResourceLimiter:
     """
 
     def __init__(
-        self,
-        max_connections: int = 100,
-        max_per_host: int = 10,
-        max_per_resource: int = 5
+        self, max_connections: int = 100, max_per_host: int = 10, max_per_resource: int = 5
     ):
         """
         初始化资源限制器
@@ -466,17 +439,13 @@ class ResourceLimiter:
             max_per_host: 每个主机的最大连接数
             max_per_resource: 每个资源的最大并发数
         """
-        self._global_sem = BoundedSemaphore(max_connections, name='global')
+        self._global_sem = BoundedSemaphore(max_connections, name="global")
         self._host_group = SemaphoreGroup(default_value=max_per_host)
         self._resource_group = SemaphoreGroup(default_value=max_per_resource)
         self._lock = threading.Lock()
 
     @contextmanager
-    def acquire_for_host(
-        self,
-        host: str,
-        timeout: Optional[float] = None
-    ):
+    def acquire_for_host(self, host: str, timeout: Optional[float] = None):
         """
         获取对特定主机的访问许可
 
@@ -495,10 +464,7 @@ class ResourceLimiter:
 
     @contextmanager
     def acquire_for_resource(
-        self,
-        resource: str,
-        host: Optional[str] = None,
-        timeout: Optional[float] = None
+        self, resource: str, host: Optional[str] = None, timeout: Optional[float] = None
     ):
         """
         获取对特定资源的访问许可
@@ -524,9 +490,9 @@ class ResourceLimiter:
     def stats(self) -> Dict[str, Any]:
         """获取统计信息"""
         return {
-            'global': self._global_sem.stats,
-            'hosts': self._host_group.get_all_stats(),
-            'resources': self._resource_group.get_all_stats()
+            "global": self._global_sem.stats,
+            "hosts": self._host_group.get_all_stats(),
+            "resources": self._resource_group.get_all_stats(),
         }
 
 

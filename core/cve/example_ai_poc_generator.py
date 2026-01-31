@@ -5,10 +5,11 @@ AI PoC Generator - 快速示例
 演示如何使用 AI PoC Generator 生成和执行 PoC
 """
 
-from ai_poc_generator import generate_poc, AIPoCGenerator
-from poc_engine import PoCEngine
-import tempfile
 import os
+import tempfile
+
+from ai_poc_generator import AIPoCGenerator, generate_poc
+from poc_engine import PoCEngine
 
 
 def example_1_basic_usage():
@@ -21,7 +22,7 @@ def example_1_basic_usage():
     poc_yaml = generate_poc(
         cve_id="CVE-2024-1234",
         cve_description="SQL injection in WordPress Plugin Contact Form 7 via id parameter",
-        severity="high"
+        severity="high",
     )
 
     print("\n生成的 PoC:")
@@ -50,11 +51,11 @@ def example_2_all_vuln_types():
         poc_yaml = generator.generate_poc(
             cve_id=f"CVE-2024-{vuln_name.replace(' ', '-')}",
             cve_description=description,
-            severity="medium"
+            severity="medium",
         )
 
         # 显示前3行
-        lines = poc_yaml.split('\n')
+        lines = poc_yaml.split("\n")
         print(f"    {lines[0]}")
         print(f"    {lines[1]}")
         if len(lines) > 2:
@@ -72,12 +73,12 @@ def example_3_with_poc_engine():
     poc_yaml = generate_poc(
         cve_id="CVE-2024-TEST",
         cve_description="Cross-site scripting in Joomla search parameter",
-        severity="medium"
+        severity="medium",
     )
 
     # 2. 保存到临时文件
     print("[2] 保存到临时文件...")
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8') as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, encoding="utf-8") as f:
         f.write(poc_yaml)
         temp_file = f.name
     print(f"    文件路径: {temp_file}")
@@ -127,13 +128,11 @@ def example_4_custom_generation():
 
     print("\n生成 PoC:")
     poc_yaml = generate_poc(
-        cve_id="CVE-2024-CUSTOM",
-        cve_description=cve_description,
-        severity="high"
+        cve_id="CVE-2024-CUSTOM", cve_description=cve_description, severity="high"
     )
 
     # 显示前10行
-    lines = poc_yaml.split('\n')
+    lines = poc_yaml.split("\n")
     for i, line in enumerate(lines[:10], 1):
         print(f"    {i:2d} | {line}")
 
@@ -148,7 +147,7 @@ def example_5_save_to_file():
     poc_yaml = generate_poc(
         cve_id="CVE-2024-FILE-TEST",
         cve_description="Remote code execution in web application",
-        severity="critical"
+        severity="critical",
     )
 
     # 保存到文件
@@ -188,6 +187,7 @@ def main():
     except Exception as e:
         print(f"\n[ERROR] 示例运行失败: {e}")
         import traceback
+
         traceback.print_exc()
 
 

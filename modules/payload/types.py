@@ -8,14 +8,15 @@ Payload 类型定义模块 - 统一的数据类型
 - adaptive_payload_engine.py: PayloadResult
 """
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-from enum import Enum
 import hashlib
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class VulnType(Enum):
     """漏洞类型枚举"""
+
     SQLI = "sqli"
     XSS = "xss"
     LFI = "lfi"
@@ -32,6 +33,7 @@ class VulnType(Enum):
 
 class PayloadCategory(Enum):
     """Payload 分类枚举"""
+
     # SQLi
     ERROR_BASED = "error_based"
     UNION_BASED = "union_based"
@@ -73,6 +75,7 @@ class PayloadStats:
 
     整合自三个不同的实现，保留所有有用的字段
     """
+
     # 基础统计
     total_uses: int = 0
     success_count: int = 0
@@ -108,6 +111,7 @@ class PayloadStats:
             self.avg_response_time = self.total_time / self.total_uses
 
         from datetime import datetime
+
         self.last_used = datetime.now().isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
@@ -143,6 +147,7 @@ class PayloadResult:
 
     整合自 adaptive_payload_engine.py
     """
+
     payload: str
     success: bool
     blocked: bool = False
@@ -165,6 +170,7 @@ class PayloadResult:
 @dataclass
 class ScoredPayload:
     """带评分的 Payload"""
+
     payload: str
     score: float
     category: Optional[str] = None

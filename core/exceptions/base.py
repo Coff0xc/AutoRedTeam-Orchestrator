@@ -7,7 +7,7 @@ AutoRedTeam-Orchestrator 基础异常类
 from __future__ import annotations
 
 import traceback
-from typing import Optional, Any, Dict
+from typing import Any, Dict, Optional
 
 
 class AutoRedTeamError(Exception):
@@ -35,7 +35,7 @@ class AutoRedTeamError(Exception):
         message: str,
         code: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None,
-        cause: Optional[Exception] = None
+        cause: Optional[Exception] = None,
     ):
         """
         初始化异常实例
@@ -82,21 +82,18 @@ class AutoRedTeamError(Exception):
             包含错误信息的字典
         """
         result = {
-            'error': self.code,
-            'message': self.message,
-            'details': self.details,
-            'type': self.__class__.__name__,
+            "error": self.code,
+            "message": self.message,
+            "details": self.details,
+            "type": self.__class__.__name__,
         }
         if self.cause:
-            result['cause'] = {
-                'type': type(self.cause).__name__,
-                'message': str(self.cause)
-            }
+            result["cause"] = {"type": type(self.cause).__name__, "message": str(self.cause)}
         return result
 
     def get_traceback(self) -> str:
         """获取完整的异常堆栈追踪"""
-        return ''.join(traceback.format_exception(type(self), self, self.__traceback__))
+        return "".join(traceback.format_exception(type(self), self, self.__traceback__))
 
 
 class ConfigError(AutoRedTeamError):
@@ -109,10 +106,11 @@ class ConfigError(AutoRedTeamError):
         >>> raise ConfigError("配置文件不存在", details={"path": "/etc/config.yaml"})
         >>> raise ConfigError("无效的配置项", code="INVALID_CONFIG", details={"key": "timeout", "value": -1})
     """
+
     pass
 
 
 __all__ = [
-    'AutoRedTeamError',
-    'ConfigError',
+    "AutoRedTeamError",
+    "ConfigError",
 ]

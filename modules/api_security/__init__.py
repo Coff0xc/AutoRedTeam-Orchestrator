@@ -34,19 +34,12 @@ API安全测试模块
 
 # 基础类和类型
 from .base import (
-    APIVulnType,
-    Severity,
-    APITestResult,
     APIScanSummary,
+    APITestResult,
+    APIVulnType,
     BaseAPITester,
     CompositeTester,
-)
-
-# JWT测试
-from .jwt import (
-    JWTTester,
-    quick_jwt_test,
-    decode_jwt,
+    Severity,
 )
 
 # CORS测试
@@ -61,10 +54,20 @@ from .graphql import (
     quick_graphql_test,
 )
 
-# WebSocket测试
-from .websocket import (
-    WebSocketTester,
-    quick_websocket_test,
+# 安全头测试
+from .headers import (
+    SecurityHeader,
+    SecurityHeadersTester,
+    SecurityScore,
+    compare_security_headers,
+    quick_headers_test,
+)
+
+# JWT测试
+from .jwt import (
+    JWTTester,
+    decode_jwt,
+    quick_jwt_test,
 )
 
 # OAuth测试
@@ -73,22 +76,15 @@ from .oauth import (
     quick_oauth_test,
 )
 
-# 安全头测试
-from .headers import (
-    SecurityHeadersTester,
-    SecurityHeader,
-    SecurityScore,
-    quick_headers_test,
-    compare_security_headers,
+# WebSocket测试
+from .websocket import (
+    WebSocketTester,
+    quick_websocket_test,
 )
 
 
 # 便捷函数
-def full_api_scan(
-    target: str,
-    jwt_token: str = None,
-    config: dict = None
-) -> dict:
+def full_api_scan(target: str, jwt_token: str = None, config: dict = None) -> dict:
     """
     完整API安全扫描
 
@@ -119,50 +115,42 @@ def full_api_scan(
 
 
 # 版本信息
-__version__ = '3.0.0'
-__author__ = 'AutoRedTeam'
+__version__ = "3.0.0"
+__author__ = "AutoRedTeam"
 
 __all__ = [
     # 版本
-    '__version__',
-    '__author__',
-
+    "__version__",
+    "__author__",
     # 基础类型
-    'APIVulnType',
-    'Severity',
-    'APITestResult',
-    'APIScanSummary',
-    'BaseAPITester',
-    'CompositeTester',
-
+    "APIVulnType",
+    "Severity",
+    "APITestResult",
+    "APIScanSummary",
+    "BaseAPITester",
+    "CompositeTester",
     # JWT
-    'JWTTester',
-    'quick_jwt_test',
-    'decode_jwt',
-
+    "JWTTester",
+    "quick_jwt_test",
+    "decode_jwt",
     # CORS
-    'CORSTester',
-    'quick_cors_test',
-
+    "CORSTester",
+    "quick_cors_test",
     # GraphQL
-    'GraphQLTester',
-    'quick_graphql_test',
-
+    "GraphQLTester",
+    "quick_graphql_test",
     # WebSocket
-    'WebSocketTester',
-    'quick_websocket_test',
-
+    "WebSocketTester",
+    "quick_websocket_test",
     # OAuth
-    'OAuthTester',
-    'quick_oauth_test',
-
+    "OAuthTester",
+    "quick_oauth_test",
     # 安全头
-    'SecurityHeadersTester',
-    'SecurityHeader',
-    'SecurityScore',
-    'quick_headers_test',
-    'compare_security_headers',
-
+    "SecurityHeadersTester",
+    "SecurityHeader",
+    "SecurityScore",
+    "quick_headers_test",
+    "compare_security_headers",
     # 便捷函数
-    'full_api_scan',
+    "full_api_scan",
 ]

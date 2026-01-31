@@ -4,29 +4,29 @@ SQL 注入检测器
 检测 SQL 注入漏洞，支持错误型、时间盲注、UNION 注入等多种技术
 """
 
-from typing import List, Optional, Dict, Any, Tuple
+import logging
 import re
 import time
-import logging
-from urllib.parse import urljoin, urlparse, parse_qs, urlencode
-
-from ..base import BaseDetector, ContextAwareDetector
-from ..result import DetectionResult, Severity, DetectorType, RequestInfo, ResponseInfo
-from ..factory import register_detector
-from ..payloads import get_payloads, PayloadCategory
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 
 # 导入项目统一异常类型
+from core.exceptions import ConnectionError as DetectorConnectionError
 from core.exceptions import (
     DetectorError,
     HTTPError,
-    TimeoutError as DetectorTimeoutError,
-    ConnectionError as DetectorConnectionError,
 )
+from core.exceptions import TimeoutError as DetectorTimeoutError
+
+from ..base import BaseDetector, ContextAwareDetector
+from ..factory import register_detector
+from ..payloads import PayloadCategory, get_payloads
+from ..result import DetectionResult, DetectorType, RequestInfo, ResponseInfo, Severity
 
 logger = logging.getLogger(__name__)
 
 
-@register_detector('sqli')
+@register_detector("sqli")
 class SQLiDetector(BaseDetector):
     """SQL 注入检测器
 
@@ -42,16 +42,16 @@ class SQLiDetector(BaseDetector):
         results = detector.detect("https://example.com/search", params={"q": "test"})
     """
 
-    name = 'sqli'
-    description = 'SQL 注入漏洞检测器'
-    vuln_type = 'sqli'
+    name = "sqli"
+    description = "SQL 注入漏洞检测器"
+    vuln_type = "sqli"
     severity = Severity.CRITICAL
     detector_type = DetectorType.INJECTION
-    version = '2.0.0'
+    version = "2.0.0"
 
     # 数据库错误特征模式
     ERROR_PATTERNS = {
-        'mysql': [
+        "mysql": [
             r"SQL syntax.*MySQL",
             r"Warning.*mysql_",
             r"Warning.*mysqli_",
@@ -65,7 +65,7 @@ class SQLiDetector(BaseDetector):
             r"mysql_fetch",
             r"Unknown column '.*' in",
         ],
-        'postgresql': [
+        "postgresql": [
             r"PostgreSQL.*ERROR",
             r"Warning.*pg_",
             r"valid PostgreSQL result",
@@ -75,7 +75,7 @@ class SQLiDetector(BaseDetector):
             r"ERROR:\s+syntax error at or near",
             r"unterminated quoted string at or near",
         ],
-        'mssql': [
+        "mssql": [
             r"Driver.* SQL[-_ ]*Server",
             r"OLE DB.* SQL Server",
             r"Microsoft SQL Native Client",
@@ -87,7 +87,7 @@ class SQLiDetector(BaseDetector):
             r"SQL Server.*Driver",
             r"mssql_query\(\)",
         ],
-        'oracle': [
+        "oracle": [
             r"Oracle error",
             r"ORA-\d{4,5}",
             r"Oracle.*Driver",
@@ -96,7 +96,7 @@ class SQLiDetector(BaseDetector):
             r"quoted string not properly terminated",
             r"oracle\.jdbc\.driver",
         ],
-        'sqlite': [
+        "sqlite": [
             r"SQLite.*error",
             r"sqlite3\.OperationalError",
             r"SQLite3::SQLException",
@@ -104,7 +104,7 @@ class SQLiDetector(BaseDetector):
             r"near \".*\": syntax error",
             r"unrecognized token:",
         ],
-        'generic': [
+        "generic": [
             r"SQLSTATE\[[0-9A-Z]+\]",
             r"SQL command not properly ended",
             r"syntax error at end of input",
@@ -112,7 +112,7 @@ class SQLiDetector(BaseDetector):
             r"Invalid query",
             r"Database error",
             r"SQL Error",
-        ]
+        ],
     }
 
     # 时间盲注检测的延迟时间（秒）
@@ -133,7 +133,7 @@ class SQLiDetector(BaseDetector):
         super().__init__(config)
 
         # 加载 payload
-        max_payloads = self.config.get('max_payloads', 30)
+        max_payloads = self.config.get("max_payloads", 30)
         self.payloads = self._enhance_payloads(
             get_payloads(PayloadCategory.SQLI, limit=max_payloads)
         )
@@ -141,14 +141,12 @@ class SQLiDetector(BaseDetector):
         # 编译错误模式正则
         self._compiled_patterns: Dict[str, List[re.Pattern]] = {}
         for db_type, patterns in self.ERROR_PATTERNS.items():
-            self._compiled_patterns[db_type] = [
-                re.compile(p, re.IGNORECASE) for p in patterns
-            ]
+            self._compiled_patterns[db_type] = [re.compile(p, re.IGNORECASE) for p in patterns]
 
         # 检测选项
-        self.check_error_based = self.config.get('check_error_based', True)
-        self.check_time_based = self.config.get('check_time_based', True)
-        self.check_boolean_based = self.config.get('check_boolean_based', True)
+        self.check_error_based = self.config.get("check_error_based", True)
+        self.check_time_based = self.config.get("check_time_based", True)
+        self.check_boolean_based = self.config.get("check_boolean_based", True)
 
     def detect(self, url: str, **kwargs) -> List[DetectionResult]:
         """检测 SQL 注入漏洞
@@ -168,10 +166,10 @@ class SQLiDetector(BaseDetector):
         results: List[DetectionResult] = []
 
         # 获取参数
-        params = kwargs.get('params', {})
-        data = kwargs.get('data', {})
-        method = kwargs.get('method', 'GET').upper()
-        headers = kwargs.get('headers', {})
+        params = kwargs.get("params", {})
+        data = kwargs.get("data", {})
+        method = kwargs.get("method", "GET").upper()
+        headers = kwargs.get("headers", {})
 
         # 如果没有提供参数，尝试从 URL 解析
         if not params:
@@ -180,27 +178,19 @@ class SQLiDetector(BaseDetector):
 
         # 测试 GET 参数
         if params:
-            param_results = self._test_parameters(
-                url, params, 'GET', headers
-            )
+            param_results = self._test_parameters(url, params, "GET", headers)
             results.extend(param_results)
 
         # 测试 POST 数据
-        if data and method == 'POST':
-            data_results = self._test_parameters(
-                url, data, 'POST', headers
-            )
+        if data and method == "POST":
+            data_results = self._test_parameters(url, data, "POST", headers)
             results.extend(data_results)
 
         self._log_detection_end(url, results)
         return results
 
     def _test_parameters(
-        self,
-        url: str,
-        params: Dict[str, str],
-        method: str,
-        headers: Dict[str, str]
+        self, url: str, params: Dict[str, str], method: str, headers: Dict[str, str]
     ) -> List[DetectionResult]:
         """测试参数中的 SQL 注入
 
@@ -240,7 +230,7 @@ class SQLiDetector(BaseDetector):
                         break  # 发现漏洞后跳过该参数
 
                 # 时间盲注检测
-                if self.check_time_based and 'SLEEP' in payload.upper():
+                if self.check_time_based and "SLEEP" in payload.upper():
                     time_result = self._check_time_based(
                         url, params, param_name, payload, method, headers
                     )
@@ -265,7 +255,7 @@ class SQLiDetector(BaseDetector):
         param_name: str,
         test_value: str,
         method: str,
-        headers: Dict[str, str]
+        headers: Dict[str, str],
     ) -> Optional[DetectionResult]:
         """检测错误型 SQL 注入
 
@@ -284,7 +274,7 @@ class SQLiDetector(BaseDetector):
         test_params[param_name] = test_value
 
         try:
-            if method == 'GET':
+            if method == "GET":
                 response = self.http_client.get(url, params=test_params, headers=headers)
             else:
                 response = self.http_client.post(url, data=test_params, headers=headers)
@@ -296,8 +286,8 @@ class SQLiDetector(BaseDetector):
                     method=method,
                     url=url,
                     headers=headers,
-                    params=test_params if method == 'GET' else None,
-                    data=test_params if method != 'GET' else None
+                    params=test_params if method == "GET" else None,
+                    data=test_params if method != "GET" else None,
                 )
                 response_info = self._build_response_info(response)
                 return self._create_result(
@@ -313,9 +303,9 @@ class SQLiDetector(BaseDetector):
                     remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
                     references=[
                         "https://owasp.org/www-community/attacks/SQL_Injection",
-                        "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+                        "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
                     ],
-                    extra={'db_type': db_type, 'injection_type': 'error-based'}
+                    extra={"db_type": db_type, "injection_type": "error-based"},
                 )
         except DetectorTimeoutError as e:
             # 请求超时 - 可能是服务器处理慢或网络问题
@@ -343,7 +333,7 @@ class SQLiDetector(BaseDetector):
         param_name: str,
         payload: str,
         method: str,
-        headers: Dict[str, str]
+        headers: Dict[str, str],
     ) -> Optional[DetectionResult]:
         """检测时间盲注
 
@@ -364,7 +354,7 @@ class SQLiDetector(BaseDetector):
         try:
             start_time = time.time()
 
-            if method == 'GET':
+            if method == "GET":
                 response = self.http_client.get(url, params=test_params, headers=headers)
             else:
                 response = self.http_client.post(url, data=test_params, headers=headers)
@@ -377,8 +367,8 @@ class SQLiDetector(BaseDetector):
                     method=method,
                     url=url,
                     headers=headers,
-                    params=test_params if method == 'GET' else None,
-                    data=test_params if method != 'GET' else None
+                    params=test_params if method == "GET" else None,
+                    data=test_params if method != "GET" else None,
                 )
                 response_info = self._build_response_info(response)
                 return self._create_result(
@@ -392,10 +382,8 @@ class SQLiDetector(BaseDetector):
                     request=request_info,
                     response=response_info,
                     remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
-                    references=[
-                        "https://owasp.org/www-community/attacks/Blind_SQL_Injection"
-                    ],
-                    extra={'injection_type': 'time-based', 'delay': elapsed}
+                    references=["https://owasp.org/www-community/attacks/Blind_SQL_Injection"],
+                    extra={"injection_type": "time-based", "delay": elapsed},
                 )
         except DetectorTimeoutError as e:
             # 超时可能是时间盲注成功的信号，需要进一步验证
@@ -406,8 +394,8 @@ class SQLiDetector(BaseDetector):
                     method=method,
                     url=url,
                     headers=headers,
-                    params=test_params if method == 'GET' else None,
-                    data=test_params if method != 'GET' else None
+                    params=test_params if method == "GET" else None,
+                    data=test_params if method != "GET" else None,
                 )
                 return self._create_result(
                     url=url,
@@ -419,7 +407,7 @@ class SQLiDetector(BaseDetector):
                     verified=False,
                     request=request_info,
                     remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
-                    extra={'injection_type': 'time-based', 'delay': elapsed, 'timeout': True}
+                    extra={"injection_type": "time-based", "delay": elapsed, "timeout": True},
                 )
             logger.debug(f"时间盲注检测超时 {url}: {e}")
         except DetectorConnectionError as e:
@@ -442,7 +430,7 @@ class SQLiDetector(BaseDetector):
         param_name: str,
         baseline: Any,
         method: str,
-        headers: Dict[str, str]
+        headers: Dict[str, str],
     ) -> Optional[DetectionResult]:
         """检测布尔盲注
 
@@ -479,18 +467,18 @@ class SQLiDetector(BaseDetector):
             try:
                 # 测试真条件
                 true_params = params.copy()
-                true_params[param_name] = str(params.get(param_name, '')) + true_payload
+                true_params[param_name] = str(params.get(param_name, "")) + true_payload
 
-                if method == 'GET':
+                if method == "GET":
                     true_response = self.http_client.get(url, params=true_params, headers=headers)
                 else:
                     true_response = self.http_client.post(url, data=true_params, headers=headers)
 
                 # 测试假条件
                 false_params = params.copy()
-                false_params[param_name] = str(params.get(param_name, '')) + false_payload
+                false_params[param_name] = str(params.get(param_name, "")) + false_payload
 
-                if method == 'GET':
+                if method == "GET":
                     false_response = self.http_client.get(url, params=false_params, headers=headers)
                 else:
                     false_response = self.http_client.post(url, data=false_params, headers=headers)
@@ -505,8 +493,8 @@ class SQLiDetector(BaseDetector):
                         method=method,
                         url=url,
                         headers=headers,
-                        params=true_params if method == 'GET' else None,
-                        data=true_params if method != 'GET' else None
+                        params=true_params if method == "GET" else None,
+                        data=true_params if method != "GET" else None,
                     )
                     response_info = self._build_response_info(true_response)
                     return self._create_result(
@@ -520,7 +508,7 @@ class SQLiDetector(BaseDetector):
                         request=request_info,
                         response=response_info,
                         remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
-                        extra={'injection_type': 'boolean-based'}
+                        extra={"injection_type": "boolean-based"},
                     )
 
             except DetectorTimeoutError as e:
@@ -563,11 +551,7 @@ class SQLiDetector(BaseDetector):
         return None, None
 
     def _get_baseline_response(
-        self,
-        url: str,
-        params: Dict[str, str],
-        method: str,
-        headers: Dict[str, str]
+        self, url: str, params: Dict[str, str], method: str, headers: Dict[str, str]
     ) -> Optional[Any]:
         """获取基线响应
 
@@ -581,7 +565,7 @@ class SQLiDetector(BaseDetector):
             响应对象或 None
         """
         try:
-            if method == 'GET':
+            if method == "GET":
                 return self.http_client.get(url, params=params, headers=headers)
             else:
                 return self.http_client.post(url, data=params, headers=headers)
@@ -614,8 +598,17 @@ class SQLiDetector(BaseDetector):
             是否跳过
         """
         skip_patterns = [
-            'token', 'csrf', 'nonce', 'hash', 'sig', 'signature',
-            'timestamp', 'time', '_t', 'callback', 'jsonp'
+            "token",
+            "csrf",
+            "nonce",
+            "hash",
+            "sig",
+            "signature",
+            "timestamp",
+            "time",
+            "_t",
+            "callback",
+            "jsonp",
         ]
         param_lower = param_name.lower()
         return any(p in param_lower for p in skip_patterns)

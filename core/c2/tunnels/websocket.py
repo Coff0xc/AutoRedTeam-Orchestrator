@@ -12,13 +12,13 @@ WebSocket 隧道 - WebSocket Tunnel
     - 自动重连
 """
 
+import json
+import logging
+import queue
+import threading
 import time
 import uuid
-import json
-import threading
-import queue
-import logging
-from typing import Optional, Dict, Any, Callable
+from typing import Any, Callable, Dict, Optional
 
 from ..base import BaseTunnel, C2Config
 from ..encoding import C2Encoder
@@ -28,12 +28,14 @@ logger = logging.getLogger(__name__)
 # WebSocket 库
 try:
     import websocket
+
     HAS_WEBSOCKET = True
 except ImportError:
     HAS_WEBSOCKET = False
 
 try:
     import websockets
+
     HAS_WEBSOCKETS = True
 except ImportError:
     HAS_WEBSOCKETS = False
@@ -90,7 +92,7 @@ class WebSocketTunnel(BaseTunnel):
     @property
     def websocket_url(self) -> str:
         """获取 WebSocket URL"""
-        protocol = 'wss' if self.config.protocol in ('wss', 'https', 'websocket') else 'ws'
+        protocol = "wss" if self.config.protocol in ("wss", "https", "websocket") else "ws"
         return f"{protocol}://{self.config.server}:{self.config.port}/ws"
 
     def connect(self) -> bool:
@@ -116,7 +118,7 @@ class WebSocketTunnel(BaseTunnel):
                     url,
                     timeout=self.config.timeout,
                     header=[f"{k}: {v}" for k, v in headers.items()],
-                    sslopt={"cert_reqs": 0} if 'wss' in url else None
+                    sslopt={"cert_reqs": 0} if "wss" in url else None,
                 )
 
                 if self._ws.connected:
@@ -125,10 +127,7 @@ class WebSocketTunnel(BaseTunnel):
                     self._running = True
 
                     # 启动接收线程
-                    self._recv_thread = threading.Thread(
-                        target=self._receive_loop,
-                        daemon=True
-                    )
+                    self._recv_thread = threading.Thread(target=self._receive_loop, daemon=True)
                     self._recv_thread.start()
 
                     logger.debug(f"WebSocket tunnel connected: {url}")
@@ -216,7 +215,7 @@ class WebSocketTunnel(BaseTunnel):
             是否成功
         """
         try:
-            text = json.dumps(data, separators=(',', ':'))
+            text = json.dumps(data, separators=(",", ":"))
             return self.send_text(text)
         except Exception as e:
             logger.error(f"WebSocket send JSON error: {e}")
@@ -272,9 +271,9 @@ class WebSocketTunnel(BaseTunnel):
     def _build_headers(self) -> Dict[str, str]:
         """构建请求头"""
         headers = {
-            'User-Agent': self.config.user_agent,
-            'Origin': f"https://{self.config.server}",
-            'Sec-WebSocket-Protocol': 'binary',
+            "User-Agent": self.config.user_agent,
+            "Origin": f"https://{self.config.server}",
+            "Sec-WebSocket-Protocol": "binary",
         }
         headers.update(self.config.headers)
         return headers
@@ -291,7 +290,7 @@ class WebSocketTunnel(BaseTunnel):
 
                 # 转换为 bytes
                 if isinstance(data, str):
-                    data = data.encode('utf-8')
+                    data = data.encode("utf-8")
 
                 # 放入队列
                 self._recv_queue.put(data)
@@ -329,6 +328,7 @@ class WebSocketTunnel(BaseTunnel):
 
 # ==================== 高级 WebSocket 隧道 ====================
 
+
 class ReconnectingWebSocketTunnel(WebSocketTunnel):
     """
     自动重连 WebSocket 隧道
@@ -362,7 +362,9 @@ class ReconnectingWebSocketTunnel(WebSocketTunnel):
 
             self._retry_count += 1
             delay = self._retry_delay * (2 ** (self._retry_count - 1))
-            logger.info(f"Reconnecting in {delay:.1f}s (attempt {self._retry_count}/{self._max_retries})")
+            logger.info(
+                f"Reconnecting in {delay:.1f}s (attempt {self._retry_count}/{self._max_retries})"
+            )
             time.sleep(delay)
 
         return False
@@ -388,10 +390,7 @@ class ReconnectingWebSocketTunnel(WebSocketTunnel):
 
     def _start_heartbeat(self) -> None:
         """启动心跳"""
-        self._heartbeat_thread = threading.Thread(
-            target=self._heartbeat_loop,
-            daemon=True
-        )
+        self._heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
         self._heartbeat_thread.start()
 
     def _stop_heartbeat(self) -> None:
@@ -419,9 +418,10 @@ class ReconnectingWebSocketTunnel(WebSocketTunnel):
             except Exception as exc:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
+
 __all__ = [
-    'WebSocketTunnel',
-    'ReconnectingWebSocketTunnel',
-    'HAS_WEBSOCKET',
-    'HAS_WEBSOCKETS',
+    "WebSocketTunnel",
+    "ReconnectingWebSocketTunnel",
+    "HAS_WEBSOCKET",
+    "HAS_WEBSOCKETS",
 ]

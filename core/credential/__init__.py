@@ -9,30 +9,24 @@ ATT&CK Tactic: TA0006 - Credential Access
 """
 
 from .credential_dumper import (
+    Credential,
     CredentialDumper,
     CredentialType,
-    Credential,
     DumpResult,
-    dump_credentials
+    dump_credentials,
 )
-
-from .password_finder import (
-    PasswordFinder,
-    SecretType,
-    SecretFinding,
-    find_secrets
-)
+from .password_finder import PasswordFinder, SecretFinding, SecretType, find_secrets
 
 __all__ = [
     # Credential Dumper
-    'CredentialDumper',
-    'CredentialType',
-    'Credential',
-    'DumpResult',
-    'dump_credentials',
+    "CredentialDumper",
+    "CredentialType",
+    "Credential",
+    "DumpResult",
+    "dump_credentials",
     # Password Finder
-    'PasswordFinder',
-    'SecretType',
-    'SecretFinding',
-    'find_secrets',
+    "PasswordFinder",
+    "SecretType",
+    "SecretFinding",
+    "find_secrets",
 ]

@@ -6,6 +6,7 @@
 - VulnerabilityVerifier: 核心验证器，整合所有 Mixin
 - HTTP 请求工具方法
 """
+
 import json
 import logging
 import re
@@ -171,9 +172,7 @@ class BaseVerifier:
         if param:
             pattern = rf"({re.escape(param)}=)[^&]*"
             if re.search(pattern, body_str):
-                body_str = re.sub(
-                    pattern, rf"\\1{urllib.parse.quote_plus(payload)}", body_str
-                )
+                body_str = re.sub(pattern, rf"\\1{urllib.parse.quote_plus(payload)}", body_str)
             else:
                 sep = "&" if body_str else ""
                 body_str = f"{body_str}{sep}{param}={urllib.parse.quote_plus(payload)}"

@@ -5,17 +5,14 @@ HTTP 中间件系统
 支持日志、重试、限流、认证等功能
 """
 
-import time
-import logging
 import asyncio
+import logging
+import time
 from abc import ABC, abstractmethod
-from typing import (
-    Any, Callable, Dict, List, Optional, TypeVar, Generic,
-    Awaitable, Union
-)
-from dataclasses import dataclass, field
 from collections import defaultdict
+from dataclasses import dataclass, field
 from functools import wraps
+from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, TypeVar, Union
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +24,7 @@ ResponseT = TypeVar("ResponseT")
 @dataclass
 class RequestContext:
     """请求上下文 - 在中间件间传递的请求信息"""
+
     method: str
     url: str
     headers: Dict[str, str] = field(default_factory=dict)
@@ -45,6 +43,7 @@ class RequestContext:
 @dataclass
 class ResponseContext:
     """响应上下文 - 在中间件间传递的响应信息"""
+
     status_code: int
     headers: Dict[str, str]
     content: bytes
@@ -77,9 +76,7 @@ class Middleware(ABC):
 
     @abstractmethod
     def process_response(
-        self,
-        response: ResponseContext,
-        request: RequestContext
+        self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         """
         处理响应 (同步)
@@ -94,9 +91,7 @@ class Middleware(ABC):
         pass
 
     def process_exception(
-        self,
-        exception: Exception,
-        request: RequestContext
+        self, exception: Exception, request: RequestContext
     ) -> Optional[ResponseContext]:
         """
         处理异常 (可选实现)
@@ -126,17 +121,13 @@ class AsyncMiddleware(ABC):
 
     @abstractmethod
     async def process_response(
-        self,
-        response: ResponseContext,
-        request: RequestContext
+        self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         """处理响应 (异步)"""
         pass
 
     async def process_exception(
-        self,
-        exception: Exception,
-        request: RequestContext
+        self, exception: Exception, request: RequestContext
     ) -> Optional[ResponseContext]:
         """处理异常 (可选)"""
         return None
@@ -151,7 +142,7 @@ class LoggingMiddleware(Middleware):
         log_responses: bool = True,
         log_headers: bool = False,
         log_body: bool = False,
-        logger_instance: Optional[logging.Logger] = None
+        logger_instance: Optional[logging.Logger] = None,
     ):
         """
         初始化日志中间件
@@ -183,9 +174,7 @@ class LoggingMiddleware(Middleware):
         return request
 
     def process_response(
-        self,
-        response: ResponseContext,
-        request: RequestContext
+        self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         if self.log_responses:
             elapsed_ms = response.elapsed * 1000
@@ -206,7 +195,7 @@ class RetryMiddleware(Middleware):
         retry_delay: float = 1.0,
         backoff_factor: float = 2.0,
         retry_status_codes: tuple = (429, 500, 502, 503, 504),
-        retry_exceptions: tuple = ()
+        retry_exceptions: tuple = (),
     ):
         """
         初始化重试中间件
@@ -230,9 +219,7 @@ class RetryMiddleware(Middleware):
         return request
 
     def process_response(
-        self,
-        response: ResponseContext,
-        request: RequestContext
+        self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         # 检查是否需要重试
         if (
@@ -263,16 +250,13 @@ class RetryMiddleware(Middleware):
         return response
 
     def process_exception(
-        self,
-        exception: Exception,
-        request: RequestContext
+        self, exception: Exception, request: RequestContext
     ) -> Optional[ResponseContext]:
         # 检查是否是需要重试的异常
         exc_type = type(exception).__name__
-        should_retry = (
-            any(isinstance(exception, exc) for exc in self.retry_exceptions)
-            or exc_type in ("TimeoutException", "ConnectError", "ReadTimeout")
-        )
+        should_retry = any(
+            isinstance(exception, exc) for exc in self.retry_exceptions
+        ) or exc_type in ("TimeoutException", "ConnectError", "ReadTimeout")
 
         if should_retry and request.attempt < self.max_retries:
             delay = self.retry_delay * (self.backoff_factor ** (request.attempt - 1))
@@ -291,12 +275,7 @@ class RetryMiddleware(Middleware):
 class RateLimitMiddleware(Middleware):
     """限流中间件 - 控制请求速率"""
 
-    def __init__(
-        self,
-        requests_per_second: float = 10.0,
-        per_host: bool = True,
-        burst: int = 5
-    ):
+    def __init__(self, requests_per_second: float = 10.0, per_host: bool = True, burst: int = 5):
         """
         初始化限流中间件
 
@@ -318,6 +297,7 @@ class RateLimitMiddleware(Middleware):
         """获取限流键"""
         if self.per_host:
             from urllib.parse import urlparse
+
             parsed = urlparse(url)
             return parsed.netloc
         return "__global__"
@@ -328,10 +308,7 @@ class RateLimitMiddleware(Middleware):
 
         # 令牌桶算法
         elapsed = now - self._last_request[key]
-        self._tokens[key] = min(
-            self.burst,
-            self._tokens[key] + elapsed * self.requests_per_second
-        )
+        self._tokens[key] = min(self.burst, self._tokens[key] + elapsed * self.requests_per_second)
         self._last_request[key] = now
 
         if self._tokens[key] < 1.0:
@@ -346,9 +323,7 @@ class RateLimitMiddleware(Middleware):
         return request
 
     def process_response(
-        self,
-        response: ResponseContext,
-        request: RequestContext
+        self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         # 如果收到 429，增加等待时间
         if response.status_code == 429:
@@ -367,12 +342,7 @@ class RateLimitMiddleware(Middleware):
 class AsyncRateLimitMiddleware(AsyncMiddleware):
     """异步限流中间件"""
 
-    def __init__(
-        self,
-        requests_per_second: float = 10.0,
-        per_host: bool = True,
-        burst: int = 5
-    ):
+    def __init__(self, requests_per_second: float = 10.0, per_host: bool = True, burst: int = 5):
         self.requests_per_second = requests_per_second
         self.per_host = per_host
         self.burst = burst
@@ -384,6 +354,7 @@ class AsyncRateLimitMiddleware(AsyncMiddleware):
     def _get_key(self, url: str) -> str:
         if self.per_host:
             from urllib.parse import urlparse
+
             parsed = urlparse(url)
             return parsed.netloc
         return "__global__"
@@ -395,8 +366,7 @@ class AsyncRateLimitMiddleware(AsyncMiddleware):
             now = time.time()
             elapsed = now - self._last_request[key]
             self._tokens[key] = min(
-                self.burst,
-                self._tokens[key] + elapsed * self.requests_per_second
+                self.burst, self._tokens[key] + elapsed * self.requests_per_second
             )
             self._last_request[key] = now
 
@@ -411,9 +381,7 @@ class AsyncRateLimitMiddleware(AsyncMiddleware):
         return request
 
     async def process_response(
-        self,
-        response: ResponseContext,
-        request: RequestContext
+        self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         if response.status_code == 429:
             retry_after = response.headers.get("Retry-After")
@@ -447,9 +415,7 @@ class HeadersMiddleware(Middleware):
         return request
 
     def process_response(
-        self,
-        response: ResponseContext,
-        request: RequestContext
+        self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         return response
 
@@ -464,7 +430,7 @@ class AuthMiddleware(Middleware):
         username: Optional[str] = None,
         password: Optional[str] = None,
         api_key: Optional[str] = None,
-        api_key_header: str = "X-API-Key"
+        api_key_header: str = "X-API-Key",
     ):
         """
         初始化认证中间件
@@ -490,9 +456,8 @@ class AuthMiddleware(Middleware):
 
         elif self.auth_type == "basic" and self.username and self.password:
             import base64
-            credentials = base64.b64encode(
-                f"{self.username}:{self.password}".encode()
-            ).decode()
+
+            credentials = base64.b64encode(f"{self.username}:{self.password}".encode()).decode()
             request.headers["Authorization"] = f"Basic {credentials}"
 
         elif self.auth_type == "apikey" and self.api_key:
@@ -501,9 +466,7 @@ class AuthMiddleware(Middleware):
         return request
 
     def process_response(
-        self,
-        response: ResponseContext,
-        request: RequestContext
+        self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         return response
 
@@ -528,9 +491,7 @@ class MetricsMiddleware(Middleware):
         return request
 
     def process_response(
-        self,
-        response: ResponseContext,
-        request: RequestContext
+        self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         elapsed = response.elapsed
         content_length = len(response.content)
@@ -548,6 +509,7 @@ class MetricsMiddleware(Middleware):
 
         # 按主机统计
         from urllib.parse import urlparse
+
         host = urlparse(request.url).netloc
         self._by_host[host]["requests"] += 1
         self._by_host[host]["bytes"] += content_length
@@ -563,14 +525,12 @@ class MetricsMiddleware(Middleware):
             "failed_requests": self.failed_requests,
             "success_rate": (
                 self.successful_requests / self.total_requests * 100
-                if self.total_requests > 0 else 0
+                if self.total_requests > 0
+                else 0
             ),
             "total_bytes": self.total_bytes,
             "total_time": self.total_time,
-            "avg_time": (
-                self.total_time / self.total_requests
-                if self.total_requests > 0 else 0
-            ),
+            "avg_time": (self.total_time / self.total_requests if self.total_requests > 0 else 0),
             "by_status": dict(self._by_status),
             "by_host": dict(self._by_host),
         }
@@ -625,9 +585,7 @@ class MiddlewareChain:
         return request
 
     def process_response(
-        self,
-        response: ResponseContext,
-        request: RequestContext
+        self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         """执行所有中间件的响应处理 (逆序)"""
         for middleware in reversed(self._middlewares):
@@ -635,9 +593,7 @@ class MiddlewareChain:
         return response
 
     def process_exception(
-        self,
-        exception: Exception,
-        request: RequestContext
+        self, exception: Exception, request: RequestContext
     ) -> Optional[ResponseContext]:
         """执行所有中间件的异常处理"""
         for middleware in reversed(self._middlewares):
@@ -657,9 +613,7 @@ class MiddlewareChain:
         return request
 
     async def async_process_response(
-        self,
-        response: ResponseContext,
-        request: RequestContext
+        self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         """异步执行所有中间件的响应处理 (逆序)"""
         for middleware in reversed(self._async_middlewares):
@@ -669,9 +623,7 @@ class MiddlewareChain:
         return response
 
     async def async_process_exception(
-        self,
-        exception: Exception,
-        request: RequestContext
+        self, exception: Exception, request: RequestContext
     ) -> Optional[ResponseContext]:
         """异步执行所有中间件的异常处理"""
         for middleware in reversed(self._async_middlewares):

@@ -4,23 +4,23 @@
 定义所有漏洞检测器的基础接口和通用功能
 """
 
-from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any, AsyncIterator
 import asyncio
+import json
 import logging
 import time
-import json
+from abc import ABC, abstractmethod
+from typing import Any, AsyncIterator, Dict, List, Optional
 from urllib.parse import urlencode
 
-from .result import DetectionResult, Severity, DetectorType, RequestInfo, ResponseInfo
-
 # 导入项目统一异常类型
+from core.exceptions import ConnectionError as DetectorConnectionError
 from core.exceptions import (
     DetectorError,
     HTTPError,
-    TimeoutError as DetectorTimeoutError,
-    ConnectionError as DetectorConnectionError,
 )
+from core.exceptions import TimeoutError as DetectorTimeoutError
+
+from .result import DetectionResult, DetectorType, RequestInfo, ResponseInfo, Severity
 
 logger = logging.getLogger(__name__)
 
@@ -49,20 +49,20 @@ class BaseDetector(ABC):
     """
 
     # 子类必须定义的属性
-    name: str = 'base'
-    description: str = '基础检测器'
-    vuln_type: str = ''
+    name: str = "base"
+    description: str = "基础检测器"
+    vuln_type: str = ""
     severity: Severity = Severity.MEDIUM
     detector_type: DetectorType = DetectorType.MISC
-    version: str = '1.0.0'
+    version: str = "1.0.0"
 
     # 默认配置 - 使用集中常量
     default_config: Dict[str, Any] = {
-        'timeout': 30,       # see core.defaults.DetectorDefaults.TIMEOUT
-        'max_payloads': 50,  # see core.defaults.DetectorDefaults.MAX_PAYLOADS
-        'verify_ssl': False,
-        'follow_redirects': True,
-        'max_redirects': 5,
+        "timeout": 30,  # see core.defaults.DetectorDefaults.TIMEOUT
+        "max_payloads": 50,  # see core.defaults.DetectorDefaults.MAX_PAYLOADS
+        "verify_ssl": False,
+        "follow_redirects": True,
+        "max_redirects": 5,
     }
 
     @classmethod
@@ -70,12 +70,13 @@ class BaseDetector(ABC):
         """从集中配置加载默认值"""
         try:
             from core.defaults import DetectorDefaults
+
             return {
-                'timeout': DetectorDefaults.TIMEOUT,
-                'max_payloads': DetectorDefaults.MAX_PAYLOADS,
-                'verify_ssl': False,
-                'follow_redirects': True,
-                'max_redirects': 5,
+                "timeout": DetectorDefaults.TIMEOUT,
+                "max_payloads": DetectorDefaults.MAX_PAYLOADS,
+                "verify_ssl": False,
+                "follow_redirects": True,
+                "max_redirects": 5,
             }
         except ImportError:
             return cls.default_config
@@ -105,41 +106,39 @@ class BaseDetector(ABC):
         """
         if self._http_client is None:
             try:
-                from core.http import get_client, HTTPConfig
+                from core.http import HTTPConfig, get_client
 
                 http_config = HTTPConfig()
-                http_config.timeout = self.config.get('timeout', 30)
-                http_config.verify_ssl = self.config.get('verify_ssl', False)
-                http_config.follow_redirects = self.config.get('follow_redirects', True)
-                http_config.max_redirects = self.config.get('max_redirects', 5)
+                http_config.timeout = self.config.get("timeout", 30)
+                http_config.verify_ssl = self.config.get("verify_ssl", False)
+                http_config.follow_redirects = self.config.get("follow_redirects", True)
+                http_config.max_redirects = self.config.get("max_redirects", 5)
 
                 from core.http import HTTPClient
+
                 self._http_client = HTTPClient(config=http_config)
             except ImportError as e:
                 # core.http 不可用时，使用 requests 作为回退
                 logger.warning(f"[{self.name}] core.http 不可用，使用 requests 回退: {e}")
                 try:
                     import requests
+
                     # 创建简单的 requests Session 包装
                     session = requests.Session()
-                    session.verify = self.config.get('verify_ssl', False)
-                    session.timeout = self.config.get('timeout', 30)
+                    session.verify = self.config.get("verify_ssl", False)
+                    session.timeout = self.config.get("timeout", 30)
                     self._http_client = session
                 except ImportError as req_e:
                     logger.error(f"[{self.name}] 无法加载HTTP客户端: {req_e}")
                     raise DetectorError(
                         f"HTTP客户端初始化失败: 缺少必要的依赖 (requests)",
                         detector_name=self.name,
-                        cause=req_e
+                        cause=req_e,
                     )
             except (TypeError, ValueError) as e:
                 # 配置参数类型错误
                 logger.error(f"[{self.name}] HTTP客户端配置错误: {e}")
-                raise DetectorError(
-                    f"HTTP客户端配置无效: {e}",
-                    detector_name=self.name,
-                    cause=e
-                )
+                raise DetectorError(f"HTTP客户端配置无效: {e}", detector_name=self.name, cause=e)
         return self._http_client
 
     @abstractmethod
@@ -180,12 +179,12 @@ class BaseDetector(ABC):
 
     def _enhance_payloads(self, payloads: List[str]) -> List[str]:
         """根据配置扩展Payload（WAF绕过/智能变异）"""
-        if not payloads or not self.config.get('enable_smart_payload', False):
+        if not payloads or not self.config.get("enable_smart_payload", False):
             return payloads
 
-        waf_type = self.config.get('waf_type')
-        source = str(self.config.get('smart_payload_source', 'adaptive')).lower()
-        max_variants = self.config.get('max_payload_variants')
+        waf_type = self.config.get("waf_type")
+        source = str(self.config.get("smart_payload_source", "adaptive")).lower()
+        max_variants = self.config.get("max_payload_variants")
         try:
             max_total = (
                 int(max_variants)
@@ -199,6 +198,7 @@ class BaseDetector(ABC):
         try:
             # 使用统一的 Payload 模块
             from modules.payload import PayloadMutator
+
             for payload in payloads:
                 mutated.extend(PayloadMutator.mutate(payload, waf=waf_type))
         except Exception as e:
@@ -222,7 +222,7 @@ class BaseDetector(ABC):
         params: Optional[Dict[str, Any]] = None,
         data: Any = None,
         json_data: Any = None,
-        cookies: Optional[Dict[str, Any]] = None
+        cookies: Optional[Dict[str, Any]] = None,
     ) -> RequestInfo:
         """构建请求上下文，便于后续验证与误报过滤"""
         method_value = (method or "GET").upper()
@@ -250,7 +250,7 @@ class BaseDetector(ABC):
             headers=headers_value,
             params=params_value,
             body=body,
-            cookies=cookies_value
+            cookies=cookies_value,
         )
 
     def _build_response_info(self, response: Any) -> Optional[ResponseInfo]:
@@ -269,7 +269,7 @@ class BaseDetector(ABC):
             status_code=getattr(response, "status_code", 0),
             headers=getattr(response, "headers", {}) or {},
             body=getattr(response, "text", "") or "",
-            elapsed_ms=elapsed_ms
+            elapsed_ms=elapsed_ms,
         )
 
     def _create_result(
@@ -286,7 +286,7 @@ class BaseDetector(ABC):
         request: Optional[RequestInfo] = None,
         response: Optional[ResponseInfo] = None,
         extra: Optional[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ) -> DetectionResult:
         """创建标准化的检测结果
 
@@ -324,7 +324,7 @@ class BaseDetector(ABC):
             response=response,
             remediation=remediation,
             references=references or [],
-            extra=extra or {}
+            extra=extra or {},
         )
 
     def _log_detection_start(self, url: str) -> None:
@@ -338,16 +338,10 @@ class BaseDetector(ABC):
         duration = self._end_time - (self._start_time or self._end_time)
         vuln_count = sum(1 for r in results if r.vulnerable)
         logger.info(
-            f"[{self.name}] 检测完成: {url}, "
-            f"发现 {vuln_count} 个漏洞, 耗时 {duration:.2f}s"
+            f"[{self.name}] 检测完成: {url}, " f"发现 {vuln_count} 个漏洞, 耗时 {duration:.2f}s"
         )
 
-    def _safe_request(
-        self,
-        method: str,
-        url: str,
-        **kwargs
-    ) -> Optional[Any]:
+    def _safe_request(self, method: str, url: str, **kwargs) -> Optional[Any]:
         """安全的HTTP请求封装
 
         Args:
@@ -385,7 +379,7 @@ class BaseDetector(ABC):
 
     # ==================== 上下文管理器支持 ====================
 
-    def __enter__(self) -> 'BaseDetector':
+    def __enter__(self) -> "BaseDetector":
         """上下文管理器入口
 
         使用示例:
@@ -408,11 +402,12 @@ class BaseDetector(ABC):
         if self._http_client is not None:
             try:
                 # 尝试关闭HTTP客户端
-                if hasattr(self._http_client, 'close'):
+                if hasattr(self._http_client, "close"):
                     self._http_client.close()
-                elif hasattr(self._http_client, 'aclose'):
+                elif hasattr(self._http_client, "aclose"):
                     # 异步客户端
                     import asyncio
+
                     try:
                         loop = asyncio.get_running_loop()
                         loop.create_task(self._http_client.aclose())
@@ -482,14 +477,14 @@ class BaseDetector(ABC):
                 url=result.url,
                 params=result.request.params,
                 headers=result.request.headers,
-                data=result.request.body
+                data=result.request.body,
             )
 
             if response is None:
                 return False
 
             # 检查响应是否仍然包含漏洞特征
-            response_text = getattr(response, 'text', '') or ''
+            response_text = getattr(response, "text", "") or ""
 
             # 如果有证据，检查证据是否仍然存在
             if result.evidence and result.evidence in response_text:
@@ -497,10 +492,10 @@ class BaseDetector(ABC):
 
             # 检查响应状态和长度是否一致
             if result.response:
-                status_match = getattr(response, 'status_code', 0) == result.response.status_code
+                status_match = getattr(response, "status_code", 0) == result.response.status_code
                 # 允许10%的长度差异
-                len_diff = abs(len(response_text) - len(result.response.body or ''))
-                len_threshold = max(100, len(result.response.body or '') * 0.1)
+                len_diff = abs(len(response_text) - len(result.response.body or ""))
+                len_threshold = max(100, len(result.response.body or "") * 0.1)
                 length_similar = len_diff <= len_threshold
 
                 return status_match and length_similar
@@ -546,15 +541,11 @@ class CompositeDetector(BaseDetector):
         results = composite.detect("https://example.com")
     """
 
-    name = 'composite'
-    description = '组合检测器'
-    vuln_type = 'multiple'
+    name = "composite"
+    description = "组合检测器"
+    vuln_type = "multiple"
 
-    def __init__(
-        self,
-        detectors: List[BaseDetector],
-        config: Optional[Dict[str, Any]] = None
-    ):
+    def __init__(self, detectors: List[BaseDetector], config: Optional[Dict[str, Any]] = None):
         """初始化组合检测器
 
         Args:
@@ -611,10 +602,7 @@ class CompositeDetector(BaseDetector):
         self._log_detection_start(url)
 
         # 创建所有检测任务
-        tasks = [
-            detector.async_detect(url, **kwargs)
-            for detector in self.detectors
-        ]
+        tasks = [detector.async_detect(url, **kwargs) for detector in self.detectors]
 
         # 并行执行
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
@@ -634,7 +622,9 @@ class CompositeDetector(BaseDetector):
                 logger.error(f"[{detector_name}] 数据处理错误: {type(results).__name__}: {results}")
             elif isinstance(results, Exception):
                 # 其他未预期的异常
-                logger.error(f"[{detector_name}] 未预期的检测失败: {type(results).__name__}: {results}")
+                logger.error(
+                    f"[{detector_name}] 未预期的检测失败: {type(results).__name__}: {results}"
+                )
             elif isinstance(results, list):
                 all_results.extend(results)
 
@@ -671,15 +661,11 @@ class StreamingDetector(BaseDetector):
     支持逐个返回检测结果，适用于大规模扫描场景
     """
 
-    name = 'streaming'
-    description = '流式检测器'
-    vuln_type = 'multiple'
+    name = "streaming"
+    description = "流式检测器"
+    vuln_type = "multiple"
 
-    async def stream_detect(
-        self,
-        url: str,
-        **kwargs
-    ) -> AsyncIterator[DetectionResult]:
+    async def stream_detect(self, url: str, **kwargs) -> AsyncIterator[DetectionResult]:
         """流式检测，逐个yield结果
 
         Args:
@@ -701,8 +687,8 @@ class ContextAwareDetector(BaseDetector):
     根据上下文（如技术栈、WAF检测结果）调整检测策略
     """
 
-    name = 'context_aware'
-    description = '上下文感知检测器'
+    name = "context_aware"
+    description = "上下文感知检测器"
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         super().__init__(config)
@@ -730,10 +716,7 @@ class ContextAwareDetector(BaseDetector):
         return self.context.get(key, default)
 
     def detect_with_context(
-        self,
-        url: str,
-        context: Dict[str, Any],
-        **kwargs
+        self, url: str, context: Dict[str, Any], **kwargs
     ) -> List[DetectionResult]:
         """带上下文的检测
 

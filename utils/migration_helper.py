@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class LegacyAdapter:
                 "success": result.get("success", False),
                 "url": url,
                 "vulnerabilities": result.get("vulnerabilities", []),
-                "total": result.get("total", 0)
+                "total": result.get("total", 0),
             }
         except Exception as e:
             logger.error(f"SQLi 检测失败: {e}")
@@ -68,7 +68,7 @@ class LegacyAdapter:
                 "success": result.get("success", False),
                 "url": url,
                 "vulnerabilities": result.get("vulnerabilities", []),
-                "total": result.get("total", 0)
+                "total": result.get("total", 0),
             }
         except Exception as e:
             logger.error(f"XSS 检测失败: {e}")
@@ -89,7 +89,7 @@ result = sqli_detect(url="https://example.com")
 from tools.detectors.factory import DetectorFactory
 detector = DetectorFactory.create("sqli")
 result = detector.detect(url="https://example.com")
-"""
+""",
     },
     "xss_detect": {
         "new_api": "DetectorFactory.create('xss').detect()",
@@ -103,8 +103,8 @@ result = xss_detect(url="https://example.com")
 from tools.detectors.factory import DetectorFactory
 detector = DetectorFactory.create("xss")
 result = detector.detect(url="https://example.com")
-"""
-    }
+""",
+    },
 }
 
 
@@ -118,7 +118,7 @@ def print_migration_guide(old_function: str):
         print(f"新 API: {guide['new_api']}")
         print(f"模块: {guide['module']}")
         print(f"\n示例:")
-        print(guide['example'])
+        print(guide["example"])
         print(f"{'='*60}\n")
 
 

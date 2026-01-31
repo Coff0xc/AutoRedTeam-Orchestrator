@@ -7,56 +7,60 @@ CVE 情报模块
 作者: AutoRedTeam-Orchestrator
 """
 
+# AI PoC 生成器
+from .ai_poc_generator import (
+    AIPoCGenerator,
+    CVEInfo,
+    CVEParser,
+    KeywordMatcher,
+    PoCTemplateGenerator,
+    VulnType,
+    generate_poc,
+)
+
+# CVE 自动利用引擎
+from .auto_exploit import (
+    AutoExploitResult,
+    AutoExploitStatus,
+    CVEAutoExploitEngine,
+    auto_exploit_cve,
+    exploit_cve_with_description,
+    generate_cve_poc,
+    get_auto_exploit_engine,
+)
+
+# 管理器
+from .manager import (
+    CVEManager,
+    get_cve_manager,
+    reset_cve_manager,
+)
+
 # 数据模型
-from .models import (
-    # 枚举
-    Severity,
-
-    # 核心数据类
+from .models import (  # 枚举; 核心数据类; PoC 相关; 统计和状态; 类型别名
     CVSS,
-    Reference,
     CVEEntry,
-
-    # PoC 相关
-    PoCMatcher,
-    PoCExtractor,
-    PoCTemplate,
-
-    # 统计和状态
-    SyncStatus,
-    CVEStats,
-
-    # 类型别名
     CVEList,
+    CVEStats,
+    PoCExtractor,
     PoCList,
+    PoCMatcher,
+    PoCTemplate,
+    Reference,
+    Severity,
+    SyncStatus,
 )
 
-# 数据源
-from .sources import (
-    # 基类
-    CVESource,
-    RateLimiter,
-
-    # 具体数据源
-    NVDSource,
-    NucleiSource,
-    ExploitDBSource,
-    GitHubPoCSource,
-    AggregatedSource,
-
-    # 便捷函数
-    create_nvd_source,
-    create_nuclei_source,
-    create_exploitdb_source,
-    create_github_poc_source,
-    create_aggregated_source,
-)
-
-# 存储
-from .storage import (
-    CVEStorage,
-    get_storage,
-    reset_storage,
+# PoC 引擎
+from .poc_engine import (
+    PoCEngine,
+    PoCResult,
+    VariableReplacer,
+    execute_poc,
+    execute_poc_batch,
+    get_poc_engine,
+    load_poc,
+    reset_poc_engine,
 )
 
 # 搜索
@@ -68,134 +72,104 @@ from .search import (
     create_search_engine,
 )
 
-# 管理器
-from .manager import (
-    CVEManager,
-    get_cve_manager,
-    reset_cve_manager,
+# 数据源
+from .sources import (  # 基类; 具体数据源; 便捷函数
+    AggregatedSource,
+    CVESource,
+    ExploitDBSource,
+    GitHubPoCSource,
+    NucleiSource,
+    NVDSource,
+    RateLimiter,
+    create_aggregated_source,
+    create_exploitdb_source,
+    create_github_poc_source,
+    create_nuclei_source,
+    create_nvd_source,
 )
 
-# PoC 引擎
-from .poc_engine import (
-    PoCEngine,
-    PoCResult,
-    VariableReplacer,
-    get_poc_engine,
-    reset_poc_engine,
-    load_poc,
-    execute_poc,
-    execute_poc_batch,
+# 存储
+from .storage import (
+    CVEStorage,
+    get_storage,
+    reset_storage,
 )
-
-# AI PoC 生成器
-from .ai_poc_generator import (
-    AIPoCGenerator,
-    VulnType,
-    CVEInfo,
-    KeywordMatcher,
-    CVEParser,
-    PoCTemplateGenerator,
-    generate_poc,
-)
-
-# CVE 自动利用引擎
-from .auto_exploit import (
-    CVEAutoExploitEngine,
-    AutoExploitResult,
-    AutoExploitStatus,
-    get_auto_exploit_engine,
-    auto_exploit_cve,
-    exploit_cve_with_description,
-    generate_cve_poc,
-)
-
 
 __all__ = [
     # === 数据模型 ===
     # 枚举
-    'Severity',
-
+    "Severity",
     # 核心数据类
-    'CVSS',
-    'Reference',
-    'CVEEntry',
-
+    "CVSS",
+    "Reference",
+    "CVEEntry",
     # PoC 相关
-    'PoCMatcher',
-    'PoCExtractor',
-    'PoCTemplate',
-
+    "PoCMatcher",
+    "PoCExtractor",
+    "PoCTemplate",
     # 统计和状态
-    'SyncStatus',
-    'CVEStats',
-
+    "SyncStatus",
+    "CVEStats",
     # 类型别名
-    'CVEList',
-    'PoCList',
-
+    "CVEList",
+    "PoCList",
     # === 数据源 ===
-    'CVESource',
-    'RateLimiter',
-    'NVDSource',
-    'NucleiSource',
-    'ExploitDBSource',
-    'GitHubPoCSource',
-    'AggregatedSource',
-    'create_nvd_source',
-    'create_nuclei_source',
-    'create_exploitdb_source',
-    'create_github_poc_source',
-    'create_aggregated_source',
-
+    "CVESource",
+    "RateLimiter",
+    "NVDSource",
+    "NucleiSource",
+    "ExploitDBSource",
+    "GitHubPoCSource",
+    "AggregatedSource",
+    "create_nvd_source",
+    "create_nuclei_source",
+    "create_exploitdb_source",
+    "create_github_poc_source",
+    "create_aggregated_source",
     # === 存储 ===
-    'CVEStorage',
-    'get_storage',
-    'reset_storage',
-
+    "CVEStorage",
+    "get_storage",
+    "reset_storage",
     # === 搜索 ===
-    'CVESearchEngine',
-    'SearchFilter',
-    'SearchOptions',
-    'SearchResult',
-    'create_search_engine',
-
+    "CVESearchEngine",
+    "SearchFilter",
+    "SearchOptions",
+    "SearchResult",
+    "create_search_engine",
     # === 管理器 ===
-    'CVEManager',
-    'get_cve_manager',
-    'reset_cve_manager',
-
+    "CVEManager",
+    "get_cve_manager",
+    "reset_cve_manager",
     # === PoC 引擎 ===
-    'PoCEngine',
-    'PoCResult',
-    'VariableReplacer',
-    'get_poc_engine',
-    'reset_poc_engine',
-    'load_poc',
-    'execute_poc',
-    'execute_poc_batch',
-
+    "PoCEngine",
+    "PoCResult",
+    "VariableReplacer",
+    "get_poc_engine",
+    "reset_poc_engine",
+    "load_poc",
+    "execute_poc",
+    "execute_poc_batch",
     # === AI PoC 生成器 ===
-    'AIPoCGenerator',
-    'VulnType',
-    'CVEInfo',
-    'KeywordMatcher',
-    'CVEParser',
-    'PoCTemplateGenerator',
-    'generate_poc',
-
+    "AIPoCGenerator",
+    "VulnType",
+    "CVEInfo",
+    "KeywordMatcher",
+    "CVEParser",
+    "PoCTemplateGenerator",
+    "generate_poc",
     # === CVE 自动利用引擎 ===
-    'CVEAutoExploitEngine',
-    'AutoExploitResult',
-    'AutoExploitStatus',
-    'get_auto_exploit_engine',
-    'auto_exploit_cve',
-    'exploit_cve_with_description',
-    'generate_cve_poc',
+    "CVEAutoExploitEngine",
+    "AutoExploitResult",
+    "AutoExploitStatus",
+    "get_auto_exploit_engine",
+    "auto_exploit_cve",
+    "exploit_cve_with_description",
+    "generate_cve_poc",
 ]
 
 
-__version__ = '3.0.0'
-__author__ = 'AutoRedTeam-Orchestrator'
+__version__ = "3.0.0"
+__author__ = "AutoRedTeam-Orchestrator"
 
 
 # 快速入门示例

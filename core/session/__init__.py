@@ -37,71 +37,61 @@ core/session - 会话管理层
     print(result.to_json())
 """
 
-from .target import (
-    Target,
-    TargetType,
-    TargetStatus,
-)
-
 from .context import (
+    ContextStatus,
     ScanContext,
     ScanPhase,
-    ContextStatus,
 )
-
-from .result import (
-    Vulnerability,
-    ScanResult,
-    Severity,
-    VulnType,
-)
-
-from .manager import (
-    SessionManager,
-    get_session_manager,
-    reset_session_manager,
-)
-
 from .http_manager import (
     AuthContext,
     HTTPSessionManager,
     get_http_session_manager,
 )
-
+from .manager import (
+    SessionManager,
+    get_session_manager,
+    reset_session_manager,
+)
+from .result import (
+    ScanResult,
+    Severity,
+    Vulnerability,
+    VulnType,
+)
 from .storage import (
     SessionStorage,
+)
+from .target import (
+    Target,
+    TargetStatus,
+    TargetType,
 )
 
 __all__ = [
     # Target
-    'Target',
-    'TargetType',
-    'TargetStatus',
-
+    "Target",
+    "TargetType",
+    "TargetStatus",
     # Context
-    'ScanContext',
-    'ScanPhase',
-    'ContextStatus',
-
+    "ScanContext",
+    "ScanPhase",
+    "ContextStatus",
     # Result
-    'Vulnerability',
-    'ScanResult',
-    'Severity',
-    'VulnType',
-
+    "Vulnerability",
+    "ScanResult",
+    "Severity",
+    "VulnType",
     # Manager
-    'SessionManager',
-    'get_session_manager',
-    'reset_session_manager',
-
+    "SessionManager",
+    "get_session_manager",
+    "reset_session_manager",
     # HTTP Manager
-    'AuthContext',
-    'HTTPSessionManager',
-    'get_http_session_manager',
-
+    "AuthContext",
+    "HTTPSessionManager",
+    "get_http_session_manager",
     # Storage
-    'SessionStorage',
+    "SessionStorage",
 ]
 
-__version__ = '1.0.0'
-__author__ = 'AutoRedTeam'
+__version__ = "1.0.0"
+__author__ = "AutoRedTeam"

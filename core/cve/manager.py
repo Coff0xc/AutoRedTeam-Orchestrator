@@ -12,20 +12,20 @@ import logging
 import os
 import threading
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
-from .models import CVEEntry, Severity, CVEStats, SyncStatus
+from .models import CVEEntry, CVEStats, Severity, SyncStatus
+from .search import CVESearchEngine, SearchFilter, SearchOptions, SearchResult
 from .sources import (
+    AggregatedSource,
     CVESource,
-    NVDSource,
-    NucleiSource,
     ExploitDBSource,
     GitHubPoCSource,
-    AggregatedSource,
-    create_aggregated_source
+    NucleiSource,
+    NVDSource,
+    create_aggregated_source,
 )
 from .storage import CVEStorage, get_storage
-from .search import CVESearchEngine, SearchFilter, SearchOptions, SearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -41,10 +41,10 @@ class CVEManager:
     - 统计分析
     """
 
-    _instance: Optional['CVEManager'] = None
+    _instance: Optional["CVEManager"] = None
     _lock = threading.Lock()
 
-    def __new__(cls, *args, **kwargs) -> 'CVEManager':
+    def __new__(cls, *args, **kwargs) -> "CVEManager":
         """单例模式"""
         with cls._lock:
             if cls._instance is None:
@@ -56,7 +56,7 @@ class CVEManager:
         self,
         db_path: Optional[str] = None,
         nvd_api_key: Optional[str] = None,
-        github_token: Optional[str] = None
+        github_token: Optional[str] = None,
     ):
         """
         初始化 CVE 管理器
@@ -70,8 +70,8 @@ class CVEManager:
             return
 
         # 从环境变量获取 API Key
-        self._nvd_api_key = nvd_api_key or os.environ.get('NVD_API_KEY')
-        self._github_token = github_token or os.environ.get('GITHUB_TOKEN')
+        self._nvd_api_key = nvd_api_key or os.environ.get("NVD_API_KEY")
+        self._github_token = github_token or os.environ.get("GITHUB_TOKEN")
 
         # 初始化存储
         self._storage = get_storage(db_path)
@@ -109,7 +109,9 @@ class CVEManager:
 
         logger.info(f"[Manager] 初始化 {len(self._sources)} 个数据源")
 
-    async def sync(self, days: int = 7, sources: Optional[List[str]] = None) -> Dict[str, SyncStatus]:
+    async def sync(
+        self, days: int = 7, sources: Optional[List[str]] = None
+    ) -> Dict[str, SyncStatus]:
         """
         同步 CVE 数据
 
@@ -147,8 +149,8 @@ class CVEManager:
                     status = SyncStatus(
                         source=source.name,
                         last_sync=datetime.now(),
-                        status='failed',
-                        message=str(result)
+                        status="failed",
+                        message=str(result),
                     )
                     logger.error(f"[Manager] {source.name} 同步失败: {result}")
                 else:
@@ -180,11 +182,7 @@ class CVEManager:
         Returns:
             同步状态
         """
-        status = SyncStatus(
-            source=source.name,
-            last_sync=datetime.now(),
-            status='running'
-        )
+        status = SyncStatus(source=source.name, last_sync=datetime.now(), status="running")
 
         try:
             # 获取数据
@@ -195,11 +193,11 @@ class CVEManager:
 
             status.new_count = new_count
             status.updated_count = updated_count
-            status.status = 'success'
+            status.status = "success"
             status.message = f"获取 {len(entries)} 条, 新增 {new_count}, 更新 {updated_count}"
 
         except Exception as e:
-            status.status = 'failed'
+            status.status = "failed"
             status.error_count = 1
             status.message = str(e)
             logger.error(f"[Manager] 同步 {source.name} 失败: {e}")
@@ -212,7 +210,7 @@ class CVEManager:
         severity: Optional[Severity] = None,
         has_poc: Optional[bool] = None,
         limit: int = 100,
-        **kwargs
+        **kwargs,
     ) -> List[CVEEntry]:
         """
         搜索 CVE
@@ -228,17 +226,11 @@ class CVEManager:
             CVE 条目列表
         """
         return self._search_engine.search(
-            keyword=keyword,
-            severity=severity,
-            has_poc=has_poc,
-            limit=limit,
-            **kwargs
+            keyword=keyword, severity=severity, has_poc=has_poc, limit=limit, **kwargs
         )
 
     def advanced_search(
-        self,
-        search_filter: SearchFilter,
-        options: Optional[SearchOptions] = None
+        self, search_filter: SearchFilter, options: Optional[SearchOptions] = None
     ) -> SearchResult:
         """
         高级搜索
@@ -431,7 +423,7 @@ _manager_lock = threading.Lock()
 def get_cve_manager(
     db_path: Optional[str] = None,
     nvd_api_key: Optional[str] = None,
-    github_token: Optional[str] = None
+    github_token: Optional[str] = None,
 ) -> CVEManager:
     """
     获取全局 CVE 管理器
@@ -449,9 +441,7 @@ def get_cve_manager(
     with _manager_lock:
         if _manager is None:
             _manager = CVEManager(
-                db_path=db_path,
-                nvd_api_key=nvd_api_key,
-                github_token=github_token
+                db_path=db_path, nvd_api_key=nvd_api_key, github_token=github_token
             )
 
     return _manager
@@ -471,7 +461,8 @@ def reset_cve_manager():
 async def _cli_main():
     """CLI 入口"""
     import sys
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     if len(sys.argv) < 2:
         logger.info("CVE Manager CLI")
@@ -488,16 +479,18 @@ async def _cli_main():
     manager = get_cve_manager()
     command = sys.argv[1]
 
-    if command == 'sync':
+    if command == "sync":
         days = int(sys.argv[2]) if len(sys.argv) > 2 else 7
         results = await manager.sync(days=days)
         logger.info("\n同步完成:")
         for source, status in results.items():
-            logger.info(f"  {source}: {status.status} "
-                  f"(新增: {status.new_count}, 更新: {status.updated_count})")
+            logger.info(
+                f"  {source}: {status.status} "
+                f"(新增: {status.new_count}, 更新: {status.updated_count})"
+            )
 
-    elif command == 'search':
-        keyword = sys.argv[2] if len(sys.argv) > 2 else ''
+    elif command == "search":
+        keyword = sys.argv[2] if len(sys.argv) > 2 else ""
         entries = manager.search(keyword=keyword, limit=10)
         logger.info(f"\n搜索结果 ({len(entries)} 条):")
         for entry in entries:
@@ -507,8 +500,8 @@ async def _cli_main():
             logger.info(f"  [{severity}] {entry.cve_id} (CVSS: {cvss:.1f}) PoC: {poc}")
             logger.info(f"    {entry.description[:80]}...")
 
-    elif command == 'get':
-        cve_id = sys.argv[2] if len(sys.argv) > 2 else ''
+    elif command == "get":
+        cve_id = sys.argv[2] if len(sys.argv) > 2 else ""
         entry = await manager.get_detail(cve_id.upper(), refresh=True)
         if entry:
             logger.info(f"\n{entry.cve_id}")
@@ -526,7 +519,7 @@ async def _cli_main():
         else:
             logger.info(f"未找到: {cve_id}")
 
-    elif command == 'stats':
+    elif command == "stats":
         stats = manager.stats()
         logger.info("\n统计信息:")
         logger.info(f"  总 CVE 数: {stats.total_count}")
@@ -538,7 +531,7 @@ async def _cli_main():
         for source, count in stats.by_source.items():
             logger.info(f"    {source}: {count}")
 
-    elif command == 'recent':
+    elif command == "recent":
         limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
         entries = manager.get_recent(limit=limit)
         logger.info(f"\n最近的 CVE ({len(entries)} 条):")
@@ -547,7 +540,7 @@ async def _cli_main():
             cvss = entry.cvss.score if entry.cvss else 0.0
             logger.info(f"  [{severity}] {entry.cve_id} (CVSS: {cvss:.1f})")
 
-    elif command == 'poc':
+    elif command == "poc":
         limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
         entries = manager.get_with_poc(limit=limit)
         logger.info(f"\n有 PoC 的 CVE ({len(entries)} 条):")
@@ -562,5 +555,5 @@ async def _cli_main():
         logger.warning(f"未知命令: {command}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(_cli_main())

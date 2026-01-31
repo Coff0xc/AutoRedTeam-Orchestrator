@@ -4,22 +4,23 @@
 提供安全的subprocess封装和命令白名单机制
 """
 
-import subprocess
-import shlex
-import shutil
 import logging
 import os
-from typing import Dict, List, Optional, Tuple
+import shlex
+import shutil
+import subprocess
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class ExecutionPolicy(Enum):
     """执行策略"""
-    STRICT = "strict"      # 严格模式：仅允许白名单命令
+
+    STRICT = "strict"  # 严格模式：仅允许白名单命令
     MODERATE = "moderate"  # 中等模式：白名单+参数验证
     PERMISSIVE = "permissive"  # 宽松模式：仅基本验证
 
@@ -27,6 +28,7 @@ class ExecutionPolicy(Enum):
 @dataclass
 class CommandWhitelist:
     """命令白名单配置"""
+
     command: str
     allowed_args: List[str] = None  # None表示允许所有参数
     max_args: int = 50
@@ -43,74 +45,89 @@ class SafeExecutor:
         "nmap": CommandWhitelist(
             command="nmap",
             allowed_args=["-sV", "-sC", "-p", "-Pn", "-T4", "-A", "-O", "--script"],
-            description="Nmap端口扫描"
+            description="Nmap端口扫描",
         ),
         "masscan": CommandWhitelist(
             command="masscan",
             allowed_args=["-p", "--rate", "--banners"],
-            description="Masscan快速扫描"
+            description="Masscan快速扫描",
         ),
         "dig": CommandWhitelist(
             command="dig",
             allowed_args=["+short", "+trace", "ANY", "A", "AAAA", "MX", "NS", "TXT"],
-            description="DNS查询"
+            description="DNS查询",
         ),
-        "nslookup": CommandWhitelist(
-            command="nslookup",
-            description="DNS查询"
-        ),
+        "nslookup": CommandWhitelist(command="nslookup", description="DNS查询"),
         "curl": CommandWhitelist(
             command="curl",
             allowed_args=["-X", "-H", "-d", "-k", "-L", "-s", "-i", "-v", "--data"],
-            description="HTTP请求"
+            description="HTTP请求",
         ),
         "wget": CommandWhitelist(
             command="wget",
             allowed_args=["-O", "-q", "--spider", "--timeout"],
-            description="文件下载"
+            description="文件下载",
         ),
-
         # 漏洞扫描工具
         "nuclei": CommandWhitelist(
             command="nuclei",
             allowed_args=["-u", "-l", "-t", "-tags", "-severity", "-o"],
-            description="Nuclei漏洞扫描"
+            description="Nuclei漏洞扫描",
         ),
         "sqlmap": CommandWhitelist(
             command="sqlmap",
             allowed_args=["-u", "--dbs", "--tables", "--dump", "--batch", "--random-agent"],
-            description="SQLMap注入检测"
+            description="SQLMap注入检测",
         ),
-
         # 系统工具 - 注意: 禁止 -c 参数以防止任意代码执行
         "python": CommandWhitelist(
             command="python",
             allowed_args=["-m", "-V", "--version"],  # 仅允许模块执行和版本查询
             max_args=10,
-            description="Python解释器（受限）"
+            description="Python解释器（受限）",
         ),
         "python3": CommandWhitelist(
             command="python3",
             allowed_args=["-m", "-V", "--version"],  # 仅允许模块执行和版本查询
             max_args=10,
-            description="Python3解释器（受限）"
+            description="Python3解释器（受限）",
         ),
     }
 
     # 危险命令黑名单
     BLACKLIST = [
-        "rm", "rmdir", "del", "format", "mkfs",
-        "dd", "fdisk", "parted",
-        "shutdown", "reboot", "halt", "poweroff",
-        "kill", "killall", "pkill",
-        "chmod", "chown", "chgrp",
-        "useradd", "userdel", "passwd",
-        "iptables", "firewall-cmd",
-        "systemctl", "service",
+        "rm",
+        "rmdir",
+        "del",
+        "format",
+        "mkfs",
+        "dd",
+        "fdisk",
+        "parted",
+        "shutdown",
+        "reboot",
+        "halt",
+        "poweroff",
+        "kill",
+        "killall",
+        "pkill",
+        "chmod",
+        "chown",
+        "chgrp",
+        "useradd",
+        "userdel",
+        "passwd",
+        "iptables",
+        "firewall-cmd",
+        "systemctl",
+        "service",
     ]
 
-    def __init__(self, policy: ExecutionPolicy = ExecutionPolicy.STRICT,
-                 custom_whitelist: Dict[str, CommandWhitelist] = None):
+    def __init__(
+        self,
+        policy: ExecutionPolicy = ExecutionPolicy.STRICT,
+        custom_whitelist: Dict[str, CommandWhitelist] = None,
+    ):
         """
         初始化安全执行器
 
@@ -124,9 +141,14 @@ class SafeExecutor:
         if custom_whitelist:
             self.whitelist.update(custom_whitelist)
 
-    def execute(self, cmd: List[str], timeout: int = 300,
-                cwd: Optional[str] = None, env: Optional[Dict] = None,
-                capture_output: bool = True) -> Dict:
+    def execute(
+        self,
+        cmd: List[str],
+        timeout: int = 300,
+        cwd: Optional[str] = None,
+        env: Optional[Dict] = None,
+        capture_output: bool = True,
+    ) -> Dict:
         """
         安全执行命令
 
@@ -155,7 +177,7 @@ class SafeExecutor:
                 "error": f"命令未找到: {cmd[0]}",
                 "stdout": "",
                 "stderr": "",
-                "returncode": -1
+                "returncode": -1,
             }
 
         # 3. 构建安全的命令
@@ -172,7 +194,7 @@ class SafeExecutor:
                 timeout=timeout,
                 cwd=cwd,
                 env=env,
-                shell=False  # 永远不使用shell=True
+                shell=False,  # 永远不使用shell=True
             )
 
             return {
@@ -180,7 +202,7 @@ class SafeExecutor:
                 "stdout": result.stdout,
                 "stderr": result.stderr,
                 "returncode": result.returncode,
-                "command": ' '.join(safe_cmd)
+                "command": " ".join(safe_cmd),
             }
 
         except subprocess.TimeoutExpired:
@@ -190,7 +212,7 @@ class SafeExecutor:
                 "error": "命令执行超时",
                 "stdout": "",
                 "stderr": "",
-                "returncode": -1
+                "returncode": -1,
             }
 
         except (OSError, subprocess.SubprocessError) as e:
@@ -200,7 +222,7 @@ class SafeExecutor:
                 "error": f"执行错误: {e}",
                 "stdout": "",
                 "stderr": "",
-                "returncode": -1
+                "returncode": -1,
             }
         except ValueError as e:
             logger.error(f"命令参数错误: {e}")
@@ -209,7 +231,7 @@ class SafeExecutor:
                 "error": f"参数错误: {e}",
                 "stdout": "",
                 "stderr": "",
-                "returncode": -1
+                "returncode": -1,
             }
 
     def _validate_command(self, cmd: List[str]):
@@ -270,7 +292,7 @@ class SafeExecutor:
         if whitelist.allowed_args is not None:
             for arg in args:
                 # 跳过参数值
-                if not arg.startswith('-'):
+                if not arg.startswith("-"):
                     continue
 
                 # 检查是否在允许列表中
@@ -291,7 +313,7 @@ class SafeExecutor:
             SecurityError: 验证失败
         """
         # 检查危险字符
-        dangerous_chars = [';', '|', '&', '$', '`', '\n', '\r', '>', '<']
+        dangerous_chars = [";", "|", "&", "$", "`", "\n", "\r", ">", "<"]
 
         for part in cmd:
             for char in dangerous_chars:
@@ -299,7 +321,7 @@ class SafeExecutor:
                     raise SecurityError(f"命令包含危险字符: {char}")
 
             # 检查命令替换
-            if '$(' in part or '`' in part:
+            if "$(" in part or "`" in part:
                 raise SecurityError("检测到命令替换尝试")
 
     def _resolve_command(self, command: str) -> Optional[str]:
@@ -333,10 +355,12 @@ class SafeExecutor:
 
 class SecurityError(Exception):
     """安全错误异常"""
+
     pass
 
 
 # ========== 沙箱执行器 ==========
+
 
 class SandboxExecutor:
     """
@@ -356,14 +380,37 @@ class SandboxExecutor:
 
     # 高风险命令（在沙箱中禁止）
     SANDBOX_BLACKLIST = [
-        "rm", "rmdir", "del", "format", "mkfs", "dd",
-        "shutdown", "reboot", "halt", "init",
-        "mount", "umount", "fdisk", "parted",
-        "iptables", "ip6tables", "nft", "firewall-cmd",
-        "systemctl", "service", "chkconfig",
-        "useradd", "userdel", "usermod", "groupadd",
-        "passwd", "chpasswd", "su", "sudo",
-        "crontab", "at",
+        "rm",
+        "rmdir",
+        "del",
+        "format",
+        "mkfs",
+        "dd",
+        "shutdown",
+        "reboot",
+        "halt",
+        "init",
+        "mount",
+        "umount",
+        "fdisk",
+        "parted",
+        "iptables",
+        "ip6tables",
+        "nft",
+        "firewall-cmd",
+        "systemctl",
+        "service",
+        "chkconfig",
+        "useradd",
+        "userdel",
+        "usermod",
+        "groupadd",
+        "passwd",
+        "chpasswd",
+        "su",
+        "sudo",
+        "crontab",
+        "at",
     ]
 
     def __init__(
@@ -374,7 +421,7 @@ class SandboxExecutor:
         max_processes: int = 50,
         allowed_env_vars: Optional[List[str]] = None,
         use_temp_dir: bool = True,
-        restrict_network: bool = False
+        restrict_network: bool = False,
     ):
         """
         初始化沙箱执行器
@@ -443,6 +490,7 @@ class SandboxExecutor:
     def _create_temp_workdir(self) -> str:
         """创建临时工作目录"""
         import tempfile
+
         workdir = tempfile.mkdtemp(prefix="sandbox_")
         logger.debug(f"创建沙箱工作目录: {workdir}")
         return workdir
@@ -450,6 +498,7 @@ class SandboxExecutor:
     def _cleanup_temp_workdir(self, workdir: str) -> None:
         """清理临时工作目录"""
         import shutil
+
         try:
             if workdir and os.path.isdir(workdir) and "sandbox_" in workdir:
                 shutil.rmtree(workdir, ignore_errors=True)
@@ -458,11 +507,7 @@ class SandboxExecutor:
             logger.warning(f"清理临时目录失败: {e}")
 
     def execute(
-        self,
-        cmd: List[str],
-        timeout: int = 60,
-        cwd: Optional[str] = None,
-        cleanup: bool = True
+        self, cmd: List[str], timeout: int = 60, cwd: Optional[str] = None, cleanup: bool = True
     ) -> Dict:
         """
         在沙箱中执行命令
@@ -488,6 +533,7 @@ class SandboxExecutor:
                 cwd = temp_workdir
             elif cwd is None:
                 import tempfile
+
                 cwd = tempfile.gettempdir()
 
             # 3. 准备环境变量
@@ -511,35 +557,20 @@ class SandboxExecutor:
                         import resource
 
                         # 内存限制（虚拟内存）
-                        resource.setrlimit(
-                            resource.RLIMIT_AS,
-                            (max_memory, max_memory)
-                        )
+                        resource.setrlimit(resource.RLIMIT_AS, (max_memory, max_memory))
 
                         # CPU时间限制
                         cpu_time = max(1, int(timeout * (max_cpu / 100)))
-                        resource.setrlimit(
-                            resource.RLIMIT_CPU,
-                            (cpu_time, cpu_time)
-                        )
+                        resource.setrlimit(resource.RLIMIT_CPU, (cpu_time, cpu_time))
 
                         # 文件描述符限制
-                        resource.setrlimit(
-                            resource.RLIMIT_NOFILE,
-                            (max_fds, max_fds)
-                        )
+                        resource.setrlimit(resource.RLIMIT_NOFILE, (max_fds, max_fds))
 
                         # 子进程数限制
-                        resource.setrlimit(
-                            resource.RLIMIT_NPROC,
-                            (max_procs, max_procs)
-                        )
+                        resource.setrlimit(resource.RLIMIT_NPROC, (max_procs, max_procs))
 
                         # 核心转储限制（禁止）
-                        resource.setrlimit(
-                            resource.RLIMIT_CORE,
-                            (0, 0)
-                        )
+                        resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 
                     except ImportError:
                         pass  # resource模块不可用
@@ -557,6 +588,7 @@ class SandboxExecutor:
                         try:
                             # 尝试使用 prctl 限制网络
                             import ctypes
+
                             libc = ctypes.CDLL("libc.so.6", use_errno=True)
                             # PR_SET_NO_NEW_PRIVS = 38
                             libc.prctl(38, 1, 0, 0, 0)
@@ -594,7 +626,7 @@ class SandboxExecutor:
                 "stderr": result.stderr,
                 "returncode": result.returncode,
                 "command": " ".join(cmd),
-                "sandbox": True
+                "sandbox": True,
             }
 
         except SecurityError as e:
@@ -605,7 +637,7 @@ class SandboxExecutor:
                 "stdout": "",
                 "stderr": "",
                 "returncode": -1,
-                "sandbox": True
+                "sandbox": True,
             }
 
         except subprocess.TimeoutExpired as e:
@@ -616,7 +648,7 @@ class SandboxExecutor:
                 "stdout": e.stdout.decode() if e.stdout else "",
                 "stderr": e.stderr.decode() if e.stderr else "",
                 "returncode": -1,
-                "sandbox": True
+                "sandbox": True,
             }
 
         except MemoryError:
@@ -627,7 +659,7 @@ class SandboxExecutor:
                 "stdout": "",
                 "stderr": "",
                 "returncode": -1,
-                "sandbox": True
+                "sandbox": True,
             }
 
         except (OSError, subprocess.SubprocessError) as e:
@@ -638,7 +670,7 @@ class SandboxExecutor:
                 "stdout": "",
                 "stderr": "",
                 "returncode": -1,
-                "sandbox": True
+                "sandbox": True,
             }
 
         except ValueError as e:
@@ -649,7 +681,7 @@ class SandboxExecutor:
                 "stdout": "",
                 "stderr": "",
                 "returncode": -1,
-                "sandbox": True
+                "sandbox": True,
             }
 
         finally:
@@ -672,10 +704,7 @@ def get_safe_executor(policy: ExecutionPolicy = ExecutionPolicy.STRICT) -> SafeE
     return _safe_executor
 
 
-def get_sandbox_executor(
-    max_memory_mb: int = 512,
-    max_cpu_percent: int = 50
-) -> SandboxExecutor:
+def get_sandbox_executor(max_memory_mb: int = 512, max_cpu_percent: int = 50) -> SandboxExecutor:
     """
     获取全局沙箱执行器实例
 
@@ -689,13 +718,13 @@ def get_sandbox_executor(
     global _sandbox_executor
     if _sandbox_executor is None:
         _sandbox_executor = SandboxExecutor(
-            max_memory_mb=max_memory_mb,
-            max_cpu_percent=max_cpu_percent
+            max_memory_mb=max_memory_mb, max_cpu_percent=max_cpu_percent
         )
     return _sandbox_executor
 
 
 # ========== 便捷函数 ==========
+
 
 def safe_execute(cmd: List[str], timeout: int = 300, **kwargs) -> Dict:
     """
@@ -733,7 +762,7 @@ def sandbox_execute(cmd: List[str], timeout: int = 60, **kwargs) -> Dict:
 
 if __name__ == "__main__":
     # 配置测试用日志
-    logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
 
     logger.info("=" * 60)
     logger.info("安全执行器测试")
@@ -746,7 +775,7 @@ if __name__ == "__main__":
     logger.info("[测试1] 安全命令 (nmap)")
     result = executor.execute(["nmap", "-sV", "127.0.0.1"])
     logger.info(f"  结果: {result.get('success', 'N/A')}")
-    if result.get('error'):
+    if result.get("error"):
         logger.error(f"  错误: {result['error']}")
 
     # 测试危险命令
@@ -770,31 +799,27 @@ if __name__ == "__main__":
     logger.info("沙箱执行器测试")
     logger.info("=" * 60)
 
-    sandbox = SandboxExecutor(
-        max_memory_mb=256,
-        max_cpu_percent=25,
-        use_temp_dir=True
-    )
+    sandbox = SandboxExecutor(max_memory_mb=256, max_cpu_percent=25, use_temp_dir=True)
 
     # 测试沙箱中的安全命令
     logger.info("[测试4] 沙箱安全命令 (echo)")
     result = sandbox.execute(["echo", "Hello from sandbox"])
     logger.info(f"  结果: {result.get('success', 'N/A')}")
-    if result.get('stdout'):
+    if result.get("stdout"):
         logger.info(f"  输出: {result['stdout'].strip()}")
 
     # 测试沙箱黑名单
     logger.info("[测试5] 沙箱黑名单（应该被阻止）")
     result = sandbox.execute(["rm", "-rf", "/tmp/test"])
     logger.info(f"  结果: {result.get('success', 'N/A')}")
-    if result.get('error'):
+    if result.get("error"):
         logger.info(f"  错误: {result['error']}")
 
     # 测试路径遍历检测
     logger.info("[测试6] 路径遍历检测（应该被阻止）")
     result = sandbox.execute(["cat", "../../etc/passwd"])
     logger.info(f"  结果: {result.get('success', 'N/A')}")
-    if result.get('error'):
+    if result.get("error"):
         logger.info(f"  错误: {result['error']}")
 
     logger.info("=" * 60)

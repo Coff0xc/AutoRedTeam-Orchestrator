@@ -12,19 +12,22 @@ from __future__ import annotations
 import asyncio
 import functools
 import inspect
-from typing import (
-    Any, Callable, Dict, List, Optional, TypeVar, Union, overload
-)
+from typing import Any, Callable, Dict, List, Optional, TypeVar, Union, overload
 
-from .categories import ToolCategory
 from .base import (
-    BaseTool, FunctionTool, AsyncTool, ToolMetadata, ToolParameter, ToolResult, ParamType
+    AsyncTool,
+    BaseTool,
+    FunctionTool,
+    ParamType,
+    ToolMetadata,
+    ToolParameter,
+    ToolResult,
 )
+from .categories import ToolCategory
 from .registry import get_registry
 
-
 # 类型变量
-F = TypeVar('F', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def tool(
@@ -34,14 +37,14 @@ def tool(
     parameters: Optional[List[ToolParameter]] = None,
     tags: Optional[List[str]] = None,
     timeout: float = 60.0,
-    version: str = '1.0.0',
-    author: str = '',
+    version: str = "1.0.0",
+    author: str = "",
     requires_auth: bool = False,
     requires_root: bool = False,
     deprecated: bool = False,
     deprecated_reason: Optional[str] = None,
     replacement: Optional[str] = None,
-    register: bool = True
+    register: bool = True,
 ) -> Callable[[F], F]:
     """工具注册装饰器
 
@@ -77,13 +80,14 @@ def tool(
     Returns:
         装饰后的函数
     """
+
     def decorator(fn: F) -> F:
         # 提取函数信息
         tool_name = name or fn.__name__
         tool_desc = description
         if tool_desc is None:
-            doc = fn.__doc__ or ''
-            tool_desc = doc.split('\n')[0].strip() or f"{tool_name} 工具"
+            doc = fn.__doc__ or ""
+            tool_desc = doc.split("\n")[0].strip() or f"{tool_name} 工具"
 
         # 推断参数
         tool_params = parameters
@@ -120,15 +124,19 @@ def tool(
 
         # 包装函数，保留原始行为
         if is_async:
+
             @functools.wraps(fn)
             async def async_wrapper(*args, **kwargs):
                 return await fn(*args, **kwargs)
+
             async_wrapper._tool = function_tool
             return async_wrapper  # type: ignore
         else:
+
             @functools.wraps(fn)
             def sync_wrapper(*args, **kwargs):
                 return fn(*args, **kwargs)
+
             sync_wrapper._tool = function_tool
             return sync_wrapper  # type: ignore
 
@@ -140,7 +148,7 @@ def async_tool(
     category: Optional[ToolCategory] = None,
     description: Optional[str] = None,
     parameters: Optional[List[ToolParameter]] = None,
-    **kwargs
+    **kwargs,
 ) -> Callable[[F], F]:
     """异步工具注册装饰器
 
@@ -164,18 +172,12 @@ def async_tool(
         装饰后的函数
     """
     return tool(
-        name=name,
-        category=category,
-        description=description,
-        parameters=parameters,
-        **kwargs
+        name=name, category=category, description=description, parameters=parameters, **kwargs
     )
 
 
 def recon_tool(
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    **kwargs
+    name: Optional[str] = None, description: Optional[str] = None, **kwargs
 ) -> Callable[[F], F]:
     """信息收集工具装饰器
 
@@ -184,18 +186,11 @@ def recon_tool(
         def subdomain_enum(domain: str) -> dict:
             ...
     """
-    return tool(
-        name=name,
-        category=ToolCategory.RECON,
-        description=description,
-        **kwargs
-    )
+    return tool(name=name, category=ToolCategory.RECON, description=description, **kwargs)
 
 
 def vuln_tool(
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    **kwargs
+    name: Optional[str] = None, description: Optional[str] = None, **kwargs
 ) -> Callable[[F], F]:
     """漏洞检测工具装饰器
 
@@ -204,18 +199,11 @@ def vuln_tool(
         def sqli_detect(url: str) -> dict:
             ...
     """
-    return tool(
-        name=name,
-        category=ToolCategory.VULN_SCAN,
-        description=description,
-        **kwargs
-    )
+    return tool(name=name, category=ToolCategory.VULN_SCAN, description=description, **kwargs)
 
 
 def api_tool(
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    **kwargs
+    name: Optional[str] = None, description: Optional[str] = None, **kwargs
 ) -> Callable[[F], F]:
     """API安全工具装饰器
 
@@ -224,18 +212,11 @@ def api_tool(
         def jwt_test(token: str) -> dict:
             ...
     """
-    return tool(
-        name=name,
-        category=ToolCategory.API_SECURITY,
-        description=description,
-        **kwargs
-    )
+    return tool(name=name, category=ToolCategory.API_SECURITY, description=description, **kwargs)
 
 
 def exploit_tool(
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    **kwargs
+    name: Optional[str] = None, description: Optional[str] = None, **kwargs
 ) -> Callable[[F], F]:
     """漏洞利用工具装饰器
 
@@ -244,18 +225,11 @@ def exploit_tool(
         def rce_exploit(target: str, payload: str) -> dict:
             ...
     """
-    return tool(
-        name=name,
-        category=ToolCategory.EXPLOIT,
-        description=description,
-        **kwargs
-    )
+    return tool(name=name, category=ToolCategory.EXPLOIT, description=description, **kwargs)
 
 
 def c2_tool(
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    **kwargs
+    name: Optional[str] = None, description: Optional[str] = None, **kwargs
 ) -> Callable[[F], F]:
     """C2工具装饰器
 
@@ -264,18 +238,11 @@ def c2_tool(
         def beacon_start(target: str) -> dict:
             ...
     """
-    return tool(
-        name=name,
-        category=ToolCategory.C2,
-        description=description,
-        **kwargs
-    )
+    return tool(name=name, category=ToolCategory.C2, description=description, **kwargs)
 
 
 def lateral_tool(
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    **kwargs
+    name: Optional[str] = None, description: Optional[str] = None, **kwargs
 ) -> Callable[[F], F]:
     """横向移动工具装饰器
 
@@ -284,18 +251,11 @@ def lateral_tool(
         def smb_exec(target: str, command: str) -> dict:
             ...
     """
-    return tool(
-        name=name,
-        category=ToolCategory.LATERAL,
-        description=description,
-        **kwargs
-    )
+    return tool(name=name, category=ToolCategory.LATERAL, description=description, **kwargs)
 
 
 def cve_tool(
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    **kwargs
+    name: Optional[str] = None, description: Optional[str] = None, **kwargs
 ) -> Callable[[F], F]:
     """CVE工具装饰器
 
@@ -304,18 +264,11 @@ def cve_tool(
         def cve_search(keyword: str) -> dict:
             ...
     """
-    return tool(
-        name=name,
-        category=ToolCategory.CVE,
-        description=description,
-        **kwargs
-    )
+    return tool(name=name, category=ToolCategory.CVE, description=description, **kwargs)
 
 
 def report_tool(
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    **kwargs
+    name: Optional[str] = None, description: Optional[str] = None, **kwargs
 ) -> Callable[[F], F]:
     """报告工具装饰器
 
@@ -324,18 +277,11 @@ def report_tool(
         def generate_report(session_id: str) -> dict:
             ...
     """
-    return tool(
-        name=name,
-        category=ToolCategory.REPORT,
-        description=description,
-        **kwargs
-    )
+    return tool(name=name, category=ToolCategory.REPORT, description=description, **kwargs)
 
 
 def ai_tool(
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    **kwargs
+    name: Optional[str] = None, description: Optional[str] = None, **kwargs
 ) -> Callable[[F], F]:
     """AI工具装饰器
 
@@ -344,27 +290,23 @@ def ai_tool(
         def smart_analyze(data: dict) -> dict:
             ...
     """
-    return tool(
-        name=name,
-        category=ToolCategory.AI,
-        description=description,
-        **kwargs
-    )
+    return tool(name=name, category=ToolCategory.AI, description=description, **kwargs)
 
 
 # ============ 参数装饰器 ============
 
+
 def param(
     name: str,
     param_type: ParamType = ParamType.STRING,
-    description: str = '',
+    description: str = "",
     required: bool = True,
     default: Any = None,
     choices: Optional[List[Any]] = None,
     min_value: Optional[float] = None,
     max_value: Optional[float] = None,
     pattern: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ) -> Callable[[F], F]:
     """参数定义装饰器
 
@@ -392,9 +334,10 @@ def param(
     Returns:
         装饰后的函数
     """
+
     def decorator(fn: F) -> F:
         # 获取或创建参数列表
-        if not hasattr(fn, '_tool_params'):
+        if not hasattr(fn, "_tool_params"):
             fn._tool_params = []  # type: ignore
 
         # 创建参数定义
@@ -408,7 +351,7 @@ def param(
             min_value=min_value,
             max_value=max_value,
             pattern=pattern,
-            **kwargs
+            **kwargs,
         )
 
         # 添加到列表（注意：装饰器从下往上执行，所以插入到开头）
@@ -431,10 +374,11 @@ def validate_params(fn: F) -> F:
             # target已经过验证
             ...
     """
+
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         # 获取工具定义
-        tool = getattr(fn, '_tool', None)
+        tool = getattr(fn, "_tool", None)
         if tool:
             valid, errors = tool.validate_params(**kwargs)
             if not valid:
@@ -443,7 +387,7 @@ def validate_params(fn: F) -> F:
 
     @functools.wraps(fn)
     async def async_wrapper(*args, **kwargs):
-        tool = getattr(fn, '_tool', None)
+        tool = getattr(fn, "_tool", None)
         if tool:
             valid, errors = tool.validate_params(**kwargs)
             if not valid:
@@ -456,9 +400,7 @@ def validate_params(fn: F) -> F:
 
 
 def deprecated(
-    reason: str = '',
-    replacement: Optional[str] = None,
-    remove_in: Optional[str] = None
+    reason: str = "", replacement: Optional[str] = None, remove_in: Optional[str] = None
 ) -> Callable[[F], F]:
     """废弃标记装饰器
 
@@ -554,11 +496,13 @@ def tags(*tag_list: str) -> Callable[[F], F]:
         def quick_scan(target: str) -> dict:
             ...
     """
+
     def decorator(fn: F) -> F:
-        if not hasattr(fn, '_tags'):
+        if not hasattr(fn, "_tags"):
             fn._tags = []  # type: ignore
         fn._tags.extend(tag_list)  # type: ignore
         return fn
+
     return decorator
 
 
@@ -573,9 +517,11 @@ def timeout(seconds: float) -> Callable[[F], F]:
         def slow_scan(target: str) -> dict:
             ...
     """
+
     def decorator(fn: F) -> F:
         fn._timeout = seconds  # type: ignore
         return fn
+
     return decorator
 
 
@@ -591,15 +537,18 @@ def example(**kwargs) -> Callable[[F], F]:
         def port_scan(target: str, ports: str) -> dict:
             ...
     """
+
     def decorator(fn: F) -> F:
-        if not hasattr(fn, '_examples'):
+        if not hasattr(fn, "_examples"):
             fn._examples = []  # type: ignore
         fn._examples.append(kwargs)  # type: ignore
         return fn
+
     return decorator
 
 
 # ============ 组合装饰器 ============
+
 
 def register_tools(*functions: Callable, category: ToolCategory) -> List[BaseTool]:
     """批量注册函数为工具

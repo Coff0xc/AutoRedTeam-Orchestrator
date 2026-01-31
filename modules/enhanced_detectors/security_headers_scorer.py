@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # 统一 HTTP 客户端工厂
 try:
     from core.http import get_sync_client
+
     HAS_HTTP_FACTORY = True
 except ImportError:
     HAS_HTTP_FACTORY = False
@@ -25,6 +26,7 @@ except ImportError:
 
 class SecurityLevel(Enum):
     """安全等级"""
+
     EXCELLENT = "A+"
     VERY_GOOD = "A"
     GOOD = "B"
@@ -36,6 +38,7 @@ class SecurityLevel(Enum):
 @dataclass
 class HeaderAnalysis:
     """单个安全头分析结果"""
+
     name: str
     present: bool
     value: str
@@ -49,6 +52,7 @@ class HeaderAnalysis:
 @dataclass
 class SecurityHeadersReport:
     """安全头评分报告"""
+
     url: str
     total_score: int
     max_score: int
@@ -70,22 +74,47 @@ class SecurityHeadersScorer:
             "required": True,
             "description": "HSTS - 强制HTTPS",
             "checks": [
-                ("max-age", r"max-age=(\d+)", lambda v: int(v) >= 31536000, "max-age应至少为1年(31536000秒)"),
-                ("includeSubDomains", r"includeSubDomains", lambda v: True, "建议包含includeSubDomains"),
+                (
+                    "max-age",
+                    r"max-age=(\d+)",
+                    lambda v: int(v) >= 31536000,
+                    "max-age应至少为1年(31536000秒)",
+                ),
+                (
+                    "includeSubDomains",
+                    r"includeSubDomains",
+                    lambda v: True,
+                    "建议包含includeSubDomains",
+                ),
                 ("preload", r"preload", lambda v: True, "建议添加preload"),
             ],
-            "recommendation": "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload"
+            "recommendation": "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
         },
         "Content-Security-Policy": {
             "weight": 20,
             "required": True,
             "description": "CSP - 内容安全策略",
             "checks": [
-                ("default-src", r"default-src\s+([^;]+)", lambda v: "'self'" in v or "'none'" in v, "default-src应设置为'self'或'none'"),
-                ("script-src", r"script-src\s+([^;]+)", lambda v: "'unsafe-inline'" not in v, "script-src不应包含'unsafe-inline'"),
-                ("object-src", r"object-src\s+([^;]+)", lambda v: "'none'" in v, "object-src应设置为'none'"),
+                (
+                    "default-src",
+                    r"default-src\s+([^;]+)",
+                    lambda v: "'self'" in v or "'none'" in v,
+                    "default-src应设置为'self'或'none'",
+                ),
+                (
+                    "script-src",
+                    r"script-src\s+([^;]+)",
+                    lambda v: "'unsafe-inline'" not in v,
+                    "script-src不应包含'unsafe-inline'",
+                ),
+                (
+                    "object-src",
+                    r"object-src\s+([^;]+)",
+                    lambda v: "'none'" in v,
+                    "object-src应设置为'none'",
+                ),
             ],
-            "recommendation": "Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'"
+            "recommendation": "Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'",
         },
         "X-Content-Type-Options": {
             "weight": 10,
@@ -94,16 +123,21 @@ class SecurityHeadersScorer:
             "checks": [
                 ("nosniff", r"nosniff", lambda v: True, "值必须为nosniff"),
             ],
-            "recommendation": "X-Content-Type-Options: nosniff"
+            "recommendation": "X-Content-Type-Options: nosniff",
         },
         "X-Frame-Options": {
             "weight": 10,
             "required": True,
             "description": "防止点击劫持",
             "checks": [
-                ("value", r"(DENY|SAMEORIGIN)", lambda v: v in ["DENY", "SAMEORIGIN"], "值应为DENY或SAMEORIGIN"),
+                (
+                    "value",
+                    r"(DENY|SAMEORIGIN)",
+                    lambda v: v in ["DENY", "SAMEORIGIN"],
+                    "值应为DENY或SAMEORIGIN",
+                ),
             ],
-            "recommendation": "X-Frame-Options: DENY"
+            "recommendation": "X-Frame-Options: DENY",
         },
         "X-XSS-Protection": {
             "weight": 5,
@@ -113,18 +147,27 @@ class SecurityHeadersScorer:
                 ("enabled", r"1", lambda v: True, "应启用XSS过滤"),
                 ("mode", r"mode=block", lambda v: True, "建议设置mode=block"),
             ],
-            "recommendation": "X-XSS-Protection: 1; mode=block"
+            "recommendation": "X-XSS-Protection: 1; mode=block",
         },
         "Referrer-Policy": {
             "weight": 8,
             "required": True,
             "description": "控制Referrer信息",
             "checks": [
-                ("policy", r"(strict-origin-when-cross-origin|no-referrer|same-origin)",
-                 lambda v: v in ["strict-origin-when-cross-origin", "no-referrer", "same-origin", "strict-origin"],
-                 "应设置安全的Referrer策略"),
+                (
+                    "policy",
+                    r"(strict-origin-when-cross-origin|no-referrer|same-origin)",
+                    lambda v: v
+                    in [
+                        "strict-origin-when-cross-origin",
+                        "no-referrer",
+                        "same-origin",
+                        "strict-origin",
+                    ],
+                    "应设置安全的Referrer策略",
+                ),
             ],
-            "recommendation": "Referrer-Policy: strict-origin-when-cross-origin"
+            "recommendation": "Referrer-Policy: strict-origin-when-cross-origin",
         },
         "Permissions-Policy": {
             "weight": 10,
@@ -135,40 +178,49 @@ class SecurityHeadersScorer:
                 ("camera", r"camera=\(\)", lambda v: True, "建议禁用camera"),
                 ("microphone", r"microphone=\(\)", lambda v: True, "建议禁用microphone"),
             ],
-            "recommendation": "Permissions-Policy: geolocation=(), camera=(), microphone=()"
+            "recommendation": "Permissions-Policy: geolocation=(), camera=(), microphone=()",
         },
         "Cross-Origin-Opener-Policy": {
             "weight": 7,
             "required": False,
             "description": "COOP - 跨源开启者策略",
             "checks": [
-                ("policy", r"(same-origin|same-origin-allow-popups)",
-                 lambda v: v in ["same-origin", "same-origin-allow-popups"],
-                 "建议设置same-origin"),
+                (
+                    "policy",
+                    r"(same-origin|same-origin-allow-popups)",
+                    lambda v: v in ["same-origin", "same-origin-allow-popups"],
+                    "建议设置same-origin",
+                ),
             ],
-            "recommendation": "Cross-Origin-Opener-Policy: same-origin"
+            "recommendation": "Cross-Origin-Opener-Policy: same-origin",
         },
         "Cross-Origin-Resource-Policy": {
             "weight": 5,
             "required": False,
             "description": "CORP - 跨源资源策略",
             "checks": [
-                ("policy", r"(same-origin|same-site|cross-origin)",
-                 lambda v: v in ["same-origin", "same-site"],
-                 "建议设置same-origin或same-site"),
+                (
+                    "policy",
+                    r"(same-origin|same-site|cross-origin)",
+                    lambda v: v in ["same-origin", "same-site"],
+                    "建议设置same-origin或same-site",
+                ),
             ],
-            "recommendation": "Cross-Origin-Resource-Policy: same-origin"
+            "recommendation": "Cross-Origin-Resource-Policy: same-origin",
         },
         "Cross-Origin-Embedder-Policy": {
             "weight": 5,
             "required": False,
             "description": "COEP - 跨源嵌入策略",
             "checks": [
-                ("policy", r"(require-corp|credentialless)",
-                 lambda v: v in ["require-corp", "credentialless"],
-                 "建议设置require-corp"),
+                (
+                    "policy",
+                    r"(require-corp|credentialless)",
+                    lambda v: v in ["require-corp", "credentialless"],
+                    "建议设置require-corp",
+                ),
             ],
-            "recommendation": "Cross-Origin-Embedder-Policy: require-corp"
+            "recommendation": "Cross-Origin-Embedder-Policy: require-corp",
         },
         "Cache-Control": {
             "weight": 5,
@@ -178,7 +230,7 @@ class SecurityHeadersScorer:
                 ("no-store", r"no-store", lambda v: True, "敏感页面应设置no-store"),
                 ("private", r"private", lambda v: True, "敏感页面应设置private"),
             ],
-            "recommendation": "Cache-Control: no-store, private"
+            "recommendation": "Cache-Control: no-store, private",
         },
     }
 
@@ -215,9 +267,9 @@ class SecurityHeadersScorer:
             self._session = get_sync_client(proxy=proxy, force_new=True)
         else:
             self._session = requests.Session()
-        self._session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        })
+        self._session.headers.update(
+            {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        )
 
     def _fetch_headers(self, url: str) -> Tuple[bool, Dict[str, str], str]:
         """
@@ -228,10 +280,7 @@ class SecurityHeadersScorer:
         """
         try:
             resp = self._session.get(
-                url,
-                timeout=self.timeout,
-                proxies=self.proxies,
-                allow_redirects=True
+                url, timeout=self.timeout, proxies=self.proxies, allow_redirects=True
             )
             # 转换为小写键的字典 (便于查找)
             headers = {k: v for k, v in resp.headers.items()}
@@ -262,7 +311,7 @@ class SecurityHeadersScorer:
             max_score=config["weight"],
             correct=False,
             issues=[],
-            recommendation=config.get("recommendation", "")
+            recommendation=config.get("recommendation", ""),
         )
 
         if not value:
@@ -319,7 +368,7 @@ class SecurityHeadersScorer:
             "missing_headers": [],
             "dangerous_headers": [],
             "recommendations": [],
-            "raw_headers": {}
+            "raw_headers": {},
         }
 
         # 获取响应头
@@ -345,16 +394,18 @@ class SecurityHeadersScorer:
             present, value = self._find_header(raw_headers, header_name)
             analysis = self._analyze_header(header_name, value, config)
 
-            result["headers"].append({
-                "name": analysis.name,
-                "present": analysis.present,
-                "value": analysis.value,
-                "score": analysis.score,
-                "max_score": analysis.max_score,
-                "correct": analysis.correct,
-                "issues": analysis.issues,
-                "recommendation": analysis.recommendation
-            })
+            result["headers"].append(
+                {
+                    "name": analysis.name,
+                    "present": analysis.present,
+                    "value": analysis.value,
+                    "score": analysis.score,
+                    "max_score": analysis.max_score,
+                    "correct": analysis.correct,
+                    "issues": analysis.issues,
+                    "recommendation": analysis.recommendation,
+                }
+            )
 
             total_score += analysis.score
             max_score += config["weight"]
@@ -368,11 +419,9 @@ class SecurityHeadersScorer:
         for header_name, description in self.DANGEROUS_HEADERS.items():
             present, value = self._find_header(raw_headers, header_name)
             if present:
-                result["dangerous_headers"].append({
-                    "name": header_name,
-                    "value": value,
-                    "risk": description
-                })
+                result["dangerous_headers"].append(
+                    {"name": header_name, "value": value, "risk": description}
+                )
                 result["recommendations"].append(f"移除或隐藏 {header_name} 头: {description}")
 
         # 计算总分和等级
@@ -422,14 +471,14 @@ class SecurityHeadersScorer:
             "url1": {
                 "url": url1,
                 "score": result1.get("score", 0),
-                "grade": result1.get("grade", "F")
+                "grade": result1.get("grade", "F"),
             },
             "url2": {
                 "url": url2,
                 "score": result2.get("score", 0),
-                "grade": result2.get("grade", "F")
+                "grade": result2.get("grade", "F"),
             },
-            "differences": []
+            "differences": [],
         }
 
         # 比较每个头
@@ -441,11 +490,13 @@ class SecurityHeadersScorer:
             h2 = headers2.get(name, {})
 
             if h1.get("present") != h2.get("present") or h1.get("value") != h2.get("value"):
-                comparison["differences"].append({
-                    "header": name,
-                    "url1": {"present": h1.get("present", False), "value": h1.get("value", "")},
-                    "url2": {"present": h2.get("present", False), "value": h2.get("value", "")}
-                })
+                comparison["differences"].append(
+                    {
+                        "header": name,
+                        "url1": {"present": h1.get("present", False), "value": h1.get("value", "")},
+                        "url2": {"present": h2.get("present", False), "value": h2.get("value", "")},
+                    }
+                )
 
         return comparison
 
@@ -518,7 +569,7 @@ def get_header_grade(url: str) -> Tuple[str, int]:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     # 测试示例
     test_url = "https://example.com"
 

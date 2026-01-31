@@ -43,6 +43,7 @@ def _env_float(key: str, default: float) -> float:
 
 class ScanDefaults:
     """扫描相关默认值（命名空间，不可实例化）"""
+
     TIMEOUT: float = _env_float("SCAN_TIMEOUT", 30.0)
     PORT_TIMEOUT: float = _env_float("SCAN_PORT_TIMEOUT", 3.0)
     MAX_WORKERS: int = _env_int("SCAN_MAX_WORKERS", 20)
@@ -55,6 +56,7 @@ class ScanDefaults:
 
 class HTTPDefaults:
     """HTTP 客户端默认值"""
+
     TIMEOUT: float = _env_float("HTTP_TIMEOUT", 30.0)
     CONNECT_TIMEOUT: float = _env_float("HTTP_CONNECT_TIMEOUT", 10.0)
     READ_TIMEOUT: float = _env_float("HTTP_READ_TIMEOUT", 30.0)
@@ -66,6 +68,7 @@ class HTTPDefaults:
 
 class C2Defaults:
     """C2 通信默认值"""
+
     SHELL_TIMEOUT: int = _env_int("C2_SHELL_TIMEOUT", 60)
     MAX_OUTPUT_SIZE: int = _env_int("C2_MAX_OUTPUT_SIZE", 10000)
     BEACON_INTERVAL: float = _env_float("C2_BEACON_INTERVAL", 60.0)
@@ -75,6 +78,7 @@ class C2Defaults:
 
 class LateralDefaults:
     """横向移动默认值"""
+
     MAX_WORKERS: int = _env_int("LATERAL_MAX_WORKERS", 10)
     COMMAND_TIMEOUT: int = _env_int("LATERAL_CMD_TIMEOUT", 30)
     FILE_TRANSFER_CHUNK_SIZE: int = _env_int("LATERAL_CHUNK_SIZE", 65536)
@@ -87,6 +91,7 @@ class LateralDefaults:
 
 class DetectorDefaults:
     """检测器默认值"""
+
     TIMEOUT: float = _env_float("DETECTOR_TIMEOUT", 30.0)
     MAX_PAYLOADS: int = _env_int("DETECTOR_MAX_PAYLOADS", 50)
     OOB_WAIT_TIME: float = _env_float("DETECTOR_OOB_WAIT", 3.0)
@@ -95,6 +100,7 @@ class DetectorDefaults:
 
 class CVEDefaults:
     """CVE 操作默认值"""
+
     SEARCH_LIMIT: int = _env_int("CVE_SEARCH_LIMIT", 20)
     CACHE_DAYS: int = _env_int("CVE_CACHE_DAYS", 7)
     SYNC_BATCH_SIZE: int = _env_int("CVE_SYNC_BATCH", 100)
@@ -103,18 +109,21 @@ class CVEDefaults:
 
 class CredentialDefaults:
     """凭证操作默认值"""
+
     DUMP_TIMEOUT: int = _env_int("CRED_DUMP_TIMEOUT", 60)
     SEARCH_TIMEOUT: int = _env_int("CRED_SEARCH_TIMEOUT", 30)
 
 
 class DNSDefaults:
     """DNS 操作默认值"""
+
     TIMEOUT: float = _env_float("DNS_TIMEOUT", 5.0)
     MAX_RETRIES: int = _env_int("DNS_MAX_RETRIES", 3)
 
 
 class PerformanceDefaults:
     """性能相关默认值"""
+
     MAX_THREADS: int = _env_int("PERF_MAX_THREADS", 16)
     MAX_ASYNC_TASKS: int = _env_int("PERF_MAX_ASYNC_TASKS", 100)
     RATE_LIMIT_PER_SECOND: int = _env_int("PERF_RATE_LIMIT", 100)

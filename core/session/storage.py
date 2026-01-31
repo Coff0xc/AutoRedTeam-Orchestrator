@@ -5,19 +5,19 @@ storage.py - 会话持久化模块
 提供会话数据的持久化存储功能，支持JSON格式的文件存储。
 """
 
-from pathlib import Path
-from typing import Optional, Dict, Any, List
 import json
-import os
-import tempfile
 import logging
+import os
 import re
+import tempfile
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 # Session ID 安全正则 - 只允许字母数字和短横线
-SESSION_ID_PATTERN = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_-]{6,62}[a-zA-Z0-9]$')
+SESSION_ID_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{6,62}[a-zA-Z0-9]$")
 
 
 class SessionStorage:
@@ -40,14 +40,14 @@ class SessionStorage:
         if storage_dir is None:
             # 获取项目根目录
             project_root = Path(__file__).parent.parent.parent
-            storage_dir = project_root / 'data' / 'sessions'
+            storage_dir = project_root / "data" / "sessions"
 
         self.storage_dir = Path(storage_dir)
         self._ensure_storage_dir()
 
         # 子目录
-        self._contexts_dir = self.storage_dir / 'contexts'
-        self._results_dir = self.storage_dir / 'results'
+        self._contexts_dir = self.storage_dir / "contexts"
+        self._results_dir = self.storage_dir / "results"
         self._contexts_dir.mkdir(parents=True, exist_ok=True)
         self._results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -76,14 +76,14 @@ class SessionStorage:
             return False
 
         # 额外检查危险字符
-        dangerous_chars = ['..', '/', '\\', '\x00', '\n', '\r']
+        dangerous_chars = ["..", "/", "\\", "\x00", "\n", "\r"]
         for char in dangerous_chars:
             if char in session_id:
                 return False
 
         return True
 
-    def _get_safe_path(self, base_dir: Path, session_id: str, suffix: str = '.json') -> Path:
+    def _get_safe_path(self, base_dir: Path, session_id: str, suffix: str = ".json") -> Path:
         """
         获取安全的文件路径
 
@@ -116,7 +116,7 @@ class SessionStorage:
 
         return resolved
 
-    def save_context(self, context: 'ScanContext') -> Path:
+    def save_context(self, context: "ScanContext") -> Path:
         """
         保存扫描上下文
 
@@ -131,13 +131,13 @@ class SessionStorage:
         filepath = self._get_safe_path(self._contexts_dir, context.session_id)
 
         data = context.to_dict()
-        data['_saved_at'] = datetime.now().isoformat()
-        data['_storage_version'] = '1.0'
+        data["_saved_at"] = datetime.now().isoformat()
+        data["_storage_version"] = "1.0"
 
         # 使用临时文件写入，然后原子性移动
-        temp_path = filepath.with_suffix('.tmp')
+        temp_path = filepath.with_suffix(".tmp")
         try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
+            with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
             # 原子性替换（Windows 需要先删除目标文件）
@@ -157,7 +157,7 @@ class SessionStorage:
             logger.error(f"保存会话上下文失败: {type(e).__name__}: {e}")
             raise
 
-    def load_context(self, session_id: str) -> Optional['ScanContext']:
+    def load_context(self, session_id: str) -> Optional["ScanContext"]:
         """
         加载扫描上下文
 
@@ -176,12 +176,12 @@ class SessionStorage:
                 logger.debug(f"会话上下文不存在: {session_id}")
                 return None
 
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             # 移除存储元数据
-            data.pop('_saved_at', None)
-            data.pop('_storage_version', None)
+            data.pop("_saved_at", None)
+            data.pop("_storage_version", None)
 
             context = ScanContext.from_dict(data)
             logger.debug(f"会话上下文已加载: {session_id}")
@@ -199,7 +199,7 @@ class SessionStorage:
             logger.error(f"加载会话上下文失败: {type(e).__name__}: {e}")
             return None
 
-    def save_result(self, result: 'ScanResult') -> Path:
+    def save_result(self, result: "ScanResult") -> Path:
         """
         保存扫描结果
 
@@ -214,13 +214,13 @@ class SessionStorage:
         filepath = self._get_safe_path(self._results_dir, result.session_id)
 
         data = result.to_dict()
-        data['_saved_at'] = datetime.now().isoformat()
-        data['_storage_version'] = '1.0'
+        data["_saved_at"] = datetime.now().isoformat()
+        data["_storage_version"] = "1.0"
 
         # 使用临时文件写入
-        temp_path = filepath.with_suffix('.tmp')
+        temp_path = filepath.with_suffix(".tmp")
         try:
-            with open(temp_path, 'w', encoding='utf-8') as f:
+            with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
             # 原子性替换
@@ -239,7 +239,7 @@ class SessionStorage:
             logger.error(f"保存扫描结果失败: {type(e).__name__}: {e}")
             raise
 
-    def load_result(self, session_id: str) -> Optional['ScanResult']:
+    def load_result(self, session_id: str) -> Optional["ScanResult"]:
         """
         加载扫描结果
 
@@ -258,12 +258,12 @@ class SessionStorage:
                 logger.debug(f"扫描结果不存在: {session_id}")
                 return None
 
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             # 移除存储元数据
-            data.pop('_saved_at', None)
-            data.pop('_storage_version', None)
+            data.pop("_saved_at", None)
+            data.pop("_storage_version", None)
 
             result = ScanResult.from_dict(data)
             logger.debug(f"扫描结果已加载: {session_id}")
@@ -291,7 +291,7 @@ class SessionStorage:
         sessions = []
 
         # 列出所有上下文文件
-        for filepath in self._contexts_dir.glob('*.json'):
+        for filepath in self._contexts_dir.glob("*.json"):
             try:
                 session_id = filepath.stem
 
@@ -299,21 +299,25 @@ class SessionStorage:
                 if not self._validate_session_id(session_id):
                     continue
 
-                with open(filepath, 'r', encoding='utf-8') as f:
+                with open(filepath, "r", encoding="utf-8") as f:
                     data = json.load(f)
 
                 # 提取摘要信息
-                sessions.append({
-                    'session_id': session_id,
-                    'target': data.get('target', {}).get('value') if data.get('target') else None,
-                    'status': data.get('status', 'unknown'),
-                    'phase': data.get('phase', 'unknown'),
-                    'started_at': data.get('started_at'),
-                    'ended_at': data.get('ended_at'),
-                    'saved_at': data.get('_saved_at'),
-                    'vulnerabilities_count': len(data.get('vulnerabilities', [])),
-                    'has_result': self._has_result(session_id),
-                })
+                sessions.append(
+                    {
+                        "session_id": session_id,
+                        "target": (
+                            data.get("target", {}).get("value") if data.get("target") else None
+                        ),
+                        "status": data.get("status", "unknown"),
+                        "phase": data.get("phase", "unknown"),
+                        "started_at": data.get("started_at"),
+                        "ended_at": data.get("ended_at"),
+                        "saved_at": data.get("_saved_at"),
+                        "vulnerabilities_count": len(data.get("vulnerabilities", [])),
+                        "has_result": self._has_result(session_id),
+                    }
+                )
 
             except (OSError, json.JSONDecodeError, KeyError, TypeError) as e:
                 # OSError: 文件读取错误
@@ -323,7 +327,7 @@ class SessionStorage:
                 continue
 
         # 按保存时间排序，最新的在前
-        sessions.sort(key=lambda x: x.get('saved_at', ''), reverse=True)
+        sessions.sort(key=lambda x: x.get("saved_at", ""), reverse=True)
 
         return sessions
 
@@ -389,7 +393,7 @@ class SessionStorage:
         cleaned = 0
         cutoff_time = datetime.now().timestamp() - (max_age_days * 24 * 3600)
 
-        for filepath in self._contexts_dir.glob('*.json'):
+        for filepath in self._contexts_dir.glob("*.json"):
             try:
                 # 检查文件修改时间
                 if filepath.stat().st_mtime < cutoff_time:
@@ -414,20 +418,20 @@ class SessionStorage:
         Returns:
             Dict: 统计信息
         """
-        contexts_count = len(list(self._contexts_dir.glob('*.json')))
-        results_count = len(list(self._results_dir.glob('*.json')))
+        contexts_count = len(list(self._contexts_dir.glob("*.json")))
+        results_count = len(list(self._results_dir.glob("*.json")))
 
         # 计算总大小
         total_size = 0
-        for filepath in self.storage_dir.rglob('*.json'):
+        for filepath in self.storage_dir.rglob("*.json"):
             total_size += filepath.stat().st_size
 
         return {
-            'storage_dir': str(self.storage_dir),
-            'contexts_count': contexts_count,
-            'results_count': results_count,
-            'total_size_bytes': total_size,
-            'total_size_mb': round(total_size / (1024 * 1024), 2),
+            "storage_dir": str(self.storage_dir),
+            "contexts_count": contexts_count,
+            "results_count": results_count,
+            "total_size_bytes": total_size,
+            "total_size_mb": round(total_size / (1024 * 1024), 2),
         }
 
     def export_all(self, output_path: Path) -> Path:
@@ -441,28 +445,28 @@ class SessionStorage:
             Path: 导出文件路径
         """
         export_data = {
-            'exported_at': datetime.now().isoformat(),
-            'storage_version': '1.0',
-            'contexts': {},
-            'results': {},
+            "exported_at": datetime.now().isoformat(),
+            "storage_version": "1.0",
+            "contexts": {},
+            "results": {},
         }
 
         # 导出所有上下文
-        for filepath in self._contexts_dir.glob('*.json'):
+        for filepath in self._contexts_dir.glob("*.json"):
             session_id = filepath.stem
             if self._validate_session_id(session_id):
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    export_data['contexts'][session_id] = json.load(f)
+                with open(filepath, "r", encoding="utf-8") as f:
+                    export_data["contexts"][session_id] = json.load(f)
 
         # 导出所有结果
-        for filepath in self._results_dir.glob('*.json'):
+        for filepath in self._results_dir.glob("*.json"):
             session_id = filepath.stem
             if self._validate_session_id(session_id):
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    export_data['results'][session_id] = json.load(f)
+                with open(filepath, "r", encoding="utf-8") as f:
+                    export_data["results"][session_id] = json.load(f)
 
         output_path = Path(output_path)
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(export_data, f, ensure_ascii=False, indent=2)
 
         logger.info(f"已导出所有会话数据到: {output_path}")
@@ -480,13 +484,13 @@ class SessionStorage:
             int: 导入的会话数
         """
         input_path = Path(input_path)
-        with open(input_path, 'r', encoding='utf-8') as f:
+        with open(input_path, "r", encoding="utf-8") as f:
             import_data = json.load(f)
 
         imported = 0
 
         # 导入上下文
-        for session_id, context_data in import_data.get('contexts', {}).items():
+        for session_id, context_data in import_data.get("contexts", {}).items():
             if not self._validate_session_id(session_id):
                 continue
 
@@ -494,12 +498,12 @@ class SessionStorage:
             if filepath.exists() and not overwrite:
                 continue
 
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(context_data, f, ensure_ascii=False, indent=2)
             imported += 1
 
         # 导入结果
-        for session_id, result_data in import_data.get('results', {}).items():
+        for session_id, result_data in import_data.get("results", {}).items():
             if not self._validate_session_id(session_id):
                 continue
 
@@ -507,7 +511,7 @@ class SessionStorage:
             if filepath.exists() and not overwrite:
                 continue
 
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(result_data, f, ensure_ascii=False, indent=2)
 
         logger.info(f"已导入 {imported} 个会话")

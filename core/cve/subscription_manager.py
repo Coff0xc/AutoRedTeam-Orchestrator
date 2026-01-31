@@ -6,25 +6,27 @@ CVE情报订阅管理系统
 作者: AutoRedTeam-Orchestrator
 """
 
+import asyncio
+import json
+import logging
 import os
 import sqlite3
-import json
-import asyncio
-import aiohttp
-from typing import List, Dict, Optional, Set, Tuple
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from pathlib import Path
-from dataclasses import dataclass, asdict
 from enum import Enum
-import logging
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
+
+import aiohttp
 
 from utils.logger import configure_root_logger
 
-from .update_manager import CVEUpdateManager, CVEEntry, Severity
+from .update_manager import CVEEntry, CVEUpdateManager, Severity
 
 # 统一 HTTP 客户端工厂
 try:
     from core.http import get_async_client
+
     HAS_HTTP_FACTORY = True
 except ImportError:
     HAS_HTTP_FACTORY = False
@@ -35,22 +37,25 @@ logger = logging.getLogger(__name__)
 
 class FilterType(Enum):
     """订阅过滤类型"""
-    KEYWORD = "keyword"          # 关键词匹配 (CVE ID或描述)
-    PRODUCT = "product"          # 产品匹配 (如 nginx, MySQL)
-    SEVERITY = "severity"        # 严重性匹配 (CRITICAL/HIGH/MEDIUM/LOW)
-    CVSS_RANGE = "cvss_range"    # CVSS分数范围 (如 "7.0-10.0")
+
+    KEYWORD = "keyword"  # 关键词匹配 (CVE ID或描述)
+    PRODUCT = "product"  # 产品匹配 (如 nginx, MySQL)
+    SEVERITY = "severity"  # 严重性匹配 (CRITICAL/HIGH/MEDIUM/LOW)
+    CVSS_RANGE = "cvss_range"  # CVSS分数范围 (如 "7.0-10.0")
 
 
 class NotifyMethod(Enum):
     """通知方式"""
-    CONSOLE = "console"          # 控制台输出
-    FILE = "file"                # 写入文件
-    WEBHOOK = "webhook"          # HTTP回调 (可选)
+
+    CONSOLE = "console"  # 控制台输出
+    FILE = "file"  # 写入文件
+    WEBHOOK = "webhook"  # HTTP回调 (可选)
 
 
 @dataclass
 class Subscription:
     """订阅配置数据模型"""
+
     id: Optional[int]
     filter_type: str
     filter_value: str
@@ -68,6 +73,7 @@ class Subscription:
 @dataclass
 class SubscriptionMatch:
     """订阅匹配结果"""
+
     subscription_id: int
     cve: CVEEntry
     matched_at: str
@@ -138,21 +144,21 @@ class SubscriptionManager:
 
             if table_exists:
                 # 2. 表已存在,检查是否需要迁移
-                cursor.execute('PRAGMA table_info(subscriptions)')
+                cursor.execute("PRAGMA table_info(subscriptions)")
                 existing_cols = {col[1] for col in cursor.fetchall()}
 
                 # 需要的列及其定义
                 required_cols = {
-                    'min_cvss': 'REAL DEFAULT 0.0',
-                    'notify_method': 'TEXT DEFAULT "console"',
-                    'notify_target': 'TEXT',
-                    'last_notified': 'TEXT'
+                    "min_cvss": "REAL DEFAULT 0.0",
+                    "notify_method": 'TEXT DEFAULT "console"',
+                    "notify_target": "TEXT",
+                    "last_notified": "TEXT",
                 }
 
                 # 执行ALTER TABLE添加缺失列
                 for col_name, col_def in required_cols.items():
                     if col_name not in existing_cols:
-                        alter_sql = f'ALTER TABLE subscriptions ADD COLUMN {col_name} {col_def}'
+                        alter_sql = f"ALTER TABLE subscriptions ADD COLUMN {col_name} {col_def}"
                         cursor.execute(alter_sql)
                         logger.info(f"迁移: 添加列 {col_name}")
 
@@ -178,10 +184,16 @@ class SubscriptionManager:
             """)
 
             # 5. 创建索引
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_sub_enabled ON subscriptions(enabled)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_sub_filter ON subscriptions(filter_type, filter_value)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_notify_sub ON notification_history(subscription_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_notify_cve ON notification_history(cve_id)')
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sub_enabled ON subscriptions(enabled)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_sub_filter ON subscriptions(filter_type, filter_value)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_notify_sub ON notification_history(subscription_id)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_notify_cve ON notification_history(cve_id)"
+            )
 
             conn.commit()
             conn.close()
@@ -197,7 +209,7 @@ class SubscriptionManager:
         filter_value: str,
         min_cvss: float = 0.0,
         notify_method: str = "console",
-        notify_target: Optional[str] = None
+        notify_target: Optional[str] = None,
     ) -> int:
         """
         添加订阅
@@ -250,21 +262,24 @@ class SubscriptionManager:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO subscriptions (
                     filter_type, filter_value, min_cvss,
                     notify_method, notify_target,
                     enabled, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                filter_type,
-                filter_value,
-                min_cvss,
-                notify_method,
-                notify_target,
-                True,
-                datetime.now().isoformat()
-            ))
+            """,
+                (
+                    filter_type,
+                    filter_value,
+                    min_cvss,
+                    notify_method,
+                    notify_target,
+                    True,
+                    datetime.now().isoformat(),
+                ),
+            )
 
             subscription_id = cursor.lastrowid
             conn.commit()
@@ -295,7 +310,9 @@ class SubscriptionManager:
             cursor.execute("DELETE FROM subscriptions WHERE id = ?", (subscription_id,))
 
             # 删除相关通知历史
-            cursor.execute("DELETE FROM notification_history WHERE subscription_id = ?", (subscription_id,))
+            cursor.execute(
+                "DELETE FROM notification_history WHERE subscription_id = ?", (subscription_id,)
+            )
 
             deleted = cursor.rowcount > 0
             conn.commit()
@@ -327,8 +344,7 @@ class SubscriptionManager:
             cursor = conn.cursor()
 
             cursor.execute(
-                "UPDATE subscriptions SET enabled = ? WHERE id = ?",
-                (enabled, subscription_id)
+                "UPDATE subscriptions SET enabled = ? WHERE id = ?", (enabled, subscription_id)
             )
 
             updated = cursor.rowcount > 0
@@ -381,7 +397,7 @@ class SubscriptionManager:
                     notify_target=row[5],
                     enabled=bool(row[6]),
                     created_at=row[7],
-                    last_notified=row[8] if len(row) > 8 else None
+                    last_notified=row[8] if len(row) > 8 else None,
                 )
                 subscriptions.append(sub)
 
@@ -452,10 +468,7 @@ class SubscriptionManager:
 
         if filter_type == FilterType.KEYWORD.value:
             # 关键词匹配 (CVE ID或描述)
-            return self.cve_manager.search(
-                keyword=filter_value,
-                min_cvss=min_cvss
-            )
+            return self.cve_manager.search(keyword=filter_value, min_cvss=min_cvss)
 
         elif filter_type == FilterType.PRODUCT.value:
             # 产品匹配 (在affected_products中搜索)
@@ -463,10 +476,7 @@ class SubscriptionManager:
 
         elif filter_type == FilterType.SEVERITY.value:
             # 严重性匹配
-            return self.cve_manager.search(
-                severity=filter_value.upper(),
-                min_cvss=min_cvss
-            )
+            return self.cve_manager.search(severity=filter_value.upper(), min_cvss=min_cvss)
 
         elif filter_type == FilterType.CVSS_RANGE.value:
             # CVSS范围匹配
@@ -487,12 +497,15 @@ class SubscriptionManager:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT * FROM cve_index
                 WHERE affected_products LIKE ?
                 AND cvss >= ?
                 ORDER BY cvss DESC, last_updated DESC
-            """, (f"%{product}%", min_cvss))
+            """,
+                (f"%{product}%", min_cvss),
+            )
 
             rows = cursor.fetchall()
             conn.close()
@@ -504,10 +517,7 @@ class SubscriptionManager:
             return []
 
     def _search_by_cvss_range(
-        self,
-        min_score: float,
-        max_score: float,
-        min_cvss: float
+        self, min_score: float, max_score: float, min_cvss: float
     ) -> List[CVEEntry]:
         """按CVSS范围搜索CVE"""
         try:
@@ -517,11 +527,14 @@ class SubscriptionManager:
             # 应用min_cvss限制
             effective_min = max(min_score, min_cvss)
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT * FROM cve_index
                 WHERE cvss >= ? AND cvss <= ?
                 ORDER BY cvss DESC, last_updated DESC
-            """, (effective_min, max_score))
+            """,
+                (effective_min, max_score),
+            )
 
             rows = cursor.fetchall()
             conn.close()
@@ -532,11 +545,7 @@ class SubscriptionManager:
             logger.error(f"CVSS范围搜索失败: {e}")
             return []
 
-    def _filter_notified_cves(
-        self,
-        subscription_id: int,
-        cves: List[CVEEntry]
-    ) -> List[CVEEntry]:
+    def _filter_notified_cves(self, subscription_id: int, cves: List[CVEEntry]) -> List[CVEEntry]:
         """
         过滤已通知的CVE
 
@@ -555,10 +564,13 @@ class SubscriptionManager:
             cursor = conn.cursor()
 
             # 获取已通知的CVE ID
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT cve_id FROM notification_history
                 WHERE subscription_id = ?
-            """, (subscription_id,))
+            """,
+                (subscription_id,),
+            )
 
             notified_ids = {row[0] for row in cursor.fetchall()}
             conn.close()
@@ -604,7 +616,9 @@ class SubscriptionManager:
     def _notify_console(self, subscription: Subscription, cves: List[CVEEntry]):
         """控制台通知"""
         print(f"\n{'='*80}")
-        print(f"[订阅通知] ID={subscription.id} | {subscription.filter_type}={subscription.filter_value}")
+        print(
+            f"[订阅通知] ID={subscription.id} | {subscription.filter_type}={subscription.filter_value}"
+        )
         print(f"{'='*80}")
         print(f"匹配到 {len(cves)} 个新CVE:\n")
 
@@ -632,7 +646,7 @@ class SubscriptionManager:
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
             # 追加写入
-            with open(file_path, 'a', encoding='utf-8') as f:
+            with open(file_path, "a", encoding="utf-8") as f:
                 f.write(f"\n{'='*80}\n")
                 f.write(f"[订阅通知] {datetime.now().isoformat()}\n")
                 f.write(f"订阅ID: {subscription.id}\n")
@@ -677,10 +691,10 @@ class SubscriptionManager:
                         "poc_available": cve.poc_available,
                         "poc_path": cve.poc_path,
                         "source": cve.source,
-                        "last_updated": cve.last_updated
+                        "last_updated": cve.last_updated,
                     }
                     for cve in cves
-                ]
+                ],
             }
 
             # 异步HTTP POST
@@ -701,12 +715,7 @@ class SubscriptionManager:
                 client_ctx = aiohttp.ClientSession()
 
             async with client_ctx as session:
-                async with session.post(
-                    url,
-                    json=payload,
-                    timeout=10,
-                    ssl=False
-                ) as resp:
+                async with session.post(url, json=payload, timeout=10, ssl=False) as resp:
                     if resp.status == 200:
                         logger.info(f"Webhook成功: {url}")
                     else:
@@ -722,16 +731,14 @@ class SubscriptionManager:
             cursor = conn.cursor()
 
             for cve in cves:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT INTO notification_history (
                         subscription_id, cve_id, notified_at, status
                     ) VALUES (?, ?, ?, ?)
-                """, (
-                    subscription_id,
-                    cve.cve_id,
-                    datetime.now().isoformat(),
-                    "SUCCESS"
-                ))
+                """,
+                    (subscription_id, cve.cve_id, datetime.now().isoformat(), "SUCCESS"),
+                )
 
             conn.commit()
             conn.close()
@@ -745,11 +752,14 @@ class SubscriptionManager:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE subscriptions
                 SET last_notified = ?
                 WHERE id = ?
-            """, (datetime.now().isoformat(), subscription_id))
+            """,
+                (datetime.now().isoformat(), subscription_id),
+            )
 
             conn.commit()
             conn.close()
@@ -772,25 +782,34 @@ class SubscriptionManager:
             cursor = conn.cursor()
 
             # 总通知次数
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT COUNT(*) FROM notification_history
                 WHERE subscription_id = ?
-            """, (subscription_id,))
+            """,
+                (subscription_id,),
+            )
             total_notifications = cursor.fetchone()[0]
 
             # 最近7天通知次数
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT COUNT(*) FROM notification_history
                 WHERE subscription_id = ?
                 AND notified_at >= datetime('now', '-7 days')
-            """, (subscription_id,))
+            """,
+                (subscription_id,),
+            )
             recent_notifications = cursor.fetchone()[0]
 
             # 最后通知时间
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT MAX(notified_at) FROM notification_history
                 WHERE subscription_id = ?
-            """, (subscription_id,))
+            """,
+                (subscription_id,),
+            )
             last_notification = cursor.fetchone()[0]
 
             conn.close()
@@ -799,7 +818,7 @@ class SubscriptionManager:
                 "subscription_id": subscription_id,
                 "total_notifications": total_notifications,
                 "recent_notifications_7d": recent_notifications,
-                "last_notification": last_notification
+                "last_notification": last_notification,
             }
 
         except Exception as e:
@@ -821,7 +840,9 @@ async def main():
             # 添加订阅
             # python subscription_manager.py add keyword "Apache" 7.0 console
             if len(sys.argv) < 6:
-                print("用法: add <filter_type> <filter_value> <min_cvss> <notify_method> [notify_target]")
+                print(
+                    "用法: add <filter_type> <filter_value> <min_cvss> <notify_method> [notify_target]"
+                )
                 return
 
             filter_type = sys.argv[2]
@@ -835,7 +856,7 @@ async def main():
                 filter_value=filter_value,
                 min_cvss=min_cvss,
                 notify_method=notify_method,
-                notify_target=notify_target
+                notify_target=notify_target,
             )
             print(f"订阅添加成功: ID={sub_id}")
 

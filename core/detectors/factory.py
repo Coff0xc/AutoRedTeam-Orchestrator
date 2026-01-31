@@ -4,8 +4,8 @@
 提供检测器的注册、创建和管理功能
 """
 
-from typing import Dict, Type, List, Optional, Any, Callable
 import logging
+from typing import Any, Callable, Dict, List, Optional, Type
 
 from .base import BaseDetector, CompositeDetector
 from .result import DetectorType, Severity
@@ -40,7 +40,7 @@ class DetectorFactory:
         cls,
         name: str,
         detector_class: Type[BaseDetector],
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """注册检测器
 
@@ -73,11 +73,7 @@ class DetectorFactory:
         return False
 
     @classmethod
-    def create(
-        cls,
-        name: str,
-        config: Optional[Dict[str, Any]] = None
-    ) -> BaseDetector:
+    def create(cls, name: str, config: Optional[Dict[str, Any]] = None) -> BaseDetector:
         """创建检测器实例
 
         Args:
@@ -96,10 +92,7 @@ class DetectorFactory:
         return cls._detectors[name](config)
 
     @classmethod
-    def create_all(
-        cls,
-        config: Optional[Dict[str, Any]] = None
-    ) -> List[BaseDetector]:
+    def create_all(cls, config: Optional[Dict[str, Any]] = None) -> List[BaseDetector]:
         """创建所有已注册的检测器
 
         Args:
@@ -108,16 +101,11 @@ class DetectorFactory:
         Returns:
             检测器实例列表
         """
-        return [
-            detector_class(config)
-            for detector_class in cls._detectors.values()
-        ]
+        return [detector_class(config) for detector_class in cls._detectors.values()]
 
     @classmethod
     def create_by_type(
-        cls,
-        detector_type: DetectorType,
-        config: Optional[Dict[str, Any]] = None
+        cls, detector_type: DetectorType, config: Optional[Dict[str, Any]] = None
     ) -> List[BaseDetector]:
         """按类型创建检测器
 
@@ -136,9 +124,7 @@ class DetectorFactory:
 
     @classmethod
     def create_by_severity(
-        cls,
-        min_severity: Severity,
-        config: Optional[Dict[str, Any]] = None
+        cls, min_severity: Severity, config: Optional[Dict[str, Any]] = None
     ) -> List[BaseDetector]:
         """按最小严重程度创建检测器
 
@@ -149,7 +135,13 @@ class DetectorFactory:
         Returns:
             符合条件的检测器实例列表
         """
-        severity_order = [Severity.INFO, Severity.LOW, Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL]
+        severity_order = [
+            Severity.INFO,
+            Severity.LOW,
+            Severity.MEDIUM,
+            Severity.HIGH,
+            Severity.CRITICAL,
+        ]
         min_index = severity_order.index(min_severity)
 
         return [
@@ -160,9 +152,7 @@ class DetectorFactory:
 
     @classmethod
     def create_composite(
-        cls,
-        names: List[str],
-        config: Optional[Dict[str, Any]] = None
+        cls, names: List[str], config: Optional[Dict[str, Any]] = None
     ) -> CompositeDetector:
         """创建组合检测器
 
@@ -200,13 +190,13 @@ class DetectorFactory:
 
         detector_class = cls._detectors[name]
         return {
-            'name': detector_class.name,
-            'description': detector_class.description,
-            'vuln_type': detector_class.vuln_type,
-            'severity': detector_class.severity.value,
-            'detector_type': detector_class.detector_type.value,
-            'version': detector_class.version,
-            'metadata': cls._metadata.get(name, {})
+            "name": detector_class.name,
+            "description": detector_class.description,
+            "vuln_type": detector_class.vuln_type,
+            "severity": detector_class.severity.value,
+            "detector_type": detector_class.detector_type.value,
+            "version": detector_class.version,
+            "metadata": cls._metadata.get(name, {}),
         }
 
     @classmethod
@@ -238,8 +228,7 @@ class DetectorFactory:
 
 
 def register_detector(
-    name: str,
-    metadata: Optional[Dict[str, Any]] = None
+    name: str, metadata: Optional[Dict[str, Any]] = None
 ) -> Callable[[Type[BaseDetector]], Type[BaseDetector]]:
     """检测器注册装饰器
 
@@ -259,9 +248,11 @@ def register_detector(
     Returns:
         装饰器函数
     """
+
     def decorator(cls: Type[BaseDetector]) -> Type[BaseDetector]:
         DetectorFactory.register(name, cls, metadata)
         return cls
+
     return decorator
 
 
@@ -273,9 +264,16 @@ class DetectorPresets:
     def owasp_top10(config: Optional[Dict[str, Any]] = None) -> CompositeDetector:
         """OWASP Top 10 检测器组合"""
         names = [
-            'sqli', 'xss', 'xxe', 'idor',
-            'security_misconfiguration', 'auth_bypass',
-            'xssi', 'csrf', 'ssrf', 'rce'
+            "sqli",
+            "xss",
+            "xxe",
+            "idor",
+            "security_misconfiguration",
+            "auth_bypass",
+            "xssi",
+            "csrf",
+            "ssrf",
+            "rce",
         ]
         available = [n for n in names if DetectorFactory.exists(n)]
         return DetectorFactory.create_composite(available, config)
@@ -284,30 +282,20 @@ class DetectorPresets:
     def injection_suite(config: Optional[Dict[str, Any]] = None) -> CompositeDetector:
         """注入类漏洞检测器组合"""
         return CompositeDetector(
-            DetectorFactory.create_by_type(DetectorType.INJECTION, config),
-            config
+            DetectorFactory.create_by_type(DetectorType.INJECTION, config), config
         )
 
     @staticmethod
     def auth_suite(config: Optional[Dict[str, Any]] = None) -> CompositeDetector:
         """认证类漏洞检测器组合"""
-        return CompositeDetector(
-            DetectorFactory.create_by_type(DetectorType.AUTH, config),
-            config
-        )
+        return CompositeDetector(DetectorFactory.create_by_type(DetectorType.AUTH, config), config)
 
     @staticmethod
     def quick_scan(config: Optional[Dict[str, Any]] = None) -> CompositeDetector:
         """快速扫描组合（高危漏洞优先）"""
-        return CompositeDetector(
-            DetectorFactory.create_by_severity(Severity.HIGH, config),
-            config
-        )
+        return CompositeDetector(DetectorFactory.create_by_severity(Severity.HIGH, config), config)
 
     @staticmethod
     def full_scan(config: Optional[Dict[str, Any]] = None) -> CompositeDetector:
         """完整扫描组合"""
-        return CompositeDetector(
-            DetectorFactory.create_all(config),
-            config
-        )
+        return CompositeDetector(DetectorFactory.create_all(config), config)

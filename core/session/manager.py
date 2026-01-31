@@ -5,17 +5,17 @@ manager.py - 会话管理器模块
 提供线程安全的单例模式会话管理器，统一管理所有扫描会话。
 """
 
-from typing import Optional, Dict, List, Any, Callable
-from datetime import datetime
-import threading
 import logging
+import threading
 import uuid
+from datetime import datetime
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
-from .target import Target, TargetStatus
-from .context import ScanContext, ScanPhase, ContextStatus
-from .result import ScanResult, Vulnerability, Severity, VulnType
+from .context import ContextStatus, ScanContext, ScanPhase
+from .result import ScanResult, Severity, Vulnerability, VulnType
 from .storage import SessionStorage
+from .target import Target, TargetStatus
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +33,10 @@ class SessionManager:
         - 持久化支持
     """
 
-    _instance: Optional['SessionManager'] = None
+    _instance: Optional["SessionManager"] = None
     _lock = threading.Lock()
 
-    def __new__(cls, *args, **kwargs) -> 'SessionManager':
+    def __new__(cls, *args, **kwargs) -> "SessionManager":
         """单例模式实现"""
         with cls._lock:
             if cls._instance is None:
@@ -44,8 +44,13 @@ class SessionManager:
                 cls._instance._initialized = False
             return cls._instance
 
-    def __init__(self, storage_dir: Optional[str] = None, auto_save: bool = True,
-                 max_sessions: int = 1000, auto_cleanup_threshold: int = 100):
+    def __init__(
+        self,
+        storage_dir: Optional[str] = None,
+        auto_save: bool = True,
+        max_sessions: int = 1000,
+        auto_cleanup_threshold: int = 100,
+    ):
         """
         初始化会话管理器
 
@@ -74,21 +79,18 @@ class SessionManager:
 
         # 事件回调
         self._callbacks: Dict[str, List[Callable]] = {
-            'session_created': [],
-            'session_updated': [],
-            'session_completed': [],
-            'session_deleted': [],
-            'vulnerability_found': [],
+            "session_created": [],
+            "session_updated": [],
+            "session_completed": [],
+            "session_deleted": [],
+            "vulnerability_found": [],
         }
 
         self._initialized = True
         logger.info("会话管理器初始化完成")
 
     def create_session(
-        self,
-        target: str,
-        config: Optional[Dict[str, Any]] = None,
-        session_id: Optional[str] = None
+        self, target: str, config: Optional[Dict[str, Any]] = None, session_id: Optional[str] = None
     ) -> ScanContext:
         """
         创建新会话
@@ -130,7 +132,7 @@ class SessionManager:
             logger.info(f"创建会话: {session_id} -> {target}")
 
             # 触发回调
-            self._trigger_callback('session_created', context)
+            self._trigger_callback("session_created", context)
 
             # 自动保存
             if self._auto_save:
@@ -170,7 +172,8 @@ class SessionManager:
         if len(self._sessions) > self._max_sessions:
             # 按结束时间排序已完成的会话
             completed = [
-                (sid, ctx) for sid, ctx in self._sessions.items()
+                (sid, ctx)
+                for sid, ctx in self._sessions.items()
                 if ctx.status in (ContextStatus.COMPLETED, ContextStatus.FAILED)
             ]
             completed.sort(key=lambda x: x[1].ended_at or datetime.min)
@@ -235,7 +238,7 @@ class SessionManager:
                     context.metadata[key] = value
 
             # 触发回调
-            self._trigger_callback('session_updated', context)
+            self._trigger_callback("session_updated", context)
 
             # 自动保存
             if self._auto_save:
@@ -250,7 +253,7 @@ class SessionManager:
         severity: Severity,
         title: str,
         url: str,
-        **kwargs
+        **kwargs,
     ) -> bool:
         """
         向会话添加漏洞
@@ -271,18 +274,12 @@ class SessionManager:
             if not context:
                 return False
 
-            vuln = Vulnerability(
-                type=vuln_type,
-                severity=severity,
-                title=title,
-                url=url,
-                **kwargs
-            )
+            vuln = Vulnerability(type=vuln_type, severity=severity, title=title, url=url, **kwargs)
 
             context.add_vulnerability(vuln)
 
             # 触发回调
-            self._trigger_callback('vulnerability_found', context, vuln)
+            self._trigger_callback("vulnerability_found", context, vuln)
 
             # 自动保存
             if self._auto_save:
@@ -319,7 +316,7 @@ class SessionManager:
             logger.info(f"会话完成: {session_id}, 发现 {result.total_vulns} 个漏洞")
 
             # 触发回调
-            self._trigger_callback('session_completed', context, result)
+            self._trigger_callback("session_completed", context, result)
 
             # 保存
             if self._auto_save:
@@ -348,7 +345,7 @@ class SessionManager:
             context.set_status(ContextStatus.FAILED)
             context.set_phase(ScanPhase.FAILED)
             if error:
-                context.log('error', error)
+                context.log("error", error)
 
             # 生成结果
             result = context.to_scan_result()
@@ -385,10 +382,7 @@ class SessionManager:
             return result
 
     def list_sessions(
-        self,
-        status: Optional[str] = None,
-        phase: Optional[str] = None,
-        limit: int = 100
+        self, status: Optional[str] = None, phase: Optional[str] = None, limit: int = 100
     ) -> List[ScanContext]:
         """
         列出会话
@@ -431,7 +425,7 @@ class SessionManager:
         Returns:
             List[ScanContext]: 活动会话列表
         """
-        return self.list_sessions(status='active')
+        return self.list_sessions(status="active")
 
     def delete_session(self, session_id: str, delete_storage: bool = True) -> bool:
         """
@@ -450,7 +444,7 @@ class SessionManager:
             # 从内存删除
             if session_id in self._sessions:
                 context = self._sessions.pop(session_id)
-                self._trigger_callback('session_deleted', context)
+                self._trigger_callback("session_deleted", context)
                 deleted = True
 
             if session_id in self._results:
@@ -506,10 +500,7 @@ class SessionManager:
             int: 活动会话数
         """
         with self._session_lock:
-            return sum(
-                1 for ctx in self._sessions.values()
-                if ctx.status == ContextStatus.ACTIVE
-            )
+            return sum(1 for ctx in self._sessions.values() if ctx.status == ContextStatus.ACTIVE)
 
     def get_stats(self) -> Dict[str, Any]:
         """
@@ -536,12 +527,12 @@ class SessionManager:
                 total_vulns += len(ctx.vulnerabilities)
 
             return {
-                'total_sessions': len(self._sessions),
-                'total_results': len(self._results),
-                'total_vulnerabilities': total_vulns,
-                'by_status': status_counts,
-                'by_phase': phase_counts,
-                'storage': self._storage.get_storage_stats(),
+                "total_sessions": len(self._sessions),
+                "total_results": len(self._results),
+                "total_vulnerabilities": total_vulns,
+                "by_status": status_counts,
+                "by_phase": phase_counts,
+                "storage": self._storage.get_storage_stats(),
             }
 
     # ========== 事件回调 ==========
@@ -644,7 +635,7 @@ class SessionManager:
         with self._session_lock:
             loaded = 0
             for session_info in self._storage.list_sessions():
-                session_id = session_info['session_id']
+                session_id = session_info["session_id"]
                 if session_id not in self._sessions:
                     context = self._storage.load_context(session_id)
                     if context:
@@ -666,8 +657,7 @@ _manager_lock = threading.Lock()
 
 
 def get_session_manager(
-    storage_dir: Optional[str] = None,
-    auto_save: bool = True
+    storage_dir: Optional[str] = None, auto_save: bool = True
 ) -> SessionManager:
     """
     获取会话管理器单例

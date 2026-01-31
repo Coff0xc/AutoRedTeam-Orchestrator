@@ -88,69 +88,17 @@ AutoRedTeamError (基类)
 版本: 3.0.0
 """
 
-# 基础异常
-from .base import AutoRedTeamError, ConfigError
-
-# HTTP 错误
-from .http import (
-    HTTPError,
-    ConnectionError,
-    TimeoutError,
-    SSLError,
-    ProxyError,
-    NetworkError,  # 向后兼容别名
-)
-
 # 认证错误
+from .auth import SecurityError  # 向后兼容别名
 from .auth import (
     AuthError,
     InvalidCredentials,
-    TokenExpired,
     PermissionDenied,
-    SecurityError,  # 向后兼容别名
+    TokenExpired,
 )
 
-# 扫描和检测器错误
-from .scan import (
-    ScanError,
-    TargetUnreachable,
-    ScanTimeout,
-    RateLimited,
-    DetectorError,
-    PayloadError,
-    ValidationError,
-    DetectionTimeout,
-)
-
-# 漏洞利用、C2、横向移动错误
-from .exploit import (
-    ExploitError,
-    ExploitFailed,
-    PayloadDeliveryFailed,
-    ShellError,
-    C2Error,
-    BeaconError,
-    TunnelError,
-    EncryptionError,
-    LateralError,
-    SMBError,
-    SSHError,
-    WMIError,
-)
-
-# 权限提升和数据外泄错误
-from .privilege import (
-    PrivilegeEscalationError,
-    EscalationVectorNotFound,
-    InsufficientPrivilege,
-    UACBypassFailed,
-    TokenManipulationError,
-    ExfiltrationError,
-    ChannelBlocked,
-    DataTooLarge,
-    ChannelConnectionError,
-    EncryptionRequired,
-)
+# 基础异常
+from .base import AutoRedTeamError, ConfigError
 
 # CVE 错误
 from .cve import (
@@ -160,21 +108,73 @@ from .cve import (
     SyncError,
 )
 
+# 漏洞利用、C2、横向移动错误
+from .exploit import (
+    BeaconError,
+    C2Error,
+    EncryptionError,
+    ExploitError,
+    ExploitFailed,
+    LateralError,
+    PayloadDeliveryFailed,
+    ShellError,
+    SMBError,
+    SSHError,
+    TunnelError,
+    WMIError,
+)
+
+# HTTP 错误
+from .http import NetworkError  # 向后兼容别名
+from .http import (
+    ConnectionError,
+    HTTPError,
+    ProxyError,
+    SSLError,
+    TimeoutError,
+)
+
+# 权限提升和数据外泄错误
+from .privilege import (
+    ChannelBlocked,
+    ChannelConnectionError,
+    DataTooLarge,
+    EncryptionRequired,
+    EscalationVectorNotFound,
+    ExfiltrationError,
+    InsufficientPrivilege,
+    PrivilegeEscalationError,
+    TokenManipulationError,
+    UACBypassFailed,
+)
+
+# 扫描和检测器错误
+from .scan import (
+    DetectionTimeout,
+    DetectorError,
+    PayloadError,
+    RateLimited,
+    ScanError,
+    ScanTimeout,
+    TargetUnreachable,
+    ValidationError,
+)
+
 # 任务和报告错误
 from .task import (
-    TaskError,
-    TaskNotFound,
-    TaskCancelled,
+    ExportError,
     QueueFull,
     ReportError,
+    TaskCancelled,
+    TaskError,
+    TaskNotFound,
     TemplateError,
-    ExportError,
 )
 
 # 辅助函数
 from .utils import (
-    wrap_exception,
     handle_exceptions,
+    wrap_exception,
 )
 
 # 向后兼容别名
@@ -182,91 +182,76 @@ ToolError = AutoRedTeamError
 
 __all__ = [
     # 基类
-    'AutoRedTeamError',
-
+    "AutoRedTeamError",
     # 配置错误
-    'ConfigError',
-
+    "ConfigError",
     # HTTP错误
-    'HTTPError',
-    'ConnectionError',
-    'TimeoutError',
-    'SSLError',
-    'ProxyError',
-
+    "HTTPError",
+    "ConnectionError",
+    "TimeoutError",
+    "SSLError",
+    "ProxyError",
     # 认证错误
-    'AuthError',
-    'InvalidCredentials',
-    'TokenExpired',
-    'PermissionDenied',
-
+    "AuthError",
+    "InvalidCredentials",
+    "TokenExpired",
+    "PermissionDenied",
     # 扫描错误
-    'ScanError',
-    'TargetUnreachable',
-    'ScanTimeout',
-    'RateLimited',
-
+    "ScanError",
+    "TargetUnreachable",
+    "ScanTimeout",
+    "RateLimited",
     # 检测器错误
-    'DetectorError',
-    'PayloadError',
-    'ValidationError',
-    'DetectionTimeout',
-
+    "DetectorError",
+    "PayloadError",
+    "ValidationError",
+    "DetectionTimeout",
     # 漏洞利用错误
-    'ExploitError',
-    'ExploitFailed',
-    'PayloadDeliveryFailed',
-    'ShellError',
-
+    "ExploitError",
+    "ExploitFailed",
+    "PayloadDeliveryFailed",
+    "ShellError",
     # C2错误
-    'C2Error',
-    'BeaconError',
-    'TunnelError',
-    'EncryptionError',
-
+    "C2Error",
+    "BeaconError",
+    "TunnelError",
+    "EncryptionError",
     # 横向移动错误
-    'LateralError',
-    'SMBError',
-    'SSHError',
-    'WMIError',
-
+    "LateralError",
+    "SMBError",
+    "SSHError",
+    "WMIError",
     # 权限提升错误
-    'PrivilegeEscalationError',
-    'EscalationVectorNotFound',
-    'InsufficientPrivilege',
-    'UACBypassFailed',
-    'TokenManipulationError',
-
+    "PrivilegeEscalationError",
+    "EscalationVectorNotFound",
+    "InsufficientPrivilege",
+    "UACBypassFailed",
+    "TokenManipulationError",
     # 数据外泄错误
-    'ExfiltrationError',
-    'ChannelBlocked',
-    'DataTooLarge',
-    'ChannelConnectionError',
-    'EncryptionRequired',
-
+    "ExfiltrationError",
+    "ChannelBlocked",
+    "DataTooLarge",
+    "ChannelConnectionError",
+    "EncryptionRequired",
     # CVE错误
-    'CVEError',
-    'CVENotFound',
-    'PoCError',
-    'SyncError',
-
+    "CVEError",
+    "CVENotFound",
+    "PoCError",
+    "SyncError",
     # 任务错误
-    'TaskError',
-    'TaskNotFound',
-    'TaskCancelled',
-    'QueueFull',
-
+    "TaskError",
+    "TaskNotFound",
+    "TaskCancelled",
+    "QueueFull",
     # 报告错误
-    'ReportError',
-    'TemplateError',
-    'ExportError',
-
+    "ReportError",
+    "TemplateError",
+    "ExportError",
     # 辅助函数
-    'wrap_exception',
-    'handle_exceptions',
-
+    "wrap_exception",
+    "handle_exceptions",
     # 向后兼容别名
-    'NetworkError',
-    'SecurityError',
-    'ToolError',
+    "NetworkError",
+    "SecurityError",
+    "ToolError",
 ]

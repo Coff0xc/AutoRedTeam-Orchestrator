@@ -8,38 +8,39 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import threading
-import asyncio
-from typing import (
-    Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, Union
-)
 from collections import defaultdict
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, Union
 
+from .base import BaseTool, FunctionTool, ParamType, ToolMetadata, ToolParameter, ToolResult
 from .categories import (
-    ToolCategory, CATEGORY_DESCRIPTIONS, CATEGORY_HIERARCHY,
-    get_category_description, get_phase_for_category
+    CATEGORY_DESCRIPTIONS,
+    CATEGORY_HIERARCHY,
+    ToolCategory,
+    get_category_description,
+    get_phase_for_category,
 )
-from .base import (
-    BaseTool, FunctionTool, ToolMetadata, ToolParameter, ToolResult, ParamType
-)
-
 
 logger = logging.getLogger(__name__)
 
 
 class ToolNotFoundError(Exception):
     """工具不存在异常"""
+
     pass
 
 
 class ToolAlreadyExistsError(Exception):
     """工具已存在异常"""
+
     pass
 
 
 class ToolValidationError(Exception):
     """参数验证异常"""
+
     pass
 
 
@@ -63,11 +64,11 @@ class ToolRegistry:
         tools = registry.list_by_category(ToolCategory.RECON)
     """
 
-    _instance: Optional['ToolRegistry'] = None
+    _instance: Optional["ToolRegistry"] = None
     _lock = threading.Lock()
     _initialized: bool = False
 
-    def __new__(cls) -> 'ToolRegistry':
+    def __new__(cls) -> "ToolRegistry":
         """单例模式实现"""
         with cls._lock:
             if cls._instance is None:
@@ -106,10 +107,7 @@ class ToolRegistry:
             logger.info("工具注册表初始化完成")
 
     def register(
-        self,
-        tool: BaseTool,
-        aliases: Optional[List[str]] = None,
-        override: bool = False
+        self, tool: BaseTool, aliases: Optional[List[str]] = None, override: bool = False
     ) -> None:
         """注册工具
 
@@ -161,7 +159,7 @@ class ToolRegistry:
         name: Optional[str] = None,
         description: Optional[str] = None,
         parameters: Optional[List[ToolParameter]] = None,
-        **kwargs
+        **kwargs,
     ) -> BaseTool:
         """将函数注册为工具
 
@@ -182,7 +180,7 @@ class ToolRegistry:
             name=name,
             description=description,
             parameters=parameters,
-            **kwargs
+            **kwargs,
         )
         self.register(tool)
         return tool
@@ -204,10 +202,7 @@ class ToolRegistry:
             self._remove_indexes(name)
 
             # 移除别名
-            aliases_to_remove = [
-                alias for alias, target in self._aliases.items()
-                if target == name
-            ]
+            aliases_to_remove = [alias for alias, target in self._aliases.items() if target == name]
             for alias in aliases_to_remove:
                 del self._aliases[alias]
 
@@ -284,7 +279,7 @@ class ToolRegistry:
         self,
         category: Optional[ToolCategory] = None,
         phase: Optional[str] = None,
-        tag: Optional[str] = None
+        tag: Optional[str] = None,
     ) -> List[str]:
         """列出工具名称
 
@@ -345,10 +340,7 @@ class ToolRegistry:
             return [self._tools[name] for name in names if name in self._tools]
 
     def search(
-        self,
-        keyword: str,
-        include_description: bool = True,
-        include_tags: bool = True
+        self, keyword: str, include_description: bool = True, include_tags: bool = True
     ) -> List[BaseTool]:
         """搜索工具
 
@@ -385,12 +377,7 @@ class ToolRegistry:
 
         return results
 
-    def execute(
-        self,
-        name: str,
-        validate: bool = True,
-        **kwargs
-    ) -> ToolResult:
+    def execute(self, name: str, validate: bool = True, **kwargs) -> ToolResult:
         """同步执行工具
 
         Args:
@@ -408,9 +395,7 @@ class ToolRegistry:
             if validate:
                 valid, errors = tool.validate_params(**kwargs)
                 if not valid:
-                    return ToolResult.fail(
-                        error="参数验证失败: " + "; ".join(errors)
-                    )
+                    return ToolResult.fail(error="参数验证失败: " + "; ".join(errors))
 
             # 执行
             return tool.execute(**kwargs)
@@ -421,12 +406,7 @@ class ToolRegistry:
             logger.exception(f"工具执行异常: {name}")
             return ToolResult.fail(error=f"执行异常: {e}")
 
-    async def async_execute(
-        self,
-        name: str,
-        validate: bool = True,
-        **kwargs
-    ) -> ToolResult:
+    async def async_execute(self, name: str, validate: bool = True, **kwargs) -> ToolResult:
         """异步执行工具
 
         Args:
@@ -444,9 +424,7 @@ class ToolRegistry:
             if validate:
                 valid, errors = tool.validate_params(**kwargs)
                 if not valid:
-                    return ToolResult.fail(
-                        error="参数验证失败: " + "; ".join(errors)
-                    )
+                    return ToolResult.fail(error="参数验证失败: " + "; ".join(errors))
 
             # 异步执行
             return await tool.async_execute(**kwargs)
@@ -464,10 +442,7 @@ class ToolRegistry:
             {tool_name: schema} 字典
         """
         with self._rw_lock:
-            return {
-                name: tool.get_schema()
-                for name, tool in self._tools.items()
-            }
+            return {name: tool.get_schema() for name, tool in self._tools.items()}
 
     def get_schema(self, name: str) -> Optional[Dict[str, Any]]:
         """获取单个工具的JSON Schema
@@ -491,23 +466,17 @@ class ToolRegistry:
         """
         with self._rw_lock:
             by_category = {
-                cat.value: len(names)
-                for cat, names in self._by_category.items()
-                if names
+                cat.value: len(names) for cat, names in self._by_category.items() if names
             }
 
-            by_phase = {
-                phase: len(names)
-                for phase, names in self._by_phase.items()
-                if names
-            }
+            by_phase = {phase: len(names) for phase, names in self._by_phase.items() if names}
 
             return {
-                'total_tools': len(self._tools),
-                'by_category': by_category,
-                'by_phase': by_phase,
-                'total_aliases': len(self._aliases),
-                'total_tags': len(self._by_tag),
+                "total_tools": len(self._tools),
+                "by_category": by_category,
+                "by_phase": by_phase,
+                "total_aliases": len(self._aliases),
+                "total_tags": len(self._by_tag),
             }
 
     def get_categories(self) -> List[Dict[str, Any]]:
@@ -521,12 +490,14 @@ class ToolRegistry:
             for category in ToolCategory:
                 count = len(self._by_category.get(category, set()))
                 if count > 0:
-                    result.append({
-                        'category': category.value,
-                        'description': get_category_description(category),
-                        'count': count,
-                        'phase': get_phase_for_category(category),
-                    })
+                    result.append(
+                        {
+                            "category": category.value,
+                            "description": get_category_description(category),
+                            "count": count,
+                            "phase": get_phase_for_category(category),
+                        }
+                    )
             return result
 
     def export_all(self) -> Dict[str, Any]:
@@ -536,15 +507,12 @@ class ToolRegistry:
             完整的工具信息字典
         """
         with self._rw_lock:
-            tools = {
-                name: tool.get_info()
-                for name, tool in self._tools.items()
-            }
+            tools = {name: tool.get_info() for name, tool in self._tools.items()}
 
             return {
-                'tools': tools,
-                'stats': self.get_stats(),
-                'categories': self.get_categories(),
+                "tools": tools,
+                "stats": self.get_stats(),
+                "categories": self.get_categories(),
             }
 
     def clear(self) -> None:
@@ -615,10 +583,8 @@ def reset_registry() -> None:
 
 # ============ 快捷函数 ============
 
-def register_tool(
-    tool: BaseTool,
-    aliases: Optional[List[str]] = None
-) -> None:
+
+def register_tool(tool: BaseTool, aliases: Optional[List[str]] = None) -> None:
     """注册工具到全局注册表
 
     Args:
@@ -628,11 +594,7 @@ def register_tool(
     get_registry().register(tool, aliases=aliases)
 
 
-def register_function(
-    fn: Callable,
-    category: ToolCategory,
-    **kwargs
-) -> BaseTool:
+def register_function(fn: Callable, category: ToolCategory, **kwargs) -> BaseTool:
     """将函数注册到全局注册表
 
     Args:

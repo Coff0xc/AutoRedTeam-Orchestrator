@@ -14,10 +14,10 @@ phases.py - 侦察阶段定义
             break
 """
 
-from enum import Enum, auto
 from dataclasses import dataclass, field
-from typing import List, Optional, Callable, Any, Dict
 from datetime import datetime
+from enum import Enum, auto
+from typing import Any, Callable, Dict, List, Optional
 
 
 class ReconPhase(Enum):
@@ -25,16 +25,17 @@ class ReconPhase(Enum):
 
     定义完整侦察流程的10个阶段，按执行顺序排列。
     """
-    INIT = auto()           # 初始化: 解析目标URL，提取主机名
-    DNS = auto()            # DNS解析: 获取A/AAAA/MX/NS/TXT记录
-    PORT_SCAN = auto()      # 端口扫描: 扫描开放端口和服务
-    FINGERPRINT = auto()    # 指纹识别: 识别服务器、框架、CMS
-    TECH_DETECT = auto()    # 技术栈识别: 基于Wappalyzer规则识别
-    WAF_DETECT = auto()     # WAF检测: 识别常见WAF/CDN
-    SUBDOMAIN = auto()      # 子域名枚举: 字典暴破+DNS解析
-    DIRECTORY = auto()      # 目录扫描: 目录和文件暴破
-    SENSITIVE = auto()      # 敏感信息: 敏感文件、配置泄露
-    COMPLETE = auto()       # 完成: 汇总结果，生成报告
+
+    INIT = auto()  # 初始化: 解析目标URL，提取主机名
+    DNS = auto()  # DNS解析: 获取A/AAAA/MX/NS/TXT记录
+    PORT_SCAN = auto()  # 端口扫描: 扫描开放端口和服务
+    FINGERPRINT = auto()  # 指纹识别: 识别服务器、框架、CMS
+    TECH_DETECT = auto()  # 技术栈识别: 基于Wappalyzer规则识别
+    WAF_DETECT = auto()  # WAF检测: 识别常见WAF/CDN
+    SUBDOMAIN = auto()  # 子域名枚举: 字典暴破+DNS解析
+    DIRECTORY = auto()  # 目录扫描: 目录和文件暴破
+    SENSITIVE = auto()  # 敏感信息: 敏感文件、配置泄露
+    COMPLETE = auto()  # 完成: 汇总结果，生成报告
 
     def __str__(self) -> str:
         """返回阶段名称"""
@@ -65,12 +66,13 @@ class ReconPhase(Enum):
 
 class PhaseStatus(Enum):
     """阶段执行状态"""
-    PENDING = "pending"         # 待执行
-    RUNNING = "running"         # 执行中
-    SUCCESS = "success"         # 成功
-    FAILED = "failed"           # 失败
-    SKIPPED = "skipped"         # 跳过
-    TIMEOUT = "timeout"         # 超时
+
+    PENDING = "pending"  # 待执行
+    RUNNING = "running"  # 执行中
+    SUCCESS = "success"  # 成功
+    FAILED = "failed"  # 失败
+    SKIPPED = "skipped"  # 跳过
+    TIMEOUT = "timeout"  # 超时
 
 
 @dataclass
@@ -90,6 +92,7 @@ class PhaseResult:
         end_time: 结束时间
         metadata: 额外元数据
     """
+
     phase: ReconPhase
     success: bool
     status: PhaseStatus = PhaseStatus.SUCCESS
@@ -129,7 +132,7 @@ class PhaseResult:
         phase: ReconPhase,
         data: Dict[str, Any],
         duration: float = 0.0,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> "PhaseResult":
         """创建成功结果"""
         return cls(
@@ -139,7 +142,7 @@ class PhaseResult:
             data=data,
             duration=duration,
             metadata=metadata or {},
-            end_time=datetime.now().isoformat()
+            end_time=datetime.now().isoformat(),
         )
 
     @classmethod
@@ -148,7 +151,7 @@ class PhaseResult:
         phase: ReconPhase,
         errors: List[str],
         duration: float = 0.0,
-        data: Optional[Dict[str, Any]] = None
+        data: Optional[Dict[str, Any]] = None,
     ) -> "PhaseResult":
         """创建失败结果"""
         return cls(
@@ -158,14 +161,12 @@ class PhaseResult:
             data=data or {},
             duration=duration,
             errors=errors,
-            end_time=datetime.now().isoformat()
+            end_time=datetime.now().isoformat(),
         )
 
     @classmethod
     def create_skipped(
-        cls,
-        phase: ReconPhase,
-        reason: str = "Skipped by configuration"
+        cls, phase: ReconPhase, reason: str = "Skipped by configuration"
     ) -> "PhaseResult":
         """创建跳过结果"""
         return cls(
@@ -175,15 +176,12 @@ class PhaseResult:
             data={},
             duration=0.0,
             metadata={"skip_reason": reason},
-            end_time=datetime.now().isoformat()
+            end_time=datetime.now().isoformat(),
         )
 
     @classmethod
     def create_timeout(
-        cls,
-        phase: ReconPhase,
-        timeout: float,
-        partial_data: Optional[Dict[str, Any]] = None
+        cls, phase: ReconPhase, timeout: float, partial_data: Optional[Dict[str, Any]] = None
     ) -> "PhaseResult":
         """创建超时结果"""
         return cls(
@@ -193,7 +191,7 @@ class PhaseResult:
             data=partial_data or {},
             duration=timeout,
             errors=[f"Phase timed out after {timeout}s"],
-            end_time=datetime.now().isoformat()
+            end_time=datetime.now().isoformat(),
         )
 
 
@@ -248,6 +246,7 @@ class PhaseConfig:
         on_error: 错误处理策略 (continue/abort)
         custom_handler: 自定义处理器
     """
+
     enabled: bool = True
     timeout: float = 60.0
     retries: int = 0
@@ -321,11 +320,7 @@ class PhaseManager:
         """获取阶段超时时间"""
         return self._configs[phase].timeout
 
-    def set_custom_handler(
-        self,
-        phase: ReconPhase,
-        handler: PhaseHandler
-    ) -> None:
+    def set_custom_handler(self, phase: ReconPhase, handler: PhaseHandler) -> None:
         """设置自定义阶段处理器"""
         self._configs[phase].custom_handler = handler
 

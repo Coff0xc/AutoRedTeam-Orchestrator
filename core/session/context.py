@@ -5,39 +5,41 @@ context.py - 扫描上下文模块
 管理扫描过程中的所有状态和收集的信息。
 """
 
+import copy
+import uuid
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List, TYPE_CHECKING
 from datetime import datetime
 from enum import Enum
-import uuid
-import copy
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
+    from .result import ScanResult, Vulnerability
     from .target import Target
-    from .result import Vulnerability, ScanResult
 
 
 class ScanPhase(Enum):
     """扫描阶段枚举"""
-    INIT = 'init'                    # 初始化
-    RECON = 'recon'                  # 信息收集
-    FINGERPRINT = 'fingerprint'      # 指纹识别
-    DISCOVERY = 'discovery'          # 资产发现
-    VULN_SCAN = 'vuln_scan'          # 漏洞扫描
-    EXPLOITATION = 'exploitation'    # 漏洞利用
-    POST_EXPLOIT = 'post_exploit'    # 后渗透
-    REPORTING = 'reporting'          # 报告生成
-    COMPLETED = 'completed'          # 完成
-    FAILED = 'failed'                # 失败
+
+    INIT = "init"  # 初始化
+    RECON = "recon"  # 信息收集
+    FINGERPRINT = "fingerprint"  # 指纹识别
+    DISCOVERY = "discovery"  # 资产发现
+    VULN_SCAN = "vuln_scan"  # 漏洞扫描
+    EXPLOITATION = "exploitation"  # 漏洞利用
+    POST_EXPLOIT = "post_exploit"  # 后渗透
+    REPORTING = "reporting"  # 报告生成
+    COMPLETED = "completed"  # 完成
+    FAILED = "failed"  # 失败
 
 
 class ContextStatus(Enum):
     """上下文状态枚举"""
-    ACTIVE = 'active'       # 活动中
-    PAUSED = 'paused'       # 已暂停
-    COMPLETED = 'completed' # 已完成
-    FAILED = 'failed'       # 已失败
-    CANCELLED = 'cancelled' # 已取消
+
+    ACTIVE = "active"  # 活动中
+    PAUSED = "paused"  # 已暂停
+    COMPLETED = "completed"  # 已完成
+    FAILED = "failed"  # 已失败
+    CANCELLED = "cancelled"  # 已取消
 
 
 @dataclass
@@ -71,7 +73,7 @@ class ScanContext:
 
     # 基本信息
     session_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    target: Optional['Target'] = None
+    target: Optional["Target"] = None
     started_at: datetime = field(default_factory=datetime.now)
     ended_at: Optional[datetime] = None
 
@@ -83,17 +85,17 @@ class ScanContext:
     config: Dict[str, Any] = field(default_factory=dict)
 
     # 收集的信息
-    fingerprints: Dict[str, Any] = field(default_factory=dict)    # 指纹信息
-    technologies: List[str] = field(default_factory=list)         # 技术栈
-    ports: List[Dict[str, Any]] = field(default_factory=list)     # 开放端口
-    subdomains: List[str] = field(default_factory=list)           # 子域名
-    directories: List[str] = field(default_factory=list)          # 目录
-    parameters: List[Dict[str, Any]] = field(default_factory=list) # 参数
-    js_files: List[str] = field(default_factory=list)             # JS文件
+    fingerprints: Dict[str, Any] = field(default_factory=dict)  # 指纹信息
+    technologies: List[str] = field(default_factory=list)  # 技术栈
+    ports: List[Dict[str, Any]] = field(default_factory=list)  # 开放端口
+    subdomains: List[str] = field(default_factory=list)  # 子域名
+    directories: List[str] = field(default_factory=list)  # 目录
+    parameters: List[Dict[str, Any]] = field(default_factory=list)  # 参数
+    js_files: List[str] = field(default_factory=list)  # JS文件
     api_endpoints: List[Dict[str, Any]] = field(default_factory=list)  # API端点
 
     # 发现的漏洞
-    vulnerabilities: List['Vulnerability'] = field(default_factory=list)
+    vulnerabilities: List["Vulnerability"] = field(default_factory=list)
 
     # HTTP会话状态
     cookies: Dict[str, str] = field(default_factory=dict)
@@ -116,11 +118,18 @@ class ScanContext:
         """初始化后处理"""
         # 确保所有集合类型字段不为None
         _list_fields = [
-            'technologies', 'ports', 'subdomains', 'directories',
-            'parameters', 'js_files', 'api_endpoints', 'vulnerabilities',
-            'logs', 'notes'
+            "technologies",
+            "ports",
+            "subdomains",
+            "directories",
+            "parameters",
+            "js_files",
+            "api_endpoints",
+            "vulnerabilities",
+            "logs",
+            "notes",
         ]
-        _dict_fields = ['fingerprints', 'cookies', 'headers', 'config', 'metadata']
+        _dict_fields = ["fingerprints", "cookies", "headers", "config", "metadata"]
 
         for field_name in _list_fields:
             if getattr(self, field_name) is None:
@@ -130,7 +139,7 @@ class ScanContext:
             if getattr(self, field_name) is None:
                 setattr(self, field_name, {})
 
-    def set_target(self, target: 'Target') -> None:
+    def set_target(self, target: "Target") -> None:
         """
         设置扫描目标
 
@@ -138,7 +147,7 @@ class ScanContext:
             target: 目标对象
         """
         self.target = target
-        self.log('info', f"设置扫描目标: {target.value}")
+        self.log("info", f"设置扫描目标: {target.value}")
 
     def set_phase(self, phase: ScanPhase) -> None:
         """
@@ -149,7 +158,7 @@ class ScanContext:
         """
         old_phase = self.phase
         self.phase = phase
-        self.log('info', f"扫描阶段变更: {old_phase.value} -> {phase.value}")
+        self.log("info", f"扫描阶段变更: {old_phase.value} -> {phase.value}")
 
     def set_status(self, status: ContextStatus) -> None:
         """
@@ -162,7 +171,7 @@ class ScanContext:
         if status in (ContextStatus.COMPLETED, ContextStatus.FAILED, ContextStatus.CANCELLED):
             self.ended_at = datetime.now()
 
-    def add_vulnerability(self, vuln: 'Vulnerability') -> None:
+    def add_vulnerability(self, vuln: "Vulnerability") -> None:
         """
         添加漏洞
 
@@ -171,9 +180,11 @@ class ScanContext:
         """
         # 避免重复添加
         for existing in self.vulnerabilities:
-            if (existing.url == vuln.url and
-                existing.type == vuln.type and
-                existing.param == vuln.param):
+            if (
+                existing.url == vuln.url
+                and existing.type == vuln.type
+                and existing.param == vuln.param
+            ):
                 # 如果新漏洞置信度更高，则更新
                 if vuln.confidence > existing.confidence:
                     self.vulnerabilities.remove(existing)
@@ -182,14 +193,10 @@ class ScanContext:
                     return
 
         self.vulnerabilities.append(vuln)
-        self.log('warning', f"发现漏洞: [{vuln.severity.value}] {vuln.title}")
+        self.log("warning", f"发现漏洞: [{vuln.severity.value}] {vuln.title}")
 
     def add_fingerprint(
-        self,
-        category: str,
-        name: str,
-        version: Optional[str] = None,
-        confidence: float = 1.0
+        self, category: str, name: str, version: Optional[str] = None, confidence: float = 1.0
     ) -> None:
         """
         添加指纹信息
@@ -204,17 +211,17 @@ class ScanContext:
             self.fingerprints[category] = []
 
         fingerprint = {
-            'name': name,
-            'version': version,
-            'confidence': confidence,
-            'detected_at': datetime.now().isoformat()
+            "name": name,
+            "version": version,
+            "confidence": confidence,
+            "detected_at": datetime.now().isoformat(),
         }
 
         # 检查是否已存在
         for existing in self.fingerprints[category]:
-            if existing['name'] == name:
+            if existing["name"] == name:
                 # 如果新的置信度更高，更新
-                if confidence > existing.get('confidence', 0):
+                if confidence > existing.get("confidence", 0):
                     existing.update(fingerprint)
                 return
 
@@ -228,10 +235,10 @@ class ScanContext:
     def add_port(
         self,
         port: int,
-        protocol: str = 'tcp',
+        protocol: str = "tcp",
         service: Optional[str] = None,
         version: Optional[str] = None,
-        state: str = 'open'
+        state: str = "open",
     ) -> None:
         """
         添加开放端口
@@ -245,22 +252,24 @@ class ScanContext:
         """
         # 检查是否已存在
         for existing in self.ports:
-            if existing['port'] == port and existing['protocol'] == protocol:
+            if existing["port"] == port and existing["protocol"] == protocol:
                 # 更新信息
                 if service:
-                    existing['service'] = service
+                    existing["service"] = service
                 if version:
-                    existing['version'] = version
+                    existing["version"] = version
                 return
 
-        self.ports.append({
-            'port': port,
-            'protocol': protocol,
-            'service': service,
-            'version': version,
-            'state': state,
-            'discovered_at': datetime.now().isoformat()
-        })
+        self.ports.append(
+            {
+                "port": port,
+                "protocol": protocol,
+                "service": service,
+                "version": version,
+                "state": state,
+                "discovered_at": datetime.now().isoformat(),
+            }
+        )
 
     def add_subdomain(self, subdomain: str) -> None:
         """
@@ -285,15 +294,9 @@ class ScanContext:
         if directory and directory not in self.directories:
             self.directories.append(directory)
             if status_code:
-                self.metadata.setdefault('dir_status', {})[directory] = status_code
+                self.metadata.setdefault("dir_status", {})[directory] = status_code
 
-    def add_parameter(
-        self,
-        name: str,
-        location: str,
-        url: str,
-        param_type: str = 'string'
-    ) -> None:
+    def add_parameter(self, name: str, location: str, url: str, param_type: str = "string") -> None:
         """
         添加参数
 
@@ -304,26 +307,22 @@ class ScanContext:
             param_type: 参数类型
         """
         param = {
-            'name': name,
-            'location': location,
-            'url': url,
-            'type': param_type,
-            'discovered_at': datetime.now().isoformat()
+            "name": name,
+            "location": location,
+            "url": url,
+            "type": param_type,
+            "discovered_at": datetime.now().isoformat(),
         }
 
         # 检查是否已存在
         for existing in self.parameters:
-            if existing['name'] == name and existing['url'] == url:
+            if existing["name"] == name and existing["url"] == url:
                 return
 
         self.parameters.append(param)
 
     def add_api_endpoint(
-        self,
-        path: str,
-        method: str = 'GET',
-        params: List[str] = None,
-        authenticated: bool = False
+        self, path: str, method: str = "GET", params: List[str] = None, authenticated: bool = False
     ) -> None:
         """
         添加API端点
@@ -335,16 +334,16 @@ class ScanContext:
             authenticated: 是否需要认证
         """
         endpoint = {
-            'path': path,
-            'method': method.upper(),
-            'params': params or [],
-            'authenticated': authenticated,
-            'discovered_at': datetime.now().isoformat()
+            "path": path,
+            "method": method.upper(),
+            "params": params or [],
+            "authenticated": authenticated,
+            "discovered_at": datetime.now().isoformat(),
         }
 
         # 检查是否已存在
         for existing in self.api_endpoints:
-            if existing['path'] == path and existing['method'] == method.upper():
+            if existing["path"] == path and existing["method"] == method.upper():
                 return
 
         self.api_endpoints.append(endpoint)
@@ -377,7 +376,7 @@ class ScanContext:
         """
         self.headers.update(headers)
 
-    def set_auth_token(self, token: str, token_type: str = 'Bearer') -> None:
+    def set_auth_token(self, token: str, token_type: str = "Bearer") -> None:
         """
         设置认证令牌
 
@@ -386,7 +385,7 @@ class ScanContext:
             token_type: 令牌类型 (Bearer/Basic/etc.)
         """
         self.auth_token = token
-        self.headers['Authorization'] = f"{token_type} {token}"
+        self.headers["Authorization"] = f"{token_type} {token}"
 
     def increment_requests(self, count: int = 1) -> None:
         """
@@ -416,12 +415,12 @@ class ScanContext:
             data: 附加数据
         """
         log_entry = {
-            'timestamp': datetime.now().isoformat(),
-            'level': level,
-            'message': message,
+            "timestamp": datetime.now().isoformat(),
+            "level": level,
+            "message": message,
         }
         if data is not None:
-            log_entry['data'] = data
+            log_entry["data"] = data
         self.logs.append(log_entry)
 
     def add_note(self, note: str) -> None:
@@ -446,38 +445,32 @@ class ScanContext:
             duration = (self.ended_at - self.started_at).total_seconds()
 
         # 统计漏洞
-        vuln_stats = {
-            'critical': 0,
-            'high': 0,
-            'medium': 0,
-            'low': 0,
-            'info': 0
-        }
+        vuln_stats = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
         for vuln in self.vulnerabilities:
             severity = vuln.severity.value
             if severity in vuln_stats:
                 vuln_stats[severity] += 1
 
         return {
-            'session_id': self.session_id,
-            'target': self.target.value if self.target else None,
-            'status': self.status.value,
-            'phase': self.phase.value,
-            'started_at': self.started_at.isoformat(),
-            'ended_at': self.ended_at.isoformat() if self.ended_at else None,
-            'duration': duration,
-            'stats': {
-                'requests_sent': self.requests_sent,
-                'errors_count': self.errors_count,
-                'vulnerabilities': len(self.vulnerabilities),
-                'vuln_by_severity': vuln_stats,
-                'technologies': len(self.technologies),
-                'ports': len(self.ports),
-                'subdomains': len(self.subdomains),
-                'directories': len(self.directories),
-                'parameters': len(self.parameters),
-                'api_endpoints': len(self.api_endpoints),
-            }
+            "session_id": self.session_id,
+            "target": self.target.value if self.target else None,
+            "status": self.status.value,
+            "phase": self.phase.value,
+            "started_at": self.started_at.isoformat(),
+            "ended_at": self.ended_at.isoformat() if self.ended_at else None,
+            "duration": duration,
+            "stats": {
+                "requests_sent": self.requests_sent,
+                "errors_count": self.errors_count,
+                "vulnerabilities": len(self.vulnerabilities),
+                "vuln_by_severity": vuln_stats,
+                "technologies": len(self.technologies),
+                "ports": len(self.ports),
+                "subdomains": len(self.subdomains),
+                "directories": len(self.directories),
+                "parameters": len(self.parameters),
+                "api_endpoints": len(self.api_endpoints),
+            },
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -488,35 +481,35 @@ class ScanContext:
             Dict[str, Any]: 完整字典表示
         """
         return {
-            'session_id': self.session_id,
-            'target': self.target.to_dict() if self.target else None,
-            'started_at': self.started_at.isoformat(),
-            'ended_at': self.ended_at.isoformat() if self.ended_at else None,
-            'phase': self.phase.value,
-            'status': self.status.value,
-            'config': self.config,
-            'fingerprints': self.fingerprints,
-            'technologies': self.technologies,
-            'ports': self.ports,
-            'subdomains': self.subdomains,
-            'directories': self.directories,
-            'parameters': self.parameters,
-            'js_files': self.js_files,
-            'api_endpoints': self.api_endpoints,
-            'vulnerabilities': [v.to_dict() for v in self.vulnerabilities],
-            'cookies': self.cookies,
-            'headers': self.headers,
-            'auth_token': self.auth_token,
-            'proxy': self.proxy,
-            'requests_sent': self.requests_sent,
-            'errors_count': self.errors_count,
-            'logs': self.logs,
-            'notes': self.notes,
-            'metadata': self.metadata,
+            "session_id": self.session_id,
+            "target": self.target.to_dict() if self.target else None,
+            "started_at": self.started_at.isoformat(),
+            "ended_at": self.ended_at.isoformat() if self.ended_at else None,
+            "phase": self.phase.value,
+            "status": self.status.value,
+            "config": self.config,
+            "fingerprints": self.fingerprints,
+            "technologies": self.technologies,
+            "ports": self.ports,
+            "subdomains": self.subdomains,
+            "directories": self.directories,
+            "parameters": self.parameters,
+            "js_files": self.js_files,
+            "api_endpoints": self.api_endpoints,
+            "vulnerabilities": [v.to_dict() for v in self.vulnerabilities],
+            "cookies": self.cookies,
+            "headers": self.headers,
+            "auth_token": self.auth_token,
+            "proxy": self.proxy,
+            "requests_sent": self.requests_sent,
+            "errors_count": self.errors_count,
+            "logs": self.logs,
+            "notes": self.notes,
+            "metadata": self.metadata,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ScanContext':
+    def from_dict(cls, data: Dict[str, Any]) -> "ScanContext":
         """
         从字典创建上下文对象
 
@@ -526,50 +519,54 @@ class ScanContext:
         Returns:
             ScanContext: 上下文对象
         """
-        from .target import Target
         from .result import Vulnerability
+        from .target import Target
 
         # 解析目标
         target = None
-        if data.get('target'):
-            target = Target.from_dict(data['target'])
+        if data.get("target"):
+            target = Target.from_dict(data["target"])
 
         # 解析漏洞
         vulns = []
-        for v_data in data.get('vulnerabilities', []):
+        for v_data in data.get("vulnerabilities", []):
             vulns.append(Vulnerability.from_dict(v_data))
 
         context = cls(
-            session_id=data.get('session_id', str(uuid.uuid4())),
+            session_id=data.get("session_id", str(uuid.uuid4())),
             target=target,
-            started_at=datetime.fromisoformat(data['started_at']) if data.get('started_at') else datetime.now(),
-            ended_at=datetime.fromisoformat(data['ended_at']) if data.get('ended_at') else None,
-            phase=ScanPhase(data.get('phase', 'init')),
-            status=ContextStatus(data.get('status', 'active')),
-            config=data.get('config', {}),
-            fingerprints=data.get('fingerprints', {}),
-            technologies=data.get('technologies', []),
-            ports=data.get('ports', []),
-            subdomains=data.get('subdomains', []),
-            directories=data.get('directories', []),
-            parameters=data.get('parameters', []),
-            js_files=data.get('js_files', []),
-            api_endpoints=data.get('api_endpoints', []),
+            started_at=(
+                datetime.fromisoformat(data["started_at"])
+                if data.get("started_at")
+                else datetime.now()
+            ),
+            ended_at=datetime.fromisoformat(data["ended_at"]) if data.get("ended_at") else None,
+            phase=ScanPhase(data.get("phase", "init")),
+            status=ContextStatus(data.get("status", "active")),
+            config=data.get("config", {}),
+            fingerprints=data.get("fingerprints", {}),
+            technologies=data.get("technologies", []),
+            ports=data.get("ports", []),
+            subdomains=data.get("subdomains", []),
+            directories=data.get("directories", []),
+            parameters=data.get("parameters", []),
+            js_files=data.get("js_files", []),
+            api_endpoints=data.get("api_endpoints", []),
             vulnerabilities=vulns,
-            cookies=data.get('cookies', {}),
-            headers=data.get('headers', {}),
-            auth_token=data.get('auth_token'),
-            proxy=data.get('proxy'),
-            requests_sent=data.get('requests_sent', 0),
-            errors_count=data.get('errors_count', 0),
-            logs=data.get('logs', []),
-            notes=data.get('notes', []),
-            metadata=data.get('metadata', {}),
+            cookies=data.get("cookies", {}),
+            headers=data.get("headers", {}),
+            auth_token=data.get("auth_token"),
+            proxy=data.get("proxy"),
+            requests_sent=data.get("requests_sent", 0),
+            errors_count=data.get("errors_count", 0),
+            logs=data.get("logs", []),
+            notes=data.get("notes", []),
+            metadata=data.get("metadata", {}),
         )
 
         return context
 
-    def to_scan_result(self) -> 'ScanResult':
+    def to_scan_result(self) -> "ScanResult":
         """
         转换为扫描结果对象
 
@@ -580,7 +577,7 @@ class ScanContext:
 
         result = ScanResult(
             session_id=self.session_id,
-            target=self.target.value if self.target else '',
+            target=self.target.value if self.target else "",
             status=self.status.value,
             started_at=self.started_at,
             ended_at=self.ended_at,
@@ -598,7 +595,7 @@ class ScanContext:
         result.calculate_stats()
         return result
 
-    def clone(self) -> 'ScanContext':
+    def clone(self) -> "ScanContext":
         """
         克隆上下文
 
@@ -609,7 +606,7 @@ class ScanContext:
 
     def __str__(self) -> str:
         """字符串表示"""
-        target_str = self.target.value if self.target else 'N/A'
+        target_str = self.target.value if self.target else "N/A"
         return f"ScanContext({self.session_id[:8]}, target={target_str}, phase={self.phase.value})"
 
     def __repr__(self) -> str:

@@ -33,29 +33,31 @@ from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 class ErrorCategory(Enum):
     """错误类别 - 用于日志分组和错误上下文"""
-    RECON = "recon"              # 侦察类
-    DETECTOR = "detector"        # 漏洞检测类
-    CVE = "cve"                  # CVE相关
-    REDTEAM = "redteam"          # 红队工具
-    API_SECURITY = "api"         # API安全
-    CLOUD = "cloud"              # 云安全
-    SUPPLY_CHAIN = "supply"      # 供应链
-    SESSION = "session"          # 会话管理
-    REPORT = "report"            # 报告生成
-    AI = "ai"                    # AI辅助
+
+    RECON = "recon"  # 侦察类
+    DETECTOR = "detector"  # 漏洞检测类
+    CVE = "cve"  # CVE相关
+    REDTEAM = "redteam"  # 红队工具
+    API_SECURITY = "api"  # API安全
+    CLOUD = "cloud"  # 云安全
+    SUPPLY_CHAIN = "supply"  # 供应链
+    SESSION = "session"  # 会话管理
+    REPORT = "report"  # 报告生成
+    AI = "ai"  # AI辅助
     EXTERNAL_TOOLS = "external"  # 外部工具集成
-    LATERAL = "lateral"          # 横向移动
+    LATERAL = "lateral"  # 横向移动
     PERSISTENCE = "persistence"  # 持久化
-    MISC = "misc"                # 其他
+    MISC = "misc"  # 其他
 
 
 class ErrorSeverity(Enum):
     """错误严重程度 - 决定日志级别"""
-    DEBUG = "debug"       # 预期内的轻微问题
-    INFO = "info"         # 业务层面的已知失败（如目标不可达）
-    WARNING = "warning"   # 可恢复的异常（如超时重试后仍失败）
-    ERROR = "error"       # 需要关注的错误（如模块导入失败）
-    CRITICAL = "critical" # 严重错误（不应发生）
+
+    DEBUG = "debug"  # 预期内的轻微问题
+    INFO = "info"  # 业务层面的已知失败（如目标不可达）
+    WARNING = "warning"  # 可恢复的异常（如超时重试后仍失败）
+    ERROR = "error"  # 需要关注的错误（如模块导入失败）
+    CRITICAL = "critical"  # 严重错误（不应发生）
 
 
 # 类型别名
@@ -65,6 +67,7 @@ ContextExtractor = Callable[[Tuple[Any, ...], Dict[str, Any]], Dict[str, Any]]
 
 
 # ==================== 异常映射表 ====================
+
 
 def _get_exception_mappings() -> ExceptionMappingType:
     """获取异常映射表（延迟加载）"""
@@ -88,32 +91,26 @@ def _get_exception_mappings() -> ExceptionMappingType:
 
     # 尝试导入项目自定义异常
     try:
-        from core.exceptions import (
-            AutoRedTeamError,
-            ValidationError,
-            ConfigError,
-            # 横向移动
-            LateralError,
-            SMBError,
-            SSHError,
-            WMIError,
-            # C2
-            C2Error,
-            BeaconError,
-            TunnelError,
-            # Payload
-            PayloadError,
-            # 认证
+        from core.exceptions import (  # 横向移动; C2; Payload; 认证; 权限提升; 外泄
             AuthError,
-            InvalidCredentials,
-            # 权限提升
-            PrivilegeEscalationError,
-            EscalationVectorNotFound,
-            InsufficientPrivilege,
-            # 外泄
-            ExfiltrationError,
+            AutoRedTeamError,
+            BeaconError,
+            C2Error,
             ChannelBlocked,
             ChannelConnectionError,
+            ConfigError,
+            EscalationVectorNotFound,
+            ExfiltrationError,
+            InsufficientPrivilege,
+            InvalidCredentials,
+            LateralError,
+            PayloadError,
+            PrivilegeEscalationError,
+            SMBError,
+            SSHError,
+            TunnelError,
+            ValidationError,
+            WMIError,
         )
 
         project_mappings: ExceptionMappingType = {
@@ -185,9 +182,7 @@ def get_exception_info(exc: Exception) -> ExceptionInfo:
 
 
 def format_error_response(
-    error: str,
-    error_type: str,
-    context: Optional[Dict[str, Any]] = None
+    error: str, error_type: str, context: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     格式化错误响应
@@ -201,9 +196,9 @@ def format_error_response(
         标准化的错误响应字典
     """
     response: Dict[str, Any] = {
-        'success': False,
-        'error': error,
-        'error_type': error_type,
+        "success": False,
+        "error": error,
+        "error_type": error_type,
     }
     if context:
         response.update(context)
@@ -216,7 +211,7 @@ def log_exception(
     severity: ErrorSeverity,
     category: ErrorCategory,
     operation: str,
-    need_traceback: bool = False
+    need_traceback: bool = False,
 ) -> None:
     """
     记录异常日志
@@ -263,30 +258,47 @@ def handle_errors(
         async def port_scan(target: str, ports: str = "1-1000") -> Dict[str, Any]:
             ...
     """
+
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         operation = func.__name__
 
         if inspect.iscoroutinefunction(func):
+
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
                 try:
                     return await func(*args, **kwargs)
                 except Exception as exc:
                     return _handle_exception(
-                        exc, logger, category, operation,
-                        context_extractor, default_context, args, kwargs
+                        exc,
+                        logger,
+                        category,
+                        operation,
+                        context_extractor,
+                        default_context,
+                        args,
+                        kwargs,
                     )
+
             return async_wrapper
         else:
+
             @functools.wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
                 try:
                     return func(*args, **kwargs)
                 except Exception as exc:
                     return _handle_exception(
-                        exc, logger, category, operation,
-                        context_extractor, default_context, args, kwargs
+                        exc,
+                        logger,
+                        category,
+                        operation,
+                        context_extractor,
+                        default_context,
+                        args,
+                        kwargs,
                     )
+
             return sync_wrapper
 
     return decorator
@@ -323,50 +335,51 @@ def _handle_exception(
 
 # ==================== 便捷上下文提取器 ====================
 
+
 def extract_target(args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Dict[str, Any]:
     """从参数中提取 target 字段"""
     if args:
-        return {'target': args[0]}
-    return {'target': kwargs.get('target', kwargs.get('url', kwargs.get('domain')))}
+        return {"target": args[0]}
+    return {"target": kwargs.get("target", kwargs.get("url", kwargs.get("domain")))}
 
 
 def extract_url(args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Dict[str, Any]:
     """从参数中提取 url 字段"""
     if args:
-        return {'url': args[0]}
-    return {'url': kwargs.get('url', kwargs.get('target'))}
+        return {"url": args[0]}
+    return {"url": kwargs.get("url", kwargs.get("target"))}
 
 
 def extract_domain(args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Dict[str, Any]:
     """从参数中提取 domain 字段"""
     if args:
-        return {'domain': args[0]}
-    return {'domain': kwargs.get('domain', kwargs.get('target'))}
+        return {"domain": args[0]}
+    return {"domain": kwargs.get("domain", kwargs.get("target"))}
 
 
 def extract_file_path(args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Dict[str, Any]:
     """从参数中提取 file_path 字段"""
     if args:
-        return {'file_path': args[0]}
-    return {'file_path': kwargs.get('file_path', kwargs.get('path'))}
+        return {"file_path": args[0]}
+    return {"file_path": kwargs.get("file_path", kwargs.get("path"))}
 
 
 # ==================== 输入验证装饰器 ====================
 
 # 验证类型映射
 _VALIDATION_TYPES = {
-    'url': 'validate_url',
-    'ip': 'validate_ip',
-    'ipv4': 'validate_ipv4',
-    'ipv6': 'validate_ipv6',
-    'domain': 'validate_domain',
-    'cidr': 'validate_cidr',
-    'port': 'validate_port',
-    'port_range': 'validate_port_range',
-    'email': 'validate_email',
-    'target': 'auto',  # 自动检测 (IP/URL/域名/CIDR)
-    'session_id': 'session_id',
-    'path': 'path',
+    "url": "validate_url",
+    "ip": "validate_ip",
+    "ipv4": "validate_ipv4",
+    "ipv6": "validate_ipv6",
+    "domain": "validate_domain",
+    "cidr": "validate_cidr",
+    "port": "validate_port",
+    "port_range": "validate_port_range",
+    "email": "validate_email",
+    "target": "auto",  # 自动检测 (IP/URL/域名/CIDR)
+    "session_id": "session_id",
+    "path": "path",
 }
 
 
@@ -374,31 +387,33 @@ def _get_validator(validation_type: str) -> Callable[[str], bool]:
     """获取验证函数"""
     try:
         from utils.validators import (
-            validate_url,
+            InputValidator,
+            validate_cidr,
+            validate_domain,
+            validate_email,
             validate_ip,
             validate_ipv4,
             validate_ipv6,
-            validate_domain,
-            validate_cidr,
             validate_port,
             validate_port_range,
-            validate_email,
-            InputValidator,
+            validate_url,
         )
 
         validators = {
-            'validate_url': validate_url,
-            'validate_ip': validate_ip,
-            'validate_ipv4': validate_ipv4,
-            'validate_ipv6': validate_ipv6,
-            'validate_domain': validate_domain,
-            'validate_cidr': validate_cidr,
-            'validate_port': validate_port,
-            'validate_port_range': validate_port_range,
-            'validate_email': validate_email,
-            'auto': lambda x: _validate_target_auto(x, validate_url, validate_ip, validate_domain, validate_cidr),
-            'session_id': lambda x: InputValidator.validate_session_id(x)[0],
-            'path': lambda x: InputValidator.validate_file_path(x, allow_absolute=True)[0],
+            "validate_url": validate_url,
+            "validate_ip": validate_ip,
+            "validate_ipv4": validate_ipv4,
+            "validate_ipv6": validate_ipv6,
+            "validate_domain": validate_domain,
+            "validate_cidr": validate_cidr,
+            "validate_port": validate_port,
+            "validate_port_range": validate_port_range,
+            "validate_email": validate_email,
+            "auto": lambda x: _validate_target_auto(
+                x, validate_url, validate_ip, validate_domain, validate_cidr
+            ),
+            "session_id": lambda x: InputValidator.validate_session_id(x)[0],
+            "path": lambda x: InputValidator.validate_file_path(x, allow_absolute=True)[0],
         }
 
         return validators.get(validation_type, lambda x: True)
@@ -413,7 +428,7 @@ def _validate_target_auto(
     validate_url: Callable,
     validate_ip: Callable,
     validate_domain: Callable,
-    validate_cidr: Callable
+    validate_cidr: Callable,
 ) -> bool:
     """自动验证目标（尝试多种类型）"""
     if not target or not isinstance(target, str):
@@ -422,11 +437,11 @@ def _validate_target_auto(
     target = target.strip()
 
     # 尝试作为 URL
-    if target.startswith(('http://', 'https://')):
+    if target.startswith(("http://", "https://")):
         return validate_url(target)
 
     # 尝试作为 CIDR
-    if '/' in target:
+    if "/" in target:
         return validate_cidr(target)
 
     # 尝试作为 IP
@@ -439,7 +454,7 @@ def _validate_target_auto(
 
     # 如果都不匹配，允许通过（可能是主机名）
     # 但要确保不包含危险字符
-    dangerous_chars = [';', '|', '&', '$', '`', '\n', '\r', '>', '<', '"', "'"]
+    dangerous_chars = [";", "|", "&", "$", "`", "\n", "\r", ">", "<", '"', "'"]
     for char in dangerous_chars:
         if char in target:
             return False
@@ -447,9 +462,7 @@ def _validate_target_auto(
     return True
 
 
-def validate_inputs(
-    **param_validators: str
-) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+def validate_inputs(**param_validators: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     输入验证装饰器
 
@@ -483,30 +496,31 @@ def validate_inputs(
         async def recon(target: str) -> Dict[str, Any]:
             ...
     """
+
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         # 获取函数签名以支持位置参数映射
         sig = inspect.signature(func)
         param_names = list(sig.parameters.keys())
 
         if inspect.iscoroutinefunction(func):
+
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
-                validation_error = _do_validation(
-                    param_validators, param_names, args, kwargs
-                )
+                validation_error = _do_validation(param_validators, param_names, args, kwargs)
                 if validation_error:
                     return validation_error
                 return await func(*args, **kwargs)
+
             return async_wrapper
         else:
+
             @functools.wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
-                validation_error = _do_validation(
-                    param_validators, param_names, args, kwargs
-                )
+                validation_error = _do_validation(param_validators, param_names, args, kwargs)
                 if validation_error:
                     return validation_error
                 return func(*args, **kwargs)
+
             return sync_wrapper
 
     return decorator
@@ -516,7 +530,7 @@ def _do_validation(
     param_validators: Dict[str, str],
     param_names: list,
     args: Tuple[Any, ...],
-    kwargs: Dict[str, Any]
+    kwargs: Dict[str, Any],
 ) -> Optional[Dict[str, Any]]:
     """
     执行参数验证
@@ -538,17 +552,17 @@ def _do_validation(
                 value = args[idx]
 
         # 跳过 None 或空值（由业务逻辑处理）
-        if value is None or value == '':
+        if value is None or value == "":
             continue
 
         # 端口特殊处理（可能是整数）
-        if validation_type in ('port', 'validate_port'):
+        if validation_type in ("port", "validate_port"):
             if isinstance(value, int):
                 if not (1 <= value <= 65535):
                     return format_error_response(
                         f"端口 '{param_name}' 无效: {value} (有效范围: 1-65535)",
-                        'ValidationError',
-                        {param_name: value}
+                        "ValidationError",
+                        {param_name: value},
                     )
                 continue
             value = str(value)
@@ -561,8 +575,8 @@ def _do_validation(
             if not validator(value):
                 return format_error_response(
                     f"参数 '{param_name}' 验证失败: '{value}' 不是有效的 {validation_type}",
-                    'ValidationError',
-                    {param_name: value}
+                    "ValidationError",
+                    {param_name: value},
                 )
 
     return None
@@ -582,25 +596,30 @@ def require_non_empty(*param_names: str) -> Callable[[Callable[..., Any]], Calla
         async def scan(url: str, target: str) -> Dict[str, Any]:
             ...
     """
+
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         sig = inspect.signature(func)
         all_param_names = list(sig.parameters.keys())
 
         if inspect.iscoroutinefunction(func):
+
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
                 error = _check_non_empty(param_names, all_param_names, args, kwargs)
                 if error:
                     return error
                 return await func(*args, **kwargs)
+
             return async_wrapper
         else:
+
             @functools.wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
                 error = _check_non_empty(param_names, all_param_names, args, kwargs)
                 if error:
                     return error
                 return func(*args, **kwargs)
+
             return sync_wrapper
 
     return decorator
@@ -610,7 +629,7 @@ def _check_non_empty(
     required_params: Tuple[str, ...],
     all_param_names: list,
     args: Tuple[Any, ...],
-    kwargs: Dict[str, Any]
+    kwargs: Dict[str, Any],
 ) -> Optional[Dict[str, Any]]:
     """检查参数是否为空"""
     for param_name in required_params:
@@ -626,23 +645,17 @@ def _check_non_empty(
         # 检查空值
         if value is None:
             return format_error_response(
-                f"参数 '{param_name}' 不能为空",
-                'ValidationError',
-                {param_name: None}
+                f"参数 '{param_name}' 不能为空", "ValidationError", {param_name: None}
             )
 
         if isinstance(value, str) and not value.strip():
             return format_error_response(
-                f"参数 '{param_name}' 不能为空字符串",
-                'ValidationError',
-                {param_name: value}
+                f"参数 '{param_name}' 不能为空字符串", "ValidationError", {param_name: value}
             )
 
         if isinstance(value, (list, dict)) and len(value) == 0:
             return format_error_response(
-                f"参数 '{param_name}' 不能为空",
-                'ValidationError',
-                {param_name: value}
+                f"参数 '{param_name}' 不能为空", "ValidationError", {param_name: value}
             )
 
     return None
@@ -679,8 +692,10 @@ def handle_external_tool_errors(
         async def ext_nmap_scan(target: str) -> Dict[str, Any]:
             ...
     """
+
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         if inspect.iscoroutinefunction(func):
+
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
                 try:
@@ -689,8 +704,10 @@ def handle_external_tool_errors(
                     return _handle_external_tool_exception(
                         exc, logger, tool_name, context_extractor, args, kwargs
                     )
+
             return async_wrapper
         else:
+
             @functools.wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
                 try:
@@ -699,6 +716,7 @@ def handle_external_tool_errors(
                     return _handle_external_tool_exception(
                         exc, logger, tool_name, context_extractor, args, kwargs
                     )
+
             return sync_wrapper
 
     return decorator
@@ -713,8 +731,8 @@ def _handle_external_tool_exception(
     kwargs: Dict[str, Any],
 ) -> Dict[str, Any]:
     """处理外部工具异常，提供针对性的错误信息和提示"""
-    import subprocess
     import asyncio
+    import subprocess
 
     error_type = type(exc).__name__
     error_msg = str(exc)
@@ -753,14 +771,13 @@ def _handle_external_tool_exception(
 
     # 构建响应
     response: Dict[str, Any] = {
-        'success': False,
-        'error': error_msg,
-        'error_type': error_type,
+        "success": False,
+        "error": error_msg,
+        "error_type": error_type,
     }
     if hint:
-        response['hint'] = hint
+        response["hint"] = hint
     if context:
         response.update(context)
 
     return response
-

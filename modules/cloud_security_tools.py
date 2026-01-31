@@ -21,8 +21,7 @@ def register_cloud_security_tools(mcp):
     # ========== Kubernetes安全工具 ==========
 
     @mcp.tool()
-    def k8s_privileged_check(namespace: str = "default",
-                              kubeconfig: str = "") -> dict:
+    def k8s_privileged_check(namespace: str = "default", kubeconfig: str = "") -> dict:
         """K8s特权容器检测 - 检查特权容器和危险能力
 
         检测内容:
@@ -61,10 +60,10 @@ def register_cloud_security_tools(mcp):
                         "severity": f.severity.value,
                         "resource": f"{f.resource_type}/{f.resource_name}",
                         "title": f.title,
-                        "remediation": f.remediation
+                        "remediation": f.remediation,
                     }
                     for f in findings
-                ]
+                ],
             }
 
         except ImportError as e:
@@ -75,8 +74,7 @@ def register_cloud_security_tools(mcp):
     registered_tools.append("k8s_privileged_check")
 
     @mcp.tool()
-    def k8s_hostpath_check(namespace: str = "default",
-                           kubeconfig: str = "") -> dict:
+    def k8s_hostpath_check(namespace: str = "default", kubeconfig: str = "") -> dict:
         """K8s宿主机路径挂载检测 - 检查危险的hostPath挂载
 
         检测敏感路径:
@@ -114,10 +112,10 @@ def register_cloud_security_tools(mcp):
                         "resource": f"{f.resource_type}/{f.resource_name}",
                         "path": f.evidence.get("path", ""),
                         "title": f.title,
-                        "remediation": f.remediation
+                        "remediation": f.remediation,
                     }
                     for f in findings
-                ]
+                ],
             }
 
         except Exception as e:
@@ -126,8 +124,7 @@ def register_cloud_security_tools(mcp):
     registered_tools.append("k8s_hostpath_check")
 
     @mcp.tool()
-    def k8s_rbac_audit(namespace: str = "default",
-                        kubeconfig: str = "") -> dict:
+    def k8s_rbac_audit(namespace: str = "default", kubeconfig: str = "") -> dict:
         """K8s RBAC权限审计 - 检查过度权限配置
 
         检测内容:
@@ -163,10 +160,10 @@ def register_cloud_security_tools(mcp):
                         "title": f.title,
                         "description": f.description,
                         "remediation": f.remediation,
-                        "evidence": f.evidence
+                        "evidence": f.evidence,
                     }
                     for f in findings
-                ]
+                ],
             }
 
         except Exception as e:
@@ -175,8 +172,7 @@ def register_cloud_security_tools(mcp):
     registered_tools.append("k8s_rbac_audit")
 
     @mcp.tool()
-    def k8s_network_policy_check(namespace: str = "default",
-                                  kubeconfig: str = "") -> dict:
+    def k8s_network_policy_check(namespace: str = "default", kubeconfig: str = "") -> dict:
         """K8s网络策略检查 - 检测缺失的NetworkPolicy
 
         Args:
@@ -204,10 +200,10 @@ def register_cloud_security_tools(mcp):
                         "severity": f.severity.value,
                         "title": f.title,
                         "description": f.description,
-                        "remediation": f.remediation
+                        "remediation": f.remediation,
                     }
                     for f in findings
-                ]
+                ],
             }
 
         except Exception as e:
@@ -216,8 +212,7 @@ def register_cloud_security_tools(mcp):
     registered_tools.append("k8s_network_policy_check")
 
     @mcp.tool()
-    def k8s_secrets_check(namespace: str = "default",
-                          kubeconfig: str = "") -> dict:
+    def k8s_secrets_check(namespace: str = "default", kubeconfig: str = "") -> dict:
         """K8s敏感信息检查 - 检测环境变量中的硬编码敏感信息
 
         Args:
@@ -246,10 +241,10 @@ def register_cloud_security_tools(mcp):
                         "resource": f"{f.resource_type}/{f.resource_name}",
                         "title": f.title,
                         "evidence": f.evidence,
-                        "remediation": f.remediation
+                        "remediation": f.remediation,
                     }
                     for f in findings
-                ]
+                ],
             }
 
         except Exception as e:
@@ -291,10 +286,10 @@ def register_cloud_security_tools(mcp):
                         "resource": f"{f.resource_type}/{f.resource_name}",
                         "title": f.title,
                         "description": f.description,
-                        "remediation": f.remediation
+                        "remediation": f.remediation,
                     }
                     for f in findings
-                ]
+                ],
             }
 
         except Exception as e:
@@ -303,8 +298,7 @@ def register_cloud_security_tools(mcp):
     registered_tools.append("k8s_manifest_scan")
 
     @mcp.tool()
-    def k8s_full_scan(namespace: str = "default",
-                      kubeconfig: str = "") -> dict:
+    def k8s_full_scan(namespace: str = "default", kubeconfig: str = "") -> dict:
         """K8s完整安全扫描 - 执行所有K8s安全检测
 
         包含:
@@ -333,10 +327,7 @@ def register_cloud_security_tools(mcp):
             tester = KubernetesSecurityTester(kubeconfig if kubeconfig else None)
             result = tester.full_scan(namespace)
 
-            return {
-                "success": True,
-                **result
-            }
+            return {"success": True, **result}
 
         except Exception as e:
             return {"success": False, "error": str(e)}

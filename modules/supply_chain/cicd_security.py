@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class CICDPlatform(Enum):
     """CI/CD平台"""
+
     GITHUB_ACTIONS = "github_actions"
     GITLAB_CI = "gitlab_ci"
     JENKINS = "jenkins"
@@ -25,6 +26,7 @@ class CICDPlatform(Enum):
 
 class CICDVulnType(Enum):
     """CI/CD漏洞类型"""
+
     COMMAND_INJECTION = "command_injection"
     SECRET_EXPOSURE = "secret_exposure"
     UNTRUSTED_INPUT = "untrusted_input"
@@ -39,6 +41,7 @@ class CICDVulnType(Enum):
 @dataclass
 class CICDFinding:
     """CI/CD安全发现"""
+
     platform: CICDPlatform
     vuln_type: CICDVulnType
     file_path: str
@@ -57,66 +60,66 @@ class CICDSecurityScanner:
     GITHUB_DANGEROUS_PATTERNS = [
         # 直接使用不受信任的输入 (命令注入)
         {
-            "pattern": r'\$\{\{\s*github\.event\.(issue|pull_request|comment|discussion)\.(title|body|head\.ref)',
+            "pattern": r"\$\{\{\s*github\.event\.(issue|pull_request|comment|discussion)\.(title|body|head\.ref)",
             "type": CICDVulnType.UNTRUSTED_INPUT,
             "severity": "high",
             "title": "直接使用不受信任的GitHub事件输入",
             "description": "直接使用github.event中的用户输入可能导致命令注入",
-            "remediation": "将用户输入存储到环境变量,并使用引号包裹"
+            "remediation": "将用户输入存储到环境变量,并使用引号包裹",
         },
         # pull_request_target触发器
         {
-            "pattern": r'on:\s*(pull_request_target|workflow_run)',
+            "pattern": r"on:\s*(pull_request_target|workflow_run)",
             "type": CICDVulnType.PRIVILEGED_WORKFLOW,
             "severity": "high",
             "title": "使用特权工作流触发器",
             "description": "pull_request_target和workflow_run在特权上下文运行,可能导致权限提升",
-            "remediation": "避免在特权工作流中检出不受信任的代码"
+            "remediation": "避免在特权工作流中检出不受信任的代码",
         },
         # 在日志中暴露secrets
         {
-            "pattern": r'(echo|print|cat|printf).*\$\{\{\s*secrets\.',
+            "pattern": r"(echo|print|cat|printf).*\$\{\{\s*secrets\.",
             "type": CICDVulnType.SECRET_EXPOSURE,
             "severity": "high",
             "title": "可能在日志中暴露Secrets",
             "description": "将secrets输出到标准输出可能导致泄露",
-            "remediation": "避免将secrets输出到日志"
+            "remediation": "避免将secrets输出到日志",
         },
         # 使用自托管runner
         {
-            "pattern": r'runs-on:\s*self-hosted',
+            "pattern": r"runs-on:\s*self-hosted",
             "type": CICDVulnType.SELF_HOSTED_RUNNER,
             "severity": "medium",
             "title": "使用自托管Runner",
             "description": "自托管runner可能存在持久化和隔离问题",
-            "remediation": "确保自托管runner安全配置,使用临时环境"
+            "remediation": "确保自托管runner安全配置,使用临时环境",
         },
         # 过度权限
         {
-            "pattern": r'permissions:\s*write-all',
+            "pattern": r"permissions:\s*write-all",
             "type": CICDVulnType.INSECURE_PERMISSION,
             "severity": "high",
             "title": "工作流使用过度权限",
             "description": "write-all权限可能导致仓库被篡改",
-            "remediation": "遵循最小权限原则,仅申请必要权限"
+            "remediation": "遵循最小权限原则,仅申请必要权限",
         },
         # 使用第三方action而不固定版本
         {
-            "pattern": r'uses:\s*[^@]+@(master|main|latest)',
+            "pattern": r"uses:\s*[^@]+@(master|main|latest)",
             "type": CICDVulnType.SUPPLY_CHAIN_RISK,
             "severity": "medium",
             "title": "使用未固定版本的第三方Action",
             "description": "使用master/main分支可能导致供应链攻击",
-            "remediation": "使用commit SHA固定Action版本"
+            "remediation": "使用commit SHA固定Action版本",
         },
         # 禁用安全检查
         {
-            "pattern": r'--no-verify|--skip-ci|continue-on-error:\s*true',
+            "pattern": r"--no-verify|--skip-ci|continue-on-error:\s*true",
             "type": CICDVulnType.INSECURE_PERMISSION,
             "severity": "low",
             "title": "禁用安全检查",
             "description": "禁用验证可能允许恶意代码通过",
-            "remediation": "避免禁用安全检查"
+            "remediation": "避免禁用安全检查",
         },
     ]
 
@@ -127,29 +130,29 @@ class CICDSecurityScanner:
         (r'(secret[_-]?key|secretkey)\s*[=:]\s*["\'][^"\']+["\']', "Secret密钥"),
         (r'(access[_-]?token|accesstoken)\s*[=:]\s*["\'][^"\']+["\']', "Access Token"),
         (r'(private[_-]?key|privatekey)\s*[=:]\s*["\'][^"\']+["\']', "私钥"),
-        (r'AKIA[0-9A-Z]{16}', "AWS Access Key"),
-        (r'ghp_[a-zA-Z0-9]{36}', "GitHub Personal Token"),
-        (r'gho_[a-zA-Z0-9]{36}', "GitHub OAuth Token"),
-        (r'glpat-[a-zA-Z0-9\-_]{20}', "GitLab Personal Token"),
+        (r"AKIA[0-9A-Z]{16}", "AWS Access Key"),
+        (r"ghp_[a-zA-Z0-9]{36}", "GitHub Personal Token"),
+        (r"gho_[a-zA-Z0-9]{36}", "GitHub OAuth Token"),
+        (r"glpat-[a-zA-Z0-9\-_]{20}", "GitLab Personal Token"),
     ]
 
     # GitLab CI危险模式
     GITLAB_DANGEROUS_PATTERNS = [
         {
-            "pattern": r'when:\s*manual',
+            "pattern": r"when:\s*manual",
             "type": CICDVulnType.INSECURE_PERMISSION,
             "severity": "low",
             "title": "手动触发任务",
             "description": "手动任务可能被未授权人员触发",
-            "remediation": "限制手动任务的执行权限"
+            "remediation": "限制手动任务的执行权限",
         },
         {
-            "pattern": r'allow_failure:\s*true',
+            "pattern": r"allow_failure:\s*true",
             "type": CICDVulnType.INSECURE_PERMISSION,
             "severity": "low",
             "title": "允许任务失败",
             "description": "允许失败可能让恶意代码通过",
-            "remediation": "评估是否真正需要允许失败"
+            "remediation": "评估是否真正需要允许失败",
         },
     ]
 
@@ -166,22 +169,21 @@ class CICDSecurityScanner:
     def _read_file(self, file_path: Path) -> str:
         """安全读取文件"""
         try:
-            return file_path.read_text(encoding='utf-8')
+            return file_path.read_text(encoding="utf-8")
         except Exception as e:
             logger.error(f"读取文件失败 {file_path}: {e}")
             return ""
 
-    def _extract_context(self, content: str, match_start: int,
-                         context_lines: int = 2) -> tuple:
+    def _extract_context(self, content: str, match_start: int, context_lines: int = 2) -> tuple:
         """提取匹配上下文"""
-        lines = content[:match_start].split('\n')
+        lines = content[:match_start].split("\n")
         line_number = len(lines)
 
         # 获取代码片段
-        all_lines = content.split('\n')
+        all_lines = content.split("\n")
         start = max(0, line_number - context_lines - 1)
         end = min(len(all_lines), line_number + context_lines)
-        snippet = '\n'.join(all_lines[start:end])
+        snippet = "\n".join(all_lines[start:end])
 
         return line_number, snippet
 
@@ -225,12 +227,14 @@ class CICDSecurityScanner:
                     title=pattern_info["title"],
                     description=pattern_info["description"],
                     code_snippet=snippet,
-                    remediation=pattern_info["remediation"]
+                    remediation=pattern_info["remediation"],
                 )
                 findings.append(finding)
 
         # 检查硬编码敏感信息
-        findings.extend(self._scan_hardcoded_secrets(content, file_path, CICDPlatform.GITHUB_ACTIONS))
+        findings.extend(
+            self._scan_hardcoded_secrets(content, file_path, CICDPlatform.GITHUB_ACTIONS)
+        )
 
         return findings
 
@@ -263,7 +267,7 @@ class CICDSecurityScanner:
                     title=pattern_info["title"],
                     description=pattern_info["description"],
                     code_snippet=snippet,
-                    remediation=pattern_info["remediation"]
+                    remediation=pattern_info["remediation"],
                 )
                 findings.append(finding)
 
@@ -305,15 +309,15 @@ class CICDSecurityScanner:
                 "severity": "high",
                 "title": "可能的Shell命令注入",
                 "description": "在sh步骤中使用变量插值可能导致命令注入",
-                "remediation": "使用参数化方式传递变量"
+                "remediation": "使用参数化方式传递变量",
             },
             {
-                "pattern": r'environment\s*\{[^}]*password\s*=',
+                "pattern": r"environment\s*\{[^}]*password\s*=",
                 "type": CICDVulnType.SECRET_EXPOSURE,
                 "severity": "high",
                 "title": "环境变量中可能包含密码",
                 "description": "密码不应在Jenkinsfile中硬编码",
-                "remediation": "使用Jenkins credentials管理密码"
+                "remediation": "使用Jenkins credentials管理密码",
             },
         ]
 
@@ -332,7 +336,7 @@ class CICDSecurityScanner:
                     title=pattern_info["title"],
                     description=pattern_info["description"],
                     code_snippet=snippet,
-                    remediation=pattern_info["remediation"]
+                    remediation=pattern_info["remediation"],
                 )
                 findings.append(finding)
 
@@ -341,8 +345,9 @@ class CICDSecurityScanner:
 
         return findings
 
-    def _scan_hardcoded_secrets(self, content: str, file_path: Path,
-                                 platform: CICDPlatform) -> List[CICDFinding]:
+    def _scan_hardcoded_secrets(
+        self, content: str, file_path: Path, platform: CICDPlatform
+    ) -> List[CICDFinding]:
         """扫描硬编码的敏感信息"""
         findings = []
 
@@ -359,7 +364,7 @@ class CICDSecurityScanner:
                     title=f"硬编码的{secret_type}",
                     description=f"在CI/CD配置文件中发现硬编码的{secret_type}",
                     code_snippet=snippet,
-                    remediation="使用环境变量或密钥管理服务存储敏感信息"
+                    remediation="使用环境变量或密钥管理服务存储敏感信息",
                 )
                 findings.append(finding)
 
@@ -411,10 +416,10 @@ class CICDSecurityScanner:
                     "severity": f.severity,
                     "title": f.title,
                     "description": f.description,
-                    "remediation": f.remediation
+                    "remediation": f.remediation,
                 }
                 for f in all_findings
-            ]
+            ],
         }
 
     def generate_report(self) -> str:
@@ -435,21 +440,20 @@ class CICDSecurityScanner:
         ]
 
         for finding in self._findings:
-            severity_icon = {
-                "critical": "🔴",
-                "high": "🟠",
-                "medium": "🟡",
-                "low": "🟢"
-            }.get(finding.severity, "⚪")
+            severity_icon = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}.get(
+                finding.severity, "⚪"
+            )
 
-            lines.extend([
-                f"{severity_icon} [{finding.severity.upper()}] {finding.title}",
-                f"   平台: {finding.platform.value}",
-                f"   文件: {finding.file_path}:{finding.line_number}",
-                f"   描述: {finding.description}",
-                f"   修复: {finding.remediation}",
-                ""
-            ])
+            lines.extend(
+                [
+                    f"{severity_icon} [{finding.severity.upper()}] {finding.title}",
+                    f"   平台: {finding.platform.value}",
+                    f"   文件: {finding.file_path}:{finding.line_number}",
+                    f"   描述: {finding.description}",
+                    f"   修复: {finding.remediation}",
+                    "",
+                ]
+            )
 
         lines.append("=" * 60)
 
@@ -465,7 +469,8 @@ def scan_cicd(project_path: str) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     import sys
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     if len(sys.argv) > 1:
         path = sys.argv[1]

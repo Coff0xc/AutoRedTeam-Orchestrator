@@ -4,34 +4,29 @@
 定义漏洞检测结果的数据结构
 """
 
-from dataclasses import dataclass, field, asdict
-from typing import List, Optional, Dict, Any
-from enum import Enum
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class Severity(Enum):
     """严重程度枚举"""
-    CRITICAL = 'critical'  # 严重 - 可直接获取系统权限或敏感数据
-    HIGH = 'high'          # 高危 - 可能导致重大安全风险
-    MEDIUM = 'medium'      # 中危 - 存在一定安全风险
-    LOW = 'low'            # 低危 - 轻微安全问题
-    INFO = 'info'          # 信息 - 安全建议或信息泄露
+
+    CRITICAL = "critical"  # 严重 - 可直接获取系统权限或敏感数据
+    HIGH = "high"  # 高危 - 可能导致重大安全风险
+    MEDIUM = "medium"  # 中危 - 存在一定安全风险
+    LOW = "low"  # 低危 - 轻微安全问题
+    INFO = "info"  # 信息 - 安全建议或信息泄露
 
     @property
     def score(self) -> float:
         """获取CVSS风格的分数"""
-        scores = {
-            'critical': 9.0,
-            'high': 7.0,
-            'medium': 5.0,
-            'low': 3.0,
-            'info': 1.0
-        }
+        scores = {"critical": 9.0, "high": 7.0, "medium": 5.0, "low": 3.0, "info": 1.0}
         return scores.get(self.value, 0.0)
 
     @classmethod
-    def from_score(cls, score: float) -> 'Severity':
+    def from_score(cls, score: float) -> "Severity":
         """从分数获取严重程度"""
         if score >= 9.0:
             return cls.CRITICAL
@@ -47,28 +42,30 @@ class Severity(Enum):
 
 class DetectorType(Enum):
     """检测器类型枚举"""
-    INJECTION = 'injection'  # 注入类漏洞
-    ACCESS = 'access'        # 访问控制漏洞
-    AUTH = 'auth'            # 认证漏洞
-    MISC = 'misc'            # 其他漏洞
+
+    INJECTION = "injection"  # 注入类漏洞
+    ACCESS = "access"  # 访问控制漏洞
+    AUTH = "auth"  # 认证漏洞
+    MISC = "misc"  # 其他漏洞
 
     @property
     def description(self) -> str:
         """获取类型描述"""
         descriptions = {
-            'injection': '注入类漏洞 (SQL注入、XSS、命令注入等)',
-            'access': '访问控制漏洞 (IDOR、路径遍历、SSRF等)',
-            'auth': '认证漏洞 (弱密码、认证绕过、会话劫持等)',
-            'misc': '其他漏洞 (CORS、CSRF、安全头缺失等)'
+            "injection": "注入类漏洞 (SQL注入、XSS、命令注入等)",
+            "access": "访问控制漏洞 (IDOR、路径遍历、SSRF等)",
+            "auth": "认证漏洞 (弱密码、认证绕过、会话劫持等)",
+            "misc": "其他漏洞 (CORS、CSRF、安全头缺失等)",
         }
-        return descriptions.get(self.value, '未知类型')
+        return descriptions.get(self.value, "未知类型")
 
 
 @dataclass
 class RequestInfo:
     """请求信息"""
-    method: str = 'GET'
-    url: str = ''
+
+    method: str = "GET"
+    url: str = ""
     headers: Dict[str, str] = field(default_factory=dict)
     params: Dict[str, str] = field(default_factory=dict)
     body: Optional[str] = None
@@ -82,9 +79,10 @@ class RequestInfo:
 @dataclass
 class ResponseInfo:
     """响应信息"""
+
     status_code: int = 0
     headers: Dict[str, str] = field(default_factory=dict)
-    body: str = ''
+    body: str = ""
     elapsed_ms: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
@@ -100,30 +98,30 @@ class DetectionResult:
     """
 
     # 基本信息
-    vulnerable: bool                     # 是否存在漏洞
-    vuln_type: str                       # 漏洞类型 (sqli, xss, rce等)
-    severity: Severity                   # 严重程度
-    url: str                             # 目标URL
+    vulnerable: bool  # 是否存在漏洞
+    vuln_type: str  # 漏洞类型 (sqli, xss, rce等)
+    severity: Severity  # 严重程度
+    url: str  # 目标URL
 
     # 详细信息
-    param: Optional[str] = None          # 受影响参数
-    payload: Optional[str] = None        # 触发漏洞的payload
-    evidence: Optional[str] = None       # 漏洞证据（响应片段等）
+    param: Optional[str] = None  # 受影响参数
+    payload: Optional[str] = None  # 触发漏洞的payload
+    evidence: Optional[str] = None  # 漏洞证据（响应片段等）
 
     # 验证信息
-    verified: bool = False               # 是否经过验证
-    confidence: float = 0.0              # 置信度 (0.0 - 1.0)
+    verified: bool = False  # 是否经过验证
+    confidence: float = 0.0  # 置信度 (0.0 - 1.0)
 
     # 检测器信息
-    detector: str = ''                   # 检测器名称
-    detector_version: str = '1.0.0'      # 检测器版本
+    detector: str = ""  # 检测器名称
+    detector_version: str = "1.0.0"  # 检测器版本
 
     # 请求/响应信息
-    request: Optional[RequestInfo] = None   # 请求详情
-    response: Optional[ResponseInfo] = None # 响应详情
+    request: Optional[RequestInfo] = None  # 请求详情
+    response: Optional[ResponseInfo] = None  # 响应详情
 
     # 修复建议
-    remediation: Optional[str] = None    # 修复建议
+    remediation: Optional[str] = None  # 修复建议
     references: List[str] = field(default_factory=list)  # 参考链接
 
     # 元数据
@@ -133,66 +131,72 @@ class DetectionResult:
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典格式"""
         result = {
-            'vulnerable': self.vulnerable,
-            'vuln_type': self.vuln_type,
-            'severity': self.severity.value if isinstance(self.severity, Severity) else self.severity,
-            'url': self.url,
-            'param': self.param,
-            'payload': self.payload,
-            'evidence': self.evidence,
-            'verified': self.verified,
-            'confidence': self.confidence,
-            'detector': self.detector,
-            'detector_version': self.detector_version,
-            'remediation': self.remediation,
-            'references': self.references,
-            'timestamp': self.timestamp,
-            'extra': self.extra
+            "vulnerable": self.vulnerable,
+            "vuln_type": self.vuln_type,
+            "severity": (
+                self.severity.value if isinstance(self.severity, Severity) else self.severity
+            ),
+            "url": self.url,
+            "param": self.param,
+            "payload": self.payload,
+            "evidence": self.evidence,
+            "verified": self.verified,
+            "confidence": self.confidence,
+            "detector": self.detector,
+            "detector_version": self.detector_version,
+            "remediation": self.remediation,
+            "references": self.references,
+            "timestamp": self.timestamp,
+            "extra": self.extra,
         }
 
         if self.request:
-            result['request'] = self.request.to_dict() if hasattr(self.request, 'to_dict') else self.request
+            result["request"] = (
+                self.request.to_dict() if hasattr(self.request, "to_dict") else self.request
+            )
         if self.response:
-            result['response'] = self.response.to_dict() if hasattr(self.response, 'to_dict') else self.response
+            result["response"] = (
+                self.response.to_dict() if hasattr(self.response, "to_dict") else self.response
+            )
 
         return result
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'DetectionResult':
+    def from_dict(cls, data: Dict[str, Any]) -> "DetectionResult":
         """从字典创建实例"""
         # 处理severity
-        severity = data.get('severity', 'medium')
+        severity = data.get("severity", "medium")
         if isinstance(severity, str):
             severity = Severity(severity)
 
         # 处理request
-        request = data.get('request')
+        request = data.get("request")
         if isinstance(request, dict):
             request = RequestInfo(**request)
 
         # 处理response
-        response = data.get('response')
+        response = data.get("response")
         if isinstance(response, dict):
             response = ResponseInfo(**response)
 
         return cls(
-            vulnerable=data.get('vulnerable', False),
-            vuln_type=data.get('vuln_type', ''),
+            vulnerable=data.get("vulnerable", False),
+            vuln_type=data.get("vuln_type", ""),
             severity=severity,
-            url=data.get('url', ''),
-            param=data.get('param'),
-            payload=data.get('payload'),
-            evidence=data.get('evidence'),
-            verified=data.get('verified', False),
-            confidence=data.get('confidence', 0.0),
-            detector=data.get('detector', ''),
-            detector_version=data.get('detector_version', '1.0.0'),
+            url=data.get("url", ""),
+            param=data.get("param"),
+            payload=data.get("payload"),
+            evidence=data.get("evidence"),
+            verified=data.get("verified", False),
+            confidence=data.get("confidence", 0.0),
+            detector=data.get("detector", ""),
+            detector_version=data.get("detector_version", "1.0.0"),
             request=request,
             response=response,
-            remediation=data.get('remediation'),
-            references=data.get('references', []),
-            timestamp=data.get('timestamp', datetime.now().isoformat()),
-            extra=data.get('extra', {})
+            remediation=data.get("remediation"),
+            references=data.get("references", []),
+            timestamp=data.get("timestamp", datetime.now().isoformat()),
+            extra=data.get("extra", {}),
         )
 
     def __str__(self) -> str:
@@ -213,9 +217,9 @@ class DetectionResult:
 class DetectionSummary:
     """检测结果汇总"""
 
-    total_scans: int = 0                 # 总扫描数
-    vulnerable_count: int = 0            # 漏洞数量
-    safe_count: int = 0                  # 安全数量
+    total_scans: int = 0  # 总扫描数
+    vulnerable_count: int = 0  # 漏洞数量
+    safe_count: int = 0  # 安全数量
 
     # 按严重程度统计
     critical_count: int = 0
@@ -265,21 +269,21 @@ class DetectionSummary:
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
-            'total_scans': self.total_scans,
-            'vulnerable_count': self.vulnerable_count,
-            'safe_count': self.safe_count,
-            'severity_counts': {
-                'critical': self.critical_count,
-                'high': self.high_count,
-                'medium': self.medium_count,
-                'low': self.low_count,
-                'info': self.info_count
+            "total_scans": self.total_scans,
+            "vulnerable_count": self.vulnerable_count,
+            "safe_count": self.safe_count,
+            "severity_counts": {
+                "critical": self.critical_count,
+                "high": self.high_count,
+                "medium": self.medium_count,
+                "low": self.low_count,
+                "info": self.info_count,
             },
-            'by_type': self.by_type,
-            'start_time': self.start_time,
-            'end_time': self.end_time,
-            'duration_seconds': self.duration_seconds,
-            'results': [r.to_dict() for r in self.results]
+            "by_type": self.by_type,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "duration_seconds": self.duration_seconds,
+            "results": [r.to_dict() for r in self.results],
         }
 
     @property
@@ -297,11 +301,11 @@ class DetectionSummary:
 
         # 加权计算
         weighted_sum = (
-            self.critical_count * 10 +
-            self.high_count * 7 +
-            self.medium_count * 4 +
-            self.low_count * 2 +
-            self.info_count * 1
+            self.critical_count * 10
+            + self.high_count * 7
+            + self.medium_count * 4
+            + self.low_count * 2
+            + self.info_count * 1
         )
 
         max_possible = self.vulnerable_count * 10

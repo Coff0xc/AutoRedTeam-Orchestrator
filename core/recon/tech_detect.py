@@ -14,16 +14,15 @@ tech_detect.py - 技术栈识别模块
         print(f"{tech.name} ({tech.category}): {tech.version}")
 """
 
-import re
 import json
-import ssl
 import logging
-import urllib.request
+import re
+import ssl
 import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Pattern, Set, Tuple
 from pathlib import Path
-
+from typing import Any, Dict, List, Optional, Pattern, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +42,7 @@ class Technology:
         implies: 依赖的其他技术
         metadata: 额外元数据
     """
+
     name: str
     category: str
     version: Optional[str] = None
@@ -110,7 +110,6 @@ class TechDetector:
             "headers": {"Server": r"Caddy"},
             "website": "https://caddyserver.com",
         },
-
         # 编程语言
         "PHP": {
             "category": "Programming Language",
@@ -139,7 +138,6 @@ class TechDetector:
             "cookies": {"ASP.NET_SessionId": ""},
             "website": "https://dotnet.microsoft.com",
         },
-
         # Web框架
         "Laravel": {
             "category": "Web Framework",
@@ -199,7 +197,6 @@ class TechDetector:
             "website": "https://koajs.com",
             "implies": ["Node.js"],
         },
-
         # CMS
         "WordPress": {
             "category": "CMS",
@@ -255,7 +252,6 @@ class TechDetector:
             "website": "https://typecho.org",
             "implies": ["PHP"],
         },
-
         # JavaScript框架
         "React": {
             "category": "JavaScript Framework",
@@ -305,7 +301,6 @@ class TechDetector:
             "website": "https://ant.design",
             "implies": ["React"],
         },
-
         # CDN/Cloud
         "Cloudflare": {
             "category": "CDN",
@@ -333,7 +328,6 @@ class TechDetector:
             "headers": {"X-Vercel-Id": "", "Server": r"Vercel"},
             "website": "https://vercel.com",
         },
-
         # 安全
         "ModSecurity": {
             "category": "Security",
@@ -345,7 +339,6 @@ class TechDetector:
             "headers": {"X-Sucuri-ID": "", "Server": r"Sucuri"},
             "website": "https://sucuri.net",
         },
-
         # 分析/追踪
         "Google Analytics": {
             "category": "Analytics",
@@ -359,7 +352,6 @@ class TechDetector:
             "scripts": [r"hm\.baidu\.com/hm\.js"],
             "website": "https://tongji.baidu.com",
         },
-
         # 数据库
         "MySQL": {
             "category": "Database",
@@ -377,7 +369,6 @@ class TechDetector:
             "category": "Database",
             "website": "https://redis.io",
         },
-
         # 运行时
         "Node.js": {
             "category": "Runtime",
@@ -407,7 +398,7 @@ class TechDetector:
         self,
         timeout: float = 10.0,
         verify_ssl: bool = True,
-        user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     ):
         """初始化技术检测器
 
@@ -447,15 +438,11 @@ class TechDetector:
 
             # 编译html规则
             if "html" in rules:
-                compiled[name]["html"] = [
-                    re.compile(p, re.IGNORECASE) for p in rules["html"]
-                ]
+                compiled[name]["html"] = [re.compile(p, re.IGNORECASE) for p in rules["html"]]
 
             # 编译scripts规则
             if "scripts" in rules:
-                compiled[name]["scripts"] = [
-                    re.compile(p, re.IGNORECASE) for p in rules["scripts"]
-                ]
+                compiled[name]["scripts"] = [re.compile(p, re.IGNORECASE) for p in rules["scripts"]]
 
             # 编译meta规则
             if "meta" in rules:
@@ -515,10 +502,7 @@ class TechDetector:
         return technologies
 
     def detect_from_response(
-        self,
-        headers: Dict[str, str],
-        body: str,
-        cookies: str = ""
+        self, headers: Dict[str, str], body: str, cookies: str = ""
     ) -> List[Technology]:
         """从响应数据检测技术
 
@@ -556,12 +540,7 @@ class TechDetector:
         return technologies
 
     def _check_technology(
-        self,
-        name: str,
-        rules: Dict[str, Any],
-        headers: Dict[str, str],
-        body: str,
-        cookies: str
+        self, name: str, rules: Dict[str, Any], headers: Dict[str, str], body: str, cookies: str
     ) -> Optional[Technology]:
         """检查单个技术
 
@@ -621,7 +600,9 @@ class TechDetector:
         if "meta" in rules:
             for meta_name, pattern in rules["meta"].items():
                 # 提取meta标签内容
-                meta_pattern = rf'<meta[^>]*name=["\']?{meta_name}["\']?[^>]*content=["\']?([^"\'>\s]+)'
+                meta_pattern = (
+                    rf'<meta[^>]*name=["\']?{meta_name}["\']?[^>]*content=["\']?([^"\'>\s]+)'
+                )
                 meta_match = re.search(meta_pattern, body, re.IGNORECASE)
                 if meta_match:
                     content = meta_match.group(1)
@@ -694,15 +675,10 @@ class TechDetector:
     def get_technologies_by_category(self, category: str) -> List[str]:
         """获取指定类别的所有技术"""
         return [
-            name for name, rules in self.TECHNOLOGIES.items()
-            if rules.get("category") == category
+            name for name, rules in self.TECHNOLOGIES.items() if rules.get("category") == category
         ]
 
-    def add_custom_technology(
-        self,
-        name: str,
-        rules: Dict[str, Any]
-    ) -> None:
+    def add_custom_technology(self, name: str, rules: Dict[str, Any]) -> None:
         """添加自定义技术规则
 
         Args:
@@ -716,9 +692,7 @@ class TechDetector:
 
 # 便捷函数
 def detect_technologies(
-    url: str,
-    timeout: float = 10.0,
-    verify_ssl: bool = True
+    url: str, timeout: float = 10.0, verify_ssl: bool = True
 ) -> List[Technology]:
     """便捷函数：检测目标技术栈
 

@@ -6,34 +6,35 @@ WMI 横向移动模块 - WMI Lateral Movement
 用于授权安全测试，仅限合法渗透测试使用
 """
 
-import time
-import uuid
 import logging
-import tempfile
 import os
 import socket
-from typing import Optional, List, Dict, Any
+import tempfile
+import time
+import uuid
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 from .base import (
+    AuthMethod,
     BaseLateralModule,
     Credentials,
+    ExecutionMethod,
     ExecutionResult,
     FileTransferResult,
     LateralConfig,
-    LateralStatus,
-    AuthMethod,
-    ExecutionMethod,
     LateralModuleError,
+    LateralStatus,
 )
 
 logger = logging.getLogger(__name__)
 
 # 尝试导入 impacket
 try:
-    from impacket.dcerpc.v5.dcomrt import DCOMConnection
     from impacket.dcerpc.v5.dcom import wmi
+    from impacket.dcerpc.v5.dcomrt import DCOMConnection
     from impacket.dcerpc.v5.dtypes import NULL
+
     HAS_IMPACKET = True
 except ImportError:
     HAS_IMPACKET = False
@@ -42,6 +43,7 @@ except ImportError:
 # Windows 本地 WMI
 try:
     import wmi as local_wmi
+
     HAS_LOCAL_WMI = True
 except ImportError:
     HAS_LOCAL_WMI = False
@@ -50,28 +52,32 @@ except ImportError:
 @dataclass
 class WMIQueryResult:
     """WMI 查询结果"""
+
     success: bool
     data: List[Dict[str, Any]] = field(default_factory=list)
-    error: str = ''
-    query: str = ''
+    error: str = ""
+    query: str = ""
     duration: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'success': self.success,
-            'data': self.data,
-            'error': self.error,
-            'query': self.query,
-            'duration': self.duration,
-            'count': len(self.data)
+            "success": self.success,
+            "data": self.data,
+            "error": self.error,
+            "query": self.query,
+            "duration": self.duration,
+            "count": len(self.data),
         }
 
 
 class WQLQueries:
     """常用 WQL 查询"""
+
     # 进程
     PROCESSES = "SELECT ProcessId, Name, CommandLine, ExecutablePath FROM Win32_Process"
-    PROCESS_BY_NAME = "SELECT ProcessId, Name, CommandLine FROM Win32_Process WHERE Name LIKE '%{name}%'"
+    PROCESS_BY_NAME = (
+        "SELECT ProcessId, Name, CommandLine FROM Win32_Process WHERE Name LIKE '%{name}%'"
+    )
 
     # 服务
     SERVICES = "SELECT Name, DisplayName, State, StartMode, PathName FROM Win32_Service"
@@ -144,16 +150,13 @@ class WMILateral(BaseLateralModule):
             info = wmi_client.recon()
     """
 
-    name = 'wmi'
-    description = 'WMI 横向移动，支持远程命令执行和系统查询'
+    name = "wmi"
+    description = "WMI 横向移动，支持远程命令执行和系统查询"
     default_port = 135  # RPC Endpoint Mapper
     supported_auth = [AuthMethod.PASSWORD, AuthMethod.HASH]
 
     def __init__(
-        self,
-        target: str,
-        credentials: Credentials,
-        config: Optional[LateralConfig] = None
+        self, target: str, credentials: Credentials, config: Optional[LateralConfig] = None
     ):
         super().__init__(target, credentials, config)
         self._dcom: Optional[Any] = None
@@ -180,33 +183,28 @@ class WMILateral(BaseLateralModule):
                 self._dcom = DCOMConnection(
                     self.target,
                     self.credentials.username,
-                    '',
-                    self.credentials.domain or '',
+                    "",
+                    self.credentials.domain or "",
                     self.credentials.lm_hash,
-                    self.credentials.nt_hash
+                    self.credentials.nt_hash,
                 )
             else:
                 # 密码认证
                 self._dcom = DCOMConnection(
                     self.target,
                     self.credentials.username,
-                    self.credentials.password or '',
-                    self.credentials.domain or ''
+                    self.credentials.password or "",
+                    self.credentials.domain or "",
                 )
 
             # 获取 WMI 对象
             iInterface = self._dcom.CoCreateInstanceEx(
-                wmi.CLSID_WbemLevel1Login,
-                wmi.IID_IWbemLevel1Login
+                wmi.CLSID_WbemLevel1Login, wmi.IID_IWbemLevel1Login
             )
             iWbemLevel1Login = wmi.IWbemLevel1Login(iInterface)
 
             # 登录到 WMI 命名空间
-            self._wmi_conn = iWbemLevel1Login.NTLMLogin(
-                self.namespace,
-                NULL,
-                NULL
-            )
+            self._wmi_conn = iWbemLevel1Login.NTLMLogin(self.namespace, NULL, NULL)
 
             self._connect_time = time.time()
             self._set_status(LateralStatus.CONNECTED)
@@ -248,9 +246,7 @@ class WMILateral(BaseLateralModule):
         """
         if not self._wmi_conn:
             return ExecutionResult(
-                success=False,
-                error="未连接",
-                method=ExecutionMethod.WMIEXEC.value
+                success=False, error="未连接", method=ExecutionMethod.WMIEXEC.value
             )
 
         self._set_status(LateralStatus.EXECUTING)
@@ -259,32 +255,32 @@ class WMILateral(BaseLateralModule):
 
         try:
             # 获取 Win32_Process 类
-            win32_process, _ = self._wmi_conn.GetObject('Win32_Process')
+            win32_process, _ = self._wmi_conn.GetObject("Win32_Process")
 
             # 调用 Create 方法
-            result = win32_process.Create(command, 'C:\\', None)
+            result = win32_process.Create(command, "C:\\", None)
 
             return_value = result.ReturnValue
-            process_id = result.ProcessId if hasattr(result, 'ProcessId') else 0
+            process_id = result.ProcessId if hasattr(result, "ProcessId") else 0
 
             self._set_status(LateralStatus.CONNECTED)
 
             if return_value == 0:
                 return ExecutionResult(
                     success=True,
-                    output=f'进程已创建，PID: {process_id}',
+                    output=f"进程已创建，PID: {process_id}",
                     exit_code=0,
                     duration=time.time() - start_time,
                     process_id=process_id,
-                    method=ExecutionMethod.WMIEXEC.value
+                    method=ExecutionMethod.WMIEXEC.value,
                 )
             else:
                 return ExecutionResult(
                     success=False,
-                    error=f'进程创建失败，返回码: {return_value}',
+                    error=f"进程创建失败，返回码: {return_value}",
                     exit_code=return_value,
                     duration=time.time() - start_time,
-                    method=ExecutionMethod.WMIEXEC.value
+                    method=ExecutionMethod.WMIEXEC.value,
                 )
 
         except (socket.error, socket.timeout, OSError) as e:
@@ -293,7 +289,7 @@ class WMILateral(BaseLateralModule):
                 success=False,
                 error=f"WMI 网络错误: {e}",
                 duration=time.time() - start_time,
-                method=ExecutionMethod.WMIEXEC.value
+                method=ExecutionMethod.WMIEXEC.value,
             )
         except (ValueError, KeyError, AttributeError) as e:
             self._set_status(LateralStatus.CONNECTED)
@@ -301,14 +297,11 @@ class WMILateral(BaseLateralModule):
                 success=False,
                 error=f"WMI 执行错误: {e}",
                 duration=time.time() - start_time,
-                method=ExecutionMethod.WMIEXEC.value
+                method=ExecutionMethod.WMIEXEC.value,
             )
 
     def execute_with_output(
-        self,
-        command: str,
-        timeout: Optional[float] = None,
-        share: str = 'ADMIN$'
+        self, command: str, timeout: Optional[float] = None, share: str = "ADMIN$"
     ) -> ExecutionResult:
         """
         执行命令并获取输出
@@ -324,7 +317,7 @@ class WMILateral(BaseLateralModule):
             return ExecutionResult(success=False, error="未连接")
 
         start_time = time.time()
-        output_file = f'C:\\Windows\\Temp\\{uuid.uuid4().hex}.txt'
+        output_file = f"C:\\Windows\\Temp\\{uuid.uuid4().hex}.txt"
 
         try:
             # 执行命令并重定向输出
@@ -341,14 +334,14 @@ class WMILateral(BaseLateralModule):
             output = self._read_output_file(output_file, share)
 
             # 删除临时文件
-            self.execute(f'cmd.exe /c del {output_file}')
+            self.execute(f"cmd.exe /c del {output_file}")
 
             return ExecutionResult(
                 success=True,
                 output=output,
                 duration=time.time() - start_time,
                 process_id=result.process_id,
-                method=ExecutionMethod.WMIEXEC.value
+                method=ExecutionMethod.WMIEXEC.value,
             )
 
         except (socket.error, socket.timeout, OSError) as e:
@@ -356,14 +349,14 @@ class WMILateral(BaseLateralModule):
                 success=False,
                 error=f"WMI 网络错误: {e}",
                 duration=time.time() - start_time,
-                method=ExecutionMethod.WMIEXEC.value
+                method=ExecutionMethod.WMIEXEC.value,
             )
         except (ValueError, KeyError, IOError) as e:
             return ExecutionResult(
                 success=False,
                 error=f"WMI 输出读取错误: {e}",
                 duration=time.time() - start_time,
-                method=ExecutionMethod.WMIEXEC.value
+                method=ExecutionMethod.WMIEXEC.value,
             )
 
     def _read_output_file(self, file_path: str, share: str) -> str:
@@ -379,16 +372,16 @@ class WMILateral(BaseLateralModule):
 
             # 转换路径
             # C:\Windows\Temp\xxx.txt -> \Windows\Temp\xxx.txt (for ADMIN$)
-            remote_path = file_path.replace('C:', '').replace('/', '\\')
+            remote_path = file_path.replace("C:", "").replace("/", "\\")
 
             # 下载到临时文件
-            fd, temp_file = tempfile.mkstemp(prefix='art_wmi_')
+            fd, temp_file = tempfile.mkstemp(prefix="art_wmi_")
             os.close(fd)
             result = smb.download(remote_path, temp_file)
             smb.disconnect()
 
             if result.success:
-                with open(temp_file, 'r', encoding='utf-8', errors='ignore') as f:
+                with open(temp_file, "r", encoding="utf-8", errors="ignore") as f:
                     output = f.read()
                 os.remove(temp_file)
                 return output
@@ -424,15 +417,15 @@ class WMILateral(BaseLateralModule):
             results = []
             while True:
                 try:
-                    obj = enum.Next(0xffffffff, 1)[0]
+                    obj = enum.Next(0xFFFFFFFF, 1)[0]
                     properties = obj.getProperties()
 
                     row = {}
                     for prop in properties:
-                        value = properties[prop]['value']
+                        value = properties[prop]["value"]
                         # 处理特殊类型
                         if isinstance(value, bytes):
-                            value = value.decode('utf-8', errors='ignore')
+                            value = value.decode("utf-8", errors="ignore")
                         elif isinstance(value, (list, tuple)):
                             value = list(value)
                         row[prop] = value
@@ -446,10 +439,7 @@ class WMILateral(BaseLateralModule):
                     break
 
             return WMIQueryResult(
-                success=True,
-                data=results,
-                query=wql,
-                duration=time.time() - start_time
+                success=True, data=results, query=wql, duration=time.time() - start_time
             )
 
         except (socket.error, socket.timeout, OSError) as e:
@@ -457,14 +447,14 @@ class WMILateral(BaseLateralModule):
                 success=False,
                 error=f"WMI 网络错误: {e}",
                 query=wql,
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
         except (ValueError, KeyError, AttributeError) as e:
             return WMIQueryResult(
                 success=False,
                 error=f"WMI 查询错误: {e}",
                 query=wql,
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
     def get_processes(self) -> List[Dict[str, Any]]:
@@ -538,7 +528,7 @@ class WMILateral(BaseLateralModule):
         Args:
             pid: 进程 ID
         """
-        result = self.execute(f'taskkill /F /PID {pid}')
+        result = self.execute(f"taskkill /F /PID {pid}")
         return result.success
 
     def kill_process_by_name(self, name: str) -> bool:
@@ -548,7 +538,7 @@ class WMILateral(BaseLateralModule):
         Args:
             name: 进程名称
         """
-        result = self.execute(f'taskkill /F /IM {name}')
+        result = self.execute(f"taskkill /F /IM {name}")
         return result.success
 
     def recon(self) -> Dict[str, Any]:
@@ -561,7 +551,7 @@ class WMILateral(BaseLateralModule):
             系统信息字典
         """
         if not self._wmi_conn:
-            return {'success': False, 'error': '未连接'}
+            return {"success": False, "error": "未连接"}
 
         try:
             os_info = self.get_os_info()
@@ -573,39 +563,39 @@ class WMILateral(BaseLateralModule):
             services = self.get_running_services()
 
             return {
-                'success': True,
-                'target': self.target,
-                'os': {
-                    'caption': os_info.get('Caption', ''),
-                    'version': os_info.get('Version', ''),
-                    'build': os_info.get('BuildNumber', ''),
-                    'architecture': os_info.get('OSArchitecture', ''),
-                    'last_boot': os_info.get('LastBootUpTime', ''),
+                "success": True,
+                "target": self.target,
+                "os": {
+                    "caption": os_info.get("Caption", ""),
+                    "version": os_info.get("Version", ""),
+                    "build": os_info.get("BuildNumber", ""),
+                    "architecture": os_info.get("OSArchitecture", ""),
+                    "last_boot": os_info.get("LastBootUpTime", ""),
                 },
-                'computer': {
-                    'name': computer_info.get('Name', ''),
-                    'domain': computer_info.get('Domain', ''),
-                    'manufacturer': computer_info.get('Manufacturer', ''),
-                    'model': computer_info.get('Model', ''),
+                "computer": {
+                    "name": computer_info.get("Name", ""),
+                    "domain": computer_info.get("Domain", ""),
+                    "manufacturer": computer_info.get("Manufacturer", ""),
+                    "model": computer_info.get("Model", ""),
                 },
-                'users': [u.get('Name', '') for u in users],
-                'network': [
+                "users": [u.get("Name", "") for u in users],
+                "network": [
                     {
-                        'description': n.get('Description', ''),
-                        'ip': n.get('IPAddress', []),
-                        'mac': n.get('MACAddress', ''),
+                        "description": n.get("Description", ""),
+                        "ip": n.get("IPAddress", []),
+                        "mac": n.get("MACAddress", ""),
                     }
                     for n in network
                 ],
-                'shares': [s.get('Name', '') for s in shares],
-                'process_count': len(processes),
-                'running_services': len(services),
+                "shares": [s.get("Name", "") for s in shares],
+                "process_count": len(processes),
+                "running_services": len(services),
             }
 
         except (socket.error, socket.timeout, OSError) as e:
-            return {'success': False, 'error': f'WMI 网络错误: {e}'}
+            return {"success": False, "error": f"WMI 网络错误: {e}"}
         except (ValueError, KeyError, AttributeError) as e:
-            return {'success': False, 'error': f'WMI 查询错误: {e}'}
+            return {"success": False, "error": f"WMI 查询错误: {e}"}
 
 
 # 便捷函数
@@ -614,8 +604,8 @@ def wmi_exec(
     username: str,
     password: str,
     command: str,
-    domain: str = '',
-    get_output: bool = False
+    domain: str = "",
+    get_output: bool = False,
 ) -> Dict[str, Any]:
     """
     WMI 命令执行 (便捷函数)
@@ -629,23 +619,14 @@ def wmi_exec(
         get_output: 是否获取输出
     """
     if not HAS_IMPACKET:
-        return {'success': False, 'error': 'impacket 未安装'}
+        return {"success": False, "error": "impacket 未安装"}
 
-    creds = Credentials(
-        username=username,
-        password=password,
-        domain=domain
-    )
+    creds = Credentials(username=username, password=password, domain=domain)
 
     wmi_client = WMILateral(target, creds)
 
     if not wmi_client.connect():
-        return {
-            'success': False,
-            'error': '连接失败',
-            'target': target,
-            'command': command
-        }
+        return {"success": False, "error": "连接失败", "target": target, "command": command}
 
     if get_output:
         result = wmi_client.execute_with_output(command)
@@ -655,23 +636,19 @@ def wmi_exec(
     wmi_client.disconnect()
 
     return {
-        'success': result.success,
-        'output': result.output,
-        'error': result.error,
-        'process_id': result.process_id,
-        'duration': result.duration,
-        'target': target,
-        'command': command,
-        'method': result.method
+        "success": result.success,
+        "output": result.output,
+        "error": result.error,
+        "process_id": result.process_id,
+        "duration": result.duration,
+        "target": target,
+        "command": command,
+        "method": result.method,
     }
 
 
 def wmi_query(
-    target: str,
-    username: str,
-    password: str,
-    wql: str,
-    domain: str = ''
+    target: str, username: str, password: str, wql: str, domain: str = ""
 ) -> Dict[str, Any]:
     """
     WMI 查询 (便捷函数)
@@ -684,23 +661,14 @@ def wmi_query(
         domain: 域名
     """
     if not HAS_IMPACKET:
-        return {'success': False, 'error': 'impacket 未安装'}
+        return {"success": False, "error": "impacket 未安装"}
 
-    creds = Credentials(
-        username=username,
-        password=password,
-        domain=domain
-    )
+    creds = Credentials(username=username, password=password, domain=domain)
 
     wmi_client = WMILateral(target, creds)
 
     if not wmi_client.connect():
-        return {
-            'success': False,
-            'error': '连接失败',
-            'target': target,
-            'query': wql
-        }
+        return {"success": False, "error": "连接失败", "target": target, "query": wql}
 
     result = wmi_client.query(wql)
     wmi_client.disconnect()
@@ -708,28 +676,19 @@ def wmi_query(
     return result.to_dict()
 
 
-def wmi_recon(
-    target: str,
-    username: str,
-    password: str,
-    domain: str = ''
-) -> Dict[str, Any]:
+def wmi_recon(target: str, username: str, password: str, domain: str = "") -> Dict[str, Any]:
     """
     WMI 系统侦察 (便捷函数)
     """
     if not HAS_IMPACKET:
-        return {'success': False, 'error': 'impacket 未安装'}
+        return {"success": False, "error": "impacket 未安装"}
 
-    creds = Credentials(
-        username=username,
-        password=password,
-        domain=domain
-    )
+    creds = Credentials(username=username, password=password, domain=domain)
 
     wmi_client = WMILateral(target, creds)
 
     if not wmi_client.connect():
-        return {'success': False, 'error': '连接失败', 'target': target}
+        return {"success": False, "error": "连接失败", "target": target}
 
     result = wmi_client.recon()
     wmi_client.disconnect()
@@ -737,8 +696,8 @@ def wmi_recon(
     return result
 
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("=== WMI Lateral Movement Module ===")
     logger.info(f"impacket 可用: {HAS_IMPACKET}")
     logger.info(f"本地 WMI 可用: {HAS_LOCAL_WMI}")
@@ -747,5 +706,5 @@ if __name__ == '__main__':
     logger.info("  result = wmi_exec('192.168.1.100', 'admin', 'password', 'whoami')")
     logger.info("常用 WQL 查询:")
     for name in dir(WQLQueries):
-        if not name.startswith('_'):
+        if not name.startswith("_"):
             logger.info(f"  {name}")

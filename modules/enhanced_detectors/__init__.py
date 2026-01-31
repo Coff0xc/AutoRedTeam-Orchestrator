@@ -4,13 +4,13 @@
 提供: JWT增强检测、CORS绕过测试、安全头评分
 """
 
-from .jwt_enhanced import JWTSecurityTester, JWTVulnType
 from .cors_enhanced import CORSEnhancedTester
+from .jwt_enhanced import JWTSecurityTester, JWTVulnType
 from .security_headers_scorer import SecurityHeadersScorer
 
 __all__ = [
-    'JWTSecurityTester',
-    'JWTVulnType',
-    'CORSEnhancedTester',
-    'SecurityHeadersScorer',
+    "JWTSecurityTester",
+    "JWTVulnType",
+    "CORSEnhancedTester",
+    "SecurityHeadersScorer",
 ]

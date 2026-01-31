@@ -6,38 +6,41 @@
 
 import hashlib
 import hmac
-import secrets
-import time
 import json
 import logging
-from typing import Dict, List, Optional, Set
+import secrets
+import time
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
 
 class ToolLevel(Enum):
     """工具危险等级"""
-    SAFE = 1        # 安全工具（信息收集）
-    MODERATE = 2    # 中等风险（漏洞扫描）
-    DANGEROUS = 3   # 高风险（漏洞利用）
-    CRITICAL = 4    # 极高风险（横向移动、持久化）
+
+    SAFE = 1  # 安全工具（信息收集）
+    MODERATE = 2  # 中等风险（漏洞扫描）
+    DANGEROUS = 3  # 高风险（漏洞利用）
+    CRITICAL = 4  # 极高风险（横向移动、持久化）
 
 
 class Permission(Enum):
     """权限类型"""
-    READ = "read"           # 只读（查看结果）
-    SCAN = "scan"           # 扫描（信息收集、漏洞检测）
-    EXPLOIT = "exploit"     # 利用（漏洞利用）
-    ADMIN = "admin"         # 管理员（所有权限）
+
+    READ = "read"  # 只读（查看结果）
+    SCAN = "scan"  # 扫描（信息收集、漏洞检测）
+    EXPLOIT = "exploit"  # 利用（漏洞利用）
+    ADMIN = "admin"  # 管理员（所有权限）
 
 
 @dataclass
 class APIKey:
     """API密钥"""
+
     key_id: str
     key_hash: str
     name: str
@@ -55,6 +58,7 @@ class APIKey:
 @dataclass
 class AuditLog:
     """审计日志"""
+
     timestamp: datetime
     key_id: str
     tool_name: str
@@ -68,20 +72,50 @@ class AuthManager:
     """认证授权管理器"""
 
     # 敏感字段列表 - 这些字段在审计日志中会被脱敏
-    SENSITIVE_FIELDS = frozenset({
-        # 密码相关
-        'password', 'passwd', 'pwd', 'pass',
-        # 密钥相关
-        'secret', 'api_key', 'apikey', 'api-key', 'token', 'access_token',
-        'refresh_token', 'private_key', 'privatekey', 'secret_key', 'secretkey',
-        # 凭证相关
-        'credential', 'credentials', 'auth', 'authorization',
-        # 会话相关
-        'cookie', 'cookies', 'session', 'session_id', 'sessionid',
-        # 其他敏感信息
-        'key', 'hash', 'salt', 'nonce', 'otp', 'pin', 'ssn',
-        'credit_card', 'creditcard', 'cvv', 'card_number',
-    })
+    SENSITIVE_FIELDS = frozenset(
+        {
+            # 密码相关
+            "password",
+            "passwd",
+            "pwd",
+            "pass",
+            # 密钥相关
+            "secret",
+            "api_key",
+            "apikey",
+            "api-key",
+            "token",
+            "access_token",
+            "refresh_token",
+            "private_key",
+            "privatekey",
+            "secret_key",
+            "secretkey",
+            # 凭证相关
+            "credential",
+            "credentials",
+            "auth",
+            "authorization",
+            # 会话相关
+            "cookie",
+            "cookies",
+            "session",
+            "session_id",
+            "sessionid",
+            # 其他敏感信息
+            "key",
+            "hash",
+            "salt",
+            "nonce",
+            "otp",
+            "pin",
+            "ssn",
+            "credit_card",
+            "creditcard",
+            "cvv",
+            "card_number",
+        }
+    )
 
     # 脱敏替换值
     REDACTED_VALUE = "[REDACTED]"
@@ -96,7 +130,6 @@ class AuthManager:
         "tech_detect": ToolLevel.SAFE,
         "subdomain_bruteforce": ToolLevel.SAFE,
         "dir_bruteforce": ToolLevel.SAFE,
-
         # MODERATE - 漏洞扫描
         "sqli_detect": ToolLevel.MODERATE,
         "xss_detect": ToolLevel.MODERATE,
@@ -105,13 +138,11 @@ class AuthManager:
         "vuln_check": ToolLevel.MODERATE,
         "nuclei_scan": ToolLevel.MODERATE,
         "weak_password_detect": ToolLevel.MODERATE,
-
         # DANGEROUS - 漏洞利用
         "exploit_sqli_extract": ToolLevel.DANGEROUS,
         "exploit_rce": ToolLevel.DANGEROUS,
         "exploit_upload": ToolLevel.DANGEROUS,
         "brute_force": ToolLevel.DANGEROUS,
-
         # CRITICAL - 后渗透
         "lateral_smb_exec": ToolLevel.CRITICAL,
         "lateral_ssh_exec": ToolLevel.CRITICAL,
@@ -139,9 +170,14 @@ class AuthManager:
         self._load_keys()
         logger.info("认证管理器初始化完成")
 
-    def generate_key(self, name: str, permissions: List[Permission],
-                    max_tool_level: ToolLevel = ToolLevel.MODERATE,
-                    expires_days: int = None, rate_limit: int = 100) -> Dict:
+    def generate_key(
+        self,
+        name: str,
+        permissions: List[Permission],
+        max_tool_level: ToolLevel = ToolLevel.MODERATE,
+        expires_days: int = None,
+        rate_limit: int = 100,
+    ) -> Dict:
         """
         生成API密钥
 
@@ -174,7 +210,7 @@ class AuthManager:
             max_tool_level=max_tool_level,
             created_at=datetime.now(),
             expires_at=expires_at,
-            rate_limit=rate_limit
+            rate_limit=rate_limit,
         )
 
         self.keys[key_id] = api_key
@@ -186,7 +222,7 @@ class AuthManager:
             "key_id": key_id,
             "secret": secret,
             "full_key": f"{key_id}.{secret}",
-            "expires_at": expires_at.isoformat() if expires_at else None
+            "expires_at": expires_at.isoformat() if expires_at else None,
         }
 
     def verify_key(self, full_key: str) -> Optional[APIKey]:
@@ -200,7 +236,7 @@ class AuthManager:
             APIKey对象，验证失败返回None
         """
         try:
-            key_id, secret = full_key.split('.', 1)
+            key_id, secret = full_key.split(".", 1)
         except ValueError:
             logger.warning("无效的密钥格式")
             return None
@@ -290,7 +326,7 @@ class AuthManager:
         sanitized = {}
         for key, value in params.items():
             # 检查键名是否为敏感字段（不区分大小写）
-            key_lower = key.lower().replace('-', '_')
+            key_lower = key.lower().replace("-", "_")
             if key_lower in self.SENSITIVE_FIELDS:
                 sanitized[key] = self.REDACTED_VALUE
             elif isinstance(value, dict):
@@ -307,8 +343,15 @@ class AuthManager:
 
         return sanitized
 
-    def audit(self, key_id: str, tool_name: str, params: Dict,
-             success: bool, error: str = None, ip_address: str = None):
+    def audit(
+        self,
+        key_id: str,
+        tool_name: str,
+        params: Dict,
+        success: bool,
+        error: str = None,
+        ip_address: str = None,
+    ):
         """
         记录审计日志
 
@@ -330,7 +373,7 @@ class AuthManager:
             params=sanitized_params,
             success=success,
             error=error,
-            ip_address=ip_address
+            ip_address=ip_address,
         )
 
         self.audit_logs.append(log)
@@ -358,7 +401,7 @@ class AuthManager:
                 "expires_at": k.expires_at.isoformat() if k.expires_at else None,
                 "last_used": k.last_used.isoformat() if k.last_used else None,
                 "usage_count": k.usage_count,
-                "enabled": k.enabled
+                "enabled": k.enabled,
             }
             for k in self.keys.values()
         ]
@@ -379,7 +422,7 @@ class AuthManager:
                 "params": log.params,
                 "success": log.success,
                 "error": log.error,
-                "ip_address": log.ip_address
+                "ip_address": log.ip_address,
             }
             for log in logs
         ]
@@ -420,7 +463,7 @@ class AuthManager:
             return
 
         try:
-            with open(keys_file, 'r', encoding='utf-8') as f:
+            with open(keys_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             for key_data in data:
@@ -431,11 +474,19 @@ class AuthManager:
                     permissions={Permission(p) for p in key_data["permissions"]},
                     max_tool_level=ToolLevel[key_data["max_tool_level"]],
                     created_at=datetime.fromisoformat(key_data["created_at"]),
-                    expires_at=datetime.fromisoformat(key_data["expires_at"]) if key_data.get("expires_at") else None,
-                    last_used=datetime.fromisoformat(key_data["last_used"]) if key_data.get("last_used") else None,
+                    expires_at=(
+                        datetime.fromisoformat(key_data["expires_at"])
+                        if key_data.get("expires_at")
+                        else None
+                    ),
+                    last_used=(
+                        datetime.fromisoformat(key_data["last_used"])
+                        if key_data.get("last_used")
+                        else None
+                    ),
                     usage_count=key_data.get("usage_count", 0),
                     rate_limit=key_data.get("rate_limit", 100),
-                    enabled=key_data.get("enabled", True)
+                    enabled=key_data.get("enabled", True),
                 )
                 self.keys[api_key.key_id] = api_key
 
@@ -460,12 +511,12 @@ class AuthManager:
                 "last_used": k.last_used.isoformat() if k.last_used else None,
                 "usage_count": k.usage_count,
                 "rate_limit": k.rate_limit,
-                "enabled": k.enabled
+                "enabled": k.enabled,
             }
             for k in self.keys.values()
         ]
 
-        with open(keys_file, 'w', encoding='utf-8') as f:
+        with open(keys_file, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
     def _save_audit_logs(self):
@@ -480,14 +531,14 @@ class AuthManager:
                 "params": log.params,
                 "success": log.success,
                 "error": log.error,
-                "ip_address": log.ip_address
+                "ip_address": log.ip_address,
             }
             for log in self.audit_logs
         ]
 
-        with open(log_file, 'a', encoding='utf-8') as f:
+        with open(log_file, "a", encoding="utf-8") as f:
             for entry in data:
-                f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
         self.audit_logs.clear()
 

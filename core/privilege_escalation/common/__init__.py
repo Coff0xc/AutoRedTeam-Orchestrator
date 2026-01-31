@@ -4,13 +4,13 @@
 """
 
 from .enumeration import (
-    PrivilegeEnumerator,
     EnumerationResult,
+    PrivilegeEnumerator,
     SystemInfo,
 )
 
 __all__ = [
-    'PrivilegeEnumerator',
-    'EnumerationResult',
-    'SystemInfo',
+    "PrivilegeEnumerator",
+    "EnumerationResult",
+    "SystemInfo",
 ]

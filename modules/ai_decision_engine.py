@@ -4,21 +4,22 @@ AI智能攻击决策引擎 v2.0
 基于目标特征、历史数据、攻击图谱进行智能决策
 """
 
-import json
-import time
 import hashlib
+import json
 import logging
-from typing import Any, Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
+import time
 from collections import defaultdict
-from pathlib import Path
+from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class AttackPriority(Enum):
     """攻击优先级"""
+
     CRITICAL = 1
     HIGH = 2
     MEDIUM = 3
@@ -28,6 +29,7 @@ class AttackPriority(Enum):
 @dataclass
 class AttackSuggestion:
     """攻击建议"""
+
     attack_type: str
     tool_name: str
     priority: AttackPriority
@@ -40,6 +42,7 @@ class AttackSuggestion:
 @dataclass
 class TargetContext:
     """目标上下文"""
+
     url: str
     tech_stack: Dict[str, Any] = field(default_factory=dict)
     open_ports: List[int] = field(default_factory=list)
@@ -55,43 +58,43 @@ class AttackKnowledgeGraph:
         # 信息收集 -> 漏洞检测
         "recon": {
             "leads_to": ["sqli_detect", "xss_detect", "lfi_detect", "ssrf_detect"],
-            "weight": 1.0
+            "weight": 1.0,
         },
         # SQL注入 -> 数据提取/权限提升
         "sqli_detect": {
             "leads_to": ["data_extraction", "auth_bypass_detect"],
             "prerequisites": ["recon"],
-            "weight": 0.9
+            "weight": 0.9,
         },
         # XSS -> 会话劫持
         "xss_detect": {
             "leads_to": ["session_hijack", "csrf_detect"],
             "prerequisites": ["recon"],
-            "weight": 0.8
+            "weight": 0.8,
         },
         # LFI -> RCE
         "lfi_detect": {
             "leads_to": ["rce_detect", "sensitive_scan"],
             "prerequisites": ["recon"],
-            "weight": 0.85
+            "weight": 0.85,
         },
         # SSRF -> 内网探测
         "ssrf_detect": {
             "leads_to": ["internal_scan", "cloud_metadata"],
             "prerequisites": ["recon"],
-            "weight": 0.9
+            "weight": 0.9,
         },
         # 文件上传 -> RCE
         "file_upload_detect": {
             "leads_to": ["webshell_upload", "rce_detect"],
             "prerequisites": ["recon"],
-            "weight": 0.95
+            "weight": 0.95,
         },
         # 认证绕过 -> 权限提升
         "auth_bypass_detect": {
             "leads_to": ["privilege_escalation", "idor_detect"],
             "prerequisites": ["recon"],
-            "weight": 0.9
+            "weight": 0.9,
         },
     }
 
@@ -129,9 +132,9 @@ class AIDecisionEngine:
 
     def __init__(self, history_file: Optional[Path] = None):
         self.knowledge_graph = AttackKnowledgeGraph()
-        self.attack_history: Dict[str, Dict] = defaultdict(lambda: {
-            "success": 0, "fail": 0, "total_time": 0
-        })
+        self.attack_history: Dict[str, Dict] = defaultdict(
+            lambda: {"success": 0, "fail": 0, "total_time": 0}
+        )
         self.history_file = history_file
         self._load_history()
 
@@ -139,7 +142,7 @@ class AIDecisionEngine:
         """加载历史攻击数据"""
         if self.history_file and self.history_file.exists():
             try:
-                with open(self.history_file, 'r', encoding='utf-8') as f:
+                with open(self.history_file, "r", encoding="utf-8") as f:
                     self.attack_history.update(json.load(f))
             except Exception as e:
                 logger.warning(f"加载历史数据失败: {e}")
@@ -149,7 +152,7 @@ class AIDecisionEngine:
         if self.history_file:
             try:
                 self.history_file.parent.mkdir(parents=True, exist_ok=True)
-                with open(self.history_file, 'w', encoding='utf-8') as f:
+                with open(self.history_file, "w", encoding="utf-8") as f:
                     json.dump(dict(self.attack_history), f, indent=2)
             except Exception as e:
                 logger.warning(f"保存历史数据失败: {e}")
@@ -184,13 +187,15 @@ class AIDecisionEngine:
         language = tech.get("language", "").lower()
         if language in self.knowledge_graph.TECH_ATTACK_MAP:
             for attack in self.knowledge_graph.TECH_ATTACK_MAP[language]:
-                suggestions.append(AttackSuggestion(
-                    attack_type=attack,
-                    tool_name=attack,
-                    priority=AttackPriority.HIGH,
-                    confidence=0.8,
-                    reason=f"目标使用{language}，该语言常见{attack}漏洞"
-                ))
+                suggestions.append(
+                    AttackSuggestion(
+                        attack_type=attack,
+                        tool_name=attack,
+                        priority=AttackPriority.HIGH,
+                        confidence=0.8,
+                        reason=f"目标使用{language}，该语言常见{attack}漏洞",
+                    )
+                )
 
         # 检测框架特定漏洞
         framework = tech.get("framework", "").lower()
@@ -206,13 +211,15 @@ class AIDecisionEngine:
 
         if framework in framework_vulns:
             for attack in framework_vulns[framework]:
-                suggestions.append(AttackSuggestion(
-                    attack_type=attack,
-                    tool_name=attack,
-                    priority=AttackPriority.CRITICAL,
-                    confidence=0.9,
-                    reason=f"检测到{framework}框架，存在已知漏洞类型"
-                ))
+                suggestions.append(
+                    AttackSuggestion(
+                        attack_type=attack,
+                        tool_name=attack,
+                        priority=AttackPriority.CRITICAL,
+                        confidence=0.9,
+                        reason=f"检测到{framework}框架，存在已知漏洞类型",
+                    )
+                )
 
         return suggestions
 
@@ -227,16 +234,22 @@ class AIDecisionEngine:
 
                 for attack in port_info["attacks"]:
                     # 数据库端口优先级更高
-                    priority = AttackPriority.CRITICAL if port in [3306, 5432, 1433, 27017, 6379] else AttackPriority.HIGH
+                    priority = (
+                        AttackPriority.CRITICAL
+                        if port in [3306, 5432, 1433, 27017, 6379]
+                        else AttackPriority.HIGH
+                    )
 
-                    suggestions.append(AttackSuggestion(
-                        attack_type=attack,
-                        tool_name=attack,
-                        priority=priority,
-                        confidence=0.85,
-                        reason=f"端口{port}({service})开放，可尝试{attack}",
-                        params={"port": port, "service": service}
-                    ))
+                    suggestions.append(
+                        AttackSuggestion(
+                            attack_type=attack,
+                            tool_name=attack,
+                            priority=priority,
+                            confidence=0.85,
+                            reason=f"端口{port}({service})开放，可尝试{attack}",
+                            params={"port": port, "service": service},
+                        )
+                    )
 
         return suggestions
 
@@ -249,19 +262,22 @@ class AIDecisionEngine:
                 graph_node = self.knowledge_graph.ATTACK_GRAPH[vuln]
 
                 for next_attack in graph_node.get("leads_to", []):
-                    suggestions.append(AttackSuggestion(
-                        attack_type=next_attack,
-                        tool_name=next_attack,
-                        priority=AttackPriority.CRITICAL,
-                        confidence=0.95,
-                        reason=f"已发现{vuln}，可进一步利用进行{next_attack}",
-                        prerequisites=[vuln]
-                    ))
+                    suggestions.append(
+                        AttackSuggestion(
+                            attack_type=next_attack,
+                            tool_name=next_attack,
+                            priority=AttackPriority.CRITICAL,
+                            confidence=0.95,
+                            reason=f"已发现{vuln}，可进一步利用进行{next_attack}",
+                            prerequisites=[vuln],
+                        )
+                    )
 
         return suggestions
 
-    def _adjust_for_waf(self, suggestions: List[AttackSuggestion],
-                        waf: Optional[str]) -> List[AttackSuggestion]:
+    def _adjust_for_waf(
+        self, suggestions: List[AttackSuggestion], waf: Optional[str]
+    ) -> List[AttackSuggestion]:
         """根据WAF调整攻击策略"""
         if not waf:
             return suggestions
@@ -284,6 +300,7 @@ class AIDecisionEngine:
 
     def _rank_by_history(self, suggestions: List[AttackSuggestion]) -> List[AttackSuggestion]:
         """基于历史成功率排序"""
+
         def score(s: AttackSuggestion) -> float:
             history = self.attack_history.get(s.attack_type, {})
             total = history.get("success", 0) + history.get("fail", 0)
@@ -310,8 +327,7 @@ class AIDecisionEngine:
         self.attack_history[attack_type]["total_time"] += duration
         self._save_history()
 
-    def get_attack_chain(self, context: TargetContext,
-                         max_depth: int = 5) -> List[List[str]]:
+    def get_attack_chain(self, context: TargetContext, max_depth: int = 5) -> List[List[str]]:
         """生成攻击链路径"""
         chains = []
 
@@ -354,7 +370,7 @@ class AIDecisionEngine:
                 "action": "recon",
                 "reason": "建议先进行信息收集",
                 "tool": "full_recon",
-                "params": {"target": context.url}
+                "params": {"target": context.url},
             }
 
         top_suggestion = suggestions[0]
@@ -368,21 +384,22 @@ class AIDecisionEngine:
             "priority": top_suggestion.priority.name,
             "attack_chains": chains[:3],  # 返回前3条攻击链
             "alternatives": [
-                {"action": s.attack_type, "confidence": s.confidence}
-                for s in suggestions[1:5]
-            ]
+                {"action": s.attack_type, "confidence": s.confidence} for s in suggestions[1:5]
+            ],
         }
 
 
 # 全局实例
 _engine_instance: Optional[AIDecisionEngine] = None
 
+
 def get_decision_engine() -> AIDecisionEngine:
     """获取决策引擎单例"""
     global _engine_instance
     if _engine_instance is None:
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
         history_path = Path(tempfile.gettempdir()) / "autored_history.json"
         _engine_instance = AIDecisionEngine(history_file=history_path)
     return _engine_instance

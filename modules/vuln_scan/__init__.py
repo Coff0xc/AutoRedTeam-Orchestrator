@@ -4,15 +4,15 @@
 
 from typing import TYPE_CHECKING
 
+from modules.vuln_scan.nikto_tools import NiktoScanTool
+from modules.vuln_scan.nuclei_tools import NucleiScanTool, NucleiTemplateScanTool
+from modules.vuln_scan.ssl_tools import SSLScanTool, TestSSLTool
+from modules.vuln_scan.vuln_search import CVESearchTool, SearchsploitTool
+
 # TYPE_CHECKING imports removed (legacy)
 
-from modules.vuln_scan.nuclei_tools import NucleiScanTool, NucleiTemplateScanTool
-from modules.vuln_scan.nikto_tools import NiktoScanTool
-from modules.vuln_scan.ssl_tools import SSLScanTool, TestSSLTool
-from modules.vuln_scan.vuln_search import SearchsploitTool, CVESearchTool
 
-
-def register_vuln_tools(server: 'MCPServer'):
+def register_vuln_tools(server: "MCPServer"):
     """注册漏洞扫描工具"""
     tools = [
         NucleiScanTool(),
@@ -23,7 +23,7 @@ def register_vuln_tools(server: 'MCPServer'):
         SearchsploitTool(),
         CVESearchTool(),
     ]
-    
+
     for tool in tools:
         server.register_tool(tool)
 
@@ -33,5 +33,5 @@ __all__ = [
     "NucleiScanTool",
     "NiktoScanTool",
     "SSLScanTool",
-    "SearchsploitTool"
+    "SearchsploitTool",
 ]

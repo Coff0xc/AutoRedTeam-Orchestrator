@@ -4,8 +4,9 @@ AI辅助工具处理器
 """
 
 from typing import Any, Dict
+
+from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
 from .tooling import tool
-from .error_handling import handle_errors, ErrorCategory, extract_target, validate_inputs
 
 
 def register_ai_tools(mcp, counter, logger):
@@ -18,7 +19,7 @@ def register_ai_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
-    @validate_inputs(target='target')
+    @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.AI, context_extractor=extract_target)
     async def smart_analyze(target: str, context: str = None) -> Dict[str, Any]:
         """智能分析 - AI辅助分析目标并推荐测试策略
@@ -35,18 +36,13 @@ def register_ai_tools(mcp, counter, logger):
         analyzer = AIAnalyzer()
         result = analyzer.analyze(target, context)
 
-        return {
-            'success': True,
-            'target': target,
-            'analysis': result
-        }
+        return {"success": True, "target": target, "analysis": result}
 
     @tool(mcp)
-    @validate_inputs(target='target')
+    @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.AI, context_extractor=extract_target)
     async def attack_chain_plan(
-        target: str,
-        reconnaissance_data: Dict[str, Any] = None
+        target: str, reconnaissance_data: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """攻击链规划 - 基于侦察数据规划攻击链
 
@@ -57,19 +53,20 @@ def register_ai_tools(mcp, counter, logger):
         Returns:
             推荐的攻击链
         """
-        from core.attack_chain import AttackChainEngine
         from urllib.parse import urlparse
 
+        from core.attack_chain import AttackChainEngine
+
         # 判断目标类型
-        if target.startswith(('http://', 'https://')):
+        if target.startswith(("http://", "https://")):
             parsed = urlparse(target)
-            target_type = 'url'
+            target_type = "url"
             domain = parsed.netloc
-        elif '.' in target and not target.replace('.', '').isdigit():
-            target_type = 'domain'
+        elif "." in target and not target.replace(".", "").isdigit():
+            target_type = "domain"
             domain = target
         else:
-            target_type = 'ip'
+            target_type = "ip"
             domain = target
 
         # 创建攻击链引擎 (tool_registry 可为 None，引擎会使用内置工具映射)
@@ -78,33 +75,31 @@ def register_ai_tools(mcp, counter, logger):
 
         # 返回攻击链信息
         return {
-            'success': True,
-            'target': target,
-            'target_type': target_type,
-            'attack_chain': {
-                'id': chain.id,
-                'name': chain.name,
-                'nodes': [
+            "success": True,
+            "target": target,
+            "target_type": target_type,
+            "attack_chain": {
+                "id": chain.id,
+                "name": chain.name,
+                "nodes": [
                     {
-                        'id': node.id,
-                        'phase': node.phase.value,
-                        'technique': node.technique,
-                        'tool': node.tool,
-                        'params': node.params,
-                        'dependencies': node.dependencies
+                        "id": node.id,
+                        "phase": node.phase.value,
+                        "technique": node.technique,
+                        "tool": node.tool,
+                        "params": node.params,
+                        "dependencies": node.dependencies,
                     }
                     for node in chain.nodes
                 ],
-                'total_nodes': len(chain.nodes)
-            }
+                "total_nodes": len(chain.nodes),
+            },
         }
 
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.AI)
     async def smart_payload(
-        vuln_type: str,
-        context: Dict[str, Any] = None,
-        waf_detected: bool = False
+        vuln_type: str, context: Dict[str, Any] = None, waf_detected: bool = False
     ) -> Dict[str, Any]:
         """智能Payload生成 - 根据上下文生成优化的payload
 
@@ -121,17 +116,15 @@ def register_ai_tools(mcp, counter, logger):
         # 使用统一的 Payload 引擎
         waf = context.get("waf") if context else None
         payloads = smart_select_payloads(
-            vuln_type=vuln_type,
-            waf=waf if waf_detected else None,
-            top_n=20
+            vuln_type=vuln_type, waf=waf if waf_detected else None, top_n=20
         )
 
         return {
-            'success': True,
-            'vuln_type': vuln_type,
-            'payloads': payloads,
-            'count': len(payloads)
+            "success": True,
+            "vuln_type": vuln_type,
+            "payloads": payloads,
+            "count": len(payloads),
         }
 
-    counter.add('ai', 3)
+    counter.add("ai", 3)
     logger.info("[AI] 已注册 3 个AI辅助工具")

@@ -10,14 +10,14 @@ CVE 本地存储
 import json
 import logging
 import sqlite3
+import tempfile
 import threading
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Iterator, Tuple
-import tempfile
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
-from .models import CVEEntry, CVSS, Reference, Severity, CVEStats, SyncStatus
+from .models import CVSS, CVEEntry, CVEStats, Reference, Severity, SyncStatus
 
 logger = logging.getLogger(__name__)
 
@@ -175,9 +175,9 @@ class CVEStorage:
         else:
             # 使用项目根目录下的 data 目录
             project_root = Path(__file__).parent.parent.parent
-            data_dir = project_root / 'data'
+            data_dir = project_root / "data"
             data_dir.mkdir(exist_ok=True)
-            self.db_path = data_dir / 'cve_storage.db'
+            self.db_path = data_dir / "cve_storage.db"
 
         # 线程本地存储
         self._local = threading.local()
@@ -189,16 +189,13 @@ class CVEStorage:
 
     def _get_connection(self) -> sqlite3.Connection:
         """获取线程本地的数据库连接"""
-        if not hasattr(self._local, 'conn') or self._local.conn is None:
-            self._local.conn = sqlite3.connect(
-                str(self.db_path),
-                check_same_thread=False
-            )
+        if not hasattr(self._local, "conn") or self._local.conn is None:
+            self._local.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
             self._local.conn.row_factory = sqlite3.Row
             # 启用外键约束
-            self._local.conn.execute('PRAGMA foreign_keys = ON')
+            self._local.conn.execute("PRAGMA foreign_keys = ON")
             # 启用 WAL 模式提高并发性能
-            self._local.conn.execute('PRAGMA journal_mode = WAL')
+            self._local.conn.execute("PRAGMA journal_mode = WAL")
 
         return self._local.conn
 
@@ -237,16 +234,13 @@ class CVEStorage:
         """
         with self._transaction() as cursor:
             # 检查是否存在
-            cursor.execute(
-                'SELECT cve_id FROM cve_entries WHERE cve_id = ?',
-                (entry.cve_id,)
-            )
+            cursor.execute("SELECT cve_id FROM cve_entries WHERE cve_id = ?", (entry.cve_id,))
             exists = cursor.fetchone() is not None
 
             # 序列化复杂字段
             cvss_version = entry.cvss.version if entry.cvss else None
             cvss_score = entry.cvss.score if entry.cvss else 0.0
-            cvss_vector = entry.cvss.vector if entry.cvss else ''
+            cvss_vector = entry.cvss.vector if entry.cvss else ""
 
             affected_products = json.dumps(entry.affected_products, ensure_ascii=False)
             affected_versions = json.dumps(entry.affected_versions, ensure_ascii=False)
@@ -261,7 +255,8 @@ class CVEStorage:
 
             if exists:
                 # 更新
-                cursor.execute('''
+                cursor.execute(
+                    """
                     UPDATE cve_entries SET
                         title = ?,
                         description = ?,
@@ -283,32 +278,35 @@ class CVEStorage:
                         raw_data = ?,
                         updated_at = ?
                     WHERE cve_id = ?
-                ''', (
-                    entry.title,
-                    entry.description,
-                    cvss_version,
-                    cvss_score,
-                    cvss_vector,
-                    entry.severity.value,
-                    affected_products,
-                    affected_versions,
-                    cwe_ids,
-                    published_date,
-                    modified_date,
-                    references,
-                    int(entry.has_poc),
-                    poc_urls,
-                    int(entry.exploit_available),
-                    entry.source,
-                    tags,
-                    raw_data,
-                    datetime.now().isoformat(),
-                    entry.cve_id
-                ))
+                """,
+                    (
+                        entry.title,
+                        entry.description,
+                        cvss_version,
+                        cvss_score,
+                        cvss_vector,
+                        entry.severity.value,
+                        affected_products,
+                        affected_versions,
+                        cwe_ids,
+                        published_date,
+                        modified_date,
+                        references,
+                        int(entry.has_poc),
+                        poc_urls,
+                        int(entry.exploit_available),
+                        entry.source,
+                        tags,
+                        raw_data,
+                        datetime.now().isoformat(),
+                        entry.cve_id,
+                    ),
+                )
                 return False
             else:
                 # 插入
-                cursor.execute('''
+                cursor.execute(
+                    """
                     INSERT INTO cve_entries (
                         cve_id, title, description,
                         cvss_version, cvss_score, cvss_vector, severity,
@@ -318,29 +316,31 @@ class CVEStorage:
                         source, tags, raw_data,
                         created_at, updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    entry.cve_id,
-                    entry.title,
-                    entry.description,
-                    cvss_version,
-                    cvss_score,
-                    cvss_vector,
-                    entry.severity.value,
-                    affected_products,
-                    affected_versions,
-                    cwe_ids,
-                    published_date,
-                    modified_date,
-                    references,
-                    int(entry.has_poc),
-                    poc_urls,
-                    int(entry.exploit_available),
-                    entry.source,
-                    tags,
-                    raw_data,
-                    datetime.now().isoformat(),
-                    datetime.now().isoformat()
-                ))
+                """,
+                    (
+                        entry.cve_id,
+                        entry.title,
+                        entry.description,
+                        cvss_version,
+                        cvss_score,
+                        cvss_vector,
+                        entry.severity.value,
+                        affected_products,
+                        affected_versions,
+                        cwe_ids,
+                        published_date,
+                        modified_date,
+                        references,
+                        int(entry.has_poc),
+                        poc_urls,
+                        int(entry.exploit_available),
+                        entry.source,
+                        tags,
+                        raw_data,
+                        datetime.now().isoformat(),
+                        datetime.now().isoformat(),
+                    ),
+                )
                 return True
 
     def save_batch(self, entries: List[CVEEntry]) -> Tuple[int, int]:
@@ -381,7 +381,7 @@ class CVEStorage:
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        cursor.execute('SELECT * FROM cve_entries WHERE cve_id = ?', (cve_id,))
+        cursor.execute("SELECT * FROM cve_entries WHERE cve_id = ?", (cve_id,))
         row = cursor.fetchone()
 
         if row:
@@ -405,11 +405,8 @@ class CVEStorage:
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        placeholders = ','.join(['?' for _ in cve_ids])
-        cursor.execute(
-            f'SELECT * FROM cve_entries WHERE cve_id IN ({placeholders})',
-            cve_ids
-        )
+        placeholders = ",".join(["?" for _ in cve_ids])
+        cursor.execute(f"SELECT * FROM cve_entries WHERE cve_id IN ({placeholders})", cve_ids)
 
         return [self._row_to_entry(row) for row in cursor.fetchall()]
 
@@ -426,11 +423,14 @@ class CVEStorage:
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT * FROM cve_entries
             ORDER BY published_date DESC, updated_at DESC
             LIMIT ?
-        ''', (limit,))
+        """,
+            (limit,),
+        )
 
         return [self._row_to_entry(row) for row in cursor.fetchall()]
 
@@ -448,12 +448,15 @@ class CVEStorage:
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT * FROM cve_entries
             WHERE severity = ?
             ORDER BY cvss_score DESC, published_date DESC
             LIMIT ?
-        ''', (severity.value, limit))
+        """,
+            (severity.value, limit),
+        )
 
         return [self._row_to_entry(row) for row in cursor.fetchall()]
 
@@ -470,12 +473,15 @@ class CVEStorage:
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT * FROM cve_entries
             WHERE has_poc = 1
             ORDER BY cvss_score DESC, published_date DESC
             LIMIT ?
-        ''', (limit,))
+        """,
+            (limit,),
+        )
 
         return [self._row_to_entry(row) for row in cursor.fetchall()]
 
@@ -493,12 +499,15 @@ class CVEStorage:
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT * FROM cve_entries
             WHERE affected_products LIKE ?
             ORDER BY cvss_score DESC, published_date DESC
             LIMIT ?
-        ''', (f'%{product}%', limit))
+        """,
+            (f"%{product}%", limit),
+        )
 
         return [self._row_to_entry(row) for row in cursor.fetchall()]
 
@@ -513,14 +522,14 @@ class CVEStorage:
             是否删除成功
         """
         with self._transaction() as cursor:
-            cursor.execute('DELETE FROM cve_entries WHERE cve_id = ?', (cve_id,))
+            cursor.execute("DELETE FROM cve_entries WHERE cve_id = ?", (cve_id,))
             return cursor.rowcount > 0
 
     def count(self) -> int:
         """获取 CVE 总数"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT COUNT(*) FROM cve_entries')
+        cursor.execute("SELECT COUNT(*) FROM cve_entries")
         return cursor.fetchone()[0]
 
     def stats(self) -> CVEStats:
@@ -529,31 +538,31 @@ class CVEStorage:
         cursor = conn.cursor()
 
         # 总数
-        cursor.execute('SELECT COUNT(*) FROM cve_entries')
+        cursor.execute("SELECT COUNT(*) FROM cve_entries")
         total_count = cursor.fetchone()[0]
 
         # 有 PoC 的数量
-        cursor.execute('SELECT COUNT(*) FROM cve_entries WHERE has_poc = 1')
+        cursor.execute("SELECT COUNT(*) FROM cve_entries WHERE has_poc = 1")
         poc_available_count = cursor.fetchone()[0]
 
         # 按严重性统计
-        cursor.execute('''
+        cursor.execute("""
             SELECT severity, COUNT(*) as count
             FROM cve_entries
             GROUP BY severity
-        ''')
+        """)
         by_severity = {row[0]: row[1] for row in cursor.fetchall()}
 
         # 按来源统计
-        cursor.execute('''
+        cursor.execute("""
             SELECT source, COUNT(*) as count
             FROM cve_entries
             GROUP BY source
-        ''')
+        """)
         by_source = {row[0]: row[1] for row in cursor.fetchall()}
 
         # 按年份统计
-        cursor.execute('''
+        cursor.execute("""
             SELECT
                 CAST(substr(cve_id, 5, 4) AS INTEGER) as year,
                 COUNT(*) as count
@@ -561,11 +570,11 @@ class CVEStorage:
             WHERE cve_id LIKE 'CVE-%'
             GROUP BY year
             ORDER BY year DESC
-        ''')
+        """)
         by_year = {row[0]: row[1] for row in cursor.fetchall()}
 
         # 最后更新时间
-        cursor.execute('SELECT MAX(updated_at) FROM cve_entries')
+        cursor.execute("SELECT MAX(updated_at) FROM cve_entries")
         last_updated_str = cursor.fetchone()[0]
         last_updated = None
         if last_updated_str:
@@ -580,7 +589,7 @@ class CVEStorage:
             by_severity=by_severity,
             by_source=by_source,
             by_year=by_year,
-            last_updated=last_updated
+            last_updated=last_updated,
         )
 
     def log_sync(self, status: SyncStatus):
@@ -591,20 +600,27 @@ class CVEStorage:
             status: 同步状态
         """
         with self._transaction() as cursor:
-            cursor.execute('''
+            cursor.execute(
+                """
                 INSERT INTO sync_history (
                     source, sync_time, new_count, updated_count,
                     error_count, status, message
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                status.source,
-                status.last_sync.isoformat() if status.last_sync else datetime.now().isoformat(),
-                status.new_count,
-                status.updated_count,
-                status.error_count,
-                status.status,
-                status.message
-            ))
+            """,
+                (
+                    status.source,
+                    (
+                        status.last_sync.isoformat()
+                        if status.last_sync
+                        else datetime.now().isoformat()
+                    ),
+                    status.new_count,
+                    status.updated_count,
+                    status.error_count,
+                    status.status,
+                    status.message,
+                ),
+            )
 
     def get_sync_history(self, source: Optional[str] = None, limit: int = 20) -> List[SyncStatus]:
         """
@@ -621,37 +637,45 @@ class CVEStorage:
         cursor = conn.cursor()
 
         if source:
-            cursor.execute('''
+            cursor.execute(
+                """
                 SELECT * FROM sync_history
                 WHERE source = ?
                 ORDER BY sync_time DESC
                 LIMIT ?
-            ''', (source, limit))
+            """,
+                (source, limit),
+            )
         else:
-            cursor.execute('''
+            cursor.execute(
+                """
                 SELECT * FROM sync_history
                 ORDER BY sync_time DESC
                 LIMIT ?
-            ''', (limit,))
+            """,
+                (limit,),
+            )
 
         results = []
         for row in cursor.fetchall():
             sync_time = None
-            if row['sync_time']:
+            if row["sync_time"]:
                 try:
-                    sync_time = datetime.fromisoformat(row['sync_time'])
+                    sync_time = datetime.fromisoformat(row["sync_time"])
                 except (ValueError, TypeError):
                     pass
 
-            results.append(SyncStatus(
-                source=row['source'],
-                last_sync=sync_time,
-                new_count=row['new_count'],
-                updated_count=row['updated_count'],
-                error_count=row['error_count'],
-                status=row['status'],
-                message=row['message'] or ''
-            ))
+            results.append(
+                SyncStatus(
+                    source=row["source"],
+                    last_sync=sync_time,
+                    new_count=row["new_count"],
+                    updated_count=row["updated_count"],
+                    error_count=row["error_count"],
+                    status=row["status"],
+                    message=row["message"] or "",
+                )
+            )
 
         return results
 
@@ -680,78 +704,78 @@ class CVEStorage:
         """
         # 解析 CVSS
         cvss = None
-        if row['cvss_version']:
+        if row["cvss_version"]:
             cvss = CVSS(
-                version=row['cvss_version'],
-                score=row['cvss_score'] or 0.0,
-                vector=row['cvss_vector'] or '',
-                severity=Severity.from_string(row['severity'])
+                version=row["cvss_version"],
+                score=row["cvss_score"] or 0.0,
+                vector=row["cvss_vector"] or "",
+                severity=Severity.from_string(row["severity"]),
             )
 
         # 解析 JSON 字段
-        affected_products = json.loads(row['affected_products'] or '[]')
-        affected_versions = json.loads(row['affected_versions'] or '[]')
-        cwe_ids = json.loads(row['cwe_ids'] or '[]')
-        poc_urls = json.loads(row['poc_urls'] or '[]')
-        tags = json.loads(row['tags'] or '[]')
+        affected_products = json.loads(row["affected_products"] or "[]")
+        affected_versions = json.loads(row["affected_versions"] or "[]")
+        cwe_ids = json.loads(row["cwe_ids"] or "[]")
+        poc_urls = json.loads(row["poc_urls"] or "[]")
+        tags = json.loads(row["tags"] or "[]")
 
         # 解析参考链接
-        refs_data = json.loads(row['ref_links'] or '[]')
+        refs_data = json.loads(row["ref_links"] or "[]")
         references = [Reference.from_dict(r) for r in refs_data]
 
         # 解析时间
         published_date = None
         modified_date = None
 
-        if row['published_date']:
+        if row["published_date"]:
             try:
-                published_date = datetime.fromisoformat(row['published_date'])
+                published_date = datetime.fromisoformat(row["published_date"])
             except (ValueError, TypeError):
                 pass
 
-        if row['modified_date']:
+        if row["modified_date"]:
             try:
-                modified_date = datetime.fromisoformat(row['modified_date'])
+                modified_date = datetime.fromisoformat(row["modified_date"])
             except (ValueError, TypeError):
                 pass
 
         # 解析原始数据
         raw_data = None
-        if row['raw_data']:
+        if row["raw_data"]:
             try:
-                raw_data = json.loads(row['raw_data'])
+                raw_data = json.loads(row["raw_data"])
             except (ValueError, TypeError):
                 pass
 
         return CVEEntry(
-            cve_id=row['cve_id'],
-            title=row['title'],
-            description=row['description'] or '',
+            cve_id=row["cve_id"],
+            title=row["title"],
+            description=row["description"] or "",
             cvss=cvss,
-            severity=Severity.from_string(row['severity']),
+            severity=Severity.from_string(row["severity"]),
             affected_products=affected_products,
             affected_versions=affected_versions,
             cwe_ids=cwe_ids,
             published_date=published_date,
             modified_date=modified_date,
             references=references,
-            has_poc=bool(row['has_poc']),
+            has_poc=bool(row["has_poc"]),
             poc_urls=poc_urls,
-            exploit_available=bool(row['exploit_available']),
-            source=row['source'] or '',
+            exploit_available=bool(row["exploit_available"]),
+            source=row["source"] or "",
             tags=tags,
-            raw_data=raw_data
+            raw_data=raw_data,
         )
 
     def vacuum(self):
         """压缩数据库"""
         conn = self._get_connection()
-        conn.execute('VACUUM')
+        conn.execute("VACUUM")
         logger.info("[Storage] 数据库压缩完成")
 
     def close(self):
         """关闭数据库连接"""
-        if hasattr(self._local, 'conn') and self._local.conn:
+        if hasattr(self._local, "conn") and self._local.conn:
             self._local.conn.close()
             self._local.conn = None
             logger.debug("[Storage] 数据库连接已关闭")

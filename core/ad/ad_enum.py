@@ -12,24 +12,26 @@ ATT&CK Technique: T1087 - Account Discovery
 
 注意: 仅用于授权的渗透测试和安全研究
 """
+
 import logging
 
 logger = logging.getLogger(__name__)
 
-import socket
-import struct
-import ssl
-import re
-import json
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime
 import base64
+import json
+import re
+import socket
+import ssl
+import struct
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class ADObjectType(Enum):
     """AD对象类型"""
+
     USER = "user"
     GROUP = "group"
     COMPUTER = "computer"
@@ -42,6 +44,7 @@ class ADObjectType(Enum):
 @dataclass
 class ADObject:
     """AD对象数据结构"""
+
     object_type: ADObjectType
     dn: str
     name: str
@@ -52,13 +55,14 @@ class ADObject:
             "type": self.object_type.value,
             "dn": self.dn,
             "name": self.name,
-            "attributes": self.attributes
+            "attributes": self.attributes,
         }
 
 
 @dataclass
 class EnumResult:
     """枚举结果"""
+
     success: bool
     target: str
     object_type: str
@@ -72,7 +76,7 @@ class EnumResult:
             "type": self.object_type,
             "count": len(self.objects),
             "objects": [o.to_dict() for o in self.objects],
-            "error": self.error
+            "error": self.error,
         }
 
 
@@ -113,7 +117,7 @@ class SimpleLDAPClient:
         else:
             length_bytes = []
             while length > 0:
-                length_bytes.insert(0, length & 0xff)
+                length_bytes.insert(0, length & 0xFF)
                 length >>= 8
             return bytes([0x80 | len(length_bytes)]) + bytes(length_bytes)
 
@@ -122,7 +126,7 @@ class SimpleLDAPClient:
         if data[offset] < 128:
             return data[offset], offset + 1
         else:
-            num_bytes = data[offset] & 0x7f
+            num_bytes = data[offset] & 0x7F
             length = 0
             for i in range(num_bytes):
                 length = (length << 8) | data[offset + 1 + i]
@@ -130,7 +134,7 @@ class SimpleLDAPClient:
 
     def _encode_string(self, s: str, tag: int = 0x04) -> bytes:
         """编码LDAP字符串"""
-        encoded = s.encode('utf-8')
+        encoded = s.encode("utf-8")
         return bytes([tag]) + self._encode_length(len(encoded)) + encoded
 
     def _encode_integer(self, value: int) -> bytes:
@@ -140,7 +144,7 @@ class SimpleLDAPClient:
 
         result = []
         while value > 0:
-            result.insert(0, value & 0xff)
+            result.insert(0, value & 0xFF)
             value >>= 8
 
         # 如果最高位是1,需要添加0x00前缀
@@ -212,7 +216,7 @@ class SimpleLDAPClient:
                     if response[i] == self.LDAP_BIND_RESPONSE:
                         # 找到resultCode (应该是第一个INTEGER)
                         for j in range(i, min(i + 20, len(response) - 2)):
-                            if response[j] == 0x0a:  # ENUMERATED (resultCode)
+                            if response[j] == 0x0A:  # ENUMERATED (resultCode)
                                 length = response[j + 1]
                                 result_code = response[j + 2]
                                 if result_code == 0:
@@ -229,7 +233,7 @@ class SimpleLDAPClient:
         base_dn: str,
         filter_str: str = "(objectClass=*)",
         scope: int = 2,  # SCOPE_SUBTREE
-        attributes: List[str] = None
+        attributes: List[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         LDAP搜索
@@ -251,8 +255,8 @@ class SimpleLDAPClient:
 
         # 构建Search Request
         base = self._encode_string(base_dn)
-        search_scope = bytes([0x0a, 0x01, scope])  # ENUMERATED
-        deref_aliases = bytes([0x0a, 0x01, 0x00])  # neverDerefAliases
+        search_scope = bytes([0x0A, 0x01, scope])  # ENUMERATED
+        deref_aliases = bytes([0x0A, 0x01, 0x00])  # neverDerefAliases
         size_limit = self._encode_integer(1000)
         time_limit = self._encode_integer(60)
         types_only = bytes([0x01, 0x01, 0x00])  # FALSE
@@ -261,16 +265,21 @@ class SimpleLDAPClient:
         filter_encoded = self._encode_filter(filter_str)
 
         # 属性列表
-        attrs_data = b''
+        attrs_data = b""
         if attributes:
             for attr in attributes:
                 attrs_data += self._encode_string(attr)
         attrs_seq = self._encode_sequence(attrs_data)
 
         search_request = (
-            base + search_scope + deref_aliases +
-            size_limit + time_limit + types_only +
-            filter_encoded + attrs_seq
+            base
+            + search_scope
+            + deref_aliases
+            + size_limit
+            + time_limit
+            + types_only
+            + filter_encoded
+            + attrs_seq
         )
         search_request = self._encode_sequence(search_request, tag=self.LDAP_SEARCH_REQUEST)
 
@@ -309,22 +318,22 @@ class SimpleLDAPClient:
         支持简单过滤器格式: (attribute=value)
         """
         # 简单实现,仅支持等值过滤
-        match = re.match(r'\(([^=]+)=([^)]*)\)', filter_str)
+        match = re.match(r"\(([^=]+)=([^)]*)\)", filter_str)
         if match:
             attr = match.group(1)
             value = match.group(2)
 
-            if value == '*':
+            if value == "*":
                 # Present filter
-                return bytes([0x87]) + self._encode_length(len(attr)) + attr.encode('utf-8')
+                return bytes([0x87]) + self._encode_length(len(attr)) + attr.encode("utf-8")
             else:
                 # Equality filter
                 attr_encoded = self._encode_string(attr)
                 value_encoded = self._encode_string(value)
-                return self._encode_sequence(attr_encoded + value_encoded, tag=0xa3)
+                return self._encode_sequence(attr_encoded + value_encoded, tag=0xA3)
 
         # 默认返回简单过滤器
-        return bytes([0x87]) + self._encode_length(11) + b'objectClass'
+        return bytes([0x87]) + self._encode_length(11) + b"objectClass"
 
     def _parse_search_response(self, data: bytes) -> Tuple[List[Dict], bool]:
         """解析搜索响应"""
@@ -379,7 +388,7 @@ class SimpleLDAPClient:
                 return None
             offset += 1
             dn_len, offset = self._decode_length(data, offset)
-            dn = data[offset:offset + dn_len].decode('utf-8', errors='ignore')
+            dn = data[offset : offset + dn_len].decode("utf-8", errors="ignore")
             offset += dn_len
 
             entry = {"dn": dn, "attributes": {}}
@@ -399,7 +408,9 @@ class SimpleLDAPClient:
                         if data[offset] == 0x04:
                             offset += 1
                             name_len, offset = self._decode_length(data, offset)
-                            attr_name = data[offset:offset + name_len].decode('utf-8', errors='ignore')
+                            attr_name = data[offset : offset + name_len].decode(
+                                "utf-8", errors="ignore"
+                            )
                             offset += name_len
 
                             # 属性值
@@ -413,11 +424,11 @@ class SimpleLDAPClient:
                                     if data[offset] == 0x04:
                                         offset += 1
                                         val_len, offset = self._decode_length(data, offset)
-                                        value = data[offset:offset + val_len]
+                                        value = data[offset : offset + val_len]
                                         try:
-                                            values.append(value.decode('utf-8'))
+                                            values.append(value.decode("utf-8"))
                                         except UnicodeDecodeError:
-                                            values.append(base64.b64encode(value).decode('ascii'))
+                                            values.append(base64.b64encode(value).decode("ascii"))
                                         offset += val_len
                                     else:
                                         offset += 1
@@ -463,7 +474,7 @@ class ADEnumerator:
         username: str = "",
         password: str = "",
         use_ssl: bool = False,
-        verbose: bool = False
+        verbose: bool = False,
     ):
         """
         初始化AD枚举器
@@ -492,22 +503,18 @@ class ADEnumerator:
 
     def _domain_to_dn(self, domain: str) -> str:
         """将域名转换为DN"""
-        parts = domain.split('.')
-        return ','.join(f'DC={p}' for p in parts)
+        parts = domain.split(".")
+        return ",".join(f"DC={p}" for p in parts)
 
     def _resolve_dc(self) -> str:
         """解析域控IP"""
         try:
             # 尝试解析常见的DC DNS记录
-            dc_names = [
-                f"_ldap._tcp.{self.domain}",
-                f"dc.{self.domain}",
-                self.domain
-            ]
+            dc_names = [f"_ldap._tcp.{self.domain}", f"dc.{self.domain}", self.domain]
 
             for name in dc_names:
                 try:
-                    result = socket.gethostbyname(name.replace('_ldap._tcp.', ''))
+                    result = socket.gethostbyname(name.replace("_ldap._tcp.", ""))
                     return result
                 except (socket.gaierror, socket.herror, OSError):
                     continue
@@ -528,7 +535,7 @@ class ADEnumerator:
         # 绑定
         bind_name = ""
         if self.username:
-            if '@' not in self.username and '\\' not in self.username:
+            if "@" not in self.username and "\\" not in self.username:
                 bind_name = f"{self.username}@{self.domain}"
             else:
                 bind_name = self.username
@@ -554,30 +561,30 @@ class ADEnumerator:
             if not self.connect():
                 return EnumResult(False, self.dc_ip, "users", error="Connection failed")
 
-        attributes = ['sAMAccountName', 'cn', 'mail']
+        attributes = ["sAMAccountName", "cn", "mail"]
         if detailed:
-            attributes.extend([
-                'userPrincipalName', 'description', 'memberOf',
-                'lastLogon', 'pwdLastSet', 'userAccountControl',
-                'adminCount', 'servicePrincipalName'
-            ])
+            attributes.extend(
+                [
+                    "userPrincipalName",
+                    "description",
+                    "memberOf",
+                    "lastLogon",
+                    "pwdLastSet",
+                    "userAccountControl",
+                    "adminCount",
+                    "servicePrincipalName",
+                ]
+            )
 
-        results = self.ldap.search(
-            self.base_dn,
-            "(objectClass=user)",
-            attributes=attributes
-        )
+        results = self.ldap.search(self.base_dn, "(objectClass=user)", attributes=attributes)
 
         objects = []
         for entry in results:
-            attrs = entry.get('attributes', {})
-            name = attrs.get('sAMAccountName', [''])[0] or attrs.get('cn', ['Unknown'])[0]
+            attrs = entry.get("attributes", {})
+            name = attrs.get("sAMAccountName", [""])[0] or attrs.get("cn", ["Unknown"])[0]
 
             obj = ADObject(
-                object_type=ADObjectType.USER,
-                dn=entry.get('dn', ''),
-                name=name,
-                attributes=attrs
+                object_type=ADObjectType.USER, dn=entry.get("dn", ""), name=name, attributes=attrs
             )
             objects.append(obj)
             self._log(f"Found user: {name}")
@@ -593,19 +600,16 @@ class ADEnumerator:
         results = self.ldap.search(
             self.base_dn,
             "(objectClass=group)",
-            attributes=['sAMAccountName', 'cn', 'description', 'member', 'memberOf']
+            attributes=["sAMAccountName", "cn", "description", "member", "memberOf"],
         )
 
         objects = []
         for entry in results:
-            attrs = entry.get('attributes', {})
-            name = attrs.get('sAMAccountName', [''])[0] or attrs.get('cn', ['Unknown'])[0]
+            attrs = entry.get("attributes", {})
+            name = attrs.get("sAMAccountName", [""])[0] or attrs.get("cn", ["Unknown"])[0]
 
             obj = ADObject(
-                object_type=ADObjectType.GROUP,
-                dn=entry.get('dn', ''),
-                name=name,
-                attributes=attrs
+                object_type=ADObjectType.GROUP, dn=entry.get("dn", ""), name=name, attributes=attrs
             )
             objects.append(obj)
             self._log(f"Found group: {name}")
@@ -621,19 +625,25 @@ class ADEnumerator:
         results = self.ldap.search(
             self.base_dn,
             "(objectClass=computer)",
-            attributes=['cn', 'dNSHostName', 'operatingSystem', 'operatingSystemVersion', 'lastLogon']
+            attributes=[
+                "cn",
+                "dNSHostName",
+                "operatingSystem",
+                "operatingSystemVersion",
+                "lastLogon",
+            ],
         )
 
         objects = []
         for entry in results:
-            attrs = entry.get('attributes', {})
-            name = attrs.get('cn', ['Unknown'])[0]
+            attrs = entry.get("attributes", {})
+            name = attrs.get("cn", ["Unknown"])[0]
 
             obj = ADObject(
                 object_type=ADObjectType.COMPUTER,
-                dn=entry.get('dn', ''),
+                dn=entry.get("dn", ""),
                 name=name,
-                attributes=attrs
+                attributes=attrs,
             )
             objects.append(obj)
             self._log(f"Found computer: {name}")
@@ -647,25 +657,21 @@ class ADEnumerator:
                 return EnumResult(False, self.dc_ip, "domain_admins", error="Connection failed")
 
         # 搜索Domain Admins组
-        results = self.ldap.search(
-            self.base_dn,
-            "(cn=Domain Admins)",
-            attributes=['member']
-        )
+        results = self.ldap.search(self.base_dn, "(cn=Domain Admins)", attributes=["member"])
 
         objects = []
         for entry in results:
-            members = entry.get('attributes', {}).get('member', [])
+            members = entry.get("attributes", {}).get("member", [])
             for member_dn in members:
                 # 从DN提取用户名
-                cn_match = re.search(r'CN=([^,]+)', member_dn)
+                cn_match = re.search(r"CN=([^,]+)", member_dn)
                 name = cn_match.group(1) if cn_match else member_dn
 
                 obj = ADObject(
                     object_type=ADObjectType.USER,
                     dn=member_dn,
                     name=name,
-                    attributes={"memberOf": ["Domain Admins"]}
+                    attributes={"memberOf": ["Domain Admins"]},
                 )
                 objects.append(obj)
                 self._log(f"Found Domain Admin: {name}")
@@ -685,25 +691,21 @@ class ADEnumerator:
         results = self.ldap.search(
             self.base_dn,
             "(&(objectClass=user)(servicePrincipalName=*))",
-            attributes=['sAMAccountName', 'servicePrincipalName', 'cn', 'memberOf']
+            attributes=["sAMAccountName", "servicePrincipalName", "cn", "memberOf"],
         )
 
         objects = []
         for entry in results:
-            attrs = entry.get('attributes', {})
-            name = attrs.get('sAMAccountName', [''])[0]
-            spns = attrs.get('servicePrincipalName', [])
+            attrs = entry.get("attributes", {})
+            name = attrs.get("sAMAccountName", [""])[0]
+            spns = attrs.get("servicePrincipalName", [])
 
             for spn in spns:
                 obj = ADObject(
                     object_type=ADObjectType.SPN,
-                    dn=entry.get('dn', ''),
+                    dn=entry.get("dn", ""),
                     name=name,
-                    attributes={
-                        "spn": spn,
-                        "account": name,
-                        "kerberoastable": True
-                    }
+                    attributes={"spn": spn, "account": name, "kerberoastable": True},
                 )
                 objects.append(obj)
                 self._log(f"Found SPN: {spn} ({name})")
@@ -721,19 +723,16 @@ class ADEnumerator:
         results = self.ldap.search(
             gpo_base,
             "(objectClass=groupPolicyContainer)",
-            attributes=['displayName', 'gPCFileSysPath', 'cn']
+            attributes=["displayName", "gPCFileSysPath", "cn"],
         )
 
         objects = []
         for entry in results:
-            attrs = entry.get('attributes', {})
-            name = attrs.get('displayName', [''])[0] or attrs.get('cn', ['Unknown'])[0]
+            attrs = entry.get("attributes", {})
+            name = attrs.get("displayName", [""])[0] or attrs.get("cn", ["Unknown"])[0]
 
             obj = ADObject(
-                object_type=ADObjectType.GPO,
-                dn=entry.get('dn', ''),
-                name=name,
-                attributes=attrs
+                object_type=ADObjectType.GPO, dn=entry.get("dn", ""), name=name, attributes=attrs
             )
             objects.append(obj)
             self._log(f"Found GPO: {name}")
@@ -749,19 +748,16 @@ class ADEnumerator:
         results = self.ldap.search(
             f"CN=System,{self.base_dn}",
             "(objectClass=trustedDomain)",
-            attributes=['cn', 'trustDirection', 'trustType', 'trustAttributes']
+            attributes=["cn", "trustDirection", "trustType", "trustAttributes"],
         )
 
         objects = []
         for entry in results:
-            attrs = entry.get('attributes', {})
-            name = attrs.get('cn', ['Unknown'])[0]
+            attrs = entry.get("attributes", {})
+            name = attrs.get("cn", ["Unknown"])[0]
 
             obj = ADObject(
-                object_type=ADObjectType.TRUST,
-                dn=entry.get('dn', ''),
-                name=name,
-                attributes=attrs
+                object_type=ADObjectType.TRUST, dn=entry.get("dn", ""), name=name, attributes=attrs
             )
             objects.append(obj)
             self._log(f"Found trust: {name}")
@@ -772,13 +768,13 @@ class ADEnumerator:
         """执行完整枚举"""
         results = {}
 
-        results['users'] = self.enum_users(detailed=True)
-        results['groups'] = self.enum_groups()
-        results['computers'] = self.enum_computers()
-        results['domain_admins'] = self.enum_domain_admins()
-        results['spn'] = self.enum_spn()
-        results['gpo'] = self.enum_gpo()
-        results['trusts'] = self.enum_trusts()
+        results["users"] = self.enum_users(detailed=True)
+        results["groups"] = self.enum_groups()
+        results["computers"] = self.enum_computers()
+        results["domain_admins"] = self.enum_domain_admins()
+        results["spn"] = self.enum_spn()
+        results["gpo"] = self.enum_gpo()
+        results["trusts"] = self.enum_trusts()
 
         return results
 
@@ -795,7 +791,7 @@ def ad_enumerate(
     username: str = "",
     password: str = "",
     enum_type: str = "all",
-    verbose: bool = False
+    verbose: bool = False,
 ) -> Dict[str, Any]:
     """
     AD枚举便捷函数
@@ -812,11 +808,7 @@ def ad_enumerate(
         枚举结果字典
     """
     enumerator = ADEnumerator(
-        domain=domain,
-        dc_ip=dc_ip,
-        username=username,
-        password=password,
-        verbose=verbose
+        domain=domain, dc_ip=dc_ip, username=username, password=password, verbose=verbose
     )
 
     try:
@@ -845,7 +837,8 @@ def ad_enumerate(
 
 if __name__ == "__main__":
     import sys
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     if len(sys.argv) < 2:
         logger.info("Usage: python ad_enum.py <domain> [dc_ip] [username]")
@@ -854,11 +847,12 @@ if __name__ == "__main__":
         sys.exit(1)
 
     import getpass as _getpass
+
     domain = sys.argv[1]
     dc_ip = sys.argv[2] if len(sys.argv) > 2 else None
     username = sys.argv[3] if len(sys.argv) > 3 else ""
     # 安全方式获取密码：优先环境变量，否则提示输入
-    password = os.environ.get('AD_PASSWORD', '')
+    password = os.environ.get("AD_PASSWORD", "")
     if not password and username:
         password = _getpass.getpass(f"Password for {username}: ")
 

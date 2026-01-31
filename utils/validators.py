@@ -36,16 +36,16 @@
     请使用此模块的函数，旧模块将在未来版本移除。
 """
 
-import re
-import os
-import json
-import ipaddress
-import logging
-from typing import Any, Callable, Optional, List, Tuple, Union, Dict
-from urllib.parse import urlparse, unquote
-from pathlib import Path
-from functools import wraps
 import inspect
+import ipaddress
+import json
+import logging
+import os
+import re
+from functools import wraps
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from urllib.parse import unquote, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -63,26 +63,51 @@ class ValidationError(Exception):
 # 预定义正则模式
 # =============================================================================
 VALIDATION_PATTERNS = {
-    "alphanumeric": re.compile(r'^[a-zA-Z0-9]+$'),
-    "alphanumeric_dash": re.compile(r'^[a-zA-Z0-9_-]+$'),
-    "domain": re.compile(r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'),
-    "email": re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
-    "ipv4": re.compile(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'),
-    "port": re.compile(r'^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$'),
-    "filename": re.compile(r'^[a-zA-Z0-9_.-]+$'),
-    "session_id": re.compile(r'^[a-zA-Z0-9_-]{8,64}$'),
-    "cve_id": re.compile(r'^CVE-\d{4}-\d{4,}$', re.IGNORECASE),
+    "alphanumeric": re.compile(r"^[a-zA-Z0-9]+$"),
+    "alphanumeric_dash": re.compile(r"^[a-zA-Z0-9_-]+$"),
+    "domain": re.compile(r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$"),
+    "email": re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"),
+    "ipv4": re.compile(
+        r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+    ),
+    "port": re.compile(
+        r"^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$"
+    ),
+    "filename": re.compile(r"^[a-zA-Z0-9_.-]+$"),
+    "session_id": re.compile(r"^[a-zA-Z0-9_-]{8,64}$"),
+    "cve_id": re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE),
 }
 
 # =============================================================================
 # 危险字符分类
 # =============================================================================
 DANGEROUS_CHARS = {
-    "path": ['..', '~', '\\', '\x00'],
-    "command": [';', '|', '&', '$', '`', '\n', '\r', '>', '<',
-                "'", '"', '\\', '(', ')', '{', '}', '[', ']',
-                '\x00', '\t', '\x0b', '\x0c'],
-    "sql": ["'", '"', '--', '/*', '*/', 'xp_', 'sp_'],
+    "path": ["..", "~", "\\", "\x00"],
+    "command": [
+        ";",
+        "|",
+        "&",
+        "$",
+        "`",
+        "\n",
+        "\r",
+        ">",
+        "<",
+        "'",
+        '"',
+        "\\",
+        "(",
+        ")",
+        "{",
+        "}",
+        "[",
+        "]",
+        "\x00",
+        "\t",
+        "\x0b",
+        "\x0c",
+    ],
+    "sql": ["'", '"', "--", "/*", "*/", "xp_", "sp_"],
 }
 
 
@@ -98,7 +123,7 @@ def validate_url(url: str, allowed_schemes: Optional[List[str]] = None) -> bool:
         URL是否有效
     """
     if allowed_schemes is None:
-        allowed_schemes = ['http', 'https']
+        allowed_schemes = ["http", "https"]
 
     try:
         result = urlparse(url)
@@ -112,7 +137,7 @@ def validate_url(url: str, allowed_schemes: Optional[List[str]] = None) -> bool:
             return False
 
         # 基本格式检查
-        if '..' in url or '\\' in url:
+        if ".." in url or "\\" in url:
             return False
 
         return True
@@ -223,11 +248,11 @@ def validate_port_range(port_range: str) -> bool:
         端口范围是否有效
     """
     try:
-        parts = port_range.replace(' ', '').split(',')
+        parts = port_range.replace(" ", "").split(",")
 
         for part in parts:
-            if '-' in part:
-                start, end = part.split('-')
+            if "-" in part:
+                start, end = part.split("-")
                 start_port = int(start)
                 end_port = int(end)
 
@@ -257,7 +282,7 @@ def validate_domain(domain: str) -> bool:
         域名是否有效
     """
     # 域名正则表达式
-    domain_pattern = r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
+    domain_pattern = r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$"
 
     if not re.match(domain_pattern, domain):
         return False
@@ -267,7 +292,7 @@ def validate_domain(domain: str) -> bool:
         return False
 
     # 检查每个标签长度
-    labels = domain.split('.')
+    labels = domain.split(".")
     for label in labels:
         if len(label) > 63:
             return False
@@ -285,7 +310,7 @@ def validate_email(email: str) -> bool:
     Returns:
         邮箱是否有效
     """
-    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     return bool(re.match(email_pattern, email))
 
 
@@ -300,25 +325,25 @@ def sanitize_path(path: str) -> str:
         清理后的路径
     """
     if not path:
-        return ''
+        return ""
 
     # URL解码
     decoded = unquote(unquote(path))
 
     # 移除路径遍历序列
-    traversal_patterns = ['../', '..\\', '%2e%2e/', '%2e%2e\\']
+    traversal_patterns = ["../", "..\\", "%2e%2e/", "%2e%2e\\"]
     for pattern in traversal_patterns:
         while pattern.lower() in decoded.lower():
-            decoded = re.sub(re.escape(pattern), '', decoded, flags=re.IGNORECASE)
+            decoded = re.sub(re.escape(pattern), "", decoded, flags=re.IGNORECASE)
 
     # 移除双斜杠
-    while '//' in decoded:
-        decoded = decoded.replace('//', '/')
-    while '\\\\' in decoded:
-        decoded = decoded.replace('\\\\', '\\')
+    while "//" in decoded:
+        decoded = decoded.replace("//", "/")
+    while "\\\\" in decoded:
+        decoded = decoded.replace("\\\\", "\\")
 
     # 移除开头的斜杠（相对路径）
-    decoded = decoded.lstrip('/\\')
+    decoded = decoded.lstrip("/\\")
 
     return decoded
 
@@ -346,30 +371,46 @@ def sanitize_command(cmd: str, strict: bool = True) -> str:
         3. 避免将用户输入直接用于命令
     """
     if not cmd:
-        return ''
+        return ""
 
     # 危险字符列表
     dangerous_chars = [
-        ';', '|', '&', '$', '`', '\n', '\r', '>', '<',
-        "'", '"', '\\', '(', ')', '{', '}', '[', ']',
-        '\x00', '\t', '\x0b', '\x0c',
+        ";",
+        "|",
+        "&",
+        "$",
+        "`",
+        "\n",
+        "\r",
+        ">",
+        "<",
+        "'",
+        '"',
+        "\\",
+        "(",
+        ")",
+        "{",
+        "}",
+        "[",
+        "]",
+        "\x00",
+        "\t",
+        "\x0b",
+        "\x0c",
     ]
 
     if strict:
         # 严格模式：检测到危险字符则拒绝
         for char in dangerous_chars:
             if char in cmd:
-                raise ValidationError(
-                    f"命令包含危险字符: {repr(char)}",
-                    field="command"
-                )
+                raise ValidationError(f"命令包含危险字符: {repr(char)}", field="command")
         return cmd.strip()
     else:
         # 宽松模式：移除危险字符 (不推荐)
         logger.warning("sanitize_command 使用宽松模式 - 可能存在绕过风险")
         result = cmd
         for char in dangerous_chars:
-            result = result.replace(char, '')
+            result = result.replace(char, "")
         return result.strip()
 
 
@@ -384,26 +425,26 @@ def sanitize_filename(filename: str) -> str:
         清理后的文件名
     """
     if not filename:
-        return 'unnamed'
+        return "unnamed"
 
     # 移除路径分隔符
-    filename = filename.replace('/', '_').replace('\\', '_')
+    filename = filename.replace("/", "_").replace("\\", "_")
 
     # 移除其他不安全字符
-    unsafe_chars = ['<', '>', ':', '"', '|', '?', '*', '\x00']
+    unsafe_chars = ["<", ">", ":", '"', "|", "?", "*", "\x00"]
     for char in unsafe_chars:
-        filename = filename.replace(char, '_')
+        filename = filename.replace(char, "_")
 
     # 移除开头的点（隐藏文件）
-    filename = filename.lstrip('.')
+    filename = filename.lstrip(".")
 
     # 限制长度
     if len(filename) > 255:
-        name, ext = filename.rsplit('.', 1) if '.' in filename else (filename, '')
+        name, ext = filename.rsplit(".", 1) if "." in filename else (filename, "")
         max_name_len = 255 - len(ext) - 1 if ext else 255
         filename = f"{name[:max_name_len]}.{ext}" if ext else name[:255]
 
-    return filename or 'unnamed'
+    return filename or "unnamed"
 
 
 class InputValidator:
@@ -415,19 +456,37 @@ class InputValidator:
 
     # 危险命令列表
     DANGEROUS_COMMANDS = [
-        'rm', 'dd', 'mkfs', 'format', ':(){:|:&};:',
-        'chmod', 'chown', 'shutdown', 'reboot', 'init',
-        'del', 'rmdir', 'rd', 'deltree'
+        "rm",
+        "dd",
+        "mkfs",
+        "format",
+        ":(){:|:&};:",
+        "chmod",
+        "chown",
+        "shutdown",
+        "reboot",
+        "init",
+        "del",
+        "rmdir",
+        "rd",
+        "deltree",
     ]
 
     # 危险系统路径
     DANGEROUS_PATHS = [
-        '/etc/', '/sys/', '/proc/', '/dev/', '/root/', '/boot/',
-        'C:\\Windows', 'C:\\System32', 'C:\\Program Files'
+        "/etc/",
+        "/sys/",
+        "/proc/",
+        "/dev/",
+        "/root/",
+        "/boot/",
+        "C:\\Windows",
+        "C:\\System32",
+        "C:\\Program Files",
     ]
 
     # Session ID 正则
-    SESSION_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]{8,64}$')
+    SESSION_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{8,64}$")
 
     @staticmethod
     def validate_target(target: str) -> Tuple[str, str]:
@@ -452,19 +511,19 @@ class InputValidator:
 
         # 尝试作为IP地址
         if validate_ip(target):
-            return 'ip', target
+            return "ip", target
 
         # 尝试作为CIDR
         if validate_cidr(target):
-            return 'cidr', target
+            return "cidr", target
 
         # 尝试作为URL
         if validate_url(target):
-            return 'url', target
+            return "url", target
 
         # 尝试作为域名
         if validate_domain(target):
-            return 'domain', target
+            return "domain", target
 
         raise ValidationError(f"无法识别目标类型: {target}", "target")
 
@@ -473,7 +532,7 @@ class InputValidator:
         path: str,
         allow_absolute: bool = False,
         base_dir: Optional[str] = None,
-        must_exist: bool = False
+        must_exist: bool = False,
     ) -> Tuple[bool, Optional[str]]:
         """
         验证文件路径安全性
@@ -494,7 +553,7 @@ class InputValidator:
         decoded_path = unquote(unquote(path))
 
         # 检查路径遍历
-        traversal_patterns = ['..', '%2e%2e', '%252e%252e', '....']
+        traversal_patterns = ["..", "%2e%2e", "%252e%252e", "...."]
         for pattern in traversal_patterns:
             if pattern.lower() in decoded_path.lower():
                 return False, f"路径包含非法字符: {pattern}"
@@ -502,6 +561,7 @@ class InputValidator:
         # 规范化路径
         try:
             import os
+
             normalized = os.path.normpath(decoded_path)
         except (TypeError, ValueError):
             return False, "路径格式无效"
@@ -509,19 +569,19 @@ class InputValidator:
         # 检查绝对路径
         if not allow_absolute:
             # Unix 绝对路径
-            if normalized.startswith('/'):
+            if normalized.startswith("/"):
                 return False, "不允许绝对路径"
             # Windows 盘符路径
-            if re.match(r'^[A-Za-z]:', normalized):
+            if re.match(r"^[A-Za-z]:", normalized):
                 return False, "不允许 Windows 绝对路径"
             # UNC 路径
-            if normalized.startswith('\\\\') or normalized.startswith('//'):
+            if normalized.startswith("\\\\") or normalized.startswith("//"):
                 return False, "不允许 UNC 路径"
 
         # 检查危险系统路径
-        normalized_lower = normalized.lower().replace('\\', '/')
+        normalized_lower = normalized.lower().replace("\\", "/")
         for dangerous in InputValidator.DANGEROUS_PATHS:
-            if normalized_lower.startswith(dangerous.lower().replace('\\', '/')):
+            if normalized_lower.startswith(dangerous.lower().replace("\\", "/")):
                 return False, f"不允许访问系统路径: {dangerous}"
 
         # 检查基础目录限制
@@ -559,7 +619,7 @@ class InputValidator:
             return False, "Session ID 格式无效 (仅允许字母数字下划线连字符, 8-64字符)"
 
         # 检查危险字符
-        if '..' in session_id or '/' in session_id or '\\' in session_id:
+        if ".." in session_id or "/" in session_id or "\\" in session_id:
             return False, "Session ID 包含非法字符"
 
         return True, None
@@ -576,7 +636,7 @@ class InputValidator:
             (是否安全, 错误消息)
         """
         if isinstance(cmd, list):
-            cmd_str = ' '.join(cmd)
+            cmd_str = " ".join(cmd)
         else:
             cmd_str = cmd
 
@@ -584,7 +644,7 @@ class InputValidator:
 
         for dangerous in InputValidator.DANGEROUS_COMMANDS:
             # 使用单词边界匹配
-            pattern = r'\b' + re.escape(dangerous) + r'\b'
+            pattern = r"\b" + re.escape(dangerous) + r"\b"
             if re.search(pattern, cmd_lower):
                 return False, f"检测到危险命令: {dangerous}"
 
@@ -638,7 +698,7 @@ class InputValidator:
         min_length: int = 0,
         max_length: int = 1000,
         pattern: str = None,
-        allow_empty: bool = False
+        allow_empty: bool = False,
     ) -> str:
         """
         验证字符串
@@ -675,10 +735,7 @@ class InputValidator:
         return value
 
     @staticmethod
-    def validate_command_args(
-        args: List[str],
-        whitelist: Optional[List[str]] = None
-    ) -> List[str]:
+    def validate_command_args(args: List[str], whitelist: Optional[List[str]] = None) -> List[str]:
         """
         验证命令参数（防止命令注入）
 
@@ -722,22 +779,17 @@ class InputValidator:
         Returns:
             清理后的HTML（HTML实体转义）
         """
-        html = html.replace('&', '&amp;')
-        html = html.replace('<', '&lt;')
-        html = html.replace('>', '&gt;')
-        html = html.replace('"', '&quot;')
-        html = html.replace("'", '&#x27;')
-        html = html.replace('/', '&#x2F;')
+        html = html.replace("&", "&amp;")
+        html = html.replace("<", "&lt;")
+        html = html.replace(">", "&gt;")
+        html = html.replace('"', "&quot;")
+        html = html.replace("'", "&#x27;")
+        html = html.replace("/", "&#x2F;")
         return html
 
 
 # 便捷验证函数
-def validate_and_raise(
-    value: str,
-    validator_func,
-    field_name: str,
-    **kwargs
-) -> str:
+def validate_and_raise(value: str, validator_func, field_name: str, **kwargs) -> str:
     """
     验证值并在失败时抛出异常
 
@@ -762,6 +814,7 @@ def validate_and_raise(
 # 装饰器
 # =============================================================================
 
+
 def validate_params(**validators):
     """
     参数验证装饰器
@@ -774,6 +827,7 @@ def validate_params(**validators):
         def scan(url: str, port: int):
             pass
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -794,7 +848,9 @@ def validate_params(**validators):
                         raise
 
             return func(**bound.arguments)
+
         return wrapper
+
     return decorator
 
 
@@ -805,8 +861,10 @@ def require_auth(func: Callable) -> Callable:
     需要配合 core.security.auth_manager 使用。
     支持同步和异步函数。
     """
+
     def _get_auth_manager():
         from core.security.auth_manager import AuthManager
+
         if not hasattr(_get_auth_manager, "_instance"):
             _get_auth_manager._instance = AuthManager()
         return _get_auth_manager._instance
@@ -853,6 +911,7 @@ def require_auth(func: Callable) -> Callable:
 # 便捷函数
 # =============================================================================
 
+
 def safe_path_join(base: str, *paths: str) -> str:
     """
     安全的路径拼接（防止路径遍历）
@@ -871,7 +930,7 @@ def safe_path_join(base: str, *paths: str) -> str:
 
     for part in paths:
         # 验证每个部分
-        if '..' in part or part.startswith('/') or part.startswith('\\'):
+        if ".." in part or part.startswith("/") or part.startswith("\\"):
             raise ValidationError(f"路径部分包含危险字符: {part}")
 
         result = result / part
@@ -901,7 +960,7 @@ def validate_target(target: str) -> Dict[str, str]:
     target = target.strip()
 
     # 尝试作为URL验证
-    if target.startswith(('http://', 'https://')):
+    if target.startswith(("http://", "https://")):
         if validate_url(target):
             return {"type": "url", "value": target}
 
@@ -922,31 +981,31 @@ def validate_target(target: str) -> Dict[str, str]:
 
 __all__ = [
     # 异常类
-    'ValidationError',
+    "ValidationError",
     # 快捷验证函数
-    'validate_url',
-    'validate_ip',
-    'validate_ipv4',
-    'validate_ipv6',
-    'validate_cidr',
-    'validate_port',
-    'validate_port_range',
-    'validate_domain',
-    'validate_email',
+    "validate_url",
+    "validate_ip",
+    "validate_ipv4",
+    "validate_ipv6",
+    "validate_cidr",
+    "validate_port",
+    "validate_port_range",
+    "validate_domain",
+    "validate_email",
     # 清理函数
-    'sanitize_path',
-    'sanitize_command',
-    'sanitize_filename',
+    "sanitize_path",
+    "sanitize_command",
+    "sanitize_filename",
     # 验证器类
-    'InputValidator',
+    "InputValidator",
     # 便捷函数
-    'validate_and_raise',
-    'validate_target',
-    'safe_path_join',
+    "validate_and_raise",
+    "validate_target",
+    "safe_path_join",
     # 装饰器
-    'validate_params',
-    'require_auth',
+    "validate_params",
+    "require_auth",
     # 常量
-    'VALIDATION_PATTERNS',
-    'DANGEROUS_CHARS',
+    "VALIDATION_PATTERNS",
+    "DANGEROUS_CHARS",
 ]

@@ -14,17 +14,16 @@ directory.py - 目录扫描模块
         print(f"{item.path} - {item.status_code}")
 """
 
-import ssl
-import logging
-import threading
-import urllib.request
-import urllib.error
 import asyncio
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Set, Callable
-from pathlib import Path
+import logging
+import ssl
+import threading
+import urllib.error
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +42,7 @@ class DirectoryInfo:
         is_directory: 是否为目录
         metadata: 额外元数据
     """
+
     path: str
     url: str
     status_code: int
@@ -83,79 +83,235 @@ class DirectoryScanner:
     # 内置常用目录字典
     COMMON_DIRECTORIES: List[str] = [
         # 管理后台
-        "admin", "administrator", "admin.php", "admin.html", "admin.asp",
-        "manage", "manager", "management", "backend", "backoffice",
-        "console", "dashboard", "control", "panel", "cp", "cpanel",
-        "login", "signin", "auth", "authenticate",
+        "admin",
+        "administrator",
+        "admin.php",
+        "admin.html",
+        "admin.asp",
+        "manage",
+        "manager",
+        "management",
+        "backend",
+        "backoffice",
+        "console",
+        "dashboard",
+        "control",
+        "panel",
+        "cp",
+        "cpanel",
+        "login",
+        "signin",
+        "auth",
+        "authenticate",
         # 配置/敏感文件
-        ".git", ".git/config", ".git/HEAD", ".gitignore",
-        ".svn", ".svn/entries", ".svn/wc.db",
-        ".env", ".env.local", ".env.production", ".env.development",
-        ".htaccess", ".htpasswd", "web.config",
-        "config", "config.php", "config.inc.php", "configuration.php",
-        "settings.php", "settings.py", "settings.json", "settings.xml",
-        "database.yml", "database.php", "db.php", "db.sql",
-        "wp-config.php", "wp-config.php.bak", "wp-config.php.old",
+        ".git",
+        ".git/config",
+        ".git/HEAD",
+        ".gitignore",
+        ".svn",
+        ".svn/entries",
+        ".svn/wc.db",
+        ".env",
+        ".env.local",
+        ".env.production",
+        ".env.development",
+        ".htaccess",
+        ".htpasswd",
+        "web.config",
+        "config",
+        "config.php",
+        "config.inc.php",
+        "configuration.php",
+        "settings.php",
+        "settings.py",
+        "settings.json",
+        "settings.xml",
+        "database.yml",
+        "database.php",
+        "db.php",
+        "db.sql",
+        "wp-config.php",
+        "wp-config.php.bak",
+        "wp-config.php.old",
         # 备份文件
-        "backup", "backups", "bak", "old", "temp", "tmp",
-        "backup.zip", "backup.tar.gz", "backup.sql", "backup.tar",
-        "site.zip", "www.zip", "web.zip", "html.zip",
-        "dump.sql", "database.sql", "db.sql.gz",
+        "backup",
+        "backups",
+        "bak",
+        "old",
+        "temp",
+        "tmp",
+        "backup.zip",
+        "backup.tar.gz",
+        "backup.sql",
+        "backup.tar",
+        "site.zip",
+        "www.zip",
+        "web.zip",
+        "html.zip",
+        "dump.sql",
+        "database.sql",
+        "db.sql.gz",
         # API
-        "api", "api/v1", "api/v2", "api/v3", "apis",
-        "rest", "graphql", "swagger", "swagger-ui", "swagger.json",
-        "openapi", "openapi.json", "openapi.yaml",
-        "docs", "documentation", "apidocs", "api-docs",
+        "api",
+        "api/v1",
+        "api/v2",
+        "api/v3",
+        "apis",
+        "rest",
+        "graphql",
+        "swagger",
+        "swagger-ui",
+        "swagger.json",
+        "openapi",
+        "openapi.json",
+        "openapi.yaml",
+        "docs",
+        "documentation",
+        "apidocs",
+        "api-docs",
         # 静态资源
-        "static", "assets", "public", "resources",
-        "css", "js", "images", "img", "media", "files",
-        "upload", "uploads", "download", "downloads",
-        "attachment", "attachments",
+        "static",
+        "assets",
+        "public",
+        "resources",
+        "css",
+        "js",
+        "images",
+        "img",
+        "media",
+        "files",
+        "upload",
+        "uploads",
+        "download",
+        "downloads",
+        "attachment",
+        "attachments",
         # 常见目录
-        "test", "testing", "dev", "development", "debug",
-        "demo", "example", "examples", "sample", "samples",
-        "include", "includes", "inc", "lib", "libs", "library",
-        "vendor", "vendors", "node_modules", "bower_components",
-        "src", "source", "app", "application", "bin",
+        "test",
+        "testing",
+        "dev",
+        "development",
+        "debug",
+        "demo",
+        "example",
+        "examples",
+        "sample",
+        "samples",
+        "include",
+        "includes",
+        "inc",
+        "lib",
+        "libs",
+        "library",
+        "vendor",
+        "vendors",
+        "node_modules",
+        "bower_components",
+        "src",
+        "source",
+        "app",
+        "application",
+        "bin",
         # 日志/错误
-        "log", "logs", "error", "errors", "debug.log", "error.log",
-        "access.log", "error_log", "debug.txt",
+        "log",
+        "logs",
+        "error",
+        "errors",
+        "debug.log",
+        "error.log",
+        "access.log",
+        "error_log",
+        "debug.txt",
         # 信息泄露
-        "phpinfo.php", "info.php", "test.php", "i.php",
-        "robots.txt", "sitemap.xml", "crossdomain.xml",
-        "humans.txt", "security.txt", ".well-known",
+        "phpinfo.php",
+        "info.php",
+        "test.php",
+        "i.php",
+        "robots.txt",
+        "sitemap.xml",
+        "crossdomain.xml",
+        "humans.txt",
+        "security.txt",
+        ".well-known",
         # 框架特定
-        "wp-admin", "wp-content", "wp-includes", "wp-login.php",
-        "administrator", "components", "modules", "templates",
-        "actuator", "actuator/env", "actuator/health", "actuator/info",
-        "elmah.axd", "trace.axd",
+        "wp-admin",
+        "wp-content",
+        "wp-includes",
+        "wp-login.php",
+        "administrator",
+        "components",
+        "modules",
+        "templates",
+        "actuator",
+        "actuator/env",
+        "actuator/health",
+        "actuator/info",
+        "elmah.axd",
+        "trace.axd",
         # 版本控制/编辑器
-        ".idea", ".vscode", ".project", ".settings",
-        "CVS", ".cvsignore",
-        "nbproject", ".netbeans",
+        ".idea",
+        ".vscode",
+        ".project",
+        ".settings",
+        "CVS",
+        ".cvsignore",
+        "nbproject",
+        ".netbeans",
         # 其他
-        "cgi-bin", "cgi", "bin", "scripts",
-        "server-status", "server-info",
-        "phpmyadmin", "pma", "mysql", "myadmin",
-        "webmail", "mail", "email",
-        "forum", "bbs", "blog", "news",
+        "cgi-bin",
+        "cgi",
+        "bin",
+        "scripts",
+        "server-status",
+        "server-info",
+        "phpmyadmin",
+        "pma",
+        "mysql",
+        "myadmin",
+        "webmail",
+        "mail",
+        "email",
+        "forum",
+        "bbs",
+        "blog",
+        "news",
     ]
 
     # 敏感文件
     SENSITIVE_FILES: List[str] = [
-        ".git/config", ".git/HEAD", ".gitignore",
-        ".svn/entries", ".svn/wc.db",
-        ".env", ".env.local", ".env.production",
-        ".htaccess", ".htpasswd",
-        "web.config", "config.php", "config.inc.php",
-        "wp-config.php", "wp-config.php.bak",
-        "database.yml", "settings.py",
-        "phpinfo.php", "info.php", "test.php",
-        "robots.txt", "sitemap.xml",
-        "backup.zip", "backup.sql", "dump.sql",
-        "main.js.map", "app.js.map", "bundle.js.map",
-        "composer.json", "package.json", "Gemfile",
-        ".DS_Store", "Thumbs.db",
+        ".git/config",
+        ".git/HEAD",
+        ".gitignore",
+        ".svn/entries",
+        ".svn/wc.db",
+        ".env",
+        ".env.local",
+        ".env.production",
+        ".htaccess",
+        ".htpasswd",
+        "web.config",
+        "config.php",
+        "config.inc.php",
+        "wp-config.php",
+        "wp-config.php.bak",
+        "database.yml",
+        "settings.py",
+        "phpinfo.php",
+        "info.php",
+        "test.php",
+        "robots.txt",
+        "sitemap.xml",
+        "backup.zip",
+        "backup.sql",
+        "dump.sql",
+        "main.js.map",
+        "app.js.map",
+        "bundle.js.map",
+        "composer.json",
+        "package.json",
+        "Gemfile",
+        ".DS_Store",
+        "Thumbs.db",
     ]
 
     # 词表缓存（类级别，所有实例共享）
@@ -170,7 +326,7 @@ class DirectoryScanner:
         user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         extensions: Optional[List[str]] = None,
         wordlist: Optional[str] = None,
-        max_results: int = 500
+        max_results: int = 500,
     ):
         """初始化目录扫描器
 
@@ -219,7 +375,7 @@ class DirectoryScanner:
         self,
         base_url: str,
         custom_wordlist: Optional[List[str]] = None,
-        scan_sensitive: bool = True
+        scan_sensitive: bool = True,
     ) -> List[DirectoryInfo]:
         """扫描目录
 
@@ -283,10 +439,7 @@ class DirectoryScanner:
         return sorted(results, key=lambda x: x.path)
 
     async def async_scan(
-        self,
-        base_url: str,
-        custom_wordlist: Optional[List[str]] = None,
-        concurrency: int = 50
+        self, base_url: str, custom_wordlist: Optional[List[str]] = None, concurrency: int = 50
     ) -> List[DirectoryInfo]:
         """异步扫描目录
 
@@ -342,9 +495,7 @@ class DirectoryScanner:
             req = urllib.request.Request(url, headers=headers, method="GET")
 
             with urllib.request.urlopen(
-                req,
-                timeout=self.timeout,
-                context=self._ssl_context
+                req, timeout=self.timeout, context=self._ssl_context
             ) as resp:
                 status = resp.status
                 content_type = resp.headers.get("Content-Type", "")
@@ -401,7 +552,7 @@ class DirectoryScanner:
         import string
 
         # 生成随机路径
-        random_path = ''.join(random.choices(string.ascii_lowercase, k=16))
+        random_path = "".join(random.choices(string.ascii_lowercase, k=16))
         test_url = f"{base_url}/{random_path}"
 
         try:
@@ -409,9 +560,7 @@ class DirectoryScanner:
             req = urllib.request.Request(test_url, headers=headers)
 
             with urllib.request.urlopen(
-                req,
-                timeout=self.timeout,
-                context=self._ssl_context
+                req, timeout=self.timeout, context=self._ssl_context
             ) as resp:
                 if resp.status == 200:
                     # 服务器返回200但可能是自定义404页面
@@ -440,7 +589,10 @@ class DirectoryScanner:
 
         # 检查常见404特征
         lower_body = body.lower()
-        if any(sig in lower_body for sig in ["not found", "404", "page doesn't exist", "cannot be found"]):
+        if any(
+            sig in lower_body
+            for sig in ["not found", "404", "page doesn't exist", "cannot be found"]
+        ):
             return True
 
         # 检查与已知404页面的相似度
@@ -452,9 +604,7 @@ class DirectoryScanner:
         return False
 
     def _load_wordlist(
-        self,
-        custom_wordlist: Optional[List[str]] = None,
-        include_sensitive: bool = True
+        self, custom_wordlist: Optional[List[str]] = None, include_sensitive: bool = True
     ) -> List[str]:
         """加载字典（带缓存）
 
@@ -513,10 +663,7 @@ class DirectoryScanner:
 
         return list(extended_paths)
 
-    def set_progress_callback(
-        self,
-        callback: Callable[[int, int, str], None]
-    ) -> None:
+    def set_progress_callback(self, callback: Callable[[int, int, str], None]) -> None:
         """设置进度回调"""
         self._progress_callback = callback
 
@@ -553,10 +700,7 @@ class DirectoryScanner:
 
 # 便捷函数
 def scan_directories(
-    base_url: str,
-    timeout: float = 10.0,
-    threads: int = 20,
-    max_results: int = 500
+    base_url: str, timeout: float = 10.0, threads: int = 20, max_results: int = 500
 ) -> List[DirectoryInfo]:
     """便捷函数：扫描目录
 
@@ -569,25 +713,15 @@ def scan_directories(
     Returns:
         目录列表
     """
-    scanner = DirectoryScanner(
-        timeout=timeout,
-        threads=threads,
-        max_results=max_results
-    )
+    scanner = DirectoryScanner(timeout=timeout, threads=threads, max_results=max_results)
     return scanner.scan(base_url)
 
 
 async def async_scan_directories(
-    base_url: str,
-    timeout: float = 10.0,
-    concurrency: int = 50,
-    max_results: int = 500
+    base_url: str, timeout: float = 10.0, concurrency: int = 50, max_results: int = 500
 ) -> List[DirectoryInfo]:
     """便捷函数：异步扫描目录"""
-    scanner = DirectoryScanner(
-        timeout=timeout,
-        max_results=max_results
-    )
+    scanner = DirectoryScanner(timeout=timeout, max_results=max_results)
     return await scanner.async_scan(base_url, concurrency=concurrency)
 
 

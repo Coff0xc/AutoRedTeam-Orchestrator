@@ -6,16 +6,17 @@
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple
-from dataclasses import dataclass, field
 from collections import defaultdict
+from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class VulnSeverity(Enum):
     """漏洞严重程度"""
+
     CRITICAL = 4
     HIGH = 3
     MEDIUM = 2
@@ -26,6 +27,7 @@ class VulnSeverity(Enum):
 @dataclass
 class Vulnerability:
     """漏洞信息"""
+
     vuln_type: str
     url: str
     param: Optional[str] = None
@@ -39,6 +41,7 @@ class Vulnerability:
 @dataclass
 class ExploitChain:
     """利用链"""
+
     name: str
     steps: List[str]
     vulns_required: List[str]
@@ -55,114 +58,114 @@ class VulnCorrelationEngine:
         "sqli": {
             "leads_to": ["data_leak", "auth_bypass", "rce"],
             "severity": VulnSeverity.CRITICAL,
-            "impact": "数据库访问、数据泄露、可能RCE"
+            "impact": "数据库访问、数据泄露、可能RCE",
         },
         "xss": {
             "leads_to": ["session_hijack", "phishing", "csrf"],
             "severity": VulnSeverity.HIGH,
-            "impact": "会话劫持、钓鱼攻击"
+            "impact": "会话劫持、钓鱼攻击",
         },
         "lfi": {
             "leads_to": ["source_leak", "rce", "credential_leak"],
             "severity": VulnSeverity.HIGH,
-            "impact": "源码泄露、配置泄露、可能RCE"
+            "impact": "源码泄露、配置泄露、可能RCE",
         },
         "ssrf": {
             "leads_to": ["internal_scan", "cloud_metadata", "rce"],
             "severity": VulnSeverity.HIGH,
-            "impact": "内网探测、云凭证泄露"
+            "impact": "内网探测、云凭证泄露",
         },
         "file_upload": {
             "leads_to": ["webshell", "rce"],
             "severity": VulnSeverity.CRITICAL,
-            "impact": "Webshell上传、远程代码执行"
+            "impact": "Webshell上传、远程代码执行",
         },
         "xxe": {
             "leads_to": ["file_read", "ssrf", "dos"],
             "severity": VulnSeverity.HIGH,
-            "impact": "文件读取、SSRF、拒绝服务"
+            "impact": "文件读取、SSRF、拒绝服务",
         },
         "ssti": {
             "leads_to": ["rce", "file_read"],
             "severity": VulnSeverity.CRITICAL,
-            "impact": "远程代码执行"
+            "impact": "远程代码执行",
         },
         "cmd_inject": {
             "leads_to": ["rce", "privilege_escalation"],
             "severity": VulnSeverity.CRITICAL,
-            "impact": "远程代码执行、权限提升"
+            "impact": "远程代码执行、权限提升",
         },
         "idor": {
             "leads_to": ["data_leak", "privilege_escalation"],
             "severity": VulnSeverity.MEDIUM,
-            "impact": "越权访问、数据泄露"
+            "impact": "越权访问、数据泄露",
         },
         "auth_bypass": {
             "leads_to": ["admin_access", "data_leak"],
             "severity": VulnSeverity.CRITICAL,
-            "impact": "认证绕过、管理员访问"
+            "impact": "认证绕过、管理员访问",
         },
         "csrf": {
             "leads_to": ["account_takeover", "data_modification"],
             "severity": VulnSeverity.MEDIUM,
-            "impact": "账户操作、数据篡改"
+            "impact": "账户操作、数据篡改",
         },
         "deserialize": {
             "leads_to": ["rce"],
             "severity": VulnSeverity.CRITICAL,
-            "impact": "远程代码执行"
+            "impact": "远程代码执行",
         },
         # 新增漏洞类型
         "prototype_pollution": {
             "leads_to": ["xss", "rce", "auth_bypass"],
             "severity": VulnSeverity.HIGH,
-            "impact": "原型链污染可导致XSS/RCE"
+            "impact": "原型链污染可导致XSS/RCE",
         },
         "race_condition": {
             "leads_to": ["privilege_escalation", "data_corruption"],
             "severity": VulnSeverity.MEDIUM,
-            "impact": "竞态条件利用"
+            "impact": "竞态条件利用",
         },
         "jwt_vuln": {
             "leads_to": ["auth_bypass", "privilege_escalation"],
             "severity": VulnSeverity.HIGH,
-            "impact": "JWT伪造、权限提升"
+            "impact": "JWT伪造、权限提升",
         },
         "graphql_vuln": {
             "leads_to": ["data_leak", "dos", "sqli"],
             "severity": VulnSeverity.MEDIUM,
-            "impact": "GraphQL注入、信息泄露"
+            "impact": "GraphQL注入、信息泄露",
         },
         "cors_misconfig": {
             "leads_to": ["data_theft", "csrf"],
             "severity": VulnSeverity.MEDIUM,
-            "impact": "跨域数据窃取"
+            "impact": "跨域数据窃取",
         },
         "open_redirect": {
             "leads_to": ["phishing", "ssrf", "oauth_bypass"],
             "severity": VulnSeverity.LOW,
-            "impact": "钓鱼攻击、OAuth绕过"
+            "impact": "钓鱼攻击、OAuth绕过",
         },
         "cache_poisoning": {
             "leads_to": ["xss", "dos", "phishing"],
             "severity": VulnSeverity.HIGH,
-            "impact": "缓存投毒攻击"
+            "impact": "缓存投毒攻击",
         },
         "request_smuggling": {
             "leads_to": ["cache_poisoning", "auth_bypass", "xss"],
             "severity": VulnSeverity.CRITICAL,
-            "impact": "请求走私攻击"
+            "impact": "请求走私攻击",
         },
         "log4j": {
             "leads_to": ["rce"],
             "severity": VulnSeverity.CRITICAL,
-            "impact": "Log4Shell RCE"
+            "impact": "Log4Shell RCE",
         },
         "spring4shell": {
             "leads_to": ["rce"],
             "severity": VulnSeverity.CRITICAL,
-            "impact": "Spring RCE"
-        }
+            "impact": "Spring RCE",
+        },
     }
 
     # 预定义利用链 - 扩展版
@@ -173,7 +176,7 @@ class VulnCorrelationEngine:
             vulns_required=["sqli"],
             impact="完全控制服务器",
             difficulty="medium",
-            success_rate=0.6
+            success_rate=0.6,
         ),
         ExploitChain(
             name="LFI到RCE",
@@ -181,7 +184,7 @@ class VulnCorrelationEngine:
             vulns_required=["lfi"],
             impact="远程代码执行",
             difficulty="medium",
-            success_rate=0.5
+            success_rate=0.5,
         ),
         ExploitChain(
             name="LFI + PHP Wrapper到RCE",
@@ -189,7 +192,7 @@ class VulnCorrelationEngine:
             vulns_required=["lfi"],
             impact="通过PHP伪协议实现RCE",
             difficulty="easy",
-            success_rate=0.7
+            success_rate=0.7,
         ),
         ExploitChain(
             name="SSRF到云凭证",
@@ -197,7 +200,7 @@ class VulnCorrelationEngine:
             vulns_required=["ssrf"],
             impact="云环境凭证泄露",
             difficulty="easy",
-            success_rate=0.8
+            success_rate=0.8,
         ),
         ExploitChain(
             name="SSRF到K8s接管",
@@ -205,7 +208,7 @@ class VulnCorrelationEngine:
             vulns_required=["ssrf"],
             impact="Kubernetes集群接管",
             difficulty="medium",
-            success_rate=0.6
+            success_rate=0.6,
         ),
         ExploitChain(
             name="XSS到账户接管",
@@ -213,7 +216,7 @@ class VulnCorrelationEngine:
             vulns_required=["xss"],
             impact="用户账户接管",
             difficulty="easy",
-            success_rate=0.7
+            success_rate=0.7,
         ),
         ExploitChain(
             name="XSS + CSRF组合攻击",
@@ -221,7 +224,7 @@ class VulnCorrelationEngine:
             vulns_required=["xss", "csrf"],
             impact="以管理员身份执行操作",
             difficulty="medium",
-            success_rate=0.65
+            success_rate=0.65,
         ),
         ExploitChain(
             name="文件上传到Webshell",
@@ -229,7 +232,7 @@ class VulnCorrelationEngine:
             vulns_required=["file_upload"],
             impact="完全控制服务器",
             difficulty="medium",
-            success_rate=0.65
+            success_rate=0.65,
         ),
         ExploitChain(
             name="XXE到内网探测",
@@ -237,7 +240,7 @@ class VulnCorrelationEngine:
             vulns_required=["xxe"],
             impact="内网信息收集",
             difficulty="medium",
-            success_rate=0.55
+            success_rate=0.55,
         ),
         ExploitChain(
             name="XXE到文件读取",
@@ -245,7 +248,7 @@ class VulnCorrelationEngine:
             vulns_required=["xxe"],
             impact="敏感文件读取和横向移动",
             difficulty="easy",
-            success_rate=0.75
+            success_rate=0.75,
         ),
         ExploitChain(
             name="IDOR到数据泄露",
@@ -253,7 +256,7 @@ class VulnCorrelationEngine:
             vulns_required=["idor"],
             impact="批量数据泄露",
             difficulty="easy",
-            success_rate=0.85
+            success_rate=0.85,
         ),
         ExploitChain(
             name="认证绕过到管理员",
@@ -261,7 +264,7 @@ class VulnCorrelationEngine:
             vulns_required=["auth_bypass"],
             impact="管理员权限",
             difficulty="easy",
-            success_rate=0.9
+            success_rate=0.9,
         ),
         # 新增利用链
         ExploitChain(
@@ -270,7 +273,7 @@ class VulnCorrelationEngine:
             vulns_required=["jwt_vuln"],
             impact="任意用户身份伪造",
             difficulty="easy",
-            success_rate=0.85
+            success_rate=0.85,
         ),
         ExploitChain(
             name="开放重定向到OAuth劫持",
@@ -278,7 +281,7 @@ class VulnCorrelationEngine:
             vulns_required=["open_redirect"],
             impact="OAuth令牌窃取",
             difficulty="medium",
-            success_rate=0.5
+            success_rate=0.5,
         ),
         ExploitChain(
             name="GraphQL批量查询到数据泄露",
@@ -286,7 +289,7 @@ class VulnCorrelationEngine:
             vulns_required=["graphql_vuln"],
             impact="大规模数据导出",
             difficulty="easy",
-            success_rate=0.8
+            success_rate=0.8,
         ),
         ExploitChain(
             name="请求走私到缓存投毒",
@@ -294,7 +297,7 @@ class VulnCorrelationEngine:
             vulns_required=["request_smuggling"],
             impact="大规模用户攻击",
             difficulty="hard",
-            success_rate=0.4
+            success_rate=0.4,
         ),
         ExploitChain(
             name="CORS + XSS跨站数据窃取",
@@ -302,7 +305,7 @@ class VulnCorrelationEngine:
             vulns_required=["cors_misconfig", "xss"],
             impact="跨域敏感数据窃取",
             difficulty="medium",
-            success_rate=0.7
+            success_rate=0.7,
         ),
         ExploitChain(
             name="原型链污染到RCE",
@@ -310,7 +313,7 @@ class VulnCorrelationEngine:
             vulns_required=["prototype_pollution"],
             impact="Node.js RCE",
             difficulty="hard",
-            success_rate=0.35
+            success_rate=0.35,
         ),
         ExploitChain(
             name="Log4j到反弹Shell",
@@ -318,7 +321,7 @@ class VulnCorrelationEngine:
             vulns_required=["log4j"],
             impact="完全控制服务器",
             difficulty="easy",
-            success_rate=0.9
+            success_rate=0.9,
         ),
         ExploitChain(
             name="SSTI到RCE",
@@ -326,7 +329,7 @@ class VulnCorrelationEngine:
             vulns_required=["ssti"],
             impact="模板注入RCE",
             difficulty="medium",
-            success_rate=0.7
+            success_rate=0.7,
         ),
     ]
 
@@ -349,7 +352,7 @@ class VulnCorrelationEngine:
                 param=v.get("param"),
                 payload=v.get("payload"),
                 evidence=v.get("evidence", ""),
-                severity=VulnSeverity[v.get("severity", "MEDIUM").upper()]
+                severity=VulnSeverity[v.get("severity", "MEDIUM").upper()],
             )
             self.add_vulnerability(vuln)
 
@@ -366,23 +369,23 @@ class VulnCorrelationEngine:
             if vuln_type in self.VULN_GRAPH:
                 graph_info = self.VULN_GRAPH[vuln_type]
                 for leads_to in graph_info["leads_to"]:
-                    correlations.append({
-                        "from": vuln_type,
-                        "to": leads_to,
-                        "impact": graph_info["impact"]
-                    })
+                    correlations.append(
+                        {"from": vuln_type, "to": leads_to, "impact": graph_info["impact"]}
+                    )
 
         # 匹配利用链
         matched_chains = []
         for chain in self.EXPLOIT_CHAINS:
             if all(req in vuln_types for req in chain.vulns_required):
-                matched_chains.append({
-                    "name": chain.name,
-                    "steps": chain.steps,
-                    "impact": chain.impact,
-                    "difficulty": chain.difficulty,
-                    "success_rate": chain.success_rate
-                })
+                matched_chains.append(
+                    {
+                        "name": chain.name,
+                        "steps": chain.steps,
+                        "impact": chain.impact,
+                        "difficulty": chain.difficulty,
+                        "success_rate": chain.success_rate,
+                    }
+                )
 
         # 生成建议
         recommendations = self._generate_recommendations(vuln_types, matched_chains)
@@ -392,59 +395,68 @@ class VulnCorrelationEngine:
             "correlations": correlations,
             "exploit_chains": matched_chains,
             "recommendations": recommendations,
-            "risk_score": self._calculate_risk_score()
+            "risk_score": self._calculate_risk_score(),
         }
 
     def _generate_recommendations(
-        self,
-        vuln_types: Set[str],
-        chains: List[Dict]
+        self, vuln_types: Set[str], chains: List[Dict]
     ) -> List[Dict[str, str]]:
         """生成利用建议"""
         recommendations = []
 
         # 基于漏洞类型的建议
         if "sqli" in vuln_types:
-            recommendations.append({
-                "priority": "critical",
-                "action": "尝试SQL注入数据提取",
-                "tool": "sqlmap_scan",
-                "reason": "SQL注入可导致数据库完全泄露"
-            })
+            recommendations.append(
+                {
+                    "priority": "critical",
+                    "action": "尝试SQL注入数据提取",
+                    "tool": "sqlmap_scan",
+                    "reason": "SQL注入可导致数据库完全泄露",
+                }
+            )
 
         if "lfi" in vuln_types:
-            recommendations.append({
-                "priority": "high",
-                "action": "尝试读取敏感配置文件",
-                "targets": ["/etc/passwd", "config.php", ".env"],
-                "reason": "LFI可泄露敏感信息，可能升级为RCE"
-            })
+            recommendations.append(
+                {
+                    "priority": "high",
+                    "action": "尝试读取敏感配置文件",
+                    "targets": ["/etc/passwd", "config.php", ".env"],
+                    "reason": "LFI可泄露敏感信息，可能升级为RCE",
+                }
+            )
 
         if "ssrf" in vuln_types:
-            recommendations.append({
-                "priority": "high",
-                "action": "探测云元数据服务",
-                "targets": ["169.254.169.254", "metadata.google.internal"],
-                "reason": "SSRF可获取云凭证"
-            })
+            recommendations.append(
+                {
+                    "priority": "high",
+                    "action": "探测云元数据服务",
+                    "targets": ["169.254.169.254", "metadata.google.internal"],
+                    "reason": "SSRF可获取云凭证",
+                }
+            )
 
         if "file_upload" in vuln_types:
-            recommendations.append({
-                "priority": "critical",
-                "action": "尝试上传Webshell",
-                "tool": "file_upload_exploit",
-                "reason": "文件上传可直接获取服务器权限"
-            })
+            recommendations.append(
+                {
+                    "priority": "critical",
+                    "action": "尝试上传Webshell",
+                    "tool": "file_upload_exploit",
+                    "reason": "文件上传可直接获取服务器权限",
+                }
+            )
 
         # 基于利用链的建议
         if chains:
             best_chain = max(chains, key=lambda x: x["success_rate"])
-            recommendations.insert(0, {
-                "priority": "critical",
-                "action": f"执行利用链: {best_chain['name']}",
-                "steps": best_chain["steps"],
-                "success_rate": f"{best_chain['success_rate']*100:.0f}%"
-            })
+            recommendations.insert(
+                0,
+                {
+                    "priority": "critical",
+                    "action": f"执行利用链: {best_chain['name']}",
+                    "steps": best_chain["steps"],
+                    "success_rate": f"{best_chain['success_rate']*100:.0f}%",
+                },
+            )
 
         return recommendations
 
@@ -476,7 +488,9 @@ class VulnCorrelationEngine:
             "score": round(score),
             "level": level,
             "vuln_count": len(self.found_vulns),
-            "critical_count": sum(1 for v in self.found_vulns if v.severity == VulnSeverity.CRITICAL)
+            "critical_count": sum(
+                1 for v in self.found_vulns if v.severity == VulnSeverity.CRITICAL
+            ),
         }
 
     def suggest_next_tests(self) -> List[Dict[str, Any]]:
@@ -490,11 +504,13 @@ class VulnCorrelationEngine:
                 leads_to = self.VULN_GRAPH[vuln_type]["leads_to"]
                 for target in leads_to:
                     if target not in vuln_types:  # 还未测试的
-                        suggestions.append({
-                            "test": target,
-                            "reason": f"基于已发现的{vuln_type}，可能存在{target}",
-                            "priority": "high"
-                        })
+                        suggestions.append(
+                            {
+                                "test": target,
+                                "reason": f"基于已发现的{vuln_type}，可能存在{target}",
+                                "priority": "high",
+                            }
+                        )
 
         # 如果没有发现漏洞，推荐基础测试
         if not suggestions:
@@ -502,7 +518,7 @@ class VulnCorrelationEngine:
                 {"test": "sqli_detect", "reason": "SQL注入是最常见的高危漏洞", "priority": "high"},
                 {"test": "xss_detect", "reason": "XSS是最常见的Web漏洞", "priority": "medium"},
                 {"test": "lfi_detect", "reason": "LFI可能导致敏感信息泄露", "priority": "medium"},
-                {"test": "ssrf_detect", "reason": "SSRF在云环境中危害极大", "priority": "high"}
+                {"test": "ssrf_detect", "reason": "SSRF在云环境中危害极大", "priority": "high"},
             ]
 
         return suggestions[:5]
@@ -549,6 +565,7 @@ class VulnCorrelationEngine:
 
 # 全局实例
 _engine_instance: Optional[VulnCorrelationEngine] = None
+
 
 def get_correlation_engine() -> VulnCorrelationEngine:
     """获取关联分析引擎单例"""

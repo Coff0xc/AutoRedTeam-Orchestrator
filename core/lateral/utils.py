@@ -6,20 +6,20 @@
 用于授权安全测试，仅限合法渗透测试使用
 """
 
-import socket
-import platform
-import logging
 import concurrent.futures
-from typing import Optional, List, Dict, Any, Union, Callable, Type
+import logging
+import platform
+import socket
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 from .base import (
+    AuthMethod,
     BaseLateralModule,
     Credentials,
     ExecutionResult,
     LateralConfig,
     LateralStatus,
-    AuthMethod,
 )
 
 logger = logging.getLogger(__name__)
@@ -27,38 +27,36 @@ logger = logging.getLogger(__name__)
 
 class OSType(Enum):
     """操作系统类型"""
-    WINDOWS = 'windows'
-    LINUX = 'linux'
-    MACOS = 'macos'
-    UNKNOWN = 'unknown'
+
+    WINDOWS = "windows"
+    LINUX = "linux"
+    MACOS = "macos"
+    UNKNOWN = "unknown"
 
 
 class PortStatus(Enum):
     """端口状态"""
-    OPEN = 'open'
-    CLOSED = 'closed'
-    FILTERED = 'filtered'
-    UNKNOWN = 'unknown'
+
+    OPEN = "open"
+    CLOSED = "closed"
+    FILTERED = "filtered"
+    UNKNOWN = "unknown"
 
 
 # 常见端口和服务映射
 COMMON_PORTS = {
-    22: ('ssh', 'SSH'),
-    23: ('telnet', 'Telnet'),
-    135: ('rpc', 'RPC Endpoint Mapper'),
-    139: ('netbios', 'NetBIOS Session'),
-    445: ('smb', 'SMB'),
-    3389: ('rdp', 'RDP'),
-    5985: ('winrm', 'WinRM HTTP'),
-    5986: ('winrm-ssl', 'WinRM HTTPS'),
+    22: ("ssh", "SSH"),
+    23: ("telnet", "Telnet"),
+    135: ("rpc", "RPC Endpoint Mapper"),
+    139: ("netbios", "NetBIOS Session"),
+    445: ("smb", "SMB"),
+    3389: ("rdp", "RDP"),
+    5985: ("winrm", "WinRM HTTP"),
+    5986: ("winrm-ssl", "WinRM HTTPS"),
 }
 
 
-def check_port(
-    host: str,
-    port: int,
-    timeout: float = 3.0
-) -> PortStatus:
+def check_port(host: str, port: int, timeout: float = 3.0) -> PortStatus:
     """
     检查端口状态
 
@@ -92,7 +90,7 @@ def scan_ports(
     ports: Optional[List[int]] = None,
     timeout: float = 3.0,
     parallel: bool = True,
-    max_workers: int = 10
+    max_workers: int = 10,
 ) -> Dict[int, PortStatus]:
     """
     扫描多个端口
@@ -115,8 +113,7 @@ def scan_ports(
     if parallel:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_port = {
-                executor.submit(check_port, host, port, timeout): port
-                for port in ports
+                executor.submit(check_port, host, port, timeout): port for port in ports
             }
 
             for future in concurrent.futures.as_completed(future_to_port):
@@ -152,15 +149,9 @@ def detect_os(host: str, timeout: float = 5.0) -> OSType:
 
     port_status = scan_ports(host, windows_ports + linux_ports, timeout)
 
-    windows_score = sum(
-        1 for p in windows_ports
-        if port_status.get(p) == PortStatus.OPEN
-    )
+    windows_score = sum(1 for p in windows_ports if port_status.get(p) == PortStatus.OPEN)
 
-    linux_score = sum(
-        1 for p in linux_ports
-        if port_status.get(p) == PortStatus.OPEN
-    )
+    linux_score = sum(1 for p in linux_ports if port_status.get(p) == PortStatus.OPEN)
 
     # 如果有 Windows 特有端口开放
     if windows_score > 0:
@@ -189,29 +180,26 @@ def get_available_methods(host: str, timeout: float = 3.0) -> List[str]:
     port_status = scan_ports(host, timeout=timeout)
 
     if port_status.get(445) == PortStatus.OPEN:
-        methods.append('smb')
-        methods.append('psexec')
+        methods.append("smb")
+        methods.append("psexec")
 
     if port_status.get(135) == PortStatus.OPEN:
-        methods.append('wmi')
+        methods.append("wmi")
 
     if port_status.get(22) == PortStatus.OPEN:
-        methods.append('ssh')
+        methods.append("ssh")
 
     if port_status.get(5985) == PortStatus.OPEN:
-        methods.append('winrm')
+        methods.append("winrm")
 
     if port_status.get(5986) == PortStatus.OPEN:
-        methods.append('winrm-ssl')
+        methods.append("winrm-ssl")
 
     return methods
 
 
 def create_lateral(
-    method: str,
-    target: str,
-    credentials: Credentials,
-    config: Optional[LateralConfig] = None
+    method: str, target: str, credentials: Credentials, config: Optional[LateralConfig] = None
 ) -> Optional[BaseLateralModule]:
     """
     创建横向移动模块实例
@@ -225,19 +213,19 @@ def create_lateral(
     Returns:
         横向移动模块实例
     """
+    from .psexec import PsExecLateral
     from .smb import SMBLateral
     from .ssh import SSHLateral
-    from .wmi import WMILateral
     from .winrm import WinRMLateral
-    from .psexec import PsExecLateral
+    from .wmi import WMILateral
 
     module_map: Dict[str, Type[BaseLateralModule]] = {
-        'smb': SMBLateral,
-        'ssh': SSHLateral,
-        'wmi': WMILateral,
-        'winrm': WinRMLateral,
-        'winrm-ssl': WinRMLateral,
-        'psexec': PsExecLateral,
+        "smb": SMBLateral,
+        "ssh": SSHLateral,
+        "wmi": WMILateral,
+        "winrm": WinRMLateral,
+        "winrm-ssl": WinRMLateral,
+        "psexec": PsExecLateral,
     }
 
     module_class = module_map.get(method.lower())
@@ -246,7 +234,7 @@ def create_lateral(
         return None
 
     # WinRM SSL 特殊处理
-    if method.lower() == 'winrm-ssl':
+    if method.lower() == "winrm-ssl":
         if config is None:
             config = LateralConfig()
         config.winrm_use_ssl = True
@@ -258,7 +246,7 @@ def auto_lateral(
     target: str,
     credentials: Credentials,
     config: Optional[LateralConfig] = None,
-    preferred_methods: Optional[List[str]] = None
+    preferred_methods: Optional[List[str]] = None,
 ) -> Optional[BaseLateralModule]:
     """
     自动选择并创建横向移动模块
@@ -281,7 +269,7 @@ def auto_lateral(
         return None
 
     # 默认优先级
-    default_priority = ['psexec', 'smb', 'wmi', 'winrm', 'ssh']
+    default_priority = ["psexec", "smb", "wmi", "winrm", "ssh"]
 
     if preferred_methods:
         methods_to_try = [m for m in preferred_methods if m in available]
@@ -311,7 +299,7 @@ def batch_execute(
     config: Optional[LateralConfig] = None,
     parallel: bool = True,
     max_workers: int = 5,
-    callback: Optional[Callable[[str, ExecutionResult], None]] = None
+    callback: Optional[Callable[[str, ExecutionResult], None]] = None,
 ) -> Dict[str, ExecutionResult]:
     """
     批量执行命令
@@ -339,17 +327,11 @@ def batch_execute(
                 module = auto_lateral(target, credentials, config)
 
             if not module:
-                return ExecutionResult(
-                    success=False,
-                    error=f"无法连接到 {target}"
-                )
+                return ExecutionResult(success=False, error=f"无法连接到 {target}")
 
             if not module.is_connected:
                 if not module.connect():
-                    return ExecutionResult(
-                        success=False,
-                        error=f"连接失败: {target}"
-                    )
+                    return ExecutionResult(success=False, error=f"连接失败: {target}")
 
             result = module.execute(command)
             module.disconnect()
@@ -365,8 +347,7 @@ def batch_execute(
     if parallel:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_target = {
-                executor.submit(execute_target, target): target
-                for target in targets
+                executor.submit(execute_target, target): target for target in targets
             }
 
             for future in concurrent.futures.as_completed(future_to_target):
@@ -388,7 +369,7 @@ def spray_credentials(
     methods: Optional[List[str]] = None,
     parallel: bool = True,
     max_workers: int = 3,
-    callback: Optional[Callable[[str, Credentials, str], None]] = None
+    callback: Optional[Callable[[str, Credentials, str], None]] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """
     凭据喷洒
@@ -424,8 +405,8 @@ def spray_credentials(
                         callback(target, creds, method)
 
                     return {
-                        'credentials': creds,
-                        'method': method,
+                        "credentials": creds,
+                        "method": method,
                     }
 
                 if module:
@@ -435,10 +416,7 @@ def spray_credentials(
 
     if parallel:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_target = {
-                executor.submit(try_target, target): target
-                for target in targets
-            }
+            future_to_target = {executor.submit(try_target, target): target for target in targets}
 
             for future in concurrent.futures.as_completed(future_to_target):
                 target = future_to_target[future]
@@ -462,11 +440,11 @@ def get_local_platform() -> OSType:
     """获取本地操作系统类型"""
     system = platform.system().lower()
 
-    if system == 'windows':
+    if system == "windows":
         return OSType.WINDOWS
-    elif system == 'linux':
+    elif system == "linux":
         return OSType.LINUX
-    elif system == 'darwin':
+    elif system == "darwin":
         return OSType.MACOS
     else:
         return OSType.UNKNOWN
@@ -516,35 +494,33 @@ def parse_target_list(targets: Union[str, List[str]]) -> List[str]:
     targets = targets.strip()
 
     # 逗号分隔
-    if ',' in targets:
+    if "," in targets:
         result = []
-        for t in targets.split(','):
+        for t in targets.split(","):
             result.extend(parse_target_list(t.strip()))
         return result
 
     # CIDR
-    if '/' in targets:
+    if "/" in targets:
         try:
             import ipaddress
+
             network = ipaddress.ip_network(targets, strict=False)
             return [str(ip) for ip in network.hosts()]
         except ValueError:
             return [targets]
 
     # IP 范围
-    if '-' in targets:
+    if "-" in targets:
         try:
-            parts = targets.rsplit('.', 1)
+            parts = targets.rsplit(".", 1)
             if len(parts) == 2:
                 base = parts[0]
                 range_part = parts[1]
 
-                if '-' in range_part:
-                    start, end = range_part.split('-')
-                    return [
-                        f"{base}.{i}"
-                        for i in range(int(start), int(end) + 1)
-                    ]
+                if "-" in range_part:
+                    start, end = range_part.split("-")
+                    return [f"{base}.{i}" for i in range(int(start), int(end) + 1)]
         except Exception as exc:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
@@ -571,11 +547,11 @@ def format_result(result: ExecutionResult, verbose: bool = False) -> str:
         if result.method:
             lines.append(f"Method: {result.method}")
 
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("=== Lateral Movement Utilities ===")
     logger.info(f"本地平台: {get_local_platform().value}")
 

@@ -14,33 +14,33 @@ fingerprint.py - 指纹识别引擎
         print(f"{fp.category}: {fp.name} {fp.version}")
 """
 
-import re
-import ssl
-import socket
-import logging
 import hashlib
-import urllib.request
+import logging
+import re
+import socket
+import ssl
 import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Pattern, Tuple
 from enum import Enum
-
+from typing import Any, Dict, List, Optional, Pattern, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class FingerprintCategory(Enum):
     """指纹类别"""
-    SERVER = "server"           # Web服务器
-    FRAMEWORK = "framework"     # Web框架
-    CMS = "cms"                 # 内容管理系统
-    LANGUAGE = "language"       # 编程语言
-    JAVASCRIPT = "javascript"   # JavaScript库/框架
-    CDN = "cdn"                 # CDN/负载均衡
-    OS = "os"                   # 操作系统
-    DATABASE = "database"       # 数据库
-    CACHE = "cache"             # 缓存
-    OTHER = "other"             # 其他
+
+    SERVER = "server"  # Web服务器
+    FRAMEWORK = "framework"  # Web框架
+    CMS = "cms"  # 内容管理系统
+    LANGUAGE = "language"  # 编程语言
+    JAVASCRIPT = "javascript"  # JavaScript库/框架
+    CDN = "cdn"  # CDN/负载均衡
+    OS = "os"  # 操作系统
+    DATABASE = "database"  # 数据库
+    CACHE = "cache"  # 缓存
+    OTHER = "other"  # 其他
 
 
 @dataclass
@@ -55,6 +55,7 @@ class Fingerprint:
         evidence: 证据
         metadata: 额外元数据
     """
+
     category: str
     name: str
     version: Optional[str] = None
@@ -96,6 +97,7 @@ class FingerprintRule:
         version_pattern: 版本提取正则
         confidence: 置信度
     """
+
     category: str
     name: str
     header: Optional[str] = None
@@ -124,418 +126,425 @@ class FingerprintEngine:
         "server": {
             "nginx": [
                 FingerprintRule(
-                    category="server", name="nginx",
-                    header="Server", header_value=r"nginx(?:/([0-9.]+))?",
-                    confidence=0.95
+                    category="server",
+                    name="nginx",
+                    header="Server",
+                    header_value=r"nginx(?:/([0-9.]+))?",
+                    confidence=0.95,
                 ),
                 FingerprintRule(
-                    category="server", name="nginx",
-                    header="X-Powered-By", header_value=r"nginx",
-                    confidence=0.8
+                    category="server",
+                    name="nginx",
+                    header="X-Powered-By",
+                    header_value=r"nginx",
+                    confidence=0.8,
                 ),
             ],
             "apache": [
                 FingerprintRule(
-                    category="server", name="Apache",
-                    header="Server", header_value=r"Apache(?:/([0-9.]+))?",
-                    confidence=0.95
+                    category="server",
+                    name="Apache",
+                    header="Server",
+                    header_value=r"Apache(?:/([0-9.]+))?",
+                    confidence=0.95,
                 ),
                 FingerprintRule(
-                    category="server", name="Apache",
+                    category="server",
+                    name="Apache",
                     body=r"Apache/[0-9.]+ Server at",
-                    confidence=0.9
+                    confidence=0.9,
                 ),
             ],
             "iis": [
                 FingerprintRule(
-                    category="server", name="Microsoft-IIS",
-                    header="Server", header_value=r"Microsoft-IIS(?:/([0-9.]+))?",
-                    confidence=0.95
+                    category="server",
+                    name="Microsoft-IIS",
+                    header="Server",
+                    header_value=r"Microsoft-IIS(?:/([0-9.]+))?",
+                    confidence=0.95,
                 ),
                 FingerprintRule(
-                    category="server", name="Microsoft-IIS",
-                    header="X-Powered-By", header_value=r"ASP\.NET",
-                    confidence=0.7
+                    category="server",
+                    name="Microsoft-IIS",
+                    header="X-Powered-By",
+                    header_value=r"ASP\.NET",
+                    confidence=0.7,
                 ),
             ],
             "openresty": [
                 FingerprintRule(
-                    category="server", name="openresty",
-                    header="Server", header_value=r"openresty(?:/([0-9.]+))?",
-                    confidence=0.95
+                    category="server",
+                    name="openresty",
+                    header="Server",
+                    header_value=r"openresty(?:/([0-9.]+))?",
+                    confidence=0.95,
                 ),
             ],
             "tengine": [
                 FingerprintRule(
-                    category="server", name="Tengine",
-                    header="Server", header_value=r"Tengine(?:/([0-9.]+))?",
-                    confidence=0.95
+                    category="server",
+                    name="Tengine",
+                    header="Server",
+                    header_value=r"Tengine(?:/([0-9.]+))?",
+                    confidence=0.95,
                 ),
             ],
             "caddy": [
                 FingerprintRule(
-                    category="server", name="Caddy",
-                    header="Server", header_value=r"Caddy",
-                    confidence=0.9
+                    category="server",
+                    name="Caddy",
+                    header="Server",
+                    header_value=r"Caddy",
+                    confidence=0.9,
                 ),
             ],
             "litespeed": [
                 FingerprintRule(
-                    category="server", name="LiteSpeed",
-                    header="Server", header_value=r"LiteSpeed",
-                    confidence=0.95
+                    category="server",
+                    name="LiteSpeed",
+                    header="Server",
+                    header_value=r"LiteSpeed",
+                    confidence=0.95,
                 ),
             ],
         },
         "framework": {
             "laravel": [
                 FingerprintRule(
-                    category="framework", name="Laravel",
-                    cookie="laravel_session",
-                    confidence=0.95
+                    category="framework", name="Laravel", cookie="laravel_session", confidence=0.95
                 ),
                 FingerprintRule(
-                    category="framework", name="Laravel",
+                    category="framework",
+                    name="Laravel",
                     cookie="XSRF-TOKEN",
                     body=r"laravel",
-                    confidence=0.7
+                    confidence=0.7,
                 ),
             ],
             "django": [
                 FingerprintRule(
-                    category="framework", name="Django",
-                    cookie="csrftoken",
-                    confidence=0.8
+                    category="framework", name="Django", cookie="csrftoken", confidence=0.8
                 ),
                 FingerprintRule(
-                    category="framework", name="Django",
-                    header="X-Frame-Options", header_value=r"DENY|SAMEORIGIN",
+                    category="framework",
+                    name="Django",
+                    header="X-Frame-Options",
+                    header_value=r"DENY|SAMEORIGIN",
                     body=r"django",
-                    confidence=0.6
+                    confidence=0.6,
                 ),
             ],
             "flask": [
                 FingerprintRule(
-                    category="framework", name="Flask",
-                    header="Server", header_value=r"Werkzeug",
-                    confidence=0.9
+                    category="framework",
+                    name="Flask",
+                    header="Server",
+                    header_value=r"Werkzeug",
+                    confidence=0.9,
                 ),
             ],
             "spring": [
                 FingerprintRule(
-                    category="framework", name="Spring",
+                    category="framework",
+                    name="Spring",
                     header="X-Application-Context",
-                    confidence=0.95
+                    confidence=0.95,
                 ),
                 FingerprintRule(
-                    category="framework", name="Spring Boot",
+                    category="framework",
+                    name="Spring Boot",
                     body=r"Whitelabel Error Page",
-                    confidence=0.9
+                    confidence=0.9,
                 ),
                 FingerprintRule(
-                    category="framework", name="Spring",
-                    cookie="JSESSIONID",
-                    confidence=0.5
+                    category="framework", name="Spring", cookie="JSESSIONID", confidence=0.5
                 ),
             ],
             "express": [
                 FingerprintRule(
-                    category="framework", name="Express",
-                    header="X-Powered-By", header_value=r"Express",
-                    confidence=0.95
+                    category="framework",
+                    name="Express",
+                    header="X-Powered-By",
+                    header_value=r"Express",
+                    confidence=0.95,
                 ),
             ],
             "rails": [
                 FingerprintRule(
-                    category="framework", name="Ruby on Rails",
-                    header="X-Powered-By", header_value=r"Phusion Passenger",
-                    confidence=0.8
+                    category="framework",
+                    name="Ruby on Rails",
+                    header="X-Powered-By",
+                    header_value=r"Phusion Passenger",
+                    confidence=0.8,
                 ),
                 FingerprintRule(
-                    category="framework", name="Ruby on Rails",
+                    category="framework",
+                    name="Ruby on Rails",
                     cookie="_session_id",
                     body=r"rails",
-                    confidence=0.6
+                    confidence=0.6,
                 ),
             ],
             "aspnet": [
                 FingerprintRule(
-                    category="framework", name="ASP.NET",
-                    header="X-Powered-By", header_value=r"ASP\.NET",
-                    confidence=0.95
+                    category="framework",
+                    name="ASP.NET",
+                    header="X-Powered-By",
+                    header_value=r"ASP\.NET",
+                    confidence=0.95,
                 ),
                 FingerprintRule(
-                    category="framework", name="ASP.NET",
-                    header="X-AspNet-Version",
-                    confidence=0.95
+                    category="framework", name="ASP.NET", header="X-AspNet-Version", confidence=0.95
                 ),
                 FingerprintRule(
-                    category="framework", name="ASP.NET",
+                    category="framework",
+                    name="ASP.NET",
                     cookie="ASP.NET_SessionId",
-                    confidence=0.95
+                    confidence=0.95,
                 ),
             ],
             "thinkphp": [
                 FingerprintRule(
-                    category="framework", name="ThinkPHP",
-                    header="X-Powered-By", header_value=r"ThinkPHP",
-                    confidence=0.95
+                    category="framework",
+                    name="ThinkPHP",
+                    header="X-Powered-By",
+                    header_value=r"ThinkPHP",
+                    confidence=0.95,
                 ),
                 FingerprintRule(
-                    category="framework", name="ThinkPHP",
-                    body=r"ThinkPHP",
-                    confidence=0.8
+                    category="framework", name="ThinkPHP", body=r"ThinkPHP", confidence=0.8
                 ),
             ],
             "fastapi": [
                 FingerprintRule(
-                    category="framework", name="FastAPI",
+                    category="framework",
+                    name="FastAPI",
                     body=r'"openapi":\s*"3\.',
                     url="/docs",
-                    confidence=0.8
+                    confidence=0.8,
                 ),
             ],
         },
         "cms": {
             "wordpress": [
                 FingerprintRule(
-                    category="cms", name="WordPress",
-                    body=r"/wp-content/",
-                    confidence=0.95
+                    category="cms", name="WordPress", body=r"/wp-content/", confidence=0.95
                 ),
                 FingerprintRule(
-                    category="cms", name="WordPress",
-                    body=r"/wp-includes/",
-                    confidence=0.95
+                    category="cms", name="WordPress", body=r"/wp-includes/", confidence=0.95
                 ),
                 FingerprintRule(
-                    category="cms", name="WordPress",
+                    category="cms",
+                    name="WordPress",
                     meta=r'name="generator" content="WordPress ([0-9.]+)"',
-                    confidence=0.99
+                    confidence=0.99,
                 ),
                 FingerprintRule(
-                    category="cms", name="WordPress",
-                    header="X-Powered-By", header_value=r"WordPress",
-                    confidence=0.95
+                    category="cms",
+                    name="WordPress",
+                    header="X-Powered-By",
+                    header_value=r"WordPress",
+                    confidence=0.95,
                 ),
             ],
             "drupal": [
                 FingerprintRule(
-                    category="cms", name="Drupal",
-                    header="X-Generator", header_value=r"Drupal ([0-9.]+)?",
-                    confidence=0.99
+                    category="cms",
+                    name="Drupal",
+                    header="X-Generator",
+                    header_value=r"Drupal ([0-9.]+)?",
+                    confidence=0.99,
                 ),
                 FingerprintRule(
-                    category="cms", name="Drupal",
-                    body=r'Drupal\.settings',
-                    confidence=0.9
+                    category="cms", name="Drupal", body=r"Drupal\.settings", confidence=0.9
                 ),
                 FingerprintRule(
-                    category="cms", name="Drupal",
-                    body=r"/sites/default/files/",
-                    confidence=0.8
+                    category="cms", name="Drupal", body=r"/sites/default/files/", confidence=0.8
                 ),
             ],
             "joomla": [
                 FingerprintRule(
-                    category="cms", name="Joomla",
+                    category="cms",
+                    name="Joomla",
                     meta=r'name="generator" content="Joomla',
-                    confidence=0.99
+                    confidence=0.99,
                 ),
-                FingerprintRule(
-                    category="cms", name="Joomla",
-                    body=r"/media/jui/",
-                    confidence=0.9
-                ),
+                FingerprintRule(category="cms", name="Joomla", body=r"/media/jui/", confidence=0.9),
             ],
             "shopify": [
+                FingerprintRule(category="cms", name="Shopify", header="X-ShopId", confidence=0.99),
                 FingerprintRule(
-                    category="cms", name="Shopify",
-                    header="X-ShopId",
-                    confidence=0.99
-                ),
-                FingerprintRule(
-                    category="cms", name="Shopify",
-                    body=r"cdn\.shopify\.com",
-                    confidence=0.95
+                    category="cms", name="Shopify", body=r"cdn\.shopify\.com", confidence=0.95
                 ),
             ],
             "magento": [
                 FingerprintRule(
-                    category="cms", name="Magento",
-                    body=r"/skin/frontend/",
-                    confidence=0.9
+                    category="cms", name="Magento", body=r"/skin/frontend/", confidence=0.9
                 ),
                 FingerprintRule(
-                    category="cms", name="Magento",
+                    category="cms",
+                    name="Magento",
                     cookie="frontend",
                     body=r"Mage\.Cookies",
-                    confidence=0.8
+                    confidence=0.8,
                 ),
             ],
             "discuz": [
+                FingerprintRule(category="cms", name="Discuz!", body=r"Discuz!", confidence=0.9),
                 FingerprintRule(
-                    category="cms", name="Discuz!",
-                    body=r"Discuz!",
-                    confidence=0.9
-                ),
-                FingerprintRule(
-                    category="cms", name="Discuz!",
-                    body=r"/uc_server/",
-                    confidence=0.85
+                    category="cms", name="Discuz!", body=r"/uc_server/", confidence=0.85
                 ),
             ],
             "dedecms": [
+                FingerprintRule(category="cms", name="DedeCMS", body=r"/dede/", confidence=0.7),
                 FingerprintRule(
-                    category="cms", name="DedeCMS",
-                    body=r"/dede/",
-                    confidence=0.7
-                ),
-                FingerprintRule(
-                    category="cms", name="DedeCMS",
-                    body=r"DedeTag Engine",
-                    confidence=0.95
+                    category="cms", name="DedeCMS", body=r"DedeTag Engine", confidence=0.95
                 ),
             ],
             "phpcms": [
                 FingerprintRule(
-                    category="cms", name="PHPCMS",
+                    category="cms",
+                    name="PHPCMS",
                     body=r"phpcms",
                     cookie="PHPSESSID",
-                    confidence=0.7
+                    confidence=0.7,
                 ),
             ],
         },
         "javascript": {
             "jquery": [
                 FingerprintRule(
-                    category="javascript", name="jQuery",
-                    body=r'jquery[.-]?([0-9.]+)?(?:\.min)?\.js',
-                    confidence=0.95
+                    category="javascript",
+                    name="jQuery",
+                    body=r"jquery[.-]?([0-9.]+)?(?:\.min)?\.js",
+                    confidence=0.95,
                 ),
             ],
             "react": [
                 FingerprintRule(
-                    category="javascript", name="React",
-                    body=r'react[.-]?(?:dom)?[.-]?([0-9.]+)?(?:\.min)?\.js',
-                    confidence=0.9
+                    category="javascript",
+                    name="React",
+                    body=r"react[.-]?(?:dom)?[.-]?([0-9.]+)?(?:\.min)?\.js",
+                    confidence=0.9,
                 ),
                 FingerprintRule(
-                    category="javascript", name="React",
-                    body=r'data-reactroot',
-                    confidence=0.95
+                    category="javascript", name="React", body=r"data-reactroot", confidence=0.95
                 ),
             ],
             "vue": [
                 FingerprintRule(
-                    category="javascript", name="Vue.js",
-                    body=r'vue[.-]?([0-9.]+)?(?:\.min)?\.js',
-                    confidence=0.9
+                    category="javascript",
+                    name="Vue.js",
+                    body=r"vue[.-]?([0-9.]+)?(?:\.min)?\.js",
+                    confidence=0.9,
                 ),
                 FingerprintRule(
-                    category="javascript", name="Vue.js",
-                    body=r'data-v-[a-f0-9]+',
-                    confidence=0.85
+                    category="javascript", name="Vue.js", body=r"data-v-[a-f0-9]+", confidence=0.85
                 ),
             ],
             "angular": [
                 FingerprintRule(
-                    category="javascript", name="Angular",
-                    body=r'ng-app|ng-controller|ng-model',
-                    confidence=0.9
+                    category="javascript",
+                    name="Angular",
+                    body=r"ng-app|ng-controller|ng-model",
+                    confidence=0.9,
                 ),
                 FingerprintRule(
-                    category="javascript", name="Angular",
-                    body=r'angular[.-]?([0-9.]+)?(?:\.min)?\.js',
-                    confidence=0.95
+                    category="javascript",
+                    name="Angular",
+                    body=r"angular[.-]?([0-9.]+)?(?:\.min)?\.js",
+                    confidence=0.95,
                 ),
             ],
             "bootstrap": [
                 FingerprintRule(
-                    category="javascript", name="Bootstrap",
-                    body=r'bootstrap[.-]?([0-9.]+)?(?:\.min)?\.(?:js|css)',
-                    confidence=0.9
+                    category="javascript",
+                    name="Bootstrap",
+                    body=r"bootstrap[.-]?([0-9.]+)?(?:\.min)?\.(?:js|css)",
+                    confidence=0.9,
                 ),
             ],
             "layui": [
                 FingerprintRule(
-                    category="javascript", name="Layui",
-                    body=r'layui[.-]?([0-9.]+)?\.(?:js|css)',
-                    confidence=0.9
+                    category="javascript",
+                    name="Layui",
+                    body=r"layui[.-]?([0-9.]+)?\.(?:js|css)",
+                    confidence=0.9,
                 ),
             ],
         },
         "cdn": {
             "cloudflare": [
                 FingerprintRule(
-                    category="cdn", name="Cloudflare",
-                    header="CF-RAY",
-                    confidence=0.99
+                    category="cdn", name="Cloudflare", header="CF-RAY", confidence=0.99
                 ),
                 FingerprintRule(
-                    category="cdn", name="Cloudflare",
-                    header="Server", header_value=r"cloudflare",
-                    confidence=0.99
+                    category="cdn",
+                    name="Cloudflare",
+                    header="Server",
+                    header_value=r"cloudflare",
+                    confidence=0.99,
                 ),
                 FingerprintRule(
-                    category="cdn", name="Cloudflare",
-                    cookie="__cf_bm",
-                    confidence=0.95
+                    category="cdn", name="Cloudflare", cookie="__cf_bm", confidence=0.95
                 ),
             ],
             "akamai": [
                 FingerprintRule(
-                    category="cdn", name="Akamai",
-                    header="X-Akamai-Transformed",
-                    confidence=0.99
+                    category="cdn", name="Akamai", header="X-Akamai-Transformed", confidence=0.99
                 ),
             ],
             "fastly": [
                 FingerprintRule(
-                    category="cdn", name="Fastly",
+                    category="cdn",
+                    name="Fastly",
                     header="X-Served-By",
                     header_value=r"cache-",
-                    confidence=0.8
+                    confidence=0.8,
                 ),
             ],
             "aliyun": [
                 FingerprintRule(
-                    category="cdn", name="Aliyun CDN",
-                    header="Via", header_value=r"ali",
-                    confidence=0.8
+                    category="cdn",
+                    name="Aliyun CDN",
+                    header="Via",
+                    header_value=r"ali",
+                    confidence=0.8,
                 ),
             ],
         },
         "language": {
             "php": [
                 FingerprintRule(
-                    category="language", name="PHP",
-                    header="X-Powered-By", header_value=r"PHP(?:/([0-9.]+))?",
-                    confidence=0.99
+                    category="language",
+                    name="PHP",
+                    header="X-Powered-By",
+                    header_value=r"PHP(?:/([0-9.]+))?",
+                    confidence=0.99,
                 ),
                 FingerprintRule(
-                    category="language", name="PHP",
-                    cookie="PHPSESSID",
-                    confidence=0.9
+                    category="language", name="PHP", cookie="PHPSESSID", confidence=0.9
                 ),
             ],
             "python": [
                 FingerprintRule(
-                    category="language", name="Python",
-                    header="Server", header_value=r"Python",
-                    confidence=0.9
+                    category="language",
+                    name="Python",
+                    header="Server",
+                    header_value=r"Python",
+                    confidence=0.9,
                 ),
             ],
             "java": [
                 FingerprintRule(
-                    category="language", name="Java",
-                    cookie="JSESSIONID",
-                    confidence=0.7
+                    category="language", name="Java", cookie="JSESSIONID", confidence=0.7
                 ),
                 FingerprintRule(
-                    category="language", name="Java",
-                    header="X-Powered-By", header_value=r"Servlet",
-                    confidence=0.9
+                    category="language",
+                    name="Java",
+                    header="X-Powered-By",
+                    header_value=r"Servlet",
+                    confidence=0.9,
                 ),
             ],
         },
@@ -545,7 +554,7 @@ class FingerprintEngine:
         self,
         timeout: float = 10.0,
         verify_ssl: bool = True,
-        user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     ):
         """初始化指纹识别引擎
 
@@ -563,7 +572,9 @@ class FingerprintEngine:
 
         self._logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
-    def _compile_rules(self) -> Dict[str, Dict[str, List[Tuple[FingerprintRule, Optional[Pattern]]]]]:
+    def _compile_rules(
+        self,
+    ) -> Dict[str, Dict[str, List[Tuple[FingerprintRule, Optional[Pattern]]]]]:
         """编译所有规则的正则表达式"""
         compiled = {}
         for category, names in self.FINGERPRINTS.items():
@@ -619,10 +630,7 @@ class FingerprintEngine:
         return fingerprints
 
     def identify_from_response(
-        self,
-        headers: Dict[str, str],
-        body: str,
-        cookies: str = ""
+        self, headers: Dict[str, str], body: str, cookies: str = ""
     ) -> List[Fingerprint]:
         """从响应数据识别指纹
 
@@ -657,7 +665,7 @@ class FingerprintEngine:
         pattern: Optional[Pattern],
         headers: Dict[str, str],
         body: str,
-        cookies: str
+        cookies: str,
     ) -> Optional[Fingerprint]:
         """检查单个规则
 
@@ -725,7 +733,7 @@ class FingerprintEngine:
                 name=rule.name,
                 version=version,
                 confidence=rule.confidence,
-                evidence=evidence
+                evidence=evidence,
             )
 
         return None
@@ -820,12 +828,7 @@ class FingerprintEngine:
 
         return None
 
-    def add_custom_rule(
-        self,
-        category: str,
-        name: str,
-        rule: FingerprintRule
-    ) -> None:
+    def add_custom_rule(self, category: str, name: str, rule: FingerprintRule) -> None:
         """添加自定义指纹规则
 
         Args:
@@ -845,9 +848,7 @@ class FingerprintEngine:
 
 # 便捷函数
 def identify_fingerprints(
-    url: str,
-    timeout: float = 10.0,
-    verify_ssl: bool = True
+    url: str, timeout: float = 10.0, verify_ssl: bool = True
 ) -> List[Fingerprint]:
     """便捷函数：识别目标指纹
 

@@ -5,19 +5,20 @@
 用于绕过基于TLS指纹的WAF检测
 """
 
-import ssl
-import random
 import hashlib
-from typing import Dict, List, Optional, Tuple, Any
+import logging
+import random
+import ssl
 from dataclasses import dataclass, field
 from enum import Enum
-import logging
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 # 尝试导入高级 TLS 库
 try:
     import urllib3
+
     HAS_URLLIB3 = True
 except ImportError:
     HAS_URLLIB3 = False
@@ -25,6 +26,7 @@ except ImportError:
 
 class BrowserType(Enum):
     """浏览器类型"""
+
     CHROME = "chrome"
     FIREFOX = "firefox"
     SAFARI = "safari"
@@ -36,6 +38,7 @@ class BrowserType(Enum):
 @dataclass
 class TLSFingerprint:
     """TLS 指纹配置"""
+
     # TLS 版本
     tls_version: str = "TLSv1.2"
 
@@ -73,6 +76,7 @@ class TLSFingerprint:
 @dataclass
 class BrowserProfile:
     """浏览器完整指纹配置"""
+
     browser_type: BrowserType
     version: str
     os: str
@@ -213,7 +217,7 @@ class JA3Spoofer:
             else:
                 ciphers.append(suite)
 
-        return ':'.join(ciphers) if ciphers else 'DEFAULT'
+        return ":".join(ciphers) if ciphers else "DEFAULT"
 
     def get_ja3_fingerprint(self) -> str:
         """获取当前配置的 JA3 指纹"""
@@ -259,7 +263,7 @@ class BrowserProfileFactory:
                 "Sec-Fetch-Site": "none",
                 "Sec-Fetch-User": "?1",
                 "Upgrade-Insecure-Requests": "1",
-            }
+            },
         )
 
     @staticmethod
@@ -290,7 +294,7 @@ class BrowserProfileFactory:
             extra_headers={
                 "Upgrade-Insecure-Requests": "1",
                 "DNT": "1",
-            }
+            },
         )
 
     @staticmethod
@@ -317,7 +321,7 @@ class BrowserProfileFactory:
                 "HEADER_TABLE_SIZE": 4096,
                 "INITIAL_WINDOW_SIZE": 65535,
             },
-            extra_headers={}
+            extra_headers={},
         )
 
     @staticmethod
@@ -478,7 +482,7 @@ def get_stealth_ssl_context(browser: str = "chrome") -> ssl.SSLContext:
 
 if __name__ == "__main__":
     # 测试
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     spoofer = FingerprintSpoofer(BrowserType.CHROME)
 
     logger.info("Browser Profile:")

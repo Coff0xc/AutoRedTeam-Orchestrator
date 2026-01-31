@@ -4,28 +4,38 @@
 提供动态线程池和异步任务池，支持自动负载调整和批量任务处理。
 """
 
-from concurrent.futures import ThreadPoolExecutor, Future, as_completed
-from typing import (
-    Callable, List, Any, Optional, Iterator, TypeVar,
-    Tuple, Dict, Coroutine, Union
-)
-import threading
-import queue
 import asyncio
-import time
 import logging
-from dataclasses import dataclass, field
+import queue
+import threading
+import time
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
+from dataclasses import dataclass, field
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    Coroutine,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
-R = TypeVar('R')
+T = TypeVar("T")
+R = TypeVar("R")
 
 
 @dataclass
 class PoolMetrics:
     """线程池指标"""
+
     submitted_tasks: int = 0
     completed_tasks: int = 0
     failed_tasks: int = 0
@@ -72,14 +82,14 @@ class PoolMetrics:
         """转换为字典"""
         with self._lock:
             return {
-                'submitted_tasks': self.submitted_tasks,
-                'completed_tasks': self.completed_tasks,
-                'failed_tasks': self.failed_tasks,
-                'pending_tasks': self.submitted_tasks - self.completed_tasks,
-                'success_rate': self.success_rate,
-                'avg_execution_time': self.avg_execution_time,
-                'total_execution_time': self.total_execution_time,
-                'peak_workers': self.peak_workers
+                "submitted_tasks": self.submitted_tasks,
+                "completed_tasks": self.completed_tasks,
+                "failed_tasks": self.failed_tasks,
+                "pending_tasks": self.submitted_tasks - self.completed_tasks,
+                "success_rate": self.success_rate,
+                "avg_execution_time": self.avg_execution_time,
+                "total_execution_time": self.total_execution_time,
+                "peak_workers": self.peak_workers,
             }
 
 
@@ -92,7 +102,7 @@ class TaskWrapper:
         args: tuple,
         kwargs: dict,
         metrics: PoolMetrics,
-        callback: Optional[Callable] = None
+        callback: Optional[Callable] = None,
     ):
         self.fn = fn
         self.args = args
@@ -145,9 +155,9 @@ class DynamicThreadPool:
         min_workers: int = 2,
         max_workers: int = 20,
         queue_size: int = 1000,
-        name: str = 'default',
+        name: str = "default",
         scale_up_threshold: float = 0.8,
-        scale_down_threshold: float = 0.3
+        scale_down_threshold: float = 0.3,
     ):
         """
         初始化动态线程池
@@ -192,8 +202,7 @@ class DynamicThreadPool:
                 return
 
             self._executor = ThreadPoolExecutor(
-                max_workers=self._current_workers,
-                thread_name_prefix=f"{self.name}-worker"
+                max_workers=self._current_workers, thread_name_prefix=f"{self.name}-worker"
             )
             self._shutdown = False
 
@@ -210,26 +219,28 @@ class DynamicThreadPool:
             load_ratio = pending / max(self._current_workers, 1)
 
             # 扩容条件
-            if (load_ratio > self.scale_up_threshold and
-                self._current_workers < self.max_workers):
+            if load_ratio > self.scale_up_threshold and self._current_workers < self.max_workers:
                 new_size = min(
-                    self._current_workers + max(2, self._current_workers // 4),
-                    self.max_workers
+                    self._current_workers + max(2, self._current_workers // 4), self.max_workers
                 )
                 if new_size != self._current_workers:
                     self._resize_pool(new_size)
-                    logger.debug(f"线程池 '{self.name}' 扩容: {self._current_workers} -> {new_size}")
+                    logger.debug(
+                        f"线程池 '{self.name}' 扩容: {self._current_workers} -> {new_size}"
+                    )
 
             # 缩容条件
-            elif (load_ratio < self.scale_down_threshold and
-                  self._current_workers > self.min_workers):
+            elif (
+                load_ratio < self.scale_down_threshold and self._current_workers > self.min_workers
+            ):
                 new_size = max(
-                    self._current_workers - max(1, self._current_workers // 4),
-                    self.min_workers
+                    self._current_workers - max(1, self._current_workers // 4), self.min_workers
                 )
                 if new_size != self._current_workers:
                     self._resize_pool(new_size)
-                    logger.debug(f"线程池 '{self.name}' 缩容: {self._current_workers} -> {new_size}")
+                    logger.debug(
+                        f"线程池 '{self.name}' 缩容: {self._current_workers} -> {new_size}"
+                    )
 
     def _resize_pool(self, new_size: int) -> None:
         """调整线程池大小"""
@@ -245,7 +256,7 @@ class DynamicThreadPool:
         fn: Callable[..., R],
         *args: Any,
         callback: Optional[Callable[[Optional[R], Optional[Exception]], None]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Future[R]:
         """
         提交任务到线程池
@@ -298,7 +309,7 @@ class DynamicThreadPool:
         fn: Callable[[T], R],
         items: List[T],
         timeout: Optional[float] = None,
-        chunksize: int = 1
+        chunksize: int = 1,
     ) -> Iterator[R]:
         """
         批量映射执行
@@ -323,10 +334,7 @@ class DynamicThreadPool:
         return self._executor.map(fn, items, timeout=timeout, chunksize=chunksize)
 
     def map_unordered(
-        self,
-        fn: Callable[[T], R],
-        items: List[T],
-        timeout: Optional[float] = None
+        self, fn: Callable[[T], R], items: List[T], timeout: Optional[float] = None
     ) -> Iterator[R]:
         """
         批量映射执行（按完成顺序返回）
@@ -351,7 +359,7 @@ class DynamicThreadPool:
     def batch_submit(
         self,
         tasks: List[Tuple[Callable, tuple, dict]],
-        callback: Optional[Callable[[List[Any]], None]] = None
+        callback: Optional[Callable[[List[Any]], None]] = None,
     ) -> List[Future]:
         """
         批量提交任务
@@ -395,9 +403,7 @@ class DynamicThreadPool:
         return futures
 
     def wait_all(
-        self,
-        futures: List[Future],
-        timeout: Optional[float] = None
+        self, futures: List[Future], timeout: Optional[float] = None
     ) -> Tuple[List[Any], List[Exception]]:
         """
         等待所有任务完成
@@ -447,13 +453,13 @@ class DynamicThreadPool:
             pending = self._pending_count
 
         return {
-            'name': self.name,
-            'current_workers': self._current_workers,
-            'min_workers': self.min_workers,
-            'max_workers': self.max_workers,
-            'pending_tasks': pending,
-            'is_shutdown': self._shutdown,
-            'metrics': self._metrics.to_dict()
+            "name": self.name,
+            "current_workers": self._current_workers,
+            "min_workers": self.min_workers,
+            "max_workers": self.max_workers,
+            "pending_tasks": pending,
+            "is_shutdown": self._shutdown,
+            "metrics": self._metrics.to_dict(),
         }
 
     @property
@@ -461,7 +467,7 @@ class DynamicThreadPool:
         """是否已关闭"""
         return self._shutdown
 
-    def __enter__(self) -> 'DynamicThreadPool':
+    def __enter__(self) -> "DynamicThreadPool":
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -498,11 +504,7 @@ class AsyncPool:
             self._semaphore = asyncio.Semaphore(self.concurrency)
         return self._semaphore
 
-    async def _run_with_semaphore(
-        self,
-        coro: Coroutine,
-        return_exceptions: bool = True
-    ) -> Any:
+    async def _run_with_semaphore(self, coro: Coroutine, return_exceptions: bool = True) -> Any:
         """使用信号量运行协程"""
         semaphore = self._get_semaphore()
         start_time = time.monotonic()
@@ -511,25 +513,15 @@ class AsyncPool:
             self._metrics.record_submit()
             try:
                 result = await coro
-                self._metrics.record_complete(
-                    time.monotonic() - start_time,
-                    success=True
-                )
+                self._metrics.record_complete(time.monotonic() - start_time, success=True)
                 return result
             except Exception as e:
-                self._metrics.record_complete(
-                    time.monotonic() - start_time,
-                    success=False
-                )
+                self._metrics.record_complete(time.monotonic() - start_time, success=False)
                 if return_exceptions:
                     return e
                 raise
 
-    async def run(
-        self,
-        coros: List[Coroutine],
-        return_exceptions: bool = True
-    ) -> List[Any]:
+    async def run(self, coros: List[Coroutine], return_exceptions: bool = True) -> List[Any]:
         """
         并发执行协程列表
 
@@ -543,18 +535,12 @@ class AsyncPool:
         if not coros:
             return []
 
-        tasks = [
-            self._run_with_semaphore(coro, return_exceptions)
-            for coro in coros
-        ]
+        tasks = [self._run_with_semaphore(coro, return_exceptions) for coro in coros]
 
         return await asyncio.gather(*tasks, return_exceptions=return_exceptions)
 
     async def run_with_timeout(
-        self,
-        coros: List[Coroutine],
-        timeout: float,
-        return_exceptions: bool = True
+        self, coros: List[Coroutine], timeout: float, return_exceptions: bool = True
     ) -> List[Any]:
         """
         带超时的并发执行
@@ -568,10 +554,7 @@ class AsyncPool:
             结果列表
         """
         try:
-            return await asyncio.wait_for(
-                self.run(coros, return_exceptions),
-                timeout=timeout
-            )
+            return await asyncio.wait_for(self.run(coros, return_exceptions), timeout=timeout)
         except asyncio.TimeoutError:
             logger.warning(f"批量任务超时 ({timeout}s)")
             return [asyncio.TimeoutError(f"超时 {timeout}s")] * len(coros)
@@ -580,7 +563,7 @@ class AsyncPool:
         self,
         fn: Callable[[T], Coroutine[Any, Any, R]],
         items: List[T],
-        return_exceptions: bool = True
+        return_exceptions: bool = True,
     ) -> List[R]:
         """
         异步批量映射
@@ -597,9 +580,7 @@ class AsyncPool:
         return await self.run(coros, return_exceptions)
 
     async def map_unordered(
-        self,
-        fn: Callable[[T], Coroutine[Any, Any, R]],
-        items: List[T]
+        self, fn: Callable[[T], Coroutine[Any, Any, R]], items: List[T]
     ) -> AsyncIterator[Tuple[T, R]]:
         """
         异步批量映射（按完成顺序返回）
@@ -624,10 +605,7 @@ class AsyncPool:
         tasks = {asyncio.create_task(wrapped(item)): item for item in items}
 
         while tasks:
-            done, _ = await asyncio.wait(
-                tasks.keys(),
-                return_when=asyncio.FIRST_COMPLETED
-            )
+            done, _ = await asyncio.wait(tasks.keys(), return_when=asyncio.FIRST_COMPLETED)
 
             for task in done:
                 del tasks[task]
@@ -636,14 +614,7 @@ class AsyncPool:
     @property
     def stats(self) -> Dict[str, Any]:
         """获取统计信息"""
-        return {
-            'concurrency': self.concurrency,
-            'metrics': self._metrics.to_dict()
-        }
-
-
-# 类型别名
-AsyncIterator = Iterator
+        return {"concurrency": self.concurrency, "metrics": self._metrics.to_dict()}
 
 
 # 全局线程池
@@ -651,10 +622,7 @@ _default_pool: Optional[DynamicThreadPool] = None
 _pool_lock = threading.Lock()
 
 
-def get_pool(
-    min_workers: int = 2,
-    max_workers: int = 20
-) -> DynamicThreadPool:
+def get_pool(min_workers: int = 2, max_workers: int = 20) -> DynamicThreadPool:
     """
     获取默认线程池
 
@@ -670,9 +638,7 @@ def get_pool(
     with _pool_lock:
         if _default_pool is None or _default_pool.is_shutdown:
             _default_pool = DynamicThreadPool(
-                min_workers=min_workers,
-                max_workers=max_workers,
-                name='global'
+                min_workers=min_workers, max_workers=max_workers, name="global"
             )
         return _default_pool
 
@@ -689,9 +655,7 @@ def shutdown_default_pool(wait: bool = True) -> None:
 
 @contextmanager
 def thread_pool(
-    min_workers: int = 2,
-    max_workers: int = 20,
-    name: str = 'temp'
+    min_workers: int = 2, max_workers: int = 20, name: str = "temp"
 ) -> Iterator[DynamicThreadPool]:
     """
     临时线程池上下文管理器
@@ -704,11 +668,7 @@ def thread_pool(
     Yields:
         DynamicThreadPool 实例
     """
-    pool = DynamicThreadPool(
-        min_workers=min_workers,
-        max_workers=max_workers,
-        name=name
-    )
+    pool = DynamicThreadPool(min_workers=min_workers, max_workers=max_workers, name=name)
 
     try:
         yield pool
@@ -718,10 +678,7 @@ def thread_pool(
 
 # 便捷函数
 def parallel_map(
-    fn: Callable[[T], R],
-    items: List[T],
-    workers: int = 10,
-    timeout: Optional[float] = None
+    fn: Callable[[T], R], items: List[T], workers: int = 10, timeout: Optional[float] = None
 ) -> List[R]:
     """
     并行映射函数
@@ -735,14 +692,12 @@ def parallel_map(
     Returns:
         结果列表
     """
-    with thread_pool(min_workers=workers, max_workers=workers, name='parallel_map') as pool:
+    with thread_pool(min_workers=workers, max_workers=workers, name="parallel_map") as pool:
         return list(pool.map(fn, items, timeout=timeout))
 
 
 async def async_parallel_map(
-    fn: Callable[[T], Coroutine[Any, Any, R]],
-    items: List[T],
-    concurrency: int = 10
+    fn: Callable[[T], Coroutine[Any, Any, R]], items: List[T], concurrency: int = 10
 ) -> List[R]:
     """
     异步并行映射函数

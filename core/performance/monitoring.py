@@ -4,34 +4,37 @@
 提供性能指标收集、日志控制、告警机制等功能
 """
 
-import time
-import threading
-import logging
 import json
+import logging
 import statistics
-from typing import Any, Dict, List, Optional, Callable
-from dataclasses import dataclass, field, asdict
+import threading
+import time
 from collections import deque
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 from functools import wraps
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 # ============== 性能指标 ==============
 
+
 class MetricType(Enum):
     """指标类型"""
-    COUNTER = "counter"      # 计数器
-    GAUGE = "gauge"          # 仪表盘
+
+    COUNTER = "counter"  # 计数器
+    GAUGE = "gauge"  # 仪表盘
     HISTOGRAM = "histogram"  # 直方图
-    TIMER = "timer"          # 计时器
+    TIMER = "timer"  # 计时器
 
 
 @dataclass
 class Metric:
     """指标数据"""
+
     name: str
     type: MetricType
     value: float
@@ -122,7 +125,7 @@ class MetricsCollector:
             "avg": statistics.mean(values),
             "p50": self._percentile(sorted_values, 50),
             "p95": self._percentile(sorted_values, 95),
-            "p99": self._percentile(sorted_values, 99)
+            "p99": self._percentile(sorted_values, 99),
         }
 
     def get_timer_stats(self, name: str, labels: Optional[Dict] = None) -> Dict[str, float]:
@@ -147,7 +150,7 @@ class MetricsCollector:
                 "gauges": dict(self._gauges),
                 "histograms": {k: self.get_histogram_stats(k) for k in self._histograms},
                 "timers": {k: self.get_timer_stats(k) for k in self._timers},
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
 
     def reset(self):
@@ -160,6 +163,7 @@ class MetricsCollector:
 
 
 # ============== 性能指标管理器 ==============
+
 
 class PerformanceMetrics:
     """
@@ -180,7 +184,9 @@ class PerformanceMetrics:
         """记录HTTP请求"""
         labels = {"endpoint": endpoint, "method": method, "status": str(status)}
         self.collector.increment("http_requests_total", labels=labels)
-        self.collector.timer("http_request_duration_seconds", duration, labels={"endpoint": endpoint})
+        self.collector.timer(
+            "http_request_duration_seconds", duration, labels={"endpoint": endpoint}
+        )
 
         if status >= 400:
             self.collector.increment("http_errors_total", labels=labels)
@@ -205,7 +211,9 @@ class PerformanceMetrics:
     # 错误指标
     def record_error(self, error_type: str, component: str):
         """记录错误"""
-        self.collector.increment("errors_total", labels={"type": error_type, "component": component})
+        self.collector.increment(
+            "errors_total", labels={"type": error_type, "component": component}
+        )
 
     # 资源指标
     def record_memory_usage(self, usage_mb: float):
@@ -246,14 +254,16 @@ class PerformanceMetrics:
             "resources": {
                 "memory_mb": metrics["gauges"].get("memory_usage_mb", 0),
                 "cpu_percent": metrics["gauges"].get("cpu_usage_percent", 0),
-            }
+            },
         }
 
 
 # ============== 日志控制器 ==============
 
+
 class LogLevel(Enum):
     """日志级别"""
+
     DEBUG = 10
     INFO = 20
     WARNING = 30
@@ -277,7 +287,7 @@ class LogController:
         level: str = "INFO",
         max_message_size: int = 10000,
         sampling_rate: float = 1.0,
-        sensitive_patterns: Optional[List[str]] = None
+        sensitive_patterns: Optional[List[str]] = None,
     ):
         self.level = getattr(logging, level.upper(), logging.INFO)
         self.max_message_size = max_message_size
@@ -296,6 +306,7 @@ class LogController:
 
         # 编译正则
         import re
+
         self._patterns = [re.compile(p, re.IGNORECASE) for p in self.sensitive_patterns]
 
     def set_level(self, level: str):
@@ -306,6 +317,7 @@ class LogController:
     def should_log(self) -> bool:
         """根据采样率决定是否记录"""
         import random
+
         with self._lock:
             self._log_count += 1
             if random.random() <= self.sampling_rate:
@@ -324,7 +336,7 @@ class LogController:
         if len(message) > self.max_message_size:
             with self._lock:
                 self._truncated_count += 1
-            return message[:self.max_message_size] + f"... [truncated, total {len(message)} chars]"
+            return message[: self.max_message_size] + f"... [truncated, total {len(message)} chars]"
         return message
 
     def process(self, message: str) -> Optional[str]:
@@ -348,14 +360,16 @@ class LogController:
             "sampled_logs": self._sampled_count,
             "truncated_logs": self._truncated_count,
             "sampling_rate": self.sampling_rate,
-            "current_level": logging.getLevelName(self.level)
+            "current_level": logging.getLevelName(self.level),
         }
 
 
 # ============== 告警管理器 ==============
 
+
 class AlertSeverity(Enum):
     """告警级别"""
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -365,6 +379,7 @@ class AlertSeverity(Enum):
 @dataclass
 class Alert:
     """告警数据"""
+
     name: str
     severity: AlertSeverity
     message: str
@@ -390,14 +405,14 @@ class AlertManager:
         thresholds: Optional[Dict[str, float]] = None,
         webhook_url: str = "",
         cooldown_seconds: float = 300.0,
-        max_alerts: int = 100
+        max_alerts: int = 100,
     ):
         self.thresholds = thresholds or {
             "error_rate": 0.1,
             "latency_p99": 10.0,
             "memory_usage": 0.9,
             "cpu_usage": 0.9,
-            "failure_rate": 0.2
+            "failure_rate": 0.2,
         }
         self.webhook_url = webhook_url
         self.cooldown_seconds = cooldown_seconds
@@ -413,7 +428,7 @@ class AlertManager:
             "total_alerts": 0,
             "by_severity": {},
             "notifications_sent": 0,
-            "notifications_failed": 0
+            "notifications_failed": 0,
         }
 
     def check_threshold(self, name: str, value: float) -> Optional[Alert]:
@@ -448,7 +463,7 @@ class AlertManager:
             message=f"{name} 超过阈值: {value:.2f} > {threshold:.2f}",
             value=value,
             threshold=threshold,
-            timestamp=now
+            timestamp=now,
         )
 
         self._record_alert(alert)
@@ -459,14 +474,13 @@ class AlertManager:
         with self._lock:
             self._alerts.append(alert)
             if len(self._alerts) > self.max_alerts:
-                self._alerts = self._alerts[-self.max_alerts:]
+                self._alerts = self._alerts[-self.max_alerts :]
 
             self._last_alert_time[alert.name] = alert.timestamp
             self._stats["total_alerts"] += 1
 
             severity = alert.severity.value
-            self._stats["by_severity"][severity] = \
-                self._stats["by_severity"].get(severity, 0) + 1
+            self._stats["by_severity"][severity] = self._stats["by_severity"].get(severity, 0) + 1
 
         # 触发回调
         for callback in self._callbacks:
@@ -483,19 +497,20 @@ class AlertManager:
         """发送Webhook通知"""
         try:
             import urllib.request
-            data = json.dumps({
-                "alert": alert.name,
-                "severity": alert.severity.value,
-                "message": alert.message,
-                "value": alert.value,
-                "threshold": alert.threshold,
-                "timestamp": alert.timestamp
-            }).encode('utf-8')
+
+            data = json.dumps(
+                {
+                    "alert": alert.name,
+                    "severity": alert.severity.value,
+                    "message": alert.message,
+                    "value": alert.value,
+                    "threshold": alert.threshold,
+                    "timestamp": alert.timestamp,
+                }
+            ).encode("utf-8")
 
             req = urllib.request.Request(
-                self.webhook_url,
-                data=data,
-                headers={"Content-Type": "application/json"}
+                self.webhook_url, data=data, headers={"Content-Type": "application/json"}
             )
             urllib.request.urlopen(req, timeout=10)
             self._stats["notifications_sent"] += 1
@@ -532,7 +547,7 @@ class AlertManager:
                 "value": a.value,
                 "threshold": a.threshold,
                 "timestamp": a.timestamp,
-                "resolved": a.resolved
+                "resolved": a.resolved,
             }
             for a in self._alerts[-count:]
         ]
@@ -542,5 +557,5 @@ class AlertManager:
         return {
             **self._stats,
             "active_alerts": len(self.get_active_alerts()),
-            "thresholds": self.thresholds
+            "thresholds": self.thresholds,
         }

@@ -22,39 +22,36 @@
 迁移建议:
     # 旧方式（继续支持）
     from modules.vuln_verifier import VulnerabilityVerifier
-    
+
     # 新方式（推荐）
     from modules.vuln_verifier import VulnerabilityVerifier
     from modules.vuln_verifier.statistical import StatisticalVerifier
     from modules.vuln_verifier.oob import OOBIntegratedVerifier
 """
 
-# 从子模块导入所有公开接口
-from modules.vuln_verifier.models import (
-    VerificationResult,
-    StatisticalVerification,
-)
-
 from modules.vuln_verifier.base import (
     BaseVerifier,
     VulnerabilityVerifier,
     get_vulnerability_verifier_class,
 )
-
-from modules.vuln_verifier.sqli import SQLiVerifierMixin
-from modules.vuln_verifier.xss import XSSVerifierMixin
 from modules.vuln_verifier.lfi_rce import LFIRCEVerifierMixin
-from modules.vuln_verifier.ssrf import SSRFVerifierMixin
 
-from modules.vuln_verifier.statistical import (
-    StatisticalVerifier,
-    verify_vuln_statistically,
+# 从子模块导入所有公开接口
+from modules.vuln_verifier.models import (
+    StatisticalVerification,
+    VerificationResult,
 )
-
 from modules.vuln_verifier.oob import (
     OOBIntegratedVerifier,
     verify_with_oob,
 )
+from modules.vuln_verifier.sqli import SQLiVerifierMixin
+from modules.vuln_verifier.ssrf import SSRFVerifierMixin
+from modules.vuln_verifier.statistical import (
+    StatisticalVerifier,
+    verify_vuln_statistically,
+)
+from modules.vuln_verifier.xss import XSSVerifierMixin
 
 # 公开接口
 __all__ = [

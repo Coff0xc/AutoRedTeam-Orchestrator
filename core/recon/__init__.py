@@ -40,27 +40,33 @@ AutoRedTeam Recon 引擎模块
     - waf_detect.py  - WAF检测
 """
 
-# 阶段定义
-from .phases import (
-    ReconPhase,
-    PhaseStatus,
-    PhaseResult,
-    PhaseConfig,
-    PhaseHandler,
-    PhaseManager,
-    DEFAULT_PHASE_ORDER,
-    QUICK_PHASE_ORDER,
-    MINIMAL_PHASE_ORDER,
-)
-
 # 基类和数据类
 from .base import (
-    Severity,
-    ReconConfig,
-    Finding,
-    ReconResult,
     BaseReconEngine,
+    Finding,
     ProgressCallback,
+    ReconConfig,
+    ReconResult,
+    Severity,
+)
+
+# 目录扫描
+from .directory import (
+    DirectoryInfo,
+    DirectoryScanner,
+    async_scan_directories,
+    scan_directories,
+)
+
+# DNS解析
+from .dns_resolver import (
+    DNSRecord,
+    DNSRecordType,
+    DNSResolver,
+    DNSResult,
+    async_resolve_domain,
+    get_dns_records,
+    resolve_domain,
 )
 
 # 标准引擎
@@ -71,63 +77,56 @@ from .engine import (
 
 # 指纹识别
 from .fingerprint import (
-    FingerprintCategory,
     Fingerprint,
-    FingerprintRule,
+    FingerprintCategory,
     FingerprintEngine,
+    FingerprintRule,
     identify_fingerprints,
+)
+
+# 阶段定义
+from .phases import (
+    DEFAULT_PHASE_ORDER,
+    MINIMAL_PHASE_ORDER,
+    QUICK_PHASE_ORDER,
+    PhaseConfig,
+    PhaseHandler,
+    PhaseManager,
+    PhaseResult,
+    PhaseStatus,
+    ReconPhase,
 )
 
 # 端口扫描
 from .port_scanner import (
     PortInfo,
     PortScanner,
-    scan_ports,
     async_scan_ports,
-)
-
-# DNS解析
-from .dns_resolver import (
-    DNSRecordType,
-    DNSRecord,
-    DNSResult,
-    DNSResolver,
-    resolve_domain,
-    async_resolve_domain,
-    get_dns_records,
+    scan_ports,
 )
 
 # 子域名枚举
 from .subdomain import (
-    SubdomainInfo,
     SubdomainEnumerator,
-    enumerate_subdomains,
+    SubdomainInfo,
     async_enumerate_subdomains,
-)
-
-# 目录扫描
-from .directory import (
-    DirectoryInfo,
-    DirectoryScanner,
-    scan_directories,
-    async_scan_directories,
+    enumerate_subdomains,
 )
 
 # 技术栈识别
 from .tech_detect import (
-    Technology,
     TechDetector,
+    Technology,
     detect_technologies,
 )
 
 # WAF检测
 from .waf_detect import (
-    WAFInfo,
     WAFDetector,
+    WAFInfo,
     detect_waf,
     is_waf_protected,
 )
-
 
 # 导出列表
 __all__ = [
@@ -141,7 +140,6 @@ __all__ = [
     "DEFAULT_PHASE_ORDER",
     "QUICK_PHASE_ORDER",
     "MINIMAL_PHASE_ORDER",
-
     # 基类和配置
     "Severity",
     "ReconConfig",
@@ -149,24 +147,20 @@ __all__ = [
     "ReconResult",
     "BaseReconEngine",
     "ProgressCallback",
-
     # 引擎
     "StandardReconEngine",
     "create_recon_engine",
-
     # 指纹识别
     "FingerprintCategory",
     "Fingerprint",
     "FingerprintRule",
     "FingerprintEngine",
     "identify_fingerprints",
-
     # 端口扫描
     "PortInfo",
     "PortScanner",
     "scan_ports",
     "async_scan_ports",
-
     # DNS解析
     "DNSRecordType",
     "DNSRecord",
@@ -175,24 +169,20 @@ __all__ = [
     "resolve_domain",
     "async_resolve_domain",
     "get_dns_records",
-
     # 子域名枚举
     "SubdomainInfo",
     "SubdomainEnumerator",
     "enumerate_subdomains",
     "async_enumerate_subdomains",
-
     # 目录扫描
     "DirectoryInfo",
     "DirectoryScanner",
     "scan_directories",
     "async_scan_directories",
-
     # 技术栈识别
     "Technology",
     "TechDetector",
     "detect_technologies",
-
     # WAF检测
     "WAFInfo",
     "WAFDetector",
@@ -201,11 +191,7 @@ __all__ = [
 ]
 
 
-def create_engine(
-    target: str,
-    engine_type: str = "standard",
-    **kwargs
-) -> BaseReconEngine:
+def create_engine(target: str, engine_type: str = "standard", **kwargs) -> BaseReconEngine:
     """工厂函数 - 创建侦察引擎实例
 
     Args:

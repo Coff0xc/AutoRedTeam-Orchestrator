@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # 统一 HTTP 客户端工厂
 try:
     from core.http import get_sync_client
+
     HAS_HTTP_FACTORY = True
 except ImportError:
     HAS_HTTP_FACTORY = False
@@ -25,6 +26,7 @@ except ImportError:
 
 class VulnSeverity(Enum):
     """漏洞严重性"""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -35,6 +37,7 @@ class VulnSeverity(Enum):
 @dataclass
 class DependencyVuln:
     """依赖漏洞"""
+
     package_name: str
     installed_version: str
     vuln_id: str  # CVE-XXXX-XXXX 或 GHSA-XXXX
@@ -82,10 +85,9 @@ class DependencyScanner:
             self._session = get_sync_client(force_new=True)
         else:
             self._session = requests.Session()
-        self._session.headers.update({
-            "User-Agent": "AutoRedTeam-DependencyScanner/1.0",
-            "Content-Type": "application/json"
-        })
+        self._session.headers.update(
+            {"User-Agent": "AutoRedTeam-DependencyScanner/1.0", "Content-Type": "application/json"}
+        )
         self._cache: Dict[str, List[DependencyVuln]] = {}
 
     def _cvss_to_severity(self, score: float) -> VulnSeverity:
@@ -95,9 +97,9 @@ class DependencyScanner:
                 return severity
         return VulnSeverity.UNKNOWN
 
-    def _parse_osv_response(self, data: Dict,
-                            package: str, version: str,
-                            ecosystem: str) -> List[DependencyVuln]:
+    def _parse_osv_response(
+        self, data: Dict, package: str, version: str, ecosystem: str
+    ) -> List[DependencyVuln]:
         """解析OSV响应"""
         vulns = []
 
@@ -125,10 +127,10 @@ class DependencyScanner:
 
             # 获取引用
             references = [
-                ref.get("url", "")
-                for ref in vuln_data.get("references", [])
-                if ref.get("url")
-            ][:5]  # 限制数量
+                ref.get("url", "") for ref in vuln_data.get("references", []) if ref.get("url")
+            ][
+                :5
+            ]  # 限制数量
 
             vuln = DependencyVuln(
                 package_name=package,
@@ -140,14 +142,15 @@ class DependencyScanner:
                 fixed_version=fixed_version,
                 references=references,
                 cvss_score=cvss_score,
-                ecosystem=ecosystem
+                ecosystem=ecosystem,
             )
             vulns.append(vuln)
 
         return vulns
 
-    def check_osv(self, package: str, version: str,
-                  ecosystem: str = "PyPI") -> List[DependencyVuln]:
+    def check_osv(
+        self, package: str, version: str, ecosystem: str = "PyPI"
+    ) -> List[DependencyVuln]:
         """
         通过OSV API检查漏洞
 
@@ -167,14 +170,8 @@ class DependencyScanner:
         try:
             response = self._session.post(
                 f"{self.OSV_API}/query",
-                json={
-                    "package": {
-                        "name": package,
-                        "ecosystem": ecosystem
-                    },
-                    "version": version
-                },
-                timeout=self.timeout
+                json={"package": {"name": package, "ecosystem": ecosystem}, "version": version},
+                timeout=self.timeout,
             )
 
             if response.status_code == 200:
@@ -203,19 +200,18 @@ class DependencyScanner:
         # OSV支持批量查询
         queries = []
         for pkg in packages:
-            queries.append({
-                "package": {
-                    "name": pkg["name"],
-                    "ecosystem": pkg.get("ecosystem", "PyPI")
-                },
-                "version": pkg["version"]
-            })
+            queries.append(
+                {
+                    "package": {"name": pkg["name"], "ecosystem": pkg.get("ecosystem", "PyPI")},
+                    "version": pkg["version"],
+                }
+            )
 
         try:
             response = self._session.post(
                 f"{self.OSV_API}/querybatch",
                 json={"queries": queries},
-                timeout=self.timeout * 2  # 批量查询给更多时间
+                timeout=self.timeout * 2,  # 批量查询给更多时间
             )
 
             if response.status_code == 200:
@@ -224,8 +220,7 @@ class DependencyScanner:
                 for i, result in enumerate(data.get("results", [])):
                     pkg = packages[i]
                     vulns = self._parse_osv_response(
-                        result, pkg["name"], pkg["version"],
-                        pkg.get("ecosystem", "PyPI")
+                        result, pkg["name"], pkg["version"], pkg.get("ecosystem", "PyPI")
                     )
                     if vulns:
                         results[pkg["name"]] = vulns
@@ -235,10 +230,7 @@ class DependencyScanner:
 
             # 回退到单个查询
             for pkg in packages:
-                vulns = self.check_osv(
-                    pkg["name"], pkg["version"],
-                    pkg.get("ecosystem", "PyPI")
-                )
+                vulns = self.check_osv(pkg["name"], pkg["version"], pkg.get("ecosystem", "PyPI"))
                 if vulns:
                     results[pkg["name"]] = vulns
 
@@ -258,13 +250,8 @@ class DependencyScanner:
             "scanned": 0,
             "vulnerable": 0,
             "vulnerabilities": [],
-            "by_severity": {
-                "critical": 0,
-                "high": 0,
-                "medium": 0,
-                "low": 0
-            },
-            "packages": {}
+            "by_severity": {"critical": 0, "high": 0, "medium": 0, "low": 0},
+            "packages": {},
         }
 
         # 解析SBOM获取依赖列表
@@ -276,7 +263,7 @@ class DependencyScanner:
                 pkg = {
                     "name": comp.get("name", ""),
                     "version": comp.get("version", ""),
-                    "ecosystem": self._detect_ecosystem_from_purl(comp.get("purl", ""))
+                    "ecosystem": self._detect_ecosystem_from_purl(comp.get("purl", "")),
                 }
                 if pkg["name"] and pkg["version"]:
                     packages.append(pkg)
@@ -287,7 +274,7 @@ class DependencyScanner:
                 pkg = {
                     "name": dep.get("name", ""),
                     "version": dep.get("version", ""),
-                    "ecosystem": self._ecosystem_to_osv(dep.get("ecosystem", "pypi"))
+                    "ecosystem": self._ecosystem_to_osv(dep.get("ecosystem", "pypi")),
                 }
                 if pkg["name"] and pkg["version"]:
                     packages.append(pkg)
@@ -312,7 +299,7 @@ class DependencyScanner:
                     "severity": severity,
                     "title": vuln.title,
                     "fixed_version": vuln.fixed_version,
-                    "cvss": vuln.cvss_score
+                    "cvss": vuln.cvss_score,
                 }
 
                 result["vulnerabilities"].append(vuln_info)
@@ -335,7 +322,7 @@ class DependencyScanner:
         Returns:
             扫描结果
         """
-        from .sbom_generator import SBOMGenerator, SBOMFormat
+        from .sbom_generator import SBOMFormat, SBOMGenerator
 
         # 生成SBOM
         generator = SBOMGenerator(project_path)
@@ -364,13 +351,7 @@ class DependencyScanner:
 
     def _ecosystem_to_osv(self, ecosystem: str) -> str:
         """转换生态系统名称为OSV格式"""
-        mapping = {
-            "pypi": "PyPI",
-            "npm": "npm",
-            "go": "Go",
-            "maven": "Maven",
-            "cargo": "crates.io"
-        }
+        mapping = {"pypi": "PyPI", "npm": "npm", "go": "Go", "maven": "Maven", "cargo": "crates.io"}
         return mapping.get(ecosystem.lower(), "PyPI")
 
     def generate_report(self, scan_result: Dict) -> str:
@@ -402,21 +383,20 @@ class DependencyScanner:
         ]
 
         for vuln in scan_result.get("vulnerabilities", []):
-            severity_icon = {
-                "critical": "🔴",
-                "high": "🟠",
-                "medium": "🟡",
-                "low": "🟢"
-            }.get(vuln["severity"], "⚪")
+            severity_icon = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}.get(
+                vuln["severity"], "⚪"
+            )
 
-            lines.extend([
-                f"{severity_icon} {vuln['id']}",
-                f"   包: {vuln['package']} @ {vuln['version']}",
-                f"   严重性: {vuln['severity'].upper()} (CVSS: {vuln.get('cvss', 'N/A')})",
-                f"   标题: {vuln['title'][:60]}...",
-                f"   修复版本: {vuln.get('fixed_version', '未知')}",
-                ""
-            ])
+            lines.extend(
+                [
+                    f"{severity_icon} {vuln['id']}",
+                    f"   包: {vuln['package']} @ {vuln['version']}",
+                    f"   严重性: {vuln['severity'].upper()} (CVSS: {vuln.get('cvss', 'N/A')})",
+                    f"   标题: {vuln['title'][:60]}...",
+                    f"   修复版本: {vuln.get('fixed_version', '未知')}",
+                    "",
+                ]
+            )
 
         lines.append("=" * 60)
 
@@ -431,7 +411,7 @@ def scan_dependencies(project_path: str) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     # 测试示例
     scanner = DependencyScanner()
 

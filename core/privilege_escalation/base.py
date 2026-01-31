@@ -7,12 +7,12 @@ ATT&CK Tactic: TA0004 - Privilege Escalation
 仅用于授权渗透测试和安全研究
 """
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
-from enum import Enum
 import logging
 import time
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +23,11 @@ class PrivilegeLevel(Enum):
 
     定义系统中不同的权限层级
     """
-    LOW = 'low'              # 普通用户
-    MEDIUM = 'medium'        # 本地管理员(受限，如 UAC 未提升)
-    HIGH = 'high'            # 本地管理员(完整权限)
-    SYSTEM = 'system'        # SYSTEM/root 权限
+
+    LOW = "low"  # 普通用户
+    MEDIUM = "medium"  # 本地管理员(受限，如 UAC 未提升)
+    HIGH = "high"  # 本地管理员(完整权限)
+    SYSTEM = "system"  # SYSTEM/root 权限
 
 
 class EscalationMethod(Enum):
@@ -35,40 +36,42 @@ class EscalationMethod(Enum):
 
     定义各种提权技术
     """
+
     # Windows 方法
-    UAC_BYPASS = 'uac_bypass'
-    TOKEN_IMPERSONATION = 'token_impersonation'
-    POTATO = 'potato'
-    SERVICE_EXPLOIT = 'service_exploit'
-    REGISTRY_EXPLOIT = 'registry_exploit'
-    DLL_HIJACK = 'dll_hijack'
-    ALWAYS_INSTALL_ELEVATED = 'always_install_elevated'
-    UNQUOTED_SERVICE_PATH = 'unquoted_service_path'
+    UAC_BYPASS = "uac_bypass"
+    TOKEN_IMPERSONATION = "token_impersonation"
+    POTATO = "potato"
+    SERVICE_EXPLOIT = "service_exploit"
+    REGISTRY_EXPLOIT = "registry_exploit"
+    DLL_HIJACK = "dll_hijack"
+    ALWAYS_INSTALL_ELEVATED = "always_install_elevated"
+    UNQUOTED_SERVICE_PATH = "unquoted_service_path"
 
     # Linux 方法
-    SUID = 'suid'
-    SUDO = 'sudo'
-    CAPABILITY = 'capability'
-    KERNEL = 'kernel'
-    CRON = 'cron'
-    LD_PRELOAD = 'ld_preload'
-    PATH_HIJACK = 'path_hijack'
-    NFS_ROOT_SQUASH = 'nfs_root_squash'
-    DOCKER_ESCAPE = 'docker_escape'
+    SUID = "suid"
+    SUDO = "sudo"
+    CAPABILITY = "capability"
+    KERNEL = "kernel"
+    CRON = "cron"
+    LD_PRELOAD = "ld_preload"
+    PATH_HIJACK = "path_hijack"
+    NFS_ROOT_SQUASH = "nfs_root_squash"
+    DOCKER_ESCAPE = "docker_escape"
 
     # 通用方法
-    CREDENTIAL_ABUSE = 'credential_abuse'
-    MISCONFIGURATION = 'misconfiguration'
+    CREDENTIAL_ABUSE = "credential_abuse"
+    MISCONFIGURATION = "misconfiguration"
 
 
 class EscalationStatus(Enum):
     """提权状态"""
-    IDLE = 'idle'
-    ENUMERATING = 'enumerating'
-    EXPLOITING = 'exploiting'
-    SUCCESS = 'success'
-    FAILED = 'failed'
-    ERROR = 'error'
+
+    IDLE = "idle"
+    ENUMERATING = "enumerating"
+    EXPLOITING = "exploiting"
+    SUCCESS = "success"
+    FAILED = "failed"
+    ERROR = "error"
 
 
 @dataclass
@@ -78,6 +81,7 @@ class EscalationVector:
 
     描述一个可能的提权路径
     """
+
     method: EscalationMethod
     name: str
     description: str
@@ -90,14 +94,14 @@ class EscalationVector:
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
-            'method': self.method.value,
-            'name': self.name,
-            'description': self.description,
-            'success_probability': self.success_probability,
-            'requires_interaction': self.requires_interaction,
-            'requires_reboot': self.requires_reboot,
-            'cleanup_required': self.cleanup_required,
-            'detected_info': self.detected_info,
+            "method": self.method.value,
+            "name": self.name,
+            "description": self.description,
+            "success_probability": self.success_probability,
+            "requires_interaction": self.requires_interaction,
+            "requires_reboot": self.requires_reboot,
+            "cleanup_required": self.cleanup_required,
+            "detected_info": self.detected_info,
         }
 
 
@@ -108,28 +112,29 @@ class EscalationResult:
 
     记录提权操作的结果
     """
+
     success: bool
     method: EscalationMethod
     from_level: PrivilegeLevel
     to_level: PrivilegeLevel
-    output: str = ''
-    error: str = ''
+    output: str = ""
+    error: str = ""
     duration: float = 0.0
-    evidence: str = ''
-    cleanup_command: str = ''
+    evidence: str = ""
+    cleanup_command: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
-            'success': self.success,
-            'method': self.method.value,
-            'from_level': self.from_level.value,
-            'to_level': self.to_level.value,
-            'output': self.output,
-            'error': self.error,
-            'duration': self.duration,
-            'evidence': self.evidence,
-            'cleanup_command': self.cleanup_command,
+            "success": self.success,
+            "method": self.method.value,
+            "from_level": self.from_level.value,
+            "to_level": self.to_level.value,
+            "output": self.output,
+            "error": self.error,
+            "duration": self.duration,
+            "evidence": self.evidence,
+            "cleanup_command": self.cleanup_command,
         }
 
     def __bool__(self) -> bool:
@@ -141,6 +146,7 @@ class EscalationConfig:
     """
     提权配置
     """
+
     # 通用配置
     timeout: float = 60.0
     cleanup: bool = True
@@ -158,12 +164,12 @@ class EscalationConfig:
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
-            'timeout': self.timeout,
-            'cleanup': self.cleanup,
-            'stealth': self.stealth,
-            'methods': [m.value for m in self.methods],
-            'auto_select': self.auto_select,
-            'safe_mode': self.safe_mode,
+            "timeout": self.timeout,
+            "cleanup": self.cleanup,
+            "stealth": self.stealth,
+            "methods": [m.value for m in self.methods],
+            "auto_select": self.auto_select,
+            "safe_mode": self.safe_mode,
         }
 
 
@@ -193,9 +199,9 @@ class BasePrivilegeEscalation(ABC):
     """
 
     # 子类必须覆盖
-    name: str = 'base'
-    description: str = 'Base Privilege Escalation Module'
-    platform: str = ''  # windows/linux
+    name: str = "base"
+    description: str = "Base Privilege Escalation Module"
+    platform: str = ""  # windows/linux
     supported_methods: List[EscalationMethod] = []
 
     def __init__(self, config: Optional[EscalationConfig] = None):
@@ -277,18 +283,15 @@ class BasePrivilegeEscalation(ABC):
                 method=EscalationMethod.MISCONFIGURATION,
                 from_level=self.current_level,
                 to_level=self.current_level,
-                error="No suitable escalation vectors found"
+                error="No suitable escalation vectors found",
             )
 
         # 按成功概率排序
-        vectors_data.sort(key=lambda x: x.get('success_probability', 0), reverse=True)
+        vectors_data.sort(key=lambda x: x.get("success_probability", 0), reverse=True)
 
         # 过滤低概率向量
         min_prob = self.config.min_success_probability
-        filtered_vectors = [
-            v for v in vectors_data
-            if v.get('success_probability', 0) >= min_prob
-        ]
+        filtered_vectors = [v for v in vectors_data if v.get("success_probability", 0) >= min_prob]
 
         if not filtered_vectors:
             filtered_vectors = vectors_data[:3]  # 至少尝试前3个
@@ -298,7 +301,7 @@ class BasePrivilegeEscalation(ABC):
         # 依次尝试
         for vector in filtered_vectors:
             try:
-                method = EscalationMethod(vector.get('method'))
+                method = EscalationMethod(vector.get("method"))
                 self.logger.info(f"Trying escalation method: {method.value}")
 
                 result = self.escalate(method)
@@ -316,7 +319,7 @@ class BasePrivilegeEscalation(ABC):
             method=EscalationMethod.MISCONFIGURATION,
             from_level=self.current_level,
             to_level=self.current_level,
-            error="All escalation methods failed"
+            error="All escalation methods failed",
         )
 
     def cleanup(self) -> bool:
@@ -331,16 +334,16 @@ class BasePrivilegeEscalation(ABC):
     def get_info(self) -> Dict[str, Any]:
         """获取模块信息"""
         return {
-            'name': self.name,
-            'description': self.description,
-            'platform': self.platform,
-            'status': self.status.value,
-            'current_level': self.current_level.value if self._current_level else 'unknown',
-            'supported_methods': [m.value for m in self.supported_methods],
-            'vectors_count': len(self._vectors),
+            "name": self.name,
+            "description": self.description,
+            "platform": self.platform,
+            "status": self.status.value,
+            "current_level": self.current_level.value if self._current_level else "unknown",
+            "supported_methods": [m.value for m in self.supported_methods],
+            "vectors_count": len(self._vectors),
         }
 
-    def __enter__(self) -> 'BasePrivilegeEscalation':
+    def __enter__(self) -> "BasePrivilegeEscalation":
         """上下文管理器入口"""
         return self
 
@@ -359,11 +362,11 @@ class BasePrivilegeEscalation(ABC):
 
 # 导出
 __all__ = [
-    'PrivilegeLevel',
-    'EscalationMethod',
-    'EscalationStatus',
-    'EscalationVector',
-    'EscalationResult',
-    'EscalationConfig',
-    'BasePrivilegeEscalation',
+    "PrivilegeLevel",
+    "EscalationMethod",
+    "EscalationStatus",
+    "EscalationVector",
+    "EscalationResult",
+    "EscalationConfig",
+    "BasePrivilegeEscalation",
 ]

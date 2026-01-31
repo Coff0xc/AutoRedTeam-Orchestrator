@@ -6,7 +6,7 @@ CVE 查询、同步、PoC 相关的错误类型定义。
 
 from __future__ import annotations
 
-from typing import Optional, Any
+from typing import Any, Optional
 
 from .base import AutoRedTeamError
 
@@ -21,12 +21,7 @@ class CVEError(AutoRedTeamError):
         cve_id: CVE编号
     """
 
-    def __init__(
-        self,
-        message: str,
-        cve_id: Optional[str] = None,
-        **kwargs: Any
-    ):
+    def __init__(self, message: str, cve_id: Optional[str] = None, **kwargs: Any):
         """
         初始化CVE错误
 
@@ -38,7 +33,7 @@ class CVEError(AutoRedTeamError):
         super().__init__(message, **kwargs)
         self.cve_id = cve_id
         if cve_id:
-            self.details['cve_id'] = cve_id
+            self.details["cve_id"] = cve_id
 
 
 class CVENotFound(CVEError):
@@ -50,6 +45,7 @@ class CVENotFound(CVEError):
     示例:
         >>> raise CVENotFound("CVE不存在", cve_id="CVE-9999-99999")
     """
+
     pass
 
 
@@ -63,12 +59,7 @@ class PoCError(CVEError):
         poc_name: PoC名称
     """
 
-    def __init__(
-        self,
-        message: str,
-        poc_name: Optional[str] = None,
-        **kwargs: Any
-    ):
+    def __init__(self, message: str, poc_name: Optional[str] = None, **kwargs: Any):
         """
         初始化PoC错误
 
@@ -80,7 +71,7 @@ class PoCError(CVEError):
         super().__init__(message, **kwargs)
         self.poc_name = poc_name
         if poc_name:
-            self.details['poc'] = poc_name
+            self.details["poc"] = poc_name
 
 
 class SyncError(CVEError):
@@ -93,12 +84,7 @@ class SyncError(CVEError):
         source: 同步源（NVD, Nuclei, Exploit-DB等）
     """
 
-    def __init__(
-        self,
-        message: str,
-        source: Optional[str] = None,
-        **kwargs: Any
-    ):
+    def __init__(self, message: str, source: Optional[str] = None, **kwargs: Any):
         """
         初始化同步错误
 
@@ -110,12 +96,12 @@ class SyncError(CVEError):
         super().__init__(message, **kwargs)
         self.source = source
         if source:
-            self.details['source'] = source
+            self.details["source"] = source
 
 
 __all__ = [
-    'CVEError',
-    'CVENotFound',
-    'PoCError',
-    'SyncError',
+    "CVEError",
+    "CVENotFound",
+    "PoCError",
+    "SyncError",
 ]

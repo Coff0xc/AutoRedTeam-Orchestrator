@@ -8,20 +8,20 @@ AutoPentestOrchestrator: 串联MCP工具，执行完整渗透流程
 警告: 仅限授权渗透测试使用！
 """
 
-from typing import Dict, Any, List, Optional, Callable
-from datetime import datetime
 import asyncio
 import logging
 import re
+from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
 
-from .state import PentestState, PentestPhase, PhaseStatus
-from .phases import BasePhaseExecutor, PhaseResult, PHASE_EXECUTORS
 from .decision import DecisionEngine
+from .phases import PHASE_EXECUTORS, BasePhaseExecutor, PhaseResult
+from .state import PentestPhase, PentestState, PhaseStatus
 
 logger = logging.getLogger(__name__)
 
 # session_id 格式校验正则 (32字符hex或带破折号的UUID)
-SESSION_ID_PATTERN = re.compile(r'^[a-f0-9]{32}$|^[a-f0-9-]{36}$')
+SESSION_ID_PATTERN = re.compile(r"^[a-f0-9]{32}$|^[a-f0-9-]{36}$")
 
 
 class OrchestratorConfig:
@@ -36,7 +36,7 @@ class OrchestratorConfig:
         timeout: int = 3600,
         quick_mode: bool = False,
         skip_exfiltrate: bool = True,
-        report_formats: List[str] = None
+        report_formats: List[str] = None,
     ):
         self.auto_mode = auto_mode
         self.skip_phases = skip_phases or []
@@ -45,18 +45,18 @@ class OrchestratorConfig:
         self.timeout = timeout
         self.quick_mode = quick_mode
         self.skip_exfiltrate = skip_exfiltrate
-        self.report_formats = report_formats or ['html', 'json']
+        self.report_formats = report_formats or ["html", "json"]
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'auto_mode': self.auto_mode,
-            'skip_phases': self.skip_phases,
-            'max_retries': self.max_retries,
-            'checkpoint_interval': self.checkpoint_interval,
-            'timeout': self.timeout,
-            'quick_mode': self.quick_mode,
-            'skip_exfiltrate': self.skip_exfiltrate,
-            'report_formats': self.report_formats
+            "auto_mode": self.auto_mode,
+            "skip_phases": self.skip_phases,
+            "max_retries": self.max_retries,
+            "checkpoint_interval": self.checkpoint_interval,
+            "timeout": self.timeout,
+            "quick_mode": self.quick_mode,
+            "skip_exfiltrate": self.skip_exfiltrate,
+            "report_formats": self.report_formats,
         }
 
 
@@ -92,7 +92,7 @@ class AutoPentestOrchestrator:
         self,
         target: str,
         config: Optional[OrchestratorConfig] = None,
-        state: Optional[PentestState] = None
+        state: Optional[PentestState] = None,
     ):
         self.target = target
         self.config = config or OrchestratorConfig()
@@ -108,7 +108,7 @@ class AutoPentestOrchestrator:
         self.logger = logging.getLogger(__name__)
 
     @classmethod
-    def resume(cls, session_id: str) -> 'AutoPentestOrchestrator':
+    def resume(cls, session_id: str) -> "AutoPentestOrchestrator":
         """从会话恢复编排器"""
         # 安全校验: 防止路径遍历攻击
         if not SESSION_ID_PATTERN.match(session_id):
@@ -154,7 +154,7 @@ class AutoPentestOrchestrator:
                     self.state.phase_status[phase.value] = PhaseStatus.SKIPPED
                     continue
 
-                self._report_progress(phase, 'starting')
+                self._report_progress(phase, "starting")
                 result = await self.execute_phase(phase)
                 results[phase.value] = result.to_dict()
 
@@ -165,7 +165,7 @@ class AutoPentestOrchestrator:
                     self._has_critical_failure = True
                     break
 
-                self._report_progress(phase, 'completed')
+                self._report_progress(phase, "completed")
 
             # 根据执行结果设置正确的最终状态
             if self._has_critical_failure:
@@ -176,7 +176,7 @@ class AutoPentestOrchestrator:
         except Exception as e:
             self.logger.exception(f"执行失败: {e}")  # 使用exception记录堆栈
             self.state.current_phase = PentestPhase.FAILED
-            results['error'] = str(e)
+            results["error"] = str(e)
 
         finally:
             await self._save_state()
@@ -184,27 +184,25 @@ class AutoPentestOrchestrator:
         duration = (datetime.now() - start_time).total_seconds()
 
         return {
-            'session_id': self.state.session_id,
-            'target': self.target,
-            'status': self.state.current_phase.value,
-            'duration': duration,
-            'phases': results,
-            'findings_summary': self._summarize_findings(),
-            'attack_paths': [
+            "session_id": self.state.session_id,
+            "target": self.target,
+            "status": self.state.current_phase.value,
+            "duration": duration,
+            "phases": results,
+            "findings_summary": self._summarize_findings(),
+            "attack_paths": [
                 {
-                    'name': p.name,
-                    'description': p.description,
-                    'priority': p.priority,
-                    'success_probability': p.success_probability
+                    "name": p.name,
+                    "description": p.description,
+                    "priority": p.priority,
+                    "success_probability": p.success_probability,
                 }
                 for p in self.decision_engine.suggest_attack_paths()[:3]
-            ]
+            ],
         }
 
     async def execute_phase(
-        self,
-        phase: PentestPhase,
-        config: Optional[Dict[str, Any]] = None
+        self, phase: PentestPhase, config: Optional[Dict[str, Any]] = None
     ) -> PhaseResult:
         """执行单个阶段
 
@@ -234,7 +232,7 @@ class AutoPentestOrchestrator:
                 phase=phase,
                 data={},
                 findings=[],
-                errors=[f"缺少前置阶段: {[p.value for p in missing]}"]
+                errors=[f"缺少前置阶段: {[p.value for p in missing]}"],
             )
 
         self.state.set_phase(phase, PhaseStatus.RUNNING)
@@ -248,23 +246,17 @@ class AutoPentestOrchestrator:
             if result.success:
                 self.state.complete_phase(phase, result.to_dict())
             else:
-                self.state.fail_phase(phase, '; '.join(result.errors))
+                self.state.fail_phase(phase, "; ".join(result.errors))
 
             analysis = self.decision_engine.analyze_result(phase, result.to_dict())
-            result.data['analysis'] = analysis
+            result.data["analysis"] = analysis
 
             return result
 
         except Exception as e:
             self.logger.exception(f"阶段 {phase.value} 执行异常: {e}")
             self.state.fail_phase(phase, str(e))
-            return PhaseResult(
-                success=False,
-                phase=phase,
-                data={},
-                findings=[],
-                errors=[str(e)]
-            )
+            return PhaseResult(success=False, phase=phase, data={}, findings=[], errors=[str(e)])
 
     def pause(self) -> bool:
         """暂停执行"""
@@ -283,8 +275,8 @@ class AutoPentestOrchestrator:
     async def _save_state(self) -> None:
         """保存状态到存储 - 使用脱敏数据"""
         async with self._state_lock:  # 并发保护
-            from core.session.storage import SessionStorage
             from core.session.context import ScanContext
+            from core.session.storage import SessionStorage
 
             if self._storage is None:
                 self._storage = SessionStorage()
@@ -294,12 +286,12 @@ class AutoPentestOrchestrator:
                 context_data = self.state.to_safe_dict()
                 context = ScanContext(
                     session_id=self.state.session_id,
-                    config=context_data.get('config', {}),
-                    fingerprints=context_data.get('recon_data', {}).get('fingerprints', {}),
-                    technologies=context_data.get('recon_data', {}).get('technologies', []),
+                    config=context_data.get("config", {}),
+                    fingerprints=context_data.get("recon_data", {}).get("fingerprints", {}),
+                    technologies=context_data.get("recon_data", {}).get("technologies", []),
                     ports=[],
                     subdomains=list(self.state.discovered_hosts),
-                    metadata=context_data
+                    metadata=context_data,
                 )
                 self._storage.save_context(context)
             except Exception as e:
@@ -321,19 +313,19 @@ class AutoPentestOrchestrator:
         findings = self.state.findings
 
         summary = {
-            'total': len(findings),
-            'critical': len([f for f in findings if f.get('severity') == 'critical']),
-            'high': len([f for f in findings if f.get('severity') == 'high']),
-            'medium': len([f for f in findings if f.get('severity') == 'medium']),
-            'low': len([f for f in findings if f.get('severity') == 'low']),
-            'info': len([f for f in findings if f.get('severity') == 'info']),
-            'verified': len([f for f in findings if f.get('verified')]),
-            'by_type': {}
+            "total": len(findings),
+            "critical": len([f for f in findings if f.get("severity") == "critical"]),
+            "high": len([f for f in findings if f.get("severity") == "high"]),
+            "medium": len([f for f in findings if f.get("severity") == "medium"]),
+            "low": len([f for f in findings if f.get("severity") == "low"]),
+            "info": len([f for f in findings if f.get("severity") == "info"]),
+            "verified": len([f for f in findings if f.get("verified")]),
+            "by_type": {},
         }
 
         for finding in findings:
-            vuln_type = finding.get('type', 'unknown')
-            summary['by_type'][vuln_type] = summary['by_type'].get(vuln_type, 0) + 1
+            vuln_type = finding.get("type", "unknown")
+            summary["by_type"][vuln_type] = summary["by_type"].get(vuln_type, 0) + 1
 
         return summary
 
@@ -354,26 +346,21 @@ class AutoPentestOrchestrator:
         paths = self.decision_engine.suggest_attack_paths()
         return [
             {
-                'name': p.name,
-                'description': p.description,
-                'priority': p.priority,
-                'success_probability': p.success_probability,
-                'tools': p.tools
+                "name": p.name,
+                "description": p.description,
+                "priority": p.priority,
+                "success_probability": p.success_probability,
+                "tools": p.tools,
             }
             for p in paths
         ]
 
 
 async def run_pentest(
-    target: str,
-    quick_mode: bool = False,
-    skip_exfiltrate: bool = True
+    target: str, quick_mode: bool = False, skip_exfiltrate: bool = True
 ) -> Dict[str, Any]:
     """便捷函数：执行自动化渗透测试"""
-    config = OrchestratorConfig(
-        quick_mode=quick_mode,
-        skip_exfiltrate=skip_exfiltrate
-    )
+    config = OrchestratorConfig(quick_mode=quick_mode, skip_exfiltrate=skip_exfiltrate)
     orchestrator = AutoPentestOrchestrator(target, config)
     return await orchestrator.run()
 
@@ -385,8 +372,8 @@ async def resume_pentest(session_id: str) -> Dict[str, Any]:
 
 
 __all__ = [
-    'OrchestratorConfig',
-    'AutoPentestOrchestrator',
-    'run_pentest',
-    'resume_pentest',
+    "OrchestratorConfig",
+    "AutoPentestOrchestrator",
+    "run_pentest",
+    "resume_pentest",
 ]

@@ -21,21 +21,22 @@
     return result.to_dict()
 """
 
-from dataclasses import dataclass, asdict, field
-from typing import Optional, Dict, Any, List, Union
-from enum import Enum
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 
 
 class ResultStatus(Enum):
     """工具执行状态枚举"""
-    SUCCESS = "success"      # 完全成功
-    FAILED = "failed"        # 执行失败
-    PARTIAL = "partial"      # 部分成功（部分目标失败等）
-    TIMEOUT = "timeout"      # 执行超时
-    ERROR = "error"          # 内部错误
-    SKIPPED = "skipped"      # 跳过执行（条件不满足等）
-    PENDING = "pending"      # 待执行（异步任务）
+
+    SUCCESS = "success"  # 完全成功
+    FAILED = "failed"  # 执行失败
+    PARTIAL = "partial"  # 部分成功（部分目标失败等）
+    TIMEOUT = "timeout"  # 执行超时
+    ERROR = "error"  # 内部错误
+    SKIPPED = "skipped"  # 跳过执行（条件不满足等）
+    PENDING = "pending"  # 待执行（异步任务）
 
 
 @dataclass
@@ -58,6 +59,7 @@ class ToolResult:
         >>> result.to_dict()
         {'success': True, 'status': 'success', 'data': {'port': 80, 'open': True}, ...}
     """
+
     success: bool
     status: ResultStatus = ResultStatus.SUCCESS
     data: Optional[Dict[str, Any]] = None
@@ -67,8 +69,8 @@ class ToolResult:
 
     def __post_init__(self):
         """初始化后处理：自动添加时间戳"""
-        if 'timestamp' not in self.metadata:
-            self.metadata['timestamp'] = datetime.now().isoformat()
+        if "timestamp" not in self.metadata:
+            self.metadata["timestamp"] = datetime.now().isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -79,12 +81,12 @@ class ToolResult:
         """
         # 手动构建字典，避免 asdict 与类方法名冲突
         result = {
-            'success': self.success,
-            'status': self.status.value,
-            'data': self.data,
-            'error': self.error,
-            'error_type': self.error_type,
-            'metadata': self.metadata,
+            "success": self.success,
+            "status": self.status.value,
+            "data": self.data,
+            "error": self.error,
+            "error_type": self.error_type,
+            "metadata": self.metadata,
         }
         # 移除空值字段以减少响应大小
         return {k: v for k, v in result.items() if v is not None}
@@ -100,14 +102,14 @@ class ToolResult:
         """
         result = self.to_dict()
         # 确保 metadata 中的值都可序列化
-        if 'metadata' in result:
-            for key, value in result['metadata'].items():
+        if "metadata" in result:
+            for key, value in result["metadata"].items():
                 if isinstance(value, datetime):
-                    result['metadata'][key] = value.isoformat()
+                    result["metadata"][key] = value.isoformat()
         return result
 
     @classmethod
-    def ok(cls, data: Optional[Dict[str, Any]] = None, **metadata) -> 'ToolResult':
+    def ok(cls, data: Optional[Dict[str, Any]] = None, **metadata) -> "ToolResult":
         """
         创建成功结果
 
@@ -121,12 +123,7 @@ class ToolResult:
         Example:
             >>> ToolResult.ok(data={'found': 5, 'items': [...]})
         """
-        return cls(
-            success=True,
-            status=ResultStatus.SUCCESS,
-            data=data,
-            metadata=metadata
-        )
+        return cls(success=True, status=ResultStatus.SUCCESS, data=data, metadata=metadata)
 
     @classmethod
     def fail(
@@ -134,8 +131,8 @@ class ToolResult:
         error: str,
         error_type: Optional[str] = None,
         data: Optional[Dict[str, Any]] = None,
-        **metadata
-    ) -> 'ToolResult':
+        **metadata,
+    ) -> "ToolResult":
         """
         创建失败结果
 
@@ -157,16 +154,13 @@ class ToolResult:
             data=data,
             error=error,
             error_type=error_type,
-            metadata=metadata
+            metadata=metadata,
         )
 
     @classmethod
     def partial(
-        cls,
-        data: Optional[Dict[str, Any]] = None,
-        error: Optional[str] = None,
-        **metadata
-    ) -> 'ToolResult':
+        cls, data: Optional[Dict[str, Any]] = None, error: Optional[str] = None, **metadata
+    ) -> "ToolResult":
         """
         创建部分成功结果
 
@@ -191,16 +185,13 @@ class ToolResult:
             status=ResultStatus.PARTIAL,
             data=data,
             error=error,
-            metadata=metadata
+            metadata=metadata,
         )
 
     @classmethod
     def timeout(
-        cls,
-        error: str = "Operation timed out",
-        data: Optional[Dict[str, Any]] = None,
-        **metadata
-    ) -> 'ToolResult':
+        cls, error: str = "Operation timed out", data: Optional[Dict[str, Any]] = None, **metadata
+    ) -> "ToolResult":
         """
         创建超时结果
 
@@ -218,16 +209,13 @@ class ToolResult:
             data=data,
             error=error,
             error_type="TimeoutError",
-            metadata=metadata
+            metadata=metadata,
         )
 
     @classmethod
     def internal_error(
-        cls,
-        error: str,
-        error_type: Optional[str] = None,
-        **metadata
-    ) -> 'ToolResult':
+        cls, error: str, error_type: Optional[str] = None, **metadata
+    ) -> "ToolResult":
         """
         创建内部错误结果
 
@@ -246,15 +234,11 @@ class ToolResult:
             status=ResultStatus.ERROR,
             error=error,
             error_type=error_type,
-            metadata=metadata
+            metadata=metadata,
         )
 
     @classmethod
-    def skipped(
-        cls,
-        reason: str,
-        **metadata
-    ) -> 'ToolResult':
+    def skipped(cls, reason: str, **metadata) -> "ToolResult":
         """
         创建跳过执行结果
 
@@ -271,15 +255,11 @@ class ToolResult:
             success=True,  # 跳过不视为失败
             status=ResultStatus.SKIPPED,
             error=reason,
-            metadata=metadata
+            metadata=metadata,
         )
 
     @classmethod
-    def pending(
-        cls,
-        task_id: str,
-        **metadata
-    ) -> 'ToolResult':
+    def pending(cls, task_id: str, **metadata) -> "ToolResult":
         """
         创建待执行结果
 
@@ -293,14 +273,11 @@ class ToolResult:
             待执行状态的 ToolResult 实例
         """
         return cls(
-            success=True,
-            status=ResultStatus.PENDING,
-            data={'task_id': task_id},
-            metadata=metadata
+            success=True, status=ResultStatus.PENDING, data={"task_id": task_id}, metadata=metadata
         )
 
     @classmethod
-    def from_exception(cls, exc: Exception, **metadata) -> 'ToolResult':
+    def from_exception(cls, exc: Exception, **metadata) -> "ToolResult":
         """
         从异常创建失败结果
 
@@ -324,10 +301,10 @@ class ToolResult:
             status=ResultStatus.ERROR,
             error=str(exc),
             error_type=type(exc).__name__,
-            metadata=metadata
+            metadata=metadata,
         )
 
-    def with_metadata(self, **kwargs) -> 'ToolResult':
+    def with_metadata(self, **kwargs) -> "ToolResult":
         """
         添加额外元数据（返回新实例）
 
@@ -344,7 +321,7 @@ class ToolResult:
             data=self.data,
             error=self.error,
             error_type=self.error_type,
-            metadata=new_metadata
+            metadata=new_metadata,
         )
 
     def __bool__(self) -> bool:
@@ -372,44 +349,40 @@ def ensure_tool_result(result: ToolResultType) -> ToolResult:
         return result
 
     if isinstance(result, dict):
-        success = result.get('success', True)
-        status_raw = result.get('status')
-        status_str = status_raw if status_raw is not None else ('success' if success else 'failed')
+        success = result.get("success", True)
+        status_raw = result.get("status")
+        status_str = status_raw if status_raw is not None else ("success" if success else "failed")
         try:
             status = ResultStatus(status_str)
             keep_status = False
         except ValueError:
             status = ResultStatus.SUCCESS if success else ResultStatus.FAILED
             keep_status = status_raw is not None
-        metadata = result.get('metadata')
+        metadata = result.get("metadata")
         if not isinstance(metadata, dict):
             metadata = {}
 
-        exclude_keys = {'success', 'error', 'error_type', 'metadata', 'data'}
+        exclude_keys = {"success", "error", "error_type", "metadata", "data"}
         if not keep_status:
-            exclude_keys.add('status')
-        extras = {
-            key: value
-            for key, value in result.items()
-            if key not in exclude_keys
-        }
-        data = result.get('data')
-        if data is None and 'data' not in result:
+            exclude_keys.add("status")
+        extras = {key: value for key, value in result.items() if key not in exclude_keys}
+        data = result.get("data")
+        if data is None and "data" not in result:
             data = extras or None
         elif extras:
             if isinstance(data, dict):
                 data = {**extras, **data}
             else:
-                data = {'value': data, **extras}
+                data = {"value": data, **extras}
 
         return ToolResult(
             success=success,
             status=status,
             data=data,
-            error=result.get('error'),
-            error_type=result.get('error_type'),
-            metadata=metadata
+            error=result.get("error"),
+            error_type=result.get("error_type"),
+            metadata=metadata,
         )
 
     # 其他类型包装为 data
-    return ToolResult.ok(data={'value': result})
+    return ToolResult.ok(data={"value": result})

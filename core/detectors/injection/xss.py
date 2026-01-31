@@ -4,29 +4,29 @@ XSS (跨站脚本) 检测器
 检测反射型、存储型、DOM 型 XSS 漏洞
 """
 
-from typing import List, Optional, Dict, Any, Set
-import re
 import html
 import logging
-from urllib.parse import urljoin, urlparse, parse_qs, quote
-
-from ..base import BaseDetector
-from ..result import DetectionResult, Severity, DetectorType, RequestInfo, ResponseInfo
-from ..factory import register_detector
-from ..payloads import get_payloads, PayloadCategory
+import re
+from typing import Any, Dict, List, Optional, Set
+from urllib.parse import parse_qs, quote, urljoin, urlparse
 
 # 导入项目统一异常类型
+from core.exceptions import ConnectionError as DetectorConnectionError
 from core.exceptions import (
     DetectorError,
     HTTPError,
-    TimeoutError as DetectorTimeoutError,
-    ConnectionError as DetectorConnectionError,
 )
+from core.exceptions import TimeoutError as DetectorTimeoutError
+
+from ..base import BaseDetector
+from ..factory import register_detector
+from ..payloads import PayloadCategory, get_payloads
+from ..result import DetectionResult, DetectorType, RequestInfo, ResponseInfo, Severity
 
 logger = logging.getLogger(__name__)
 
 
-@register_detector('xss')
+@register_detector("xss")
 class XSSDetector(BaseDetector):
     """XSS (跨站脚本) 检测器
 
@@ -40,20 +40,19 @@ class XSSDetector(BaseDetector):
         results = detector.detect("https://example.com/search", params={"q": "test"})
     """
 
-    name = 'xss'
-    description = 'XSS 跨站脚本漏洞检测器'
-    vuln_type = 'xss'
+    name = "xss"
+    description = "XSS 跨站脚本漏洞检测器"
+    vuln_type = "xss"
     severity = Severity.HIGH
     detector_type = DetectorType.INJECTION
-    version = '2.0.0'
+    version = "2.0.0"
 
     # XSS 执行成功的标志模式
     REFLECTION_PATTERNS = [
         # 脚本标签
         r'<script[^>]*>.*?alert\s*\(\s*[\'"]?1[\'"]?\s*\).*?</script>',
         r'<script[^>]*>.*?alert\s*\(\s*[\'"]?XSS[\'"]?\s*\).*?</script>',
-        r'<script[^>]*>.*?alert\s*\(\s*document\.domain\s*\).*?</script>',
-
+        r"<script[^>]*>.*?alert\s*\(\s*document\.domain\s*\).*?</script>",
         # 事件处理器
         r'<img[^>]*\sonerror\s*=\s*[\'"]?alert\s*\([^)]*\)[\'"]?[^>]*>',
         r'<svg[^>]*\sonload\s*=\s*[\'"]?alert\s*\([^)]*\)[\'"]?[^>]*>',
@@ -62,10 +61,8 @@ class XSSDetector(BaseDetector):
         r'<iframe[^>]*\sonload\s*=\s*[\'"]?alert\s*\([^)]*\)[\'"]?[^>]*>',
         r'<details[^>]*\sontoggle\s*=\s*[\'"]?alert\s*\([^)]*\)[\'"]?[^>]*>',
         r'<marquee[^>]*\sonstart\s*=\s*[\'"]?alert\s*\([^)]*\)[\'"]?[^>]*>',
-
         # JavaScript 协议
-        r'javascript\s*:\s*alert\s*\([^)]*\)',
-
+        r"javascript\s*:\s*alert\s*\([^)]*\)",
         # 完整 payload 反射
         r"<script>alert\(1\)</script>",
         r"<img src=x onerror=alert\(1\)>",
@@ -74,19 +71,35 @@ class XSSDetector(BaseDetector):
 
     # 危险的 DOM 属性和方法
     DOM_SINKS = [
-        'innerHTML', 'outerHTML', 'insertAdjacentHTML',
-        'document.write', 'document.writeln',
-        'eval', 'setTimeout', 'setInterval',
-        'Function', 'execScript',
-        'location.href', 'location.assign', 'location.replace',
-        'src', 'href', 'action', 'formaction',
+        "innerHTML",
+        "outerHTML",
+        "insertAdjacentHTML",
+        "document.write",
+        "document.writeln",
+        "eval",
+        "setTimeout",
+        "setInterval",
+        "Function",
+        "execScript",
+        "location.href",
+        "location.assign",
+        "location.replace",
+        "src",
+        "href",
+        "action",
+        "formaction",
     ]
 
     # 危险的 DOM 源
     DOM_SOURCES = [
-        'location.search', 'location.hash', 'location.href',
-        'document.URL', 'document.documentURI', 'document.referrer',
-        'window.name', 'postMessage',
+        "location.search",
+        "location.hash",
+        "location.href",
+        "document.URL",
+        "document.documentURI",
+        "document.referrer",
+        "window.name",
+        "postMessage",
     ]
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -102,21 +115,20 @@ class XSSDetector(BaseDetector):
         super().__init__(config)
 
         # 加载 payload
-        max_payloads = self.config.get('max_payloads', 30)
+        max_payloads = self.config.get("max_payloads", 30)
         self.payloads = self._enhance_payloads(
             get_payloads(PayloadCategory.XSS, limit=max_payloads)
         )
 
         # 编译反射模式
         self._reflection_patterns = [
-            re.compile(p, re.IGNORECASE | re.DOTALL)
-            for p in self.REFLECTION_PATTERNS
+            re.compile(p, re.IGNORECASE | re.DOTALL) for p in self.REFLECTION_PATTERNS
         ]
 
         # 检测选项
-        self.check_reflected = self.config.get('check_reflected', True)
-        self.check_dom = self.config.get('check_dom', True)
-        self.encoding_bypass = self.config.get('encoding_bypass', True)
+        self.check_reflected = self.config.get("check_reflected", True)
+        self.check_dom = self.config.get("check_dom", True)
+        self.encoding_bypass = self.config.get("encoding_bypass", True)
 
     def detect(self, url: str, **kwargs) -> List[DetectionResult]:
         """检测 XSS 漏洞
@@ -136,10 +148,10 @@ class XSSDetector(BaseDetector):
         results: List[DetectionResult] = []
 
         # 获取参数
-        params = kwargs.get('params', {})
-        data = kwargs.get('data', {})
-        method = kwargs.get('method', 'GET').upper()
-        headers = kwargs.get('headers', {})
+        params = kwargs.get("params", {})
+        data = kwargs.get("data", {})
+        method = kwargs.get("method", "GET").upper()
+        headers = kwargs.get("headers", {})
 
         # 如果没有提供参数，尝试从 URL 解析
         if not params:
@@ -150,16 +162,12 @@ class XSSDetector(BaseDetector):
         if self.check_reflected:
             # 测试 GET 参数
             if params:
-                reflected_results = self._test_reflected_xss(
-                    url, params, 'GET', headers
-                )
+                reflected_results = self._test_reflected_xss(url, params, "GET", headers)
                 results.extend(reflected_results)
 
             # 测试 POST 数据
-            if data and method == 'POST':
-                reflected_results = self._test_reflected_xss(
-                    url, data, 'POST', headers
-                )
+            if data and method == "POST":
+                reflected_results = self._test_reflected_xss(url, data, "POST", headers)
                 results.extend(reflected_results)
 
         # DOM 型 XSS 检测
@@ -171,11 +179,7 @@ class XSSDetector(BaseDetector):
         return results
 
     def _test_reflected_xss(
-        self,
-        url: str,
-        params: Dict[str, str],
-        method: str,
-        headers: Dict[str, str]
+        self, url: str, params: Dict[str, str], method: str, headers: Dict[str, str]
     ) -> List[DetectionResult]:
         """测试反射型 XSS
 
@@ -212,46 +216,50 @@ class XSSDetector(BaseDetector):
                     test_params[param_name] = test_payload
 
                     try:
-                        if method == 'GET':
-                            response = self.http_client.get(url, params=test_params, headers=headers)
+                        if method == "GET":
+                            response = self.http_client.get(
+                                url, params=test_params, headers=headers
+                            )
                         else:
                             response = self.http_client.post(url, data=test_params, headers=headers)
 
                         # 检查响应中是否有 XSS 反射
-                        xss_type, evidence = self._check_xss_reflection(
-                            response.text, test_payload
-                        )
+                        xss_type, evidence = self._check_xss_reflection(response.text, test_payload)
 
                         if xss_type:
                             request_info = self._build_request_info(
                                 method=method,
                                 url=url,
                                 headers=headers,
-                                params=test_params if method == 'GET' else None,
-                                data=test_params if method != 'GET' else None
+                                params=test_params if method == "GET" else None,
+                                data=test_params if method != "GET" else None,
                             )
                             response_info = self._build_response_info(response)
-                            results.append(self._create_result(
-                                url=url,
-                                vulnerable=True,
-                                param=param_name,
-                                payload=test_payload,
-                                evidence=evidence,
-                                confidence=0.9 if xss_type == 'full' else 0.7,
-                                verified=True if xss_type == 'full' else False,
-                                request=request_info,
-                                response=response_info,
-                                remediation="对用户输入进行 HTML 实体编码，使用 CSP 策略",
-                                references=[
-                                    "https://owasp.org/www-community/attacks/xss/",
-                                    "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html"
-                                ],
-                                extra={
-                                    'xss_type': 'reflected',
-                                    'reflection_type': xss_type,
-                                    'context': self._detect_context(response.text, test_payload)
-                                }
-                            ))
+                            results.append(
+                                self._create_result(
+                                    url=url,
+                                    vulnerable=True,
+                                    param=param_name,
+                                    payload=test_payload,
+                                    evidence=evidence,
+                                    confidence=0.9 if xss_type == "full" else 0.7,
+                                    verified=True if xss_type == "full" else False,
+                                    request=request_info,
+                                    response=response_info,
+                                    remediation="对用户输入进行 HTML 实体编码，使用 CSP 策略",
+                                    references=[
+                                        "https://owasp.org/www-community/attacks/xss/",
+                                        "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+                                    ],
+                                    extra={
+                                        "xss_type": "reflected",
+                                        "reflection_type": xss_type,
+                                        "context": self._detect_context(
+                                            response.text, test_payload
+                                        ),
+                                    },
+                                )
+                            )
                             # 发现漏洞后跳过该参数的其他 payload
                             break
 
@@ -278,11 +286,7 @@ class XSSDetector(BaseDetector):
 
         return results
 
-    def _test_dom_xss(
-        self,
-        url: str,
-        headers: Dict[str, str]
-    ) -> List[DetectionResult]:
+    def _test_dom_xss(self, url: str, headers: Dict[str, str]) -> List[DetectionResult]:
         """测试 DOM 型 XSS
 
         Args:
@@ -301,32 +305,28 @@ class XSSDetector(BaseDetector):
             dom_vulns = self._find_dom_xss_patterns(response.text)
 
             for vuln in dom_vulns:
-                request_info = self._build_request_info(
-                    method="GET",
-                    url=url,
-                    headers=headers
-                )
+                request_info = self._build_request_info(method="GET", url=url, headers=headers)
                 response_info = self._build_response_info(response)
-                results.append(self._create_result(
-                    url=url,
-                    vulnerable=True,
-                    param=None,
-                    payload=None,
-                    evidence=vuln['evidence'],
-                    confidence=0.6,  # DOM XSS 需要手动验证
-                    verified=False,
-                    request=request_info,
-                    response=response_info,
-                    remediation="避免使用危险的 DOM 操作，使用安全的 API 如 textContent",
-                    references=[
-                        "https://owasp.org/www-community/attacks/DOM_Based_XSS"
-                    ],
-                    extra={
-                        'xss_type': 'dom',
-                        'sink': vuln.get('sink'),
-                        'source': vuln.get('source')
-                    }
-                ))
+                results.append(
+                    self._create_result(
+                        url=url,
+                        vulnerable=True,
+                        param=None,
+                        payload=None,
+                        evidence=vuln["evidence"],
+                        confidence=0.6,  # DOM XSS 需要手动验证
+                        verified=False,
+                        request=request_info,
+                        response=response_info,
+                        remediation="避免使用危险的 DOM 操作，使用安全的 API 如 textContent",
+                        references=["https://owasp.org/www-community/attacks/DOM_Based_XSS"],
+                        extra={
+                            "xss_type": "dom",
+                            "sink": vuln.get("sink"),
+                            "source": vuln.get("source"),
+                        },
+                    )
+                )
 
         except DetectorTimeoutError as e:
             # 请求超时
@@ -350,11 +350,7 @@ class XSSDetector(BaseDetector):
 
         return results
 
-    def _check_xss_reflection(
-        self,
-        response_text: str,
-        payload: str
-    ) -> tuple:
+    def _check_xss_reflection(self, response_text: str, payload: str) -> tuple:
         """检查 XSS 是否被反射
 
         Args:
@@ -371,22 +367,22 @@ class XSSDetector(BaseDetector):
             start = max(0, idx - 50)
             end = min(len(response_text), idx + len(payload) + 50)
             context = response_text[start:end]
-            return ('full', context)
+            return ("full", context)
 
         # 检查是否匹配危险模式
         for pattern in self._reflection_patterns:
             match = pattern.search(response_text)
             if match:
-                return ('pattern', match.group(0)[:200])
+                return ("pattern", match.group(0)[:200])
 
         # 检查部分反射（payload 特征字符）
-        dangerous_chars = ['<script', '<img', '<svg', 'onerror=', 'onload=', 'javascript:']
+        dangerous_chars = ["<script", "<img", "<svg", "onerror=", "onload=", "javascript:"]
         for char in dangerous_chars:
             if char in payload.lower() and char in response_text.lower():
                 idx = response_text.lower().find(char)
                 start = max(0, idx - 30)
                 end = min(len(response_text), idx + 80)
-                return ('partial', response_text[start:end])
+                return ("partial", response_text[start:end])
 
         return (None, None)
 
@@ -408,13 +404,15 @@ class XSSDetector(BaseDetector):
                 variants.append(html_encoded)
 
             # URL 编码
-            url_encoded = quote(payload, safe='')
+            url_encoded = quote(payload, safe="")
             if url_encoded != payload:
                 variants.append(url_encoded)
 
             # 大小写混淆
-            if '<script>' in payload.lower():
-                variants.append(payload.replace('<script>', '<ScRiPt>').replace('</script>', '</sCrIpT>'))
+            if "<script>" in payload.lower():
+                variants.append(
+                    payload.replace("<script>", "<ScRiPt>").replace("</script>", "</sCrIpT>")
+                )
 
         return variants[:5]  # 限制变体数量
 
@@ -433,32 +431,31 @@ class XSSDetector(BaseDetector):
         for source in self.DOM_SOURCES:
             for sink in self.DOM_SINKS:
                 # 简单的模式匹配
-                pattern = rf'{sink}\s*[=\(]\s*.*?{source.replace(".", r"\.")}'
+                escaped_source = source.replace(".", r"\.")
+                pattern = rf"{sink}\s*[=\(]\s*.*?{escaped_source}"
                 matches = re.findall(pattern, html_content, re.IGNORECASE | re.DOTALL)
                 for match in matches:
-                    vulns.append({
-                        'source': source,
-                        'sink': sink,
-                        'evidence': match[:200]
-                    })
+                    vulns.append({"source": source, "sink": sink, "evidence": match[:200]})
 
         # 查找危险的 innerHTML 赋值
         innerHTML_patterns = [
-            r'\.innerHTML\s*=\s*[^;]+location\.',
-            r'\.innerHTML\s*=\s*[^;]+document\.URL',
-            r'\.innerHTML\s*=\s*[^;]+document\.referrer',
-            r'document\.write\s*\([^)]*location\.',
-            r'eval\s*\([^)]*location\.',
+            r"\.innerHTML\s*=\s*[^;]+location\.",
+            r"\.innerHTML\s*=\s*[^;]+document\.URL",
+            r"\.innerHTML\s*=\s*[^;]+document\.referrer",
+            r"document\.write\s*\([^)]*location\.",
+            r"eval\s*\([^)]*location\.",
         ]
 
         for pattern in innerHTML_patterns:
             matches = re.findall(pattern, html_content, re.IGNORECASE)
             for match in matches:
-                vulns.append({
-                    'source': 'location/document',
-                    'sink': 'innerHTML/write/eval',
-                    'evidence': match[:200]
-                })
+                vulns.append(
+                    {
+                        "source": "location/document",
+                        "sink": "innerHTML/write/eval",
+                        "evidence": match[:200],
+                    }
+                )
 
         return vulns
 
@@ -473,25 +470,25 @@ class XSSDetector(BaseDetector):
             上下文类型
         """
         if payload not in response_text:
-            return 'none'
+            return "none"
 
         idx = response_text.find(payload)
-        before = response_text[max(0, idx - 50):idx]
-        after = response_text[idx + len(payload):idx + len(payload) + 50]
+        before = response_text[max(0, idx - 50) : idx]
+        after = response_text[idx + len(payload) : idx + len(payload) + 50]
 
         # 检测上下文
-        if re.search(r'<script[^>]*>$', before, re.IGNORECASE):
-            return 'script'
+        if re.search(r"<script[^>]*>$", before, re.IGNORECASE):
+            return "script"
         elif re.search(r'["\']$', before):
-            return 'attribute_value'
-        elif re.search(r'<[a-z]+[^>]*$', before, re.IGNORECASE):
-            return 'tag_attribute'
-        elif re.search(r'<!--$', before):
-            return 'comment'
-        elif re.search(r'<style[^>]*>$', before, re.IGNORECASE):
-            return 'style'
+            return "attribute_value"
+        elif re.search(r"<[a-z]+[^>]*$", before, re.IGNORECASE):
+            return "tag_attribute"
+        elif re.search(r"<!--$", before):
+            return "comment"
+        elif re.search(r"<style[^>]*>$", before, re.IGNORECASE):
+            return "style"
         else:
-            return 'html_body'
+            return "html_body"
 
     def _should_skip_param(self, param_name: str) -> bool:
         """判断是否应跳过某个参数
@@ -503,8 +500,18 @@ class XSSDetector(BaseDetector):
             是否跳过
         """
         skip_patterns = [
-            'token', 'csrf', 'nonce', 'hash', 'sig', 'signature',
-            'timestamp', 'time', '_t', 'callback', 'jsonp', '_'
+            "token",
+            "csrf",
+            "nonce",
+            "hash",
+            "sig",
+            "signature",
+            "timestamp",
+            "time",
+            "_t",
+            "callback",
+            "jsonp",
+            "_",
         ]
         param_lower = param_name.lower()
         return any(p in param_lower for p in skip_patterns)

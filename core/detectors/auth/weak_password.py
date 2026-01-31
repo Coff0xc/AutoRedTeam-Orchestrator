@@ -4,19 +4,19 @@
 检测常见的弱密码和默认凭证
 """
 
-from typing import List, Optional, Dict, Any, Tuple
-import re
 import logging
+import re
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from ..base import BaseDetector
-from ..result import DetectionResult, Severity, DetectorType
 from ..factory import register_detector
+from ..result import DetectionResult, DetectorType, Severity
 
 logger = logging.getLogger(__name__)
 
 
-@register_detector('weak_password')
+@register_detector("weak_password")
 class WeakPasswordDetector(BaseDetector):
     """弱密码检测器
 
@@ -27,93 +27,132 @@ class WeakPasswordDetector(BaseDetector):
         results = detector.detect("https://example.com/login", data={"username": "admin", "password": "admin"})
     """
 
-    name = 'weak_password'
-    description = '弱密码检测器'
-    vuln_type = 'weak_password'
+    name = "weak_password"
+    description = "弱密码检测器"
+    vuln_type = "weak_password"
     severity = Severity.HIGH
     detector_type = DetectorType.AUTH
-    version = '1.0.0'
+    version = "1.0.0"
 
     # 常见弱密码
     WEAK_PASSWORDS = [
-        'password', 'Password', 'PASSWORD',
-        '123456', '12345678', '123456789', '1234567890',
-        'admin', 'Admin', 'ADMIN', 'admin123', 'admin@123',
-        'root', 'Root', 'root123', 'toor',
-        'test', 'Test', 'test123', 'testing',
-        'guest', 'Guest', 'guest123',
-        'user', 'User', 'user123',
-        'demo', 'Demo', 'demo123',
-        'qwerty', 'QWERTY', 'qwerty123',
-        'abc123', 'abcd1234', '1q2w3e4r',
-        'password1', 'password123', 'p@ssw0rd', 'P@ssw0rd',
-        'letmein', 'welcome', 'monkey', 'dragon',
-        'master', 'login', 'passw0rd',
-        '111111', '000000', '666666', '888888',
-        'changeme', 'secret', 'pass', 'pass123',
+        "password",
+        "Password",
+        "PASSWORD",
+        "123456",
+        "12345678",
+        "123456789",
+        "1234567890",
+        "admin",
+        "Admin",
+        "ADMIN",
+        "admin123",
+        "admin@123",
+        "root",
+        "Root",
+        "root123",
+        "toor",
+        "test",
+        "Test",
+        "test123",
+        "testing",
+        "guest",
+        "Guest",
+        "guest123",
+        "user",
+        "User",
+        "user123",
+        "demo",
+        "Demo",
+        "demo123",
+        "qwerty",
+        "QWERTY",
+        "qwerty123",
+        "abc123",
+        "abcd1234",
+        "1q2w3e4r",
+        "password1",
+        "password123",
+        "p@ssw0rd",
+        "P@ssw0rd",
+        "letmein",
+        "welcome",
+        "monkey",
+        "dragon",
+        "master",
+        "login",
+        "passw0rd",
+        "111111",
+        "000000",
+        "666666",
+        "888888",
+        "changeme",
+        "secret",
+        "pass",
+        "pass123",
     ]
 
     # 默认凭证 (用户名, 密码)
     DEFAULT_CREDENTIALS = [
-        ('admin', 'admin'),
-        ('admin', 'password'),
-        ('admin', '123456'),
-        ('admin', 'admin123'),
-        ('admin', ''),
-        ('administrator', 'administrator'),
-        ('administrator', 'password'),
-        ('root', 'root'),
-        ('root', 'password'),
-        ('root', 'toor'),
-        ('root', '123456'),
-        ('user', 'user'),
-        ('user', 'password'),
-        ('test', 'test'),
-        ('test', 'password'),
-        ('guest', 'guest'),
-        ('demo', 'demo'),
-        ('operator', 'operator'),
-        ('manager', 'manager'),
-        ('support', 'support'),
-        ('service', 'service'),
-        ('info', 'info'),
-        ('web', 'web'),
-        ('mysql', 'mysql'),
-        ('postgres', 'postgres'),
-        ('oracle', 'oracle'),
-        ('ftp', 'ftp'),
-        ('anonymous', ''),
-        ('anonymous', 'anonymous'),
+        ("admin", "admin"),
+        ("admin", "password"),
+        ("admin", "123456"),
+        ("admin", "admin123"),
+        ("admin", ""),
+        ("administrator", "administrator"),
+        ("administrator", "password"),
+        ("root", "root"),
+        ("root", "password"),
+        ("root", "toor"),
+        ("root", "123456"),
+        ("user", "user"),
+        ("user", "password"),
+        ("test", "test"),
+        ("test", "password"),
+        ("guest", "guest"),
+        ("demo", "demo"),
+        ("operator", "operator"),
+        ("manager", "manager"),
+        ("support", "support"),
+        ("service", "service"),
+        ("info", "info"),
+        ("web", "web"),
+        ("mysql", "mysql"),
+        ("postgres", "postgres"),
+        ("oracle", "oracle"),
+        ("ftp", "ftp"),
+        ("anonymous", ""),
+        ("anonymous", "anonymous"),
     ]
 
     # 登录成功的标志
     SUCCESS_PATTERNS = [
-        r'welcome',
-        r'dashboard',
-        r'logout',
-        r'sign\s*out',
-        r'log\s*out',
-        r'my\s*account',
-        r'profile',
-        r'settings',
-        r'authenticated',
-        r'successfully\s*logged',
-        r'login\s*successful',
-        r'authentication\s*successful',
+        r"welcome",
+        r"dashboard",
+        r"logout",
+        r"sign\s*out",
+        r"log\s*out",
+        r"my\s*account",
+        r"profile",
+        r"settings",
+        r"authenticated",
+        r"successfully\s*logged",
+        r"login\s*successful",
+        r"authentication\s*successful",
     ]
 
     # 登录失败的标志
     FAILURE_PATTERNS = [
-        r'invalid\s*(username|password|credentials)',
-        r'incorrect\s*(username|password|credentials)',
-        r'wrong\s*(username|password|credentials)',
-        r'authentication\s*failed',
-        r'login\s*failed',
-        r'access\s*denied',
-        r'bad\s*credentials',
-        r'user\s*not\s*found',
-        r'account\s*locked',
-        r'too\s*many\s*attempts',
+        r"invalid\s*(username|password|credentials)",
+        r"incorrect\s*(username|password|credentials)",
+        r"wrong\s*(username|password|credentials)",
+        r"authentication\s*failed",
+        r"login\s*failed",
+        r"access\s*denied",
+        r"bad\s*credentials",
+        r"user\s*not\s*found",
+        r"account\s*locked",
+        r"too\s*many\s*attempts",
     ]
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -129,21 +168,17 @@ class WeakPasswordDetector(BaseDetector):
         super().__init__(config)
 
         # 配置
-        self.max_attempts = self.config.get('max_attempts', 20)
-        self.username_field = self.config.get('username_field', None)
-        self.password_field = self.config.get('password_field', None)
+        self.max_attempts = self.config.get("max_attempts", 20)
+        self.username_field = self.config.get("username_field", None)
+        self.password_field = self.config.get("password_field", None)
 
         # 合并自定义凭证
-        custom_creds = self.config.get('custom_credentials', [])
+        custom_creds = self.config.get("custom_credentials", [])
         self.credentials = list(self.DEFAULT_CREDENTIALS) + custom_creds
 
         # 编译模式
-        self._success_patterns = [
-            re.compile(p, re.IGNORECASE) for p in self.SUCCESS_PATTERNS
-        ]
-        self._failure_patterns = [
-            re.compile(p, re.IGNORECASE) for p in self.FAILURE_PATTERNS
-        ]
+        self._success_patterns = [re.compile(p, re.IGNORECASE) for p in self.SUCCESS_PATTERNS]
+        self._failure_patterns = [re.compile(p, re.IGNORECASE) for p in self.FAILURE_PATTERNS]
 
     def detect(self, url: str, **kwargs) -> List[DetectionResult]:
         """检测弱密码
@@ -161,9 +196,9 @@ class WeakPasswordDetector(BaseDetector):
         self._log_detection_start(url)
         results: List[DetectionResult] = []
 
-        data = kwargs.get('data', {})
-        headers = kwargs.get('headers', {})
-        method = kwargs.get('method', 'POST').upper()
+        data = kwargs.get("data", {})
+        headers = kwargs.get("headers", {})
+        method = kwargs.get("method", "POST").upper()
 
         # 识别用户名和密码字段
         username_field, password_field = self._identify_login_fields(data)
@@ -187,14 +222,21 @@ class WeakPasswordDetector(BaseDetector):
             attempts += 1
 
             result = self._test_credential(
-                url, data, username_field, password_field,
-                username, password, method, headers, baseline
+                url,
+                data,
+                username_field,
+                password_field,
+                username,
+                password,
+                method,
+                headers,
+                baseline,
             )
 
             if result:
                 results.append(result)
                 # 发现有效凭证后可以选择继续或停止
-                if not self.config.get('find_all', False):
+                if not self.config.get("find_all", False):
                     break
 
         self._log_detection_end(url, results)
@@ -210,7 +252,7 @@ class WeakPasswordDetector(BaseDetector):
         password: str,
         method: str,
         headers: Dict[str, str],
-        baseline: Optional[Any]
+        baseline: Optional[Any],
     ) -> Optional[DetectionResult]:
         """测试单个凭证
 
@@ -233,7 +275,7 @@ class WeakPasswordDetector(BaseDetector):
         test_data[password_field] = password
 
         try:
-            if method == 'POST':
+            if method == "POST":
                 response = self.http_client.post(url, data=test_data, headers=headers)
             else:
                 response = self.http_client.get(url, params=test_data, headers=headers)
@@ -255,11 +297,11 @@ class WeakPasswordDetector(BaseDetector):
                         "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/04-Authentication_Testing/07-Testing_for_Weak_Password_Policy"
                     ],
                     extra={
-                        'username': username,
-                        'password': password,
-                        'username_field': username_field,
-                        'password_field': password_field
-                    }
+                        "username": username,
+                        "password": password,
+                        "username_field": username_field,
+                        "password_field": password_field,
+                    },
                 )
 
         except Exception as e:
@@ -267,11 +309,7 @@ class WeakPasswordDetector(BaseDetector):
 
         return None
 
-    def _check_login_success(
-        self,
-        response: Any,
-        baseline: Optional[Any]
-    ) -> Tuple[bool, str]:
+    def _check_login_success(self, response: Any, baseline: Optional[Any]) -> Tuple[bool, str]:
         """检查登录是否成功
 
         Args:
@@ -283,9 +321,9 @@ class WeakPasswordDetector(BaseDetector):
         """
         # 检查重定向
         if response.status_code in (301, 302, 303, 307, 308):
-            location = response.headers.get('Location', '')
+            location = response.headers.get("Location", "")
             # 重定向到非登录页面通常表示成功
-            if location and 'login' not in location.lower():
+            if location and "login" not in location.lower():
                 return (True, f"重定向到: {location}")
 
         # 检查成功标志
@@ -294,9 +332,9 @@ class WeakPasswordDetector(BaseDetector):
                 return (True, f"检测到登录成功标志: {pattern.pattern}")
 
         # 检查 Set-Cookie（会话创建）
-        if 'Set-Cookie' in response.headers:
-            cookies = response.headers.get('Set-Cookie', '')
-            if any(marker in cookies.lower() for marker in ['session', 'token', 'auth', 'user']):
+        if "Set-Cookie" in response.headers:
+            cookies = response.headers.get("Set-Cookie", "")
+            if any(marker in cookies.lower() for marker in ["session", "token", "auth", "user"]):
                 # 还需要确认没有失败标志
                 for pattern in self._failure_patterns:
                     if pattern.search(response.text):
@@ -321,10 +359,7 @@ class WeakPasswordDetector(BaseDetector):
 
         return (False, None)
 
-    def _identify_login_fields(
-        self,
-        data: Dict[str, str]
-    ) -> Tuple[Optional[str], Optional[str]]:
+    def _identify_login_fields(self, data: Dict[str, str]) -> Tuple[Optional[str], Optional[str]]:
         """识别用户名和密码字段
 
         Args:
@@ -340,8 +375,8 @@ class WeakPasswordDetector(BaseDetector):
         username_field = None
         password_field = None
 
-        username_patterns = ['user', 'username', 'email', 'login', 'account', 'name']
-        password_patterns = ['pass', 'password', 'pwd', 'secret', 'credential']
+        username_patterns = ["user", "username", "email", "login", "account", "name"]
+        password_patterns = ["pass", "password", "pwd", "secret", "credential"]
 
         for field_name in data.keys():
             field_lower = field_name.lower()
@@ -363,7 +398,7 @@ class WeakPasswordDetector(BaseDetector):
         username_field: str,
         password_field: str,
         method: str,
-        headers: Dict[str, str]
+        headers: Dict[str, str],
     ) -> Optional[Any]:
         """获取基线响应（使用无效凭证）
 
@@ -380,10 +415,10 @@ class WeakPasswordDetector(BaseDetector):
         """
         try:
             baseline_data = data.copy()
-            baseline_data[username_field] = 'nonexistent_user_xyz123'
-            baseline_data[password_field] = 'invalid_password_xyz123'
+            baseline_data[username_field] = "nonexistent_user_xyz123"
+            baseline_data[password_field] = "invalid_password_xyz123"
 
-            if method == 'POST':
+            if method == "POST":
                 return self.http_client.post(url, data=baseline_data, headers=headers)
             else:
                 return self.http_client.get(url, params=baseline_data, headers=headers)

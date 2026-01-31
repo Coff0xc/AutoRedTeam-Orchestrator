@@ -14,16 +14,15 @@ waf_detect.py - WAF检测模块
         print(f"Detected WAF: {waf.name}")
 """
 
-import re
-import ssl
-import socket
 import logging
-import urllib.request
+import re
+import socket
+import ssl
 import urllib.error
 import urllib.parse
+import urllib.request
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Pattern, Tuple
-
+from typing import Any, Dict, List, Optional, Pattern, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +39,7 @@ class WAFInfo:
         bypass_hints: 绕过提示
         metadata: 额外元数据
     """
+
     name: str
     vendor: Optional[str] = None
     confidence: int = 0
@@ -186,7 +186,6 @@ class WAFDetector:
                 "检查CRS规则集版本",
             ],
         },
-
         # 国内WAF
         "阿里云盾": {
             "vendor": "阿里云",
@@ -324,7 +323,7 @@ class WAFDetector:
         timeout: float = 10.0,
         verify_ssl: bool = True,
         user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        aggressive: bool = True
+        aggressive: bool = True,
     ):
         """初始化WAF检测器
 
@@ -370,9 +369,7 @@ class WAFDetector:
 
             # 编译body规则
             if sig.get("body"):
-                compiled[name]["body"] = [
-                    re.compile(p, re.IGNORECASE) for p in sig["body"]
-                ]
+                compiled[name]["body"] = [re.compile(p, re.IGNORECASE) for p in sig["body"]]
 
         return compiled
 
@@ -407,11 +404,7 @@ class WAFDetector:
         return None
 
     def detect_from_response(
-        self,
-        headers: Dict[str, str],
-        body: str,
-        cookies: str = "",
-        status_code: int = 200
+        self, headers: Dict[str, str], body: str, cookies: str = "", status_code: int = 200
     ) -> Optional[WAFInfo]:
         """从响应数据检测WAF
 
@@ -433,9 +426,7 @@ class WAFDetector:
         return self._check_signatures(response)
 
     def _check_signatures(
-        self,
-        response: Dict[str, Any],
-        is_blocked: bool = False
+        self, response: Dict[str, Any], is_blocked: bool = False
     ) -> Optional[WAFInfo]:
         """检查响应是否匹配WAF签名
 
@@ -578,10 +569,7 @@ class WAFDetector:
 
 # 便捷函数
 def detect_waf(
-    url: str,
-    timeout: float = 10.0,
-    verify_ssl: bool = True,
-    aggressive: bool = True
+    url: str, timeout: float = 10.0, verify_ssl: bool = True, aggressive: bool = True
 ) -> Optional[WAFInfo]:
     """便捷函数：检测目标WAF
 
@@ -594,11 +582,7 @@ def detect_waf(
     Returns:
         WAFInfo对象
     """
-    detector = WAFDetector(
-        timeout=timeout,
-        verify_ssl=verify_ssl,
-        aggressive=aggressive
-    )
+    detector = WAFDetector(timeout=timeout, verify_ssl=verify_ssl, aggressive=aggressive)
     return detector.detect(url)
 
 

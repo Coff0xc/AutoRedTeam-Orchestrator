@@ -4,8 +4,9 @@
 """
 
 from typing import Any, Dict, List
+
+from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
 from .tooling import tool
-from .error_handling import handle_errors, ErrorCategory, extract_target, validate_inputs
 
 
 def register_cloud_security_tools(mcp, counter, logger):
@@ -36,19 +37,19 @@ def register_cloud_security_tools(mcp, counter, logger):
         if manifest_path:
             findings = scan_k8s_manifest(manifest_path)
         else:
-            tester = KubernetesTester(config={'namespace': namespace})
+            tester = KubernetesTester(config={"namespace": namespace})
             findings = tester.scan()
 
         return {
-            'success': True,
-            'findings': [f.to_dict() for f in findings],
-            'critical': len([f for f in findings if f.severity.value == 'critical']),
-            'high': len([f for f in findings if f.severity.value == 'high']),
-            'total': len(findings)
+            "success": True,
+            "findings": [f.to_dict() for f in findings],
+            "critical": len([f for f in findings if f.severity.value == "critical"]),
+            "high": len([f for f in findings if f.severity.value == "high"]),
+            "total": len(findings),
         }
 
     @tool(mcp)
-    @validate_inputs(target='target')
+    @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.CLOUD, context_extractor=extract_target)
     async def grpc_scan(target: str) -> Dict[str, Any]:
         """gRPC安全扫描 - 检测gRPC服务安全问题
@@ -66,9 +67,9 @@ def register_cloud_security_tools(mcp, counter, logger):
         result = scan_grpc(target)
 
         return {
-            'success': True,
-            'target': target,
-            'findings': result if isinstance(result, list) else [result]
+            "success": True,
+            "target": target,
+            "findings": result if isinstance(result, list) else [result],
         }
 
     @tool(mcp)
@@ -90,10 +91,10 @@ def register_cloud_security_tools(mcp, counter, logger):
         result = scan_aws(region=region, services=services)
 
         return {
-            'success': True,
-            'region': region,
-            'findings': result if isinstance(result, list) else [result]
+            "success": True,
+            "region": region,
+            "findings": result if isinstance(result, list) else [result],
         }
 
-    counter.add('cloud_security', 3)
+    counter.add("cloud_security", 3)
     logger.info("[Cloud Security] 已注册 3 个云安全工具")

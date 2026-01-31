@@ -9,20 +9,32 @@
 
 from __future__ import annotations
 
-import re
-import inspect
 import asyncio
+import inspect
 import ipaddress
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
-    Any, Callable, Dict, List, Optional, Tuple, Type, Union,
-    TypeVar, Generic, get_type_hints, get_origin, get_args
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
 )
 from urllib.parse import urlparse
 
 from core.result import ToolResult
+
 from .categories import ToolCategory
 
 
@@ -31,31 +43,32 @@ class ParamType(Enum):
 
     定义工具参数的数据类型，用于验证和Schema生成。
     """
-    STRING = 'string'          # 字符串
-    INTEGER = 'integer'        # 整数
-    FLOAT = 'float'            # 浮点数
-    NUMBER = 'number'          # 数值 (整数或浮点)
-    BOOLEAN = 'boolean'        # 布尔值
-    ARRAY = 'array'            # 数组
-    OBJECT = 'object'          # 对象/字典
-    URL = 'url'                # URL地址
-    IP = 'ip'                  # IP地址
-    IPV4 = 'ipv4'              # IPv4地址
-    IPV6 = 'ipv6'              # IPv6地址
-    CIDR = 'cidr'              # CIDR网段
-    PORT = 'port'              # 端口号 (1-65535)
-    PORT_RANGE = 'port_range'  # 端口范围 (如 "1-1000")
-    FILE = 'file'              # 文件路径
-    DIRECTORY = 'directory'    # 目录路径
-    EMAIL = 'email'            # 电子邮件
-    DOMAIN = 'domain'          # 域名
-    REGEX = 'regex'            # 正则表达式
-    JSON = 'json'              # JSON字符串
-    BASE64 = 'base64'          # Base64编码
-    HEX = 'hex'                # 十六进制
-    UUID = 'uuid'              # UUID
-    DATETIME = 'datetime'      # 日期时间
-    ENUM = 'enum'              # 枚举值
+
+    STRING = "string"  # 字符串
+    INTEGER = "integer"  # 整数
+    FLOAT = "float"  # 浮点数
+    NUMBER = "number"  # 数值 (整数或浮点)
+    BOOLEAN = "boolean"  # 布尔值
+    ARRAY = "array"  # 数组
+    OBJECT = "object"  # 对象/字典
+    URL = "url"  # URL地址
+    IP = "ip"  # IP地址
+    IPV4 = "ipv4"  # IPv4地址
+    IPV6 = "ipv6"  # IPv6地址
+    CIDR = "cidr"  # CIDR网段
+    PORT = "port"  # 端口号 (1-65535)
+    PORT_RANGE = "port_range"  # 端口范围 (如 "1-1000")
+    FILE = "file"  # 文件路径
+    DIRECTORY = "directory"  # 目录路径
+    EMAIL = "email"  # 电子邮件
+    DOMAIN = "domain"  # 域名
+    REGEX = "regex"  # 正则表达式
+    JSON = "json"  # JSON字符串
+    BASE64 = "base64"  # Base64编码
+    HEX = "hex"  # 十六进制
+    UUID = "uuid"  # UUID
+    DATETIME = "datetime"  # 日期时间
+    ENUM = "enum"  # 枚举值
 
 
 # Python类型到ParamType的映射
@@ -93,6 +106,7 @@ class ToolParameter:
         deprecated: 是否已废弃
         alias: 参数别名
     """
+
     name: str
     type: ParamType
     description: str
@@ -252,8 +266,8 @@ class ToolParameter:
     def _validate_port_range(value: str) -> bool:
         """验证端口范围"""
         try:
-            if '-' in value:
-                start, end = value.split('-', 1)
+            if "-" in value:
+                start, end = value.split("-", 1)
                 return 1 <= int(start) <= int(end) <= 65535
             return ToolParameter._validate_port(value)
         except (ValueError, TypeError):
@@ -262,19 +276,19 @@ class ToolParameter:
     @staticmethod
     def _validate_email(value: str) -> bool:
         """验证邮箱地址"""
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         return bool(re.match(pattern, value))
 
     @staticmethod
     def _validate_domain(value: str) -> bool:
         """验证域名"""
-        pattern = r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
+        pattern = r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$"
         return bool(re.match(pattern, value))
 
     @staticmethod
     def _validate_uuid(value: str) -> bool:
         """验证UUID"""
-        pattern = r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+        pattern = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
         return bool(re.match(pattern, value))
 
     def to_json_schema(self) -> Dict[str, Any]:
@@ -284,56 +298,56 @@ class ToolParameter:
             JSON Schema字典
         """
         schema: Dict[str, Any] = {
-            'type': self._type_to_json_type(),
-            'description': self.description,
+            "type": self._type_to_json_type(),
+            "description": self.description,
         }
 
         # 默认值
         if self.default is not None:
-            schema['default'] = self.default
+            schema["default"] = self.default
 
         # 枚举值
         if self.choices:
-            schema['enum'] = self.choices
+            schema["enum"] = self.choices
 
         # 数值约束
         if self.min_value is not None:
-            schema['minimum'] = self.min_value
+            schema["minimum"] = self.min_value
         if self.max_value is not None:
-            schema['maximum'] = self.max_value
+            schema["maximum"] = self.max_value
 
         # 字符串约束
         if self.type == ParamType.STRING:
             if self.min_length is not None:
-                schema['minLength'] = self.min_length
+                schema["minLength"] = self.min_length
             if self.max_length is not None:
-                schema['maxLength'] = self.max_length
+                schema["maxLength"] = self.max_length
             if self.pattern:
-                schema['pattern'] = self.pattern
+                schema["pattern"] = self.pattern
 
         # 数组约束
         if self.type == ParamType.ARRAY:
             if self.min_length is not None:
-                schema['minItems'] = self.min_length
+                schema["minItems"] = self.min_length
             if self.max_length is not None:
-                schema['maxItems'] = self.max_length
+                schema["maxItems"] = self.max_length
 
         # 示例
         if self.examples:
-            schema['examples'] = self.examples
+            schema["examples"] = self.examples
 
         # 格式 (针对特殊类型)
         format_mapping = {
-            ParamType.URL: 'uri',
-            ParamType.IP: 'ip-address',
-            ParamType.IPV4: 'ipv4',
-            ParamType.IPV6: 'ipv6',
-            ParamType.EMAIL: 'email',
-            ParamType.UUID: 'uuid',
-            ParamType.DATETIME: 'date-time',
+            ParamType.URL: "uri",
+            ParamType.IP: "ip-address",
+            ParamType.IPV4: "ipv4",
+            ParamType.IPV6: "ipv6",
+            ParamType.EMAIL: "email",
+            ParamType.UUID: "uuid",
+            ParamType.DATETIME: "date-time",
         }
         if self.type in format_mapping:
-            schema['format'] = format_mapping[self.type]
+            schema["format"] = format_mapping[self.type]
 
         return schema
 
@@ -344,33 +358,33 @@ class ToolParameter:
             JSON类型字符串
         """
         mapping = {
-            ParamType.STRING: 'string',
-            ParamType.INTEGER: 'integer',
-            ParamType.FLOAT: 'number',
-            ParamType.NUMBER: 'number',
-            ParamType.BOOLEAN: 'boolean',
-            ParamType.ARRAY: 'array',
-            ParamType.OBJECT: 'object',
-            ParamType.URL: 'string',
-            ParamType.IP: 'string',
-            ParamType.IPV4: 'string',
-            ParamType.IPV6: 'string',
-            ParamType.CIDR: 'string',
-            ParamType.PORT: 'integer',
-            ParamType.PORT_RANGE: 'string',
-            ParamType.FILE: 'string',
-            ParamType.DIRECTORY: 'string',
-            ParamType.EMAIL: 'string',
-            ParamType.DOMAIN: 'string',
-            ParamType.REGEX: 'string',
-            ParamType.JSON: 'string',
-            ParamType.BASE64: 'string',
-            ParamType.HEX: 'string',
-            ParamType.UUID: 'string',
-            ParamType.DATETIME: 'string',
-            ParamType.ENUM: 'string',
+            ParamType.STRING: "string",
+            ParamType.INTEGER: "integer",
+            ParamType.FLOAT: "number",
+            ParamType.NUMBER: "number",
+            ParamType.BOOLEAN: "boolean",
+            ParamType.ARRAY: "array",
+            ParamType.OBJECT: "object",
+            ParamType.URL: "string",
+            ParamType.IP: "string",
+            ParamType.IPV4: "string",
+            ParamType.IPV6: "string",
+            ParamType.CIDR: "string",
+            ParamType.PORT: "integer",
+            ParamType.PORT_RANGE: "string",
+            ParamType.FILE: "string",
+            ParamType.DIRECTORY: "string",
+            ParamType.EMAIL: "string",
+            ParamType.DOMAIN: "string",
+            ParamType.REGEX: "string",
+            ParamType.JSON: "string",
+            ParamType.BASE64: "string",
+            ParamType.HEX: "string",
+            ParamType.UUID: "string",
+            ParamType.DATETIME: "string",
+            ParamType.ENUM: "string",
         }
-        return mapping.get(self.type, 'string')
+        return mapping.get(self.type, "string")
 
 
 @dataclass
@@ -396,14 +410,15 @@ class ToolMetadata:
         deprecated_reason: 废弃原因
         replacement: 替代工具名称
     """
+
     name: str
     description: str
     category: ToolCategory
     parameters: List[ToolParameter] = field(default_factory=list)
 
     # 版本信息
-    version: str = '1.0.0'
-    author: str = ''
+    version: str = "1.0.0"
+    author: str = ""
     tags: List[str] = field(default_factory=list)
 
     # 使用示例
@@ -457,28 +472,28 @@ class ToolMetadata:
             元数据字典
         """
         return {
-            'name': self.name,
-            'description': self.description,
-            'category': self.category.value,
-            'parameters': [
+            "name": self.name,
+            "description": self.description,
+            "category": self.category.value,
+            "parameters": [
                 {
-                    'name': p.name,
-                    'type': p.type.value,
-                    'description': p.description,
-                    'required': p.required,
-                    'default': p.default,
-                    'choices': p.choices,
+                    "name": p.name,
+                    "type": p.type.value,
+                    "description": p.description,
+                    "required": p.required,
+                    "default": p.default,
+                    "choices": p.choices,
                 }
                 for p in self.parameters
             ],
-            'version': self.version,
-            'author': self.author,
-            'tags': self.tags,
-            'timeout': self.timeout,
-            'async_support': self.async_support,
-            'requires_auth': self.requires_auth,
-            'requires_root': self.requires_root,
-            'deprecated': self.deprecated,
+            "version": self.version,
+            "author": self.author,
+            "tags": self.tags,
+            "timeout": self.timeout,
+            "async_support": self.async_support,
+            "requires_auth": self.requires_auth,
+            "requires_root": self.requires_root,
+            "deprecated": self.deprecated,
         }
 
 
@@ -520,7 +535,7 @@ class BaseTool(ABC):
 
     def _validate_metadata(self) -> None:
         """验证元数据完整性"""
-        if not hasattr(self, 'metadata') or self.metadata is None:
+        if not hasattr(self, "metadata") or self.metadata is None:
             raise ValueError(f"工具 {self.__class__.__name__} 缺少metadata定义")
 
     @abstractmethod
@@ -593,10 +608,10 @@ class BaseTool(ABC):
                 required.append(param.name)
 
         return {
-            'type': 'object',
-            'properties': properties,
-            'required': required,
-            'additionalProperties': False,
+            "type": "object",
+            "properties": properties,
+            "required": required,
+            "additionalProperties": False,
         }
 
     def get_info(self) -> Dict[str, Any]:
@@ -607,7 +622,7 @@ class BaseTool(ABC):
         """
         return {
             **self.metadata.to_dict(),
-            'schema': self.get_schema(),
+            "schema": self.get_schema(),
         }
 
     def __str__(self) -> str:
@@ -634,10 +649,7 @@ class FunctionTool(BaseTool):
     """
 
     def __init__(
-        self,
-        fn: Callable,
-        metadata: ToolMetadata,
-        config: Optional[Dict[str, Any]] = None
+        self, fn: Callable, metadata: ToolMetadata, config: Optional[Dict[str, Any]] = None
     ):
         """初始化函数工具
 
@@ -671,21 +683,18 @@ class FunctionTool(BaseTool):
                 return result
             elif isinstance(result, dict):
                 # 检查是否已是结果格式
-                if 'success' in result:
-                    success = result.get('success', True)
-                    data = result.get('data', result)
-                    error = result.get('error')
-                    error_type = result.get('error_type')
-                    metadata = result.get('metadata')
+                if "success" in result:
+                    success = result.get("success", True)
+                    data = result.get("data", result)
+                    error = result.get("error")
+                    error_type = result.get("error_type")
+                    metadata = result.get("metadata")
                     if not isinstance(metadata, dict):
                         metadata = {}
                     if success:
                         return ToolResult.ok(data=data, **metadata)
                     return ToolResult.fail(
-                        error=error or "执行失败",
-                        error_type=error_type,
-                        data=data,
-                        **metadata
+                        error=error or "执行失败", error_type=error_type, data=data, **metadata
                     )
                 return ToolResult.ok(data=result)
             else:
@@ -713,29 +722,24 @@ class FunctionTool(BaseTool):
                 result = await self._fn(**filled_kwargs)
             else:
                 loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(
-                    None, lambda: self._fn(**filled_kwargs)
-                )
+                result = await loop.run_in_executor(None, lambda: self._fn(**filled_kwargs))
 
             # 包装结果
             if isinstance(result, ToolResult):
                 return result
             elif isinstance(result, dict):
-                if 'success' in result:
-                    success = result.get('success', True)
-                    data = result.get('data', result)
-                    error = result.get('error')
-                    error_type = result.get('error_type')
-                    metadata = result.get('metadata')
+                if "success" in result:
+                    success = result.get("success", True)
+                    data = result.get("data", result)
+                    error = result.get("error")
+                    error_type = result.get("error_type")
+                    metadata = result.get("metadata")
                     if not isinstance(metadata, dict):
                         metadata = {}
                     if success:
                         return ToolResult.ok(data=data, **metadata)
                     return ToolResult.fail(
-                        error=error or "执行失败",
-                        error_type=error_type,
-                        data=data,
-                        **metadata
+                        error=error or "执行失败", error_type=error_type, data=data, **metadata
                     )
                 return ToolResult.ok(data=result)
             else:
@@ -770,8 +774,8 @@ class FunctionTool(BaseTool):
         name: Optional[str] = None,
         description: Optional[str] = None,
         parameters: Optional[List[ToolParameter]] = None,
-        **kwargs
-    ) -> 'FunctionTool':
+        **kwargs,
+    ) -> "FunctionTool":
         """从函数创建工具
 
         自动从函数签名推断参数信息。
@@ -791,8 +795,8 @@ class FunctionTool(BaseTool):
         tool_name = name or fn.__name__
         tool_desc = description
         if tool_desc is None:
-            doc = fn.__doc__ or ''
-            tool_desc = doc.split('\n')[0].strip() or f"{tool_name} 工具"
+            doc = fn.__doc__ or ""
+            tool_desc = doc.split("\n")[0].strip() or f"{tool_name} 工具"
 
         # 推断参数
         if parameters is None:
@@ -808,7 +812,7 @@ class FunctionTool(BaseTool):
             category=category,
             parameters=parameters,
             async_support=async_support,
-            **{k: v for k, v in kwargs.items() if hasattr(ToolMetadata, k)}
+            **{k: v for k, v in kwargs.items() if hasattr(ToolMetadata, k)},
         )
 
         return cls(fn, metadata)
@@ -834,7 +838,7 @@ class FunctionTool(BaseTool):
 
         for param_name, param in sig.parameters.items():
             # 跳过特殊参数
-            if param_name in ('self', 'cls', 'session_id', 'context'):
+            if param_name in ("self", "cls", "session_id", "context"):
                 continue
 
             # 推断类型
@@ -851,13 +855,15 @@ class FunctionTool(BaseTool):
             # 提取描述 (从docstring)
             param_desc = f"参数 {param_name}"
 
-            parameters.append(ToolParameter(
-                name=param_name,
-                type=param_type,
-                description=param_desc,
-                required=not has_default,
-                default=default_value,
-            ))
+            parameters.append(
+                ToolParameter(
+                    name=param_name,
+                    type=param_type,
+                    description=param_desc,
+                    required=not has_default,
+                    default=default_value,
+                )
+            )
 
         return parameters
 
@@ -922,10 +928,9 @@ class AsyncTool(BaseTool):
             if loop.is_running():
                 # 如果事件循环正在运行，创建新任务
                 import concurrent.futures
+
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(
-                        asyncio.run, self.async_execute(**kwargs)
-                    )
+                    future = pool.submit(asyncio.run, self.async_execute(**kwargs))
                     return future.result(timeout=self.metadata.timeout)
             else:
                 return loop.run_until_complete(self.async_execute(**kwargs))

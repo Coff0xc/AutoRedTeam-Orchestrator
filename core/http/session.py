@@ -5,19 +5,20 @@ HTTP 会话管理
 支持同步和异步操作
 """
 
+import base64
 import logging
 import time
-from typing import Optional, Dict, Any, Union, List
 from dataclasses import dataclass, field
-from urllib.parse import urljoin, urlparse
 from enum import Enum
-import base64
+from typing import Any, Dict, List, Optional, Union
+from urllib.parse import urljoin, urlparse
 
 logger = logging.getLogger(__name__)
 
 
 class AuthType(Enum):
     """认证类型"""
+
     NONE = "none"
     BASIC = "basic"
     BEARER = "bearer"
@@ -29,6 +30,7 @@ class AuthType(Enum):
 @dataclass
 class AuthConfig:
     """认证配置"""
+
     auth_type: AuthType = AuthType.NONE
 
     # Basic 认证
@@ -94,6 +96,7 @@ class AuthConfig:
 @dataclass
 class Cookie:
     """Cookie 对象"""
+
     name: str
     value: str
     domain: Optional[str] = None
@@ -136,11 +139,7 @@ class Cookie:
 
         name, value = name_value.split("=", 1)
 
-        cookie = cls(
-            name=name.strip(),
-            value=value.strip(),
-            domain=domain
-        )
+        cookie = cls(name=name.strip(), value=value.strip(), domain=domain)
 
         # 解析其他属性
         for part in parts[1:]:
@@ -233,8 +232,7 @@ class CookieJar:
         for cookie_domain, cookies in self._cookies.items():
             # 检查域名匹配
             if cookie_domain and not (
-                domain == cookie_domain or
-                domain.endswith("." + cookie_domain)
+                domain == cookie_domain or domain.endswith("." + cookie_domain)
             ):
                 continue
 
@@ -314,7 +312,7 @@ class HTTPSession:
         base_url: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
         auth: Optional[AuthConfig] = None,
-        timeout: float = 30.0
+        timeout: float = 30.0,
     ):
         """
         初始化 HTTP 会话
@@ -357,32 +355,21 @@ class HTTPSession:
 
     def set_bearer_token(self, token: str, prefix: str = "Bearer") -> None:
         """设置 Bearer Token"""
-        self.auth = AuthConfig(
-            auth_type=AuthType.BEARER,
-            token=token,
-            token_prefix=prefix
-        )
+        self.auth = AuthConfig(auth_type=AuthType.BEARER, token=token, token_prefix=prefix)
 
     def set_basic_auth(self, username: str, password: str) -> None:
         """设置 Basic 认证"""
-        self.auth = AuthConfig(
-            auth_type=AuthType.BASIC,
-            username=username,
-            password=password
-        )
+        self.auth = AuthConfig(auth_type=AuthType.BASIC, username=username, password=password)
 
     def set_api_key(
-        self,
-        api_key: str,
-        header: str = "X-API-Key",
-        query_param: Optional[str] = None
+        self, api_key: str, header: str = "X-API-Key", query_param: Optional[str] = None
     ) -> None:
         """设置 API Key 认证"""
         self.auth = AuthConfig(
             auth_type=AuthType.API_KEY,
             api_key=api_key,
             api_key_header=header,
-            api_key_query=query_param
+            api_key_query=query_param,
         )
 
     def set_header(self, name: str, value: str) -> None:
@@ -491,7 +478,7 @@ class HTTPSession:
         params: Optional[Dict[str, Any]] = None,
         data: Optional[Any] = None,
         json: Optional[Any] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         发送同步请求
@@ -525,7 +512,7 @@ class HTTPSession:
             params=merged_params,
             data=data,
             json=json,
-            **kwargs
+            **kwargs,
         )
 
         # 更新 Cookie
@@ -542,7 +529,7 @@ class HTTPSession:
         params: Optional[Dict[str, Any]] = None,
         data: Optional[Any] = None,
         json: Optional[Any] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         发送异步请求
@@ -576,7 +563,7 @@ class HTTPSession:
             params=merged_params,
             data=data,
             json=json,
-            **kwargs
+            **kwargs,
         )
 
         # 更新 Cookie

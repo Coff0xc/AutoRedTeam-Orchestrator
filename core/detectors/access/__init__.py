@@ -5,13 +5,13 @@
 """
 
 from .idor import IDORDetector
+from .open_redirect import OpenRedirectDetector
 from .path_traversal import PathTraversalDetector
 from .ssrf import SSRFDetector
-from .open_redirect import OpenRedirectDetector
 
 __all__ = [
-    'IDORDetector',
-    'PathTraversalDetector',
-    'SSRFDetector',
-    'OpenRedirectDetector',
+    "IDORDetector",
+    "PathTraversalDetector",
+    "SSRFDetector",
+    "OpenRedirectDetector",
 ]

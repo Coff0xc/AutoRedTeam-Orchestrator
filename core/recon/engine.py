@@ -15,53 +15,65 @@ engine.py - 标准侦察引擎
     result = await engine.async_run()
 """
 
+import asyncio
+import logging
 import re
 import ssl
 import time
-import asyncio
-import logging
-import urllib.request
 import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Callable
+from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import urlparse
 
-from .phases import (
-    ReconPhase,
-    PhaseResult,
-    PhaseStatus,
-    PhaseManager,
-    DEFAULT_PHASE_ORDER,
-    QUICK_PHASE_ORDER,
-)
 from .base import (
     BaseReconEngine,
+    Finding,
     ReconConfig,
     ReconResult,
-    Finding,
     Severity,
 )
+from .directory import DirectoryScanner
 from .dns_resolver import DNSResolver
-from .port_scanner import PortScanner
 from .fingerprint import FingerprintEngine
+from .phases import (
+    DEFAULT_PHASE_ORDER,
+    QUICK_PHASE_ORDER,
+    PhaseManager,
+    PhaseResult,
+    PhaseStatus,
+    ReconPhase,
+)
+from .port_scanner import PortScanner
+from .subdomain import SubdomainEnumerator
 from .tech_detect import TechDetector
 from .waf_detect import WAFDetector
-from .subdomain import SubdomainEnumerator
-from .directory import DirectoryScanner
-
 
 logger = logging.getLogger(__name__)
 
 
 # 敏感文件列表
 SENSITIVE_FILES = [
-    ".git/config", ".git/HEAD", ".env", ".env.local",
-    "web.config", "wp-config.php", "config.php",
-    "robots.txt", "sitemap.xml", "phpinfo.php",
-    "backup.sql", "dump.sql", ".DS_Store",
-    "actuator/env", "actuator/health", "swagger.json",
-    "main.js.map", "app.js.map", "bundle.js.map",
+    ".git/config",
+    ".git/HEAD",
+    ".env",
+    ".env.local",
+    "web.config",
+    "wp-config.php",
+    "config.php",
+    "robots.txt",
+    "sitemap.xml",
+    "phpinfo.php",
+    "backup.sql",
+    "dump.sql",
+    ".DS_Store",
+    "actuator/env",
+    "actuator/health",
+    "swagger.json",
+    "main.js.map",
+    "app.js.map",
+    "bundle.js.map",
 ]
 
 
@@ -85,11 +97,7 @@ class StandardReconEngine(BaseReconEngine):
         config: 侦察配置
     """
 
-    def __init__(
-        self,
-        target: str,
-        config: Optional[ReconConfig] = None
-    ):
+    def __init__(self, target: str, config: Optional[ReconConfig] = None):
         """初始化标准侦察引擎
 
         Args:
@@ -168,15 +176,11 @@ class StandardReconEngine(BaseReconEngine):
                         break
                 else:
                     # 没有处理器，跳过
-                    self._add_phase_result(
-                        PhaseResult.create_skipped(phase, "No handler")
-                    )
+                    self._add_phase_result(PhaseResult.create_skipped(phase, "No handler"))
 
             except Exception as e:
                 self._logger.error(f"Phase {phase.name} error: {e}")
-                self._add_phase_result(
-                    PhaseResult.create_failure(phase, [str(e)])
-                )
+                self._add_phase_result(PhaseResult.create_failure(phase, [str(e)]))
                 self._add_error(f"{phase.name}: {str(e)}")
 
                 if phase.is_critical:
@@ -248,19 +252,20 @@ class StandardReconEngine(BaseReconEngine):
             data["ipv6_addresses"] = dns_result.ipv6_addresses
             data["nameservers"] = dns_result.nameservers
             data["mail_servers"] = [
-                {"priority": p, "server": s}
-                for p, s in dns_result.mail_servers
+                {"priority": p, "server": s} for p, s in dns_result.mail_servers
             ]
             data["txt_records"] = dns_result.txt_records
 
             if dns_result.ip_addresses:
-                self._add_finding(Finding(
-                    type="dns",
-                    severity=Severity.INFO,
-                    title="IP地址解析",
-                    description=f"目标解析到 {len(dns_result.ip_addresses)} 个IP地址",
-                    evidence=", ".join(dns_result.ip_addresses[:5]),
-                ))
+                self._add_finding(
+                    Finding(
+                        type="dns",
+                        severity=Severity.INFO,
+                        title="IP地址解析",
+                        description=f"目标解析到 {len(dns_result.ip_addresses)} 个IP地址",
+                        evidence=", ".join(dns_result.ip_addresses[:5]),
+                    )
+                )
 
             return PhaseResult.create_success(ReconPhase.DNS, data)
 
@@ -282,8 +287,7 @@ class StandardReconEngine(BaseReconEngine):
 
         try:
             scanner = PortScanner(
-                timeout=self.config.port_timeout,
-                max_threads=self.config.port_concurrency
+                timeout=self.config.port_timeout, max_threads=self.config.port_concurrency
             )
 
             ip = self.result.ip_addresses[0]
@@ -298,26 +302,36 @@ class StandardReconEngine(BaseReconEngine):
 
             if ports:
                 port_list = [p.port for p in ports]
-                self._add_finding(Finding(
-                    type="port",
-                    severity=Severity.INFO,
-                    title="开放端口",
-                    description=f"发现 {len(ports)} 个开放端口",
-                    evidence=", ".join(str(p) for p in port_list[:10]),
-                ))
+                self._add_finding(
+                    Finding(
+                        type="port",
+                        severity=Severity.INFO,
+                        title="开放端口",
+                        description=f"发现 {len(ports)} 个开放端口",
+                        evidence=", ".join(str(p) for p in port_list[:10]),
+                    )
+                )
 
                 # 检测危险端口
-                dangerous_ports = {22: "SSH", 23: "Telnet", 3389: "RDP",
-                                   445: "SMB", 6379: "Redis", 27017: "MongoDB"}
+                dangerous_ports = {
+                    22: "SSH",
+                    23: "Telnet",
+                    3389: "RDP",
+                    445: "SMB",
+                    6379: "Redis",
+                    27017: "MongoDB",
+                }
                 for port in ports:
                     if port.port in dangerous_ports:
-                        self._add_finding(Finding(
-                            type="port",
-                            severity=Severity.MEDIUM,
-                            title=f"敏感服务端口开放: {dangerous_ports[port.port]}",
-                            description=f"端口 {port.port} ({port.service or dangerous_ports[port.port]}) 开放",
-                            recommendation="确认该服务是否需要对外开放，建议进行访问控制",
-                        ))
+                        self._add_finding(
+                            Finding(
+                                type="port",
+                                severity=Severity.MEDIUM,
+                                title=f"敏感服务端口开放: {dangerous_ports[port.port]}",
+                                description=f"端口 {port.port} ({port.service or dangerous_ports[port.port]}) 开放",
+                                recommendation="确认该服务是否需要对外开放，建议进行访问控制",
+                            )
+                        )
 
             return PhaseResult.create_success(ReconPhase.PORT_SCAN, data)
 
@@ -336,8 +350,7 @@ class StandardReconEngine(BaseReconEngine):
 
         try:
             engine = FingerprintEngine(
-                timeout=self.config.timeout,
-                verify_ssl=self.config.verify_ssl
+                timeout=self.config.timeout, verify_ssl=self.config.verify_ssl
             )
 
             fingerprints = engine.identify(self.target)
@@ -350,13 +363,15 @@ class StandardReconEngine(BaseReconEngine):
             data["fingerprints"] = [fp.to_dict() for fp in fingerprints]
 
             if fingerprints:
-                self._add_finding(Finding(
-                    type="fingerprint",
-                    severity=Severity.INFO,
-                    title="指纹识别",
-                    description=f"识别到 {len(fingerprints)} 个指纹",
-                    evidence=", ".join(str(fp) for fp in fingerprints[:5]),
-                ))
+                self._add_finding(
+                    Finding(
+                        type="fingerprint",
+                        severity=Severity.INFO,
+                        title="指纹识别",
+                        description=f"识别到 {len(fingerprints)} 个指纹",
+                        evidence=", ".join(str(fp) for fp in fingerprints[:5]),
+                    )
+                )
 
             return PhaseResult.create_success(ReconPhase.FINGERPRINT, data)
 
@@ -374,10 +389,7 @@ class StandardReconEngine(BaseReconEngine):
         errors = []
 
         try:
-            detector = TechDetector(
-                timeout=self.config.timeout,
-                verify_ssl=self.config.verify_ssl
-            )
+            detector = TechDetector(timeout=self.config.timeout, verify_ssl=self.config.verify_ssl)
 
             technologies = detector.detect(self.target)
 
@@ -386,13 +398,15 @@ class StandardReconEngine(BaseReconEngine):
             data["technologies"] = [t.to_dict() for t in technologies]
 
             if technologies:
-                self._add_finding(Finding(
-                    type="technology",
-                    severity=Severity.INFO,
-                    title="技术栈识别",
-                    description=f"识别到 {len(technologies)} 种技术",
-                    evidence=", ".join(self.result.technologies[:10]),
-                ))
+                self._add_finding(
+                    Finding(
+                        type="technology",
+                        severity=Severity.INFO,
+                        title="技术栈识别",
+                        description=f"识别到 {len(technologies)} 种技术",
+                        evidence=", ".join(self.result.technologies[:10]),
+                    )
+                )
 
             return PhaseResult.create_success(ReconPhase.TECH_DETECT, data)
 
@@ -413,7 +427,7 @@ class StandardReconEngine(BaseReconEngine):
             detector = WAFDetector(
                 timeout=self.config.timeout,
                 verify_ssl=self.config.verify_ssl,
-                aggressive=not self.config.stealth_mode
+                aggressive=not self.config.stealth_mode,
             )
 
             waf = detector.detect(self.target)
@@ -422,14 +436,16 @@ class StandardReconEngine(BaseReconEngine):
                 self.result.waf_detected = waf.name
                 data["waf"] = waf.to_dict()
 
-                self._add_finding(Finding(
-                    type="waf",
-                    severity=Severity.INFO,
-                    title=f"检测到WAF: {waf.name}",
-                    description=f"目标受 {waf.vendor or waf.name} 保护",
-                    evidence=", ".join(waf.evidence[:3]),
-                    recommendation="; ".join(waf.bypass_hints[:2]) if waf.bypass_hints else "",
-                ))
+                self._add_finding(
+                    Finding(
+                        type="waf",
+                        severity=Severity.INFO,
+                        title=f"检测到WAF: {waf.name}",
+                        description=f"目标受 {waf.vendor or waf.name} 保护",
+                        evidence=", ".join(waf.evidence[:3]),
+                        recommendation="; ".join(waf.bypass_hints[:2]) if waf.bypass_hints else "",
+                    )
+                )
             else:
                 data["waf"] = None
 
@@ -453,7 +469,7 @@ class StandardReconEngine(BaseReconEngine):
                 timeout=self.config.subdomain_timeout,
                 threads=self.config.max_threads,
                 wordlist=self.config.subdomain_wordlist,
-                max_subdomains=self.config.max_subdomains
+                max_subdomains=self.config.max_subdomains,
             )
 
             # 提取根域名
@@ -471,13 +487,15 @@ class StandardReconEngine(BaseReconEngine):
             data["domain"] = domain
 
             if subdomains:
-                self._add_finding(Finding(
-                    type="subdomain",
-                    severity=Severity.INFO,
-                    title="子域名发现",
-                    description=f"发现 {len(subdomains)} 个子域名",
-                    evidence=", ".join(self.result.subdomains[:10]),
-                ))
+                self._add_finding(
+                    Finding(
+                        type="subdomain",
+                        severity=Severity.INFO,
+                        title="子域名发现",
+                        description=f"发现 {len(subdomains)} 个子域名",
+                        evidence=", ".join(self.result.subdomains[:10]),
+                    )
+                )
 
             return PhaseResult.create_success(ReconPhase.SUBDOMAIN, data)
 
@@ -501,7 +519,7 @@ class StandardReconEngine(BaseReconEngine):
                 verify_ssl=self.config.verify_ssl,
                 extensions=self.config.extensions,
                 wordlist=self.config.wordlist,
-                max_results=self.config.max_directories
+                max_results=self.config.max_directories,
             )
 
             directories = scanner.scan(self.target)
@@ -511,13 +529,15 @@ class StandardReconEngine(BaseReconEngine):
             data["directories"] = [d.to_dict() for d in directories]
 
             if directories:
-                self._add_finding(Finding(
-                    type="directory",
-                    severity=Severity.LOW,
-                    title="目录发现",
-                    description=f"发现 {len(directories)} 个目录/文件",
-                    evidence=", ".join(self.result.directories[:10]),
-                ))
+                self._add_finding(
+                    Finding(
+                        type="directory",
+                        severity=Severity.LOW,
+                        title="目录发现",
+                        description=f"发现 {len(directories)} 个目录/文件",
+                        evidence=", ".join(self.result.directories[:10]),
+                    )
+                )
 
             return PhaseResult.create_success(ReconPhase.DIRECTORY, data)
 
@@ -549,18 +569,22 @@ class StandardReconEngine(BaseReconEngine):
 
             # 添加发现
             for file_info in found_files:
-                severity = Severity.HIGH if any(
-                    x in file_info["path"] for x in [".env", "config", ".git", "backup"]
-                ) else Severity.MEDIUM
+                severity = (
+                    Severity.HIGH
+                    if any(x in file_info["path"] for x in [".env", "config", ".git", "backup"])
+                    else Severity.MEDIUM
+                )
 
-                self._add_finding(Finding(
-                    type="sensitive_file",
-                    severity=severity,
-                    title=f"敏感文件: {file_info['path']}",
-                    description=f"发现敏感文件 (大小: {file_info.get('size', 'N/A')} bytes)",
-                    url=file_info["url"],
-                    recommendation="确认文件是否应该对外公开，建议限制访问",
-                ))
+                self._add_finding(
+                    Finding(
+                        type="sensitive_file",
+                        severity=severity,
+                        title=f"敏感文件: {file_info['path']}",
+                        description=f"发现敏感文件 (大小: {file_info.get('size', 'N/A')} bytes)",
+                        url=file_info["url"],
+                        recommendation="确认文件是否应该对外公开，建议限制访问",
+                    )
+                )
 
             return PhaseResult.create_success(ReconPhase.SENSITIVE, data)
 
@@ -591,9 +615,7 @@ class StandardReconEngine(BaseReconEngine):
             req = urllib.request.Request(url, headers=headers)
 
             with urllib.request.urlopen(
-                req,
-                timeout=self.config.timeout,
-                context=ssl_context
+                req, timeout=self.config.timeout, context=ssl_context
             ) as resp:
                 if resp.status == 200:
                     body = resp.read(2000).decode("utf-8", errors="replace")
@@ -652,9 +674,7 @@ class StandardReconEngine(BaseReconEngine):
 
 # 工厂函数
 def create_recon_engine(
-    target: str,
-    config: Optional[ReconConfig] = None,
-    quick_mode: bool = False
+    target: str, config: Optional[ReconConfig] = None, quick_mode: bool = False
 ) -> StandardReconEngine:
     """创建侦察引擎实例
 

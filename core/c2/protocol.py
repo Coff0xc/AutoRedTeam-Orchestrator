@@ -17,19 +17,19 @@ C2 协议模块 - C2 Protocol Module
         - checksum (4 bytes): CRC32 校验
 """
 
-import struct
 import json
-import time
-import zlib
-import uuid
 import logging
-from typing import Optional, Dict, Any, List, Tuple, Union
-from dataclasses import dataclass, field, asdict
+import struct
+import time
+import uuid
+import zlib
+from dataclasses import asdict, dataclass, field
 from enum import IntEnum
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from .base import Task, TaskResult, BeaconInfo
-from .encoding import C2Encoder, JSONEncoder
+from .base import BeaconInfo, Task, TaskResult
 from .crypto import C2Crypto, CryptoAlgorithm
+from .encoding import C2Encoder, JSONEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -51,32 +51,35 @@ MAX_MESSAGE_SIZE = 10 * 1024 * 1024
 
 class MessageType(IntEnum):
     """消息类型"""
-    HEARTBEAT = 0x01        # 心跳
-    HEARTBEAT_ACK = 0x02    # 心跳响应
-    CHECKIN = 0x03          # 签到
-    CHECKIN_ACK = 0x04      # 签到响应
-    TASK = 0x05             # 任务下发
-    TASK_RESULT = 0x06      # 任务结果
-    DATA = 0x07             # 数据传输
-    DATA_ACK = 0x08         # 数据确认
-    ERROR = 0x09            # 错误
-    CLOSE = 0x0A            # 关闭连接
-    KEEPALIVE = 0x0B        # 保活
+
+    HEARTBEAT = 0x01  # 心跳
+    HEARTBEAT_ACK = 0x02  # 心跳响应
+    CHECKIN = 0x03  # 签到
+    CHECKIN_ACK = 0x04  # 签到响应
+    TASK = 0x05  # 任务下发
+    TASK_RESULT = 0x06  # 任务结果
+    DATA = 0x07  # 数据传输
+    DATA_ACK = 0x08  # 数据确认
+    ERROR = 0x09  # 错误
+    CLOSE = 0x0A  # 关闭连接
+    KEEPALIVE = 0x0B  # 保活
 
 
 class MessageFlags(IntEnum):
     """消息标志位"""
+
     NONE = 0x0000
-    ENCRYPTED = 0x0001      # 已加密
-    COMPRESSED = 0x0002     # 已压缩
-    CHUNKED = 0x0004        # 分块传输
-    ACK_REQUIRED = 0x0008   # 需要确认
-    PRIORITY = 0x0010       # 高优先级
+    ENCRYPTED = 0x0001  # 已加密
+    COMPRESSED = 0x0002  # 已压缩
+    CHUNKED = 0x0004  # 分块传输
+    ACK_REQUIRED = 0x0008  # 需要确认
+    PRIORITY = 0x0010  # 高优先级
 
 
 @dataclass
 class MessageHeader:
     """消息头"""
+
     magic: int = PROTOCOL_MAGIC
     version: int = PROTOCOL_VERSION
     msg_type: MessageType = MessageType.DATA
@@ -87,23 +90,23 @@ class MessageHeader:
     def pack(self) -> bytes:
         """打包为字节"""
         return struct.pack(
-            '>IBBHII',
+            ">IBBHII",
             self.magic,
             self.version,
             self.msg_type,
             self.flags,
             self.length,
-            self.checksum
+            self.checksum,
         )
 
     @classmethod
-    def unpack(cls, data: bytes) -> 'MessageHeader':
+    def unpack(cls, data: bytes) -> "MessageHeader":
         """从字节解包"""
         if len(data) < HEADER_SIZE:
             raise ValueError(f"Header too short: {len(data)} < {HEADER_SIZE}")
 
         magic, version, msg_type, flags, length, checksum = struct.unpack(
-            '>IBBHII', data[:HEADER_SIZE]
+            ">IBBHII", data[:HEADER_SIZE]
         )
 
         if magic != PROTOCOL_MAGIC:
@@ -115,31 +118,26 @@ class MessageHeader:
             msg_type=MessageType(msg_type),
             flags=flags,
             length=length,
-            checksum=checksum
+            checksum=checksum,
         )
 
 
 @dataclass
 class Message:
     """协议消息"""
+
     header: MessageHeader
     payload: bytes
 
     @classmethod
     def create(
-        cls,
-        msg_type: MessageType,
-        payload: bytes,
-        flags: int = MessageFlags.NONE
-    ) -> 'Message':
+        cls, msg_type: MessageType, payload: bytes, flags: int = MessageFlags.NONE
+    ) -> "Message":
         """创建消息"""
-        checksum = zlib.crc32(payload) & 0xffffffff
+        checksum = zlib.crc32(payload) & 0xFFFFFFFF
 
         header = MessageHeader(
-            msg_type=msg_type,
-            flags=flags,
-            length=len(payload),
-            checksum=checksum
+            msg_type=msg_type, flags=flags, length=len(payload), checksum=checksum
         )
 
         return cls(header=header, payload=payload)
@@ -149,13 +147,13 @@ class Message:
         return self.header.pack() + self.payload
 
     @classmethod
-    def unpack(cls, data: bytes) -> 'Message':
+    def unpack(cls, data: bytes) -> "Message":
         """解包消息"""
         header = MessageHeader.unpack(data[:HEADER_SIZE])
-        payload = data[HEADER_SIZE:HEADER_SIZE + header.length]
+        payload = data[HEADER_SIZE : HEADER_SIZE + header.length]
 
         # 验证校验和
-        calculated_checksum = zlib.crc32(payload) & 0xffffffff
+        calculated_checksum = zlib.crc32(payload) & 0xFFFFFFFF
         if calculated_checksum != header.checksum:
             raise ValueError("Checksum mismatch")
 
@@ -163,11 +161,12 @@ class Message:
 
     def verify(self) -> bool:
         """验证消息完整性"""
-        calculated = zlib.crc32(self.payload) & 0xffffffff
+        calculated = zlib.crc32(self.payload) & 0xFFFFFFFF
         return calculated == self.header.checksum
 
 
 # ==================== 协议编解码器 ====================
+
 
 class ProtocolCodec:
     """
@@ -185,11 +184,7 @@ class ProtocolCodec:
         tasks = codec.decode_tasks(data)
     """
 
-    def __init__(
-        self,
-        crypto: Optional[C2Crypto] = None,
-        compress: bool = True
-    ):
+    def __init__(self, crypto: Optional[C2Crypto] = None, compress: bool = True):
         """
         初始化编解码器
 
@@ -212,8 +207,8 @@ class ProtocolCodec:
         flags = MessageFlags.NONE
 
         # JSON 序列化
-        json_data = json.dumps(data, separators=(',', ':'), ensure_ascii=False)
-        payload = json_data.encode('utf-8')
+        json_data = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+        payload = json_data.encode("utf-8")
 
         # 压缩
         if self.compress and len(payload) > 100:
@@ -249,15 +244,11 @@ class ProtocolCodec:
             data = zlib.decompress(data)
 
         # JSON 反序列化
-        return json.loads(data.decode('utf-8'))
+        return json.loads(data.decode("utf-8"))
 
     # ==================== 心跳 ====================
 
-    def encode_heartbeat(
-        self,
-        beacon_id: str,
-        timestamp: Optional[float] = None
-    ) -> bytes:
+    def encode_heartbeat(self, beacon_id: str, timestamp: Optional[float] = None) -> bytes:
         """
         编码心跳消息
 
@@ -268,11 +259,7 @@ class ProtocolCodec:
         Returns:
             编码后的消息
         """
-        data = {
-            'beacon_id': beacon_id,
-            'timestamp': timestamp or time.time(),
-            'type': 'heartbeat'
-        }
+        data = {"beacon_id": beacon_id, "timestamp": timestamp or time.time(), "type": "heartbeat"}
 
         payload, flags = self._prepare_payload(data)
         message = Message.create(MessageType.HEARTBEAT, payload, flags)
@@ -308,8 +295,8 @@ class ProtocolCodec:
             编码后的消息
         """
         data = info.to_dict()
-        data['type'] = 'checkin'
-        data['timestamp'] = time.time()
+        data["type"] = "checkin"
+        data["timestamp"] = time.time()
 
         payload, flags = self._prepare_payload(data)
         message = Message.create(MessageType.CHECKIN, payload, flags)
@@ -333,14 +320,14 @@ class ProtocolCodec:
         payload_data = self._extract_payload(message.payload, message.header.flags)
 
         return BeaconInfo(
-            beacon_id=payload_data.get('beacon_id', ''),
-            hostname=payload_data.get('hostname', ''),
-            username=payload_data.get('username', ''),
-            os_info=payload_data.get('os_info', ''),
-            arch=payload_data.get('arch', ''),
-            ip_address=payload_data.get('ip_address', ''),
-            pid=payload_data.get('pid', 0),
-            integrity=payload_data.get('integrity', 'medium'),
+            beacon_id=payload_data.get("beacon_id", ""),
+            hostname=payload_data.get("hostname", ""),
+            username=payload_data.get("username", ""),
+            os_info=payload_data.get("os_info", ""),
+            arch=payload_data.get("arch", ""),
+            ip_address=payload_data.get("ip_address", ""),
+            pid=payload_data.get("pid", 0),
+            integrity=payload_data.get("integrity", "medium"),
         )
 
     # ==================== 任务 ====================
@@ -356,12 +343,12 @@ class ProtocolCodec:
             编码后的消息
         """
         data = {
-            'id': task.id,
-            'type': task.type,
-            'payload': task.payload,
-            'timeout': task.timeout,
-            'priority': task.priority,
-            'created_at': task.created_at,
+            "id": task.id,
+            "type": task.type,
+            "payload": task.payload,
+            "timeout": task.timeout,
+            "priority": task.priority,
+            "created_at": task.created_at,
         }
 
         payload, flags = self._prepare_payload(data)
@@ -379,17 +366,17 @@ class ProtocolCodec:
             编码后的消息
         """
         data = {
-            'tasks': [
+            "tasks": [
                 {
-                    'id': t.id,
-                    'type': t.type,
-                    'payload': t.payload,
-                    'timeout': t.timeout,
-                    'priority': t.priority,
+                    "id": t.id,
+                    "type": t.type,
+                    "payload": t.payload,
+                    "timeout": t.timeout,
+                    "priority": t.priority,
                 }
                 for t in tasks
             ],
-            'count': len(tasks),
+            "count": len(tasks),
         }
 
         payload, flags = self._prepare_payload(data)
@@ -414,16 +401,16 @@ class ProtocolCodec:
         payload_data = self._extract_payload(message.payload, message.header.flags)
 
         tasks = []
-        task_list = payload_data.get('tasks', [payload_data])
+        task_list = payload_data.get("tasks", [payload_data])
 
         for task_data in task_list:
             task = Task(
-                id=task_data.get('id', str(uuid.uuid4())[:8]),
-                type=task_data.get('type', 'unknown'),
-                payload=task_data.get('payload'),
-                timeout=task_data.get('timeout', 300.0),
-                priority=task_data.get('priority', 5),
-                created_at=task_data.get('created_at', time.time()),
+                id=task_data.get("id", str(uuid.uuid4())[:8]),
+                type=task_data.get("type", "unknown"),
+                payload=task_data.get("payload"),
+                timeout=task_data.get("timeout", 300.0),
+                priority=task_data.get("priority", 5),
+                created_at=task_data.get("created_at", time.time()),
             )
             tasks.append(task)
 
@@ -442,7 +429,7 @@ class ProtocolCodec:
             编码后的消息
         """
         data = result.to_dict()
-        data['timestamp'] = time.time()
+        data["timestamp"] = time.time()
 
         payload, flags = self._prepare_payload(data)
         message = Message.create(MessageType.TASK_RESULT, payload, flags)
@@ -524,7 +511,7 @@ class ProtocolCodec:
             payload = zlib.decompress(payload)
 
         if as_dict:
-            return json.loads(payload.decode('utf-8'))
+            return json.loads(payload.decode("utf-8"))
 
         return payload
 
@@ -542,9 +529,9 @@ class ProtocolCodec:
             编码后的消息
         """
         data = {
-            'error_code': error_code,
-            'message': message,
-            'timestamp': time.time(),
+            "error_code": error_code,
+            "message": message,
+            "timestamp": time.time(),
         }
 
         payload, flags = self._prepare_payload(data)
@@ -553,6 +540,7 @@ class ProtocolCodec:
 
 
 # ==================== HTTP 协议适配 ====================
+
 
 class HTTPProtocolAdapter:
     """
@@ -572,9 +560,7 @@ class HTTPProtocolAdapter:
         self.encoder = C2Encoder()
 
     def encode_request(
-        self,
-        data: bytes,
-        method: str = 'POST'
+        self, data: bytes, method: str = "POST"
     ) -> Tuple[Dict[str, str], Union[str, Dict[str, Any]]]:
         """
         编码为 HTTP 请求
@@ -589,24 +575,21 @@ class HTTPProtocolAdapter:
         # Base64 编码
         encoded = self.encoder.base64_encode(data)
 
-        if method.upper() == 'GET':
+        if method.upper() == "GET":
             # GET 请求放在参数中
-            return {}, {'d': encoded, 't': str(int(time.time()))}
+            return {}, {"d": encoded, "t": str(int(time.time()))}
         else:
             # POST 请求放在 body 中
             headers = {
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json",
             }
             body = {
-                'data': encoded,
-                'timestamp': int(time.time()),
+                "data": encoded,
+                "timestamp": int(time.time()),
             }
             return headers, body
 
-    def decode_request(
-        self,
-        body: Union[str, Dict[str, Any]]
-    ) -> bytes:
+    def decode_request(self, body: Union[str, Dict[str, Any]]) -> bytes:
         """
         解码 HTTP 请求
 
@@ -619,7 +602,7 @@ class HTTPProtocolAdapter:
         if isinstance(body, str):
             body = json.loads(body)
 
-        encoded = body.get('data') or body.get('d', '')
+        encoded = body.get("data") or body.get("d", "")
         return self.encoder.base64_decode(encoded)
 
     def encode_response(self, data: bytes) -> Dict[str, Any]:
@@ -634,9 +617,9 @@ class HTTPProtocolAdapter:
         """
         encoded = self.encoder.base64_encode(data)
         return {
-            'data': encoded,
-            'timestamp': int(time.time()),
-            'status': 'ok',
+            "data": encoded,
+            "timestamp": int(time.time()),
+            "status": "ok",
         }
 
     def decode_response(self, body: Union[str, Dict[str, Any]]) -> bytes:
@@ -652,14 +635,15 @@ class HTTPProtocolAdapter:
         if isinstance(body, str):
             body = json.loads(body)
 
-        encoded = body.get('data', '')
+        encoded = body.get("data", "")
         if not encoded:
-            return b''
+            return b""
 
         return self.encoder.base64_decode(encoded)
 
 
 # ==================== 便捷函数 ====================
+
 
 def encode_heartbeat(beacon_id: str, timestamp: Optional[float] = None) -> bytes:
     """编码心跳消息"""
@@ -698,19 +682,19 @@ def decode_result(data: bytes) -> TaskResult:
 
 
 __all__ = [
-    'PROTOCOL_MAGIC',
-    'PROTOCOL_VERSION',
-    'HEADER_SIZE',
-    'MessageType',
-    'MessageFlags',
-    'MessageHeader',
-    'Message',
-    'ProtocolCodec',
-    'HTTPProtocolAdapter',
-    'encode_heartbeat',
-    'decode_heartbeat',
-    'encode_tasks',
-    'decode_tasks',
-    'encode_result',
-    'decode_result',
+    "PROTOCOL_MAGIC",
+    "PROTOCOL_VERSION",
+    "HEADER_SIZE",
+    "MessageType",
+    "MessageFlags",
+    "MessageHeader",
+    "Message",
+    "ProtocolCodec",
+    "HTTPProtocolAdapter",
+    "encode_heartbeat",
+    "decode_heartbeat",
+    "encode_tasks",
+    "decode_tasks",
+    "encode_result",
+    "decode_result",
 ]

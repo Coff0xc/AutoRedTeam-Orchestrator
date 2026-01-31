@@ -44,10 +44,14 @@ def get_log_dir() -> Path:
     Returns:
         日志目录的Path对象
     """
-    if os.name == 'nt':  # Windows
-        log_dir = Path(os.environ.get('LOCALAPPDATA', Path.home())) / 'AutoRedTeam' / 'logs'
+    if os.name == "nt":  # Windows
+        log_dir = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "AutoRedTeam" / "logs"
     else:  # Linux/macOS
-        log_dir = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local' / 'state')) / 'autoredteam' / 'logs'
+        log_dir = (
+            Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+            / "autoredteam"
+            / "logs"
+        )
 
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
@@ -60,10 +64,12 @@ def get_data_dir() -> Path:
     Returns:
         数据目录的Path对象
     """
-    if os.name == 'nt':  # Windows
-        data_dir = Path(os.environ.get('LOCALAPPDATA', Path.home())) / 'AutoRedTeam' / 'data'
+    if os.name == "nt":  # Windows
+        data_dir = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "AutoRedTeam" / "data"
     else:  # Linux/macOS
-        data_dir = Path(os.environ.get('XDG_DATA_HOME', Path.home() / '.local' / 'share')) / 'autoredteam'
+        data_dir = (
+            Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "autoredteam"
+        )
 
     data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir
@@ -76,10 +82,12 @@ def get_config_dir() -> Path:
     Returns:
         配置目录的Path对象
     """
-    if os.name == 'nt':  # Windows
-        config_dir = Path(os.environ.get('APPDATA', Path.home())) / 'AutoRedTeam'
+    if os.name == "nt":  # Windows
+        config_dir = Path(os.environ.get("APPDATA", Path.home())) / "AutoRedTeam"
     else:  # Linux/macOS
-        config_dir = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config')) / 'autoredteam'
+        config_dir = (
+            Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "autoredteam"
+        )
 
     config_dir.mkdir(parents=True, exist_ok=True)
     return config_dir
@@ -92,10 +100,10 @@ def get_cache_dir() -> Path:
     Returns:
         缓存目录的Path对象
     """
-    if os.name == 'nt':  # Windows
-        cache_dir = Path(os.environ.get('LOCALAPPDATA', Path.home())) / 'AutoRedTeam' / 'cache'
+    if os.name == "nt":  # Windows
+        cache_dir = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "AutoRedTeam" / "cache"
     else:  # Linux/macOS
-        cache_dir = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'autoredteam'
+        cache_dir = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "autoredteam"
 
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir
@@ -144,7 +152,7 @@ def safe_join(*parts: str) -> Path:
     result = Path(parts[0])
     for part in parts[1:]:
         # 检查路径遍历
-        if '..' in Path(part).parts:
+        if ".." in Path(part).parts:
             raise ValueError(f"路径遍历检测: {part}")
         result = result / part
     return result
@@ -159,18 +167,18 @@ CACHE_DIR = get_cache_dir()
 
 
 __all__ = [
-    'get_temp_dir',
-    'get_temp_file',
-    'get_log_dir',
-    'get_data_dir',
-    'get_config_dir',
-    'get_cache_dir',
-    'normalize_path',
-    'ensure_dir',
-    'safe_join',
-    'TEMP_DIR',
-    'LOG_DIR',
-    'DATA_DIR',
-    'CONFIG_DIR',
-    'CACHE_DIR',
+    "get_temp_dir",
+    "get_temp_file",
+    "get_log_dir",
+    "get_data_dir",
+    "get_config_dir",
+    "get_cache_dir",
+    "normalize_path",
+    "ensure_dir",
+    "safe_join",
+    "TEMP_DIR",
+    "LOG_DIR",
+    "DATA_DIR",
+    "CONFIG_DIR",
+    "CACHE_DIR",
 ]

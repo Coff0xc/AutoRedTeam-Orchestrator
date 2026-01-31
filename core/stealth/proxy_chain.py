@@ -5,24 +5,25 @@
 """
 
 import asyncio
-import random
-import time
+import json
 import logging
-from typing import Dict, List, Optional, Tuple, Any, Callable, Union
+import os
+import random
+import tempfile
+import time
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from collections import deque
-import json
-import tempfile
-import os
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
 # 尝试导入请求库
 try:
     import requests
-    from requests.exceptions import RequestException, ProxyError, Timeout
+    from requests.exceptions import ProxyError, RequestException, Timeout
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -30,12 +31,14 @@ except ImportError:
 
 try:
     import httpx
+
     HAS_HTTPX = True
 except ImportError:
     HAS_HTTPX = False
 
 try:
     from PySocks import socks  # 需要 PySocks 库支持 SOCKS 代理
+
     HAS_SOCKS = True
 except ImportError:
     HAS_SOCKS = False
@@ -43,13 +46,14 @@ except ImportError:
 
 # 导入代理池模块
 try:
-    from .proxy_pool import Proxy, ProxyType, ProxyPool, ProxyAnonymity, ProxyValidator
+    from .proxy_pool import Proxy, ProxyAnonymity, ProxyPool, ProxyType, ProxyValidator
 except ImportError:
-    from proxy_pool import Proxy, ProxyType, ProxyPool, ProxyAnonymity, ProxyValidator
+    from proxy_pool import Proxy, ProxyAnonymity, ProxyPool, ProxyType, ProxyValidator
 
 
 class ChainStrategy(Enum):
     """代理链策略"""
+
     STRICT = "strict"  # 严格模式 - 必须全部经过所有代理
     DYNAMIC = "dynamic"  # 动态模式 - 跳过失效代理
     RANDOM = "random"  # 随机模式 - 随机选择代理链路
@@ -58,6 +62,7 @@ class ChainStrategy(Enum):
 
 class LoadBalanceMode(Enum):
     """负载均衡模式"""
+
     ROUND_ROBIN = "round_robin"  # 轮询
     RANDOM = "random"  # 随机
     WEIGHTED = "weighted"  # 加权 (基于成功率)
@@ -67,6 +72,7 @@ class LoadBalanceMode(Enum):
 @dataclass
 class ChainMetrics:
     """代理链指标"""
+
     total_requests: int = 0
     success_requests: int = 0
     failed_requests: int = 0
@@ -107,12 +113,14 @@ class ProxyChain:
         status = chain.get_status()
     """
 
-    def __init__(self,
-                 name: str = "default",
-                 strategy: ChainStrategy = ChainStrategy.DYNAMIC,
-                 max_retry: int = 3,
-                 timeout: float = 30.0,
-                 jitter: Tuple[float, float] = (0.5, 2.0)):
+    def __init__(
+        self,
+        name: str = "default",
+        strategy: ChainStrategy = ChainStrategy.DYNAMIC,
+        max_retry: int = 3,
+        timeout: float = 30.0,
+        jitter: Tuple[float, float] = (0.5, 2.0),
+    ):
         """
         Args:
             name: 链名称
@@ -220,12 +228,7 @@ class ProxyChain:
         Returns:
             验证结果统计
         """
-        results = {
-            "total": len(self._proxies),
-            "valid": 0,
-            "invalid": 0,
-            "details": []
-        }
+        results = {"total": len(self._proxies), "valid": 0, "invalid": 0, "details": []}
 
         for i, proxy in enumerate(self._proxies):
             is_valid, response_time = self.verify_proxy(proxy.url, timeout)
@@ -237,22 +240,21 @@ class ProxyChain:
             else:
                 results["invalid"] += 1
 
-            results["details"].append({
-                "index": i,
-                "url": proxy.url,
-                "valid": is_valid,
-                "response_time": response_time
-            })
+            results["details"].append(
+                {"index": i, "url": proxy.url, "valid": is_valid, "response_time": response_time}
+            )
 
         logger.info(f"[{self.name}] Verified {results['valid']}/{results['total']} proxies")
         return results
 
-    def request_through_chain(self,
-                             url: str,
-                             method: str = "GET",
-                             use_jitter: bool = True,
-                             auto_cleanup: bool = True,
-                             **kwargs) -> Optional[requests.Response]:
+    def request_through_chain(
+        self,
+        url: str,
+        method: str = "GET",
+        use_jitter: bool = True,
+        auto_cleanup: bool = True,
+        **kwargs,
+    ) -> Optional[requests.Response]:
         """
         通过代理链发送请求
 
@@ -327,7 +329,9 @@ class ProxyChain:
                     self._metrics.total_response_time += response_time
                     self._metrics.last_used = time.time()
 
-                    logger.info(f"[{self.name}] Request success via {proxy.url} ({response_time:.2f}s)")
+                    logger.info(
+                        f"[{self.name}] Request success via {proxy.url} ({response_time:.2f}s)"
+                    )
                     return response
 
                 except (ProxyError, Timeout, RequestException) as e:
@@ -351,7 +355,9 @@ class ProxyChain:
             # 重试延迟
             if attempt < self.max_retry - 1:
                 retry_delay = random.uniform(1, 3)
-                logger.debug(f"[{self.name}] Retrying in {retry_delay:.1f}s (attempt {attempt+1}/{self.max_retry})")
+                logger.debug(
+                    f"[{self.name}] Retrying in {retry_delay:.1f}s (attempt {attempt+1}/{self.max_retry})"
+                )
                 time.sleep(retry_delay)
 
         # 所有尝试失败
@@ -389,7 +395,7 @@ class ProxyChain:
                 "success_rate": self._metrics.success_rate,
                 "avg_response_time": self._metrics.avg_response_time,
                 "last_used": self._metrics.last_used,
-            }
+            },
         }
 
     def enable(self):
@@ -437,8 +443,8 @@ class ProxyChain:
             else:
                 lines.append(f"{proxy_type} {proxy.host} {proxy.port}")
 
-        config = '\n'.join(lines)
-        Path(filepath).write_text(config, encoding='utf-8')
+        config = "\n".join(lines)
+        Path(filepath).write_text(config, encoding="utf-8")
         logger.info(f"[{self.name}] Exported proxychains config to {filepath}")
 
 
@@ -460,9 +466,11 @@ class ProxyChainManager:
         stats = manager.get_stats()
     """
 
-    def __init__(self,
-                 pool: Optional[ProxyPool] = None,
-                 load_balance: LoadBalanceMode = LoadBalanceMode.ROUND_ROBIN):
+    def __init__(
+        self,
+        pool: Optional[ProxyPool] = None,
+        load_balance: LoadBalanceMode = LoadBalanceMode.ROUND_ROBIN,
+    ):
         """
         Args:
             pool: 代理池 (可选)
@@ -473,10 +481,9 @@ class ProxyChainManager:
         self._load_balance = load_balance
         self._chain_queue = deque()  # 用于 round-robin
 
-    def create_chain(self,
-                    name: str,
-                    strategy: ChainStrategy = ChainStrategy.DYNAMIC,
-                    **kwargs) -> ProxyChain:
+    def create_chain(
+        self, name: str, strategy: ChainStrategy = ChainStrategy.DYNAMIC, **kwargs
+    ) -> ProxyChain:
         """创建代理链"""
         if name in self._chains:
             logger.warning(f"Chain '{name}' already exists")
@@ -609,7 +616,7 @@ class ProxyChainManager:
             "total_chains": len(self._chains),
             "enabled_chains": sum(1 for c in self._chains.values() if c._enabled),
             "load_balance_mode": self._load_balance.value,
-            "chains": {name: chain.get_status() for name, chain in self._chains.items()}
+            "chains": {name: chain.get_status() for name, chain in self._chains.items()},
         }
 
     def auto_cleanup(self):
@@ -627,9 +634,10 @@ class ProxyChainManager:
 
 # 便捷函数
 
-def create_chain_from_list(proxies: List[str],
-                          name: str = "default",
-                          strategy: ChainStrategy = ChainStrategy.DYNAMIC) -> ProxyChain:
+
+def create_chain_from_list(
+    proxies: List[str], name: str = "default", strategy: ChainStrategy = ChainStrategy.DYNAMIC
+) -> ProxyChain:
     """
     从代理列表创建代理链
 
@@ -647,10 +655,12 @@ def create_chain_from_list(proxies: List[str],
     return chain
 
 
-def create_chain_from_pool(pool: ProxyPool,
-                          count: int = 5,
-                          name: str = "pool_chain",
-                          strategy: ChainStrategy = ChainStrategy.DYNAMIC) -> ProxyChain:
+def create_chain_from_pool(
+    pool: ProxyPool,
+    count: int = 5,
+    name: str = "pool_chain",
+    strategy: ChainStrategy = ChainStrategy.DYNAMIC,
+) -> ProxyChain:
     """
     从代理池创建代理链
 
@@ -675,7 +685,7 @@ def create_chain_from_pool(pool: ProxyPool,
 
 if __name__ == "__main__":
     # 测试代码
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     logger.info("=== ProxyChain Test ===")
 

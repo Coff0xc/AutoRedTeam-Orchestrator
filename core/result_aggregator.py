@@ -3,12 +3,12 @@
 结果聚合器 - 统一的结果收集和聚合
 """
 
-from typing import List, Dict, Any, Optional
-from dataclasses import dataclass, field
-from datetime import datetime
-from collections import defaultdict
 import json
 import logging
+from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class VulnerabilityResult:
     """漏洞结果数据类"""
+
     vuln_type: str
     severity: str
     url: str
@@ -61,7 +62,7 @@ class ResultAggregator:
             evidence=result.get("evidence"),
             confidence=result.get("confidence", 0.0),
             verified=result.get("verified", False),
-            source=source
+            source=source,
         )
 
         # 去重
@@ -116,7 +117,7 @@ class ResultAggregator:
                 "by_severity": {},
                 "by_type": {},
                 "verified_count": 0,
-                "high_confidence_count": 0
+                "high_confidence_count": 0,
             }
 
         # 按严重程度统计
@@ -140,7 +141,9 @@ class ResultAggregator:
             "verified_count": verified_count,
             "verified_rate": verified_count / len(self.results) if self.results else 0,
             "high_confidence_count": high_confidence_count,
-            "high_confidence_rate": high_confidence_count / len(self.results) if self.results else 0
+            "high_confidence_rate": (
+                high_confidence_count / len(self.results) if self.results else 0
+            ),
         }
 
     def export_json(self, output_file: str):
@@ -159,13 +162,13 @@ class ResultAggregator:
                     "confidence": r.confidence,
                     "verified": r.verified,
                     "source": r.source,
-                    "timestamp": r.timestamp.isoformat()
+                    "timestamp": r.timestamp.isoformat(),
                 }
                 for r in self.results
-            ]
+            ],
         }
 
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
         logger.info(f"结果已导出到: {output_file}")
@@ -174,29 +177,41 @@ class ResultAggregator:
         """导出为 CSV 格式"""
         import csv
 
-        with open(output_file, 'w', newline='', encoding='utf-8') as f:
+        with open(output_file, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
 
             # 写入表头
-            writer.writerow([
-                "Type", "Severity", "URL", "Param", "Payload",
-                "Evidence", "Confidence", "Verified", "Source", "Timestamp"
-            ])
+            writer.writerow(
+                [
+                    "Type",
+                    "Severity",
+                    "URL",
+                    "Param",
+                    "Payload",
+                    "Evidence",
+                    "Confidence",
+                    "Verified",
+                    "Source",
+                    "Timestamp",
+                ]
+            )
 
             # 写入数据
             for r in self.results:
-                writer.writerow([
-                    r.vuln_type,
-                    r.severity,
-                    r.url,
-                    r.param or "",
-                    r.payload or "",
-                    r.evidence or "",
-                    r.confidence,
-                    r.verified,
-                    r.source,
-                    r.timestamp.isoformat()
-                ])
+                writer.writerow(
+                    [
+                        r.vuln_type,
+                        r.severity,
+                        r.url,
+                        r.param or "",
+                        r.payload or "",
+                        r.evidence or "",
+                        r.confidence,
+                        r.verified,
+                        r.source,
+                        r.timestamp.isoformat(),
+                    ]
+                )
 
         logger.info(f"结果已导出到: {output_file}")
 
@@ -204,7 +219,7 @@ class ResultAggregator:
         """导出为 Markdown 格式"""
         stats = self.get_statistics()
 
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             # 标题
             f.write("# 漏洞扫描报告\n\n")
             f.write(f"**扫描时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
@@ -213,17 +228,19 @@ class ResultAggregator:
             f.write("## 统计信息\n\n")
             f.write(f"- 总漏洞数: {stats['total']}\n")
             f.write(f"- 已验证: {stats['verified_count']} ({stats['verified_rate']:.1%})\n")
-            f.write(f"- 高置信度: {stats['high_confidence_count']} ({stats['high_confidence_rate']:.1%})\n\n")
+            f.write(
+                f"- 高置信度: {stats['high_confidence_count']} ({stats['high_confidence_rate']:.1%})\n\n"
+            )
 
             # 按严重程度
             f.write("### 按严重程度\n\n")
-            for severity, count in sorted(stats['by_severity'].items()):
+            for severity, count in sorted(stats["by_severity"].items()):
                 f.write(f"- {severity}: {count}\n")
             f.write("\n")
 
             # 按类型
             f.write("### 按漏洞类型\n\n")
-            for vuln_type, count in sorted(stats['by_type'].items()):
+            for vuln_type, count in sorted(stats["by_type"].items()):
                 f.write(f"- {vuln_type}: {count}\n")
             f.write("\n")
 
@@ -263,25 +280,31 @@ if __name__ == "__main__":
     aggregator = ResultAggregator()
 
     # 添加结果
-    aggregator.add_result({
-        "type": "SQL Injection",
-        "severity": "CRITICAL",
-        "url": "https://example.com/page?id=1",
-        "param": "id",
-        "payload": "' OR '1'='1",
-        "confidence": 0.9,
-        "verified": True
-    }, source="sqli_detector")
+    aggregator.add_result(
+        {
+            "type": "SQL Injection",
+            "severity": "CRITICAL",
+            "url": "https://example.com/page?id=1",
+            "param": "id",
+            "payload": "' OR '1'='1",
+            "confidence": 0.9,
+            "verified": True,
+        },
+        source="sqli_detector",
+    )
 
-    aggregator.add_result({
-        "type": "XSS",
-        "severity": "HIGH",
-        "url": "https://example.com/search?q=test",
-        "param": "q",
-        "payload": "<script>alert(1)</script>",
-        "confidence": 0.8,
-        "verified": False
-    }, source="xss_detector")
+    aggregator.add_result(
+        {
+            "type": "XSS",
+            "severity": "HIGH",
+            "url": "https://example.com/search?q=test",
+            "param": "q",
+            "payload": "<script>alert(1)</script>",
+            "confidence": 0.8,
+            "verified": False,
+        },
+        source="xss_detector",
+    )
 
     # 统计信息
     stats = aggregator.get_statistics()

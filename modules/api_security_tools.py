@@ -191,8 +191,7 @@ def register_api_security_tools(mcp):
     # ========== WebSocket安全工具 ==========
 
     @mcp.tool()
-    def websocket_origin_bypass_test(ws_url: str,
-                                      target_origin: str = "") -> dict:
+    def websocket_origin_bypass_test(ws_url: str, target_origin: str = "") -> dict:
         """WebSocket Origin绕过测试 - 检测Origin验证
 
         测试多种Origin绕过技术

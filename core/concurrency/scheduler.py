@@ -4,26 +4,27 @@
 提供延迟任务和周期任务的调度功能。
 """
 
-import heapq
-import time
-import threading
-import uuid
 import asyncio
-from typing import Callable, Optional, Any, List, Dict
+import heapq
+import logging
+import threading
+import time
+import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-import logging
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class TaskStatus(Enum):
     """任务状态"""
-    PENDING = 'pending'       # 等待执行
-    RUNNING = 'running'       # 正在执行
-    COMPLETED = 'completed'   # 已完成
-    FAILED = 'failed'         # 失败
-    CANCELLED = 'cancelled'   # 已取消
+
+    PENDING = "pending"  # 等待执行
+    RUNNING = "running"  # 正在执行
+    COMPLETED = "completed"  # 已完成
+    FAILED = "failed"  # 失败
+    CANCELLED = "cancelled"  # 已取消
 
 
 @dataclass(order=True)
@@ -33,13 +34,14 @@ class ScheduledTask:
 
     使用 dataclass 的 order=True 实现基于 run_at 的排序
     """
+
     run_at: float
     task_id: str = field(compare=False)
     fn: Callable = field(compare=False)
     args: tuple = field(compare=False, default=())
     kwargs: dict = field(compare=False, default_factory=dict)
     interval: Optional[float] = field(compare=False, default=None)
-    name: str = field(compare=False, default='')
+    name: str = field(compare=False, default="")
     status: TaskStatus = field(compare=False, default=TaskStatus.PENDING)
     created_at: float = field(compare=False, default_factory=time.monotonic)
     last_run: Optional[float] = field(compare=False, default=None)
@@ -62,11 +64,7 @@ class TaskScheduler:
     - 任务状态追踪
     """
 
-    def __init__(
-        self,
-        max_workers: int = 4,
-        name: str = 'default'
-    ):
+    def __init__(self, max_workers: int = 4, name: str = "default"):
         """
         初始化任务调度器
 
@@ -94,7 +92,7 @@ class TaskScheduler:
         interval: Optional[float] = None,
         args: tuple = (),
         kwargs: Optional[dict] = None,
-        name: Optional[str] = None
+        name: Optional[str] = None,
     ) -> str:
         """
         调度任务
@@ -120,7 +118,7 @@ class TaskScheduler:
             args=args,
             kwargs=kwargs if kwargs else {},
             interval=interval,
-            name=name or f"task_{task_id[:8]}"
+            name=name or f"task_{task_id[:8]}",
         )
 
         with self._condition:
@@ -128,9 +126,10 @@ class TaskScheduler:
             self._task_map[task_id] = task
             self._condition.notify()
 
-        logger.debug(f"任务 '{task.name}' (ID: {task_id[:8]}) 已调度, "
-                    f"将在 {delay:.2f}s 后执行"
-                    + (f", 周期: {interval}s" if interval else ""))
+        logger.debug(
+            f"任务 '{task.name}' (ID: {task_id[:8]}) 已调度, "
+            f"将在 {delay:.2f}s 后执行" + (f", 周期: {interval}s" if interval else "")
+        )
 
         return task_id
 
@@ -141,7 +140,7 @@ class TaskScheduler:
         interval: Optional[float] = None,
         args: tuple = (),
         kwargs: Optional[dict] = None,
-        name: Optional[str] = None
+        name: Optional[str] = None,
     ) -> str:
         """
         在指定时间调度任务
@@ -192,10 +191,7 @@ class TaskScheduler:
         with self._lock:
             return self._task_map.get(task_id)
 
-    def list_tasks(
-        self,
-        status: Optional[TaskStatus] = None
-    ) -> List[Dict[str, Any]]:
+    def list_tasks(self, status: Optional[TaskStatus] = None) -> List[Dict[str, Any]]:
         """
         列出任务
 
@@ -209,16 +205,18 @@ class TaskScheduler:
             tasks = []
             for task in self._task_map.values():
                 if status is None or task.status == status:
-                    tasks.append({
-                        'task_id': task.task_id,
-                        'name': task.name,
-                        'status': task.status.value,
-                        'run_at': task.run_at,
-                        'interval': task.interval,
-                        'run_count': task.run_count,
-                        'last_run': task.last_run,
-                        'error': task.error
-                    })
+                    tasks.append(
+                        {
+                            "task_id": task.task_id,
+                            "name": task.name,
+                            "status": task.status.value,
+                            "run_at": task.run_at,
+                            "interval": task.interval,
+                            "run_count": task.run_count,
+                            "last_run": task.last_run,
+                            "error": task.error,
+                        }
+                    )
             return tasks
 
     def _execute_task(self, task: ScheduledTask) -> None:
@@ -277,14 +275,10 @@ class TaskScheduler:
 
                         # 在新线程中执行任务
                         executor = threading.Thread(
-                            target=self._execute_task,
-                            args=(task,),
-                            daemon=True
+                            target=self._execute_task, args=(task,), daemon=True
                         )
                         executor.start()
-                        self._executor_pool = [
-                            t for t in self._executor_pool if t.is_alive()
-                        ]
+                        self._executor_pool = [t for t in self._executor_pool if t.is_alive()]
                         self._executor_pool.append(executor)
                     else:
                         # 等待直到任务到期或有新任务
@@ -300,9 +294,7 @@ class TaskScheduler:
 
             self._running = True
             self._thread = threading.Thread(
-                target=self._scheduler_loop,
-                name=f"scheduler-{self.name}",
-                daemon=True
+                target=self._scheduler_loop, name=f"scheduler-{self.name}", daemon=True
             )
             self._thread.start()
             logger.info(f"调度器 '{self.name}' 已启动")
@@ -346,10 +338,7 @@ class TaskScheduler:
                     task.status = TaskStatus.CANCELLED
                     count += 1
 
-            self._tasks = [
-                t for t in self._tasks
-                if t.status != TaskStatus.CANCELLED
-            ]
+            self._tasks = [t for t in self._tasks if t.status != TaskStatus.CANCELLED]
             heapq.heapify(self._tasks)
 
             return count
@@ -369,14 +358,14 @@ class TaskScheduler:
                 status_counts[status] = status_counts.get(status, 0) + 1
 
             return {
-                'name': self.name,
-                'is_running': self._running,
-                'total_tasks': len(self._task_map),
-                'pending_tasks': len(self._tasks),
-                'status_counts': status_counts
+                "name": self.name,
+                "is_running": self._running,
+                "total_tasks": len(self._task_map),
+                "pending_tasks": len(self._tasks),
+                "status_counts": status_counts,
             }
 
-    def __enter__(self) -> 'TaskScheduler':
+    def __enter__(self) -> "TaskScheduler":
         self.start()
         return self
 
@@ -395,7 +384,7 @@ class AsyncTaskScheduler:
     用于调度异步任务
     """
 
-    def __init__(self, name: str = 'async_default'):
+    def __init__(self, name: str = "async_default"):
         """
         初始化异步任务调度器
 
@@ -406,12 +395,7 @@ class AsyncTaskScheduler:
         self._tasks: Dict[str, asyncio.Task] = {}
         self._lock = asyncio.Lock()
 
-    async def schedule(
-        self,
-        coro: Any,
-        delay: float = 0,
-        name: Optional[str] = None
-    ) -> str:
+    async def schedule(self, coro: Any, delay: float = 0, name: Optional[str] = None) -> str:
         """
         调度异步任务
 
@@ -436,9 +420,7 @@ class AsyncTaskScheduler:
             self._tasks[task_id] = task
 
             # 任务完成后清理
-            task.add_done_callback(
-                lambda t: asyncio.create_task(self._cleanup(task_id))
-            )
+            task.add_done_callback(lambda t: asyncio.create_task(self._cleanup(task_id)))
 
         logger.debug(f"异步任务 '{task_name}' 已调度")
         return task_id
@@ -450,7 +432,7 @@ class AsyncTaskScheduler:
         args: tuple = (),
         kwargs: Optional[dict] = None,
         name: Optional[str] = None,
-        max_iterations: Optional[int] = None
+        max_iterations: Optional[int] = None,
     ) -> str:
         """
         调度周期异步任务
@@ -535,11 +517,7 @@ class AsyncTaskScheduler:
             self._tasks.clear()
             return count
 
-    async def wait_task(
-        self,
-        task_id: str,
-        timeout: Optional[float] = None
-    ) -> Any:
+    async def wait_task(self, task_id: str, timeout: Optional[float] = None) -> Any:
         """
         等待任务完成
 
@@ -578,7 +556,7 @@ def get_scheduler() -> TaskScheduler:
 
     with _scheduler_lock:
         if _global_scheduler is None:
-            _global_scheduler = TaskScheduler(name='global')
+            _global_scheduler = TaskScheduler(name="global")
             _global_scheduler.start()
         return _global_scheduler
 
@@ -589,7 +567,7 @@ def schedule_task(
     interval: Optional[float] = None,
     args: tuple = (),
     kwargs: Optional[dict] = None,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ) -> str:
     """
     使用全局调度器调度任务
@@ -606,12 +584,7 @@ def schedule_task(
         任务 ID
     """
     return get_scheduler().schedule(
-        fn=fn,
-        delay=delay,
-        interval=interval,
-        args=args,
-        kwargs=kwargs,
-        name=name
+        fn=fn, delay=delay, interval=interval, args=args, kwargs=kwargs, name=name
     )
 
 

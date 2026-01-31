@@ -23,20 +23,20 @@
 
 import base64
 import binascii
-import html
 import codecs
-from typing import Union, Optional
-from urllib.parse import quote, unquote, quote_plus, unquote_plus
+import html
+from typing import Optional, Union
+from urllib.parse import quote, quote_plus, unquote, unquote_plus
 
 
-def _ensure_bytes(data: Union[str, bytes], encoding: str = 'utf-8') -> bytes:
+def _ensure_bytes(data: Union[str, bytes], encoding: str = "utf-8") -> bytes:
     """确保数据为bytes类型"""
     if isinstance(data, str):
         return data.encode(encoding)
     return data
 
 
-def _ensure_str(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
+def _ensure_str(data: Union[str, bytes], encoding: str = "utf-8") -> str:
     """确保数据为str类型"""
     if isinstance(data, bytes):
         return data.decode(encoding)
@@ -45,7 +45,8 @@ def _ensure_str(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
 
 # ==================== Base64 编码 ====================
 
-def base64_encode(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
+
+def base64_encode(data: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     Base64编码
 
@@ -57,10 +58,10 @@ def base64_encode(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
         Base64编码后的字符串
     """
     data_bytes = _ensure_bytes(data, encoding)
-    return base64.b64encode(data_bytes).decode('ascii')
+    return base64.b64encode(data_bytes).decode("ascii")
 
 
-def base64_decode(data: str, encoding: str = 'utf-8') -> bytes:
+def base64_decode(data: str, encoding: str = "utf-8") -> bytes:
     """
     Base64解码
 
@@ -72,17 +73,17 @@ def base64_decode(data: str, encoding: str = 'utf-8') -> bytes:
         解码后的字节数据
     """
     # 处理URL安全的Base64
-    data = data.replace('-', '+').replace('_', '/')
+    data = data.replace("-", "+").replace("_", "/")
 
     # 补齐padding
     padding = 4 - (len(data) % 4)
     if padding != 4:
-        data += '=' * padding
+        data += "=" * padding
 
     return base64.b64decode(data)
 
 
-def base64_decode_str(data: str, encoding: str = 'utf-8') -> str:
+def base64_decode_str(data: str, encoding: str = "utf-8") -> str:
     """
     Base64解码为字符串
 
@@ -96,7 +97,7 @@ def base64_decode_str(data: str, encoding: str = 'utf-8') -> str:
     return base64_decode(data).decode(encoding)
 
 
-def base64_url_encode(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
+def base64_url_encode(data: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     URL安全的Base64编码
 
@@ -110,8 +111,8 @@ def base64_url_encode(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
         URL安全的Base64字符串
     """
     data_bytes = _ensure_bytes(data, encoding)
-    encoded = base64.urlsafe_b64encode(data_bytes).decode('ascii')
-    return encoded.rstrip('=')
+    encoded = base64.urlsafe_b64encode(data_bytes).decode("ascii")
+    return encoded.rstrip("=")
 
 
 def base64_url_decode(data: str) -> bytes:
@@ -127,14 +128,15 @@ def base64_url_decode(data: str) -> bytes:
     # 补齐padding
     padding = 4 - (len(data) % 4)
     if padding != 4:
-        data += '=' * padding
+        data += "=" * padding
 
     return base64.urlsafe_b64decode(data)
 
 
 # ==================== 十六进制编码 ====================
 
-def hex_encode(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
+
+def hex_encode(data: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     十六进制编码
 
@@ -146,7 +148,7 @@ def hex_encode(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
         十六进制字符串
     """
     data_bytes = _ensure_bytes(data, encoding)
-    return binascii.hexlify(data_bytes).decode('ascii')
+    return binascii.hexlify(data_bytes).decode("ascii")
 
 
 def hex_decode(data: str) -> bytes:
@@ -160,16 +162,16 @@ def hex_decode(data: str) -> bytes:
         解码后的字节数据
     """
     # 移除可能的0x前缀
-    if data.lower().startswith('0x'):
+    if data.lower().startswith("0x"):
         data = data[2:]
 
     # 移除空格
-    data = data.replace(' ', '').replace('\n', '')
+    data = data.replace(" ", "").replace("\n", "")
 
     return binascii.unhexlify(data)
 
 
-def hex_decode_str(data: str, encoding: str = 'utf-8') -> str:
+def hex_decode_str(data: str, encoding: str = "utf-8") -> str:
     """
     十六进制解码为字符串
 
@@ -185,7 +187,8 @@ def hex_decode_str(data: str, encoding: str = 'utf-8') -> str:
 
 # ==================== URL编码 ====================
 
-def url_encode(data: str, safe: str = '') -> str:
+
+def url_encode(data: str, safe: str = "") -> str:
     """
     URL编码
 
@@ -250,7 +253,7 @@ def url_encode_all(data: str) -> str:
     Returns:
         完全URL编码的字符串
     """
-    return ''.join(f'%{ord(c):02X}' for c in data)
+    return "".join(f"%{ord(c):02X}" for c in data)
 
 
 def double_url_encode(data: str) -> str:
@@ -269,6 +272,7 @@ def double_url_encode(data: str) -> str:
 
 
 # ==================== HTML实体编码 ====================
+
 
 def html_encode(data: str) -> str:
     """
@@ -308,7 +312,7 @@ def html_encode_all(data: str) -> str:
     Returns:
         HTML数字实体编码的字符串
     """
-    return ''.join(f'&#{ord(c)};' for c in data)
+    return "".join(f"&#{ord(c)};" for c in data)
 
 
 def html_encode_hex(data: str) -> str:
@@ -321,10 +325,11 @@ def html_encode_hex(data: str) -> str:
     Returns:
         HTML十六进制实体编码的字符串
     """
-    return ''.join(f'&#x{ord(c):x};' for c in data)
+    return "".join(f"&#x{ord(c):x};" for c in data)
 
 
 # ==================== Unicode编码 ====================
+
 
 def unicode_encode(data: str) -> str:
     """
@@ -336,7 +341,7 @@ def unicode_encode(data: str) -> str:
     Returns:
         Unicode编码的字符串
     """
-    return ''.join(f'\\u{ord(c):04x}' for c in data)
+    return "".join(f"\\u{ord(c):04x}" for c in data)
 
 
 def unicode_decode(data: str) -> str:
@@ -351,7 +356,7 @@ def unicode_decode(data: str) -> str:
     Returns:
         解码后的字符串
     """
-    return codecs.decode(data, 'unicode_escape')
+    return codecs.decode(data, "unicode_escape")
 
 
 def unicode_encode_wide(data: str) -> str:
@@ -366,10 +371,11 @@ def unicode_encode_wide(data: str) -> str:
     Returns:
         Unicode宽字符编码的字符串
     """
-    return ''.join(f'\\u00{ord(c):02x}' if ord(c) < 256 else f'\\u{ord(c):04x}' for c in data)
+    return "".join(f"\\u00{ord(c):02x}" if ord(c) < 256 else f"\\u{ord(c):04x}" for c in data)
 
 
 # ==================== 其他编码 ====================
+
 
 def rot13(data: str) -> str:
     """
@@ -383,10 +389,10 @@ def rot13(data: str) -> str:
     Returns:
         ROT13处理后的字符串
     """
-    return codecs.encode(data, 'rot_13')
+    return codecs.encode(data, "rot_13")
 
 
-def binary_encode(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
+def binary_encode(data: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     二进制编码
 
@@ -398,7 +404,7 @@ def binary_encode(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
         二进制字符串（空格分隔的8位二进制）
     """
     data_bytes = _ensure_bytes(data, encoding)
-    return ' '.join(f'{b:08b}' for b in data_bytes)
+    return " ".join(f"{b:08b}" for b in data_bytes)
 
 
 def binary_decode(data: str) -> bytes:
@@ -412,15 +418,15 @@ def binary_decode(data: str) -> bytes:
         解码后的字节数据
     """
     # 移除空格和换行
-    data = data.replace(' ', '').replace('\n', '')
+    data = data.replace(" ", "").replace("\n", "")
 
     # 按8位分组
-    bytes_list = [data[i:i+8] for i in range(0, len(data), 8)]
+    bytes_list = [data[i : i + 8] for i in range(0, len(data), 8)]
 
     return bytes(int(b, 2) for b in bytes_list)
 
 
-def octal_encode(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
+def octal_encode(data: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     八进制编码
 
@@ -432,7 +438,7 @@ def octal_encode(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
         八进制字符串
     """
     data_bytes = _ensure_bytes(data, encoding)
-    return ''.join(f'\\{b:03o}' for b in data_bytes)
+    return "".join(f"\\{b:03o}" for b in data_bytes)
 
 
 def ascii_encode(data: str) -> str:
@@ -445,7 +451,7 @@ def ascii_encode(data: str) -> str:
     Returns:
         ASCII码字符串（逗号分隔的十进制）
     """
-    return ','.join(str(ord(c)) for c in data)
+    return ",".join(str(ord(c)) for c in data)
 
 
 def ascii_decode(data: str) -> str:
@@ -459,15 +465,16 @@ def ascii_decode(data: str) -> str:
         解码后的字符串
     """
     # 处理不同分隔符
-    if ',' in data:
-        codes = data.split(',')
+    if "," in data:
+        codes = data.split(",")
     else:
         codes = data.split()
 
-    return ''.join(chr(int(code.strip())) for code in codes if code.strip())
+    return "".join(chr(int(code.strip())) for code in codes if code.strip())
 
 
 # ==================== 多重编码 ====================
+
 
 class MultiEncoder:
     """
@@ -490,27 +497,27 @@ class MultiEncoder:
         """获取当前数据"""
         return self._data
 
-    def base64(self) -> 'MultiEncoder':
+    def base64(self) -> "MultiEncoder":
         """Base64编码"""
         self._data = base64_encode(self._data)
         return self
 
-    def url(self) -> 'MultiEncoder':
+    def url(self) -> "MultiEncoder":
         """URL编码"""
         self._data = url_encode(_ensure_str(self._data))
         return self
 
-    def hex(self) -> 'MultiEncoder':
+    def hex(self) -> "MultiEncoder":
         """十六进制编码"""
         self._data = hex_encode(self._data)
         return self
 
-    def html(self) -> 'MultiEncoder':
+    def html(self) -> "MultiEncoder":
         """HTML编码"""
         self._data = html_encode(_ensure_str(self._data))
         return self
 
-    def unicode(self) -> 'MultiEncoder':
+    def unicode(self) -> "MultiEncoder":
         """Unicode编码"""
         self._data = unicode_encode(_ensure_str(self._data))
         return self
@@ -538,39 +545,39 @@ def multi_encode(data: Union[str, bytes]) -> MultiEncoder:
 
 __all__ = [
     # Base64
-    'base64_encode',
-    'base64_decode',
-    'base64_decode_str',
-    'base64_url_encode',
-    'base64_url_decode',
+    "base64_encode",
+    "base64_decode",
+    "base64_decode_str",
+    "base64_url_encode",
+    "base64_url_decode",
     # Hex
-    'hex_encode',
-    'hex_decode',
-    'hex_decode_str',
+    "hex_encode",
+    "hex_decode",
+    "hex_decode_str",
     # URL
-    'url_encode',
-    'url_decode',
-    'url_encode_plus',
-    'url_decode_plus',
-    'url_encode_all',
-    'double_url_encode',
+    "url_encode",
+    "url_decode",
+    "url_encode_plus",
+    "url_decode_plus",
+    "url_encode_all",
+    "double_url_encode",
     # HTML
-    'html_encode',
-    'html_decode',
-    'html_encode_all',
-    'html_encode_hex',
+    "html_encode",
+    "html_decode",
+    "html_encode_all",
+    "html_encode_hex",
     # Unicode
-    'unicode_encode',
-    'unicode_decode',
-    'unicode_encode_wide',
+    "unicode_encode",
+    "unicode_decode",
+    "unicode_encode_wide",
     # 其他
-    'rot13',
-    'binary_encode',
-    'binary_decode',
-    'octal_encode',
-    'ascii_encode',
-    'ascii_decode',
+    "rot13",
+    "binary_encode",
+    "binary_decode",
+    "octal_encode",
+    "ascii_encode",
+    "ascii_decode",
     # 多重编码
-    'MultiEncoder',
-    'multi_encode',
+    "MultiEncoder",
+    "multi_encode",
 ]

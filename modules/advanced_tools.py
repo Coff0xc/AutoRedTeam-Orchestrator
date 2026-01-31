@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 from utils.mcp_tooling import patch_mcp_tool
 
@@ -14,13 +14,14 @@ logger = logging.getLogger(__name__)
 # 导入新模块
 try:
     from core.stealth import (
-        TrafficMutator,
-        RequestHumanizer,
+        BrowserType,
+        FingerprintSpoofer,
         ProxyPool,
         ProxyValidator,
-        FingerprintSpoofer,
-        BrowserType,
+        RequestHumanizer,
+        TrafficMutator,
     )
+
     HAS_STEALTH = True
 except ImportError as e:
     logger.warning(f"Stealth module not available: {e}")
@@ -28,15 +29,16 @@ except ImportError as e:
 
 try:
     from core.exploit import (
+        PurePortScanner,
         PureSQLiEngine,
         SQLiType,
         detect_sqli,
         exploit_sqli,
-        PurePortScanner,
-        scan_ports,
-        scan_network,
         quick_scan,
+        scan_network,
+        scan_ports,
     )
+
     HAS_EXPLOIT = True
 except ImportError as e:
     logger.warning(f"Exploit module not available: {e}")
@@ -45,13 +47,14 @@ except ImportError as e:
 
 # ==================== 隐蔽模块工具 ====================
 
+
 async def stealth_request(
     url: str,
     method: str = "GET",
     params: Optional[Dict] = None,
     headers: Optional[Dict] = None,
     stealth_level: int = 2,
-    browser: str = "chrome"
+    browser: str = "chrome",
 ) -> Dict[str, Any]:
     """
     发送隐蔽请求
@@ -70,8 +73,8 @@ async def stealth_request(
     if not HAS_STEALTH:
         return {"error": "Stealth module not available"}
 
+    from core.stealth.fingerprint_spoofer import BrowserType, FingerprintSpoofer
     from core.stealth.traffic_mutator import MutationConfig, TrafficMutator
-    from core.stealth.fingerprint_spoofer import FingerprintSpoofer, BrowserType
 
     # 配置
     config = MutationConfig()
@@ -115,7 +118,7 @@ async def proxy_pool_manage(
     action: str,
     proxies: Optional[List[str]] = None,
     proxy_file: Optional[str] = None,
-    strategy: str = "random"
+    strategy: str = "random",
 ) -> Dict[str, Any]:
     """
     代理池管理
@@ -133,7 +136,7 @@ async def proxy_pool_manage(
 
     # 使用全局代理池
     global _proxy_pool
-    if '_proxy_pool' not in globals():
+    if "_proxy_pool" not in globals():
         _proxy_pool = ProxyPool(auto_validate=False)
 
     pool = _proxy_pool
@@ -178,9 +181,9 @@ async def browser_fingerprint(browser: str = "random") -> Dict[str, Any]:
         return {"error": "Stealth module not available"}
 
     from core.stealth.fingerprint_spoofer import (
-        FingerprintSpoofer,
+        BrowserProfileFactory,
         BrowserType,
-        BrowserProfileFactory
+        FingerprintSpoofer,
     )
 
     if browser == "random":
@@ -207,12 +210,9 @@ async def browser_fingerprint(browser: str = "random") -> Dict[str, Any]:
 
 # ==================== 漏洞利用工具 ====================
 
+
 async def sqli_detect(
-    url: str,
-    param: str,
-    value: str = "1",
-    method: str = "GET",
-    waf_bypass: bool = True
+    url: str, param: str, value: str = "1", method: str = "GET", waf_bypass: bool = True
 ) -> Dict[str, Any]:
     """
     SQL注入检测 (纯Python引擎)
@@ -247,11 +247,7 @@ async def sqli_detect(
 
 
 async def sqli_exploit(
-    url: str,
-    param: str,
-    query: str,
-    sqli_type: str = "union",
-    db_type: str = "mysql"
+    url: str, param: str, query: str, sqli_type: str = "union", db_type: str = "mysql"
 ) -> Dict[str, Any]:
     """
     SQL注入数据提取
@@ -266,27 +262,16 @@ async def sqli_exploit(
     if not HAS_EXPLOIT:
         return {"error": "Exploit module not available"}
 
-    from core.exploit.pure_sqli import (
-        PureSQLiEngine, SQLiType, DBType, InjectionPoint
-    )
+    from core.exploit.pure_sqli import DBType, InjectionPoint, PureSQLiEngine, SQLiType
 
     engine = PureSQLiEngine()
 
     try:
         ip = InjectionPoint(
-            url=url,
-            method="GET",
-            param=param,
-            original_value="1",
-            position="query"
+            url=url, method="GET", param=param, original_value="1", position="query"
         )
 
-        data = engine.extract_data(
-            ip,
-            query,
-            SQLiType(sqli_type),
-            DBType(db_type)
-        )
+        data = engine.extract_data(ip, query, SQLiType(sqli_type), DBType(db_type))
 
         return {
             "success": data is not None,
@@ -304,7 +289,7 @@ async def port_scan_advanced(
     ports: Optional[List[int]] = None,
     scan_type: str = "quick",
     service_detection: bool = True,
-    concurrency: int = 100
+    concurrency: int = 100,
 ) -> Dict[str, Any]:
     """
     高级端口扫描 (纯Python, 无需nmap)
@@ -321,10 +306,7 @@ async def port_scan_advanced(
 
     from core.exploit.pure_scanner import PurePortScanner, run_async
 
-    scanner = PurePortScanner(
-        concurrency=concurrency,
-        service_detection=service_detection
-    )
+    scanner = PurePortScanner(concurrency=concurrency, service_detection=service_detection)
 
     if scan_type == "quick":
         result = run_async(scanner.quick_scan(target))
@@ -357,9 +339,7 @@ async def port_scan_advanced(
 
 
 async def network_scan(
-    cidr: str,
-    ports: Optional[List[int]] = None,
-    concurrency: int = 50
+    cidr: str, ports: Optional[List[int]] = None, concurrency: int = 50
 ) -> Dict[str, Any]:
     """
     网段扫描
@@ -381,10 +361,7 @@ async def network_scan(
 
     alive_hosts = [r for r in results if r.is_up]
     hosts_with_ports = [
-        {
-            "ip": r.ip,
-            "open_ports": [p.port for p in r.ports if p.state.value == "open"]
-        }
+        {"ip": r.ip, "open_ports": [p.port for p in r.ports if p.state.value == "open"]}
         for r in alive_hosts
     ]
 
@@ -397,6 +374,7 @@ async def network_scan(
 
 
 # ==================== 注册函数 (供 MCP Server 调用) ====================
+
 
 def register_advanced_tools(mcp):
     """
@@ -411,10 +389,7 @@ def register_advanced_tools(mcp):
     # 隐蔽请求
     @mcp.tool()
     async def stealth_http_request(
-        url: str,
-        method: str = "GET",
-        stealth_level: int = 2,
-        browser: str = "chrome"
+        url: str, method: str = "GET", stealth_level: int = 2, browser: str = "chrome"
     ) -> Dict[str, Any]:
         """
         生成隐蔽HTTP请求配置 - 流量伪装、指纹模拟
@@ -433,9 +408,7 @@ def register_advanced_tools(mcp):
     # 代理池
     @mcp.tool()
     async def proxy_pool(
-        action: str = "stats",
-        proxies: Optional[List[str]] = None,
-        strategy: str = "random"
+        action: str = "stats", proxies: Optional[List[str]] = None, strategy: str = "random"
     ) -> Dict[str, Any]:
         """
         代理池管理 - 添加、获取、验证代理
@@ -467,10 +440,7 @@ def register_advanced_tools(mcp):
     # SQLi检测
     @mcp.tool()
     async def pure_sqli_detect(
-        url: str,
-        param: str,
-        value: str = "1",
-        waf_bypass: bool = True
+        url: str, param: str, value: str = "1", waf_bypass: bool = True
     ) -> Dict[str, Any]:
         """
         纯Python SQL注入检测 - 无需sqlmap
@@ -489,11 +459,7 @@ def register_advanced_tools(mcp):
     # SQLi利用
     @mcp.tool()
     async def pure_sqli_exploit(
-        url: str,
-        param: str,
-        query: str,
-        sqli_type: str = "union",
-        db_type: str = "mysql"
+        url: str, param: str, query: str, sqli_type: str = "union", db_type: str = "mysql"
     ) -> Dict[str, Any]:
         """
         SQL注入数据提取 - 执行任意SQL查询
@@ -513,9 +479,7 @@ def register_advanced_tools(mcp):
     # 端口扫描
     @mcp.tool()
     async def pure_port_scan(
-        target: str,
-        scan_type: str = "quick",
-        service_detection: bool = True
+        target: str, scan_type: str = "quick", service_detection: bool = True
     ) -> Dict[str, Any]:
         """
         纯Python端口扫描 - 无需nmap
@@ -528,8 +492,9 @@ def register_advanced_tools(mcp):
         Returns:
             扫描结果,包含开放端口和服务信息
         """
-        return await port_scan_advanced(target, scan_type=scan_type,
-                                        service_detection=service_detection)
+        return await port_scan_advanced(
+            target, scan_type=scan_type, service_detection=service_detection
+        )
 
     # 网段扫描
     @mcp.tool()
@@ -552,7 +517,8 @@ def register_advanced_tools(mcp):
 # 测试
 if __name__ == "__main__":
     import asyncio
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     async def test():
         # 测试隐蔽请求

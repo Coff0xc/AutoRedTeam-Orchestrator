@@ -6,11 +6,11 @@
 仅用于授权渗透测试和安全研究
 """
 
-from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
-import platform
 import logging
 import os
+import platform
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -22,33 +22,34 @@ class SystemInfo:
 
     收集的目标系统基本信息
     """
-    hostname: str = ''
-    os_name: str = ''
-    os_version: str = ''
-    os_release: str = ''
-    architecture: str = ''
-    kernel_version: str = ''
-    current_user: str = ''
+
+    hostname: str = ""
+    os_name: str = ""
+    os_version: str = ""
+    os_release: str = ""
+    architecture: str = ""
+    kernel_version: str = ""
+    current_user: str = ""
     current_uid: int = -1
-    home_directory: str = ''
-    shell: str = ''
+    home_directory: str = ""
+    shell: str = ""
     path: List[str] = field(default_factory=list)
     environment: Dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
-            'hostname': self.hostname,
-            'os_name': self.os_name,
-            'os_version': self.os_version,
-            'os_release': self.os_release,
-            'architecture': self.architecture,
-            'kernel_version': self.kernel_version,
-            'current_user': self.current_user,
-            'current_uid': self.current_uid,
-            'home_directory': self.home_directory,
-            'shell': self.shell,
-            'path': self.path,
+            "hostname": self.hostname,
+            "os_name": self.os_name,
+            "os_version": self.os_version,
+            "os_release": self.os_release,
+            "architecture": self.architecture,
+            "kernel_version": self.kernel_version,
+            "current_user": self.current_user,
+            "current_uid": self.current_uid,
+            "home_directory": self.home_directory,
+            "shell": self.shell,
+            "path": self.path,
         }
 
 
@@ -59,21 +60,22 @@ class EnumerationResult:
 
     包含系统信息和发现的提权向量
     """
+
     success: bool
     system_info: Optional[SystemInfo] = None
     vectors: List[Dict[str, Any]] = field(default_factory=list)
-    error: str = ''
+    error: str = ""
     duration: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
-            'success': self.success,
-            'system_info': self.system_info.to_dict() if self.system_info else None,
-            'vectors': self.vectors,
-            'vectors_count': len(self.vectors),
-            'error': self.error,
-            'duration': self.duration,
+            "success": self.success,
+            "system_info": self.system_info.to_dict() if self.system_info else None,
+            "vectors": self.vectors,
+            "vectors_count": len(self.vectors),
+            "error": self.error,
+            "duration": self.duration,
         }
 
     def __bool__(self) -> bool:
@@ -120,26 +122,24 @@ class PrivilegeEnumerator:
             # 获取当前用户
             try:
                 import getpass
+
                 info.current_user = getpass.getuser()
             except (ImportError, KeyError, OSError):
-                info.current_user = os.environ.get('USER', os.environ.get('USERNAME', 'unknown'))
+                info.current_user = os.environ.get("USER", os.environ.get("USERNAME", "unknown"))
 
             # 平台特定信息
-            if info.os_name.lower() == 'linux':
+            if info.os_name.lower() == "linux":
                 info = self._get_linux_info(info)
-            elif info.os_name.lower() == 'windows':
+            elif info.os_name.lower() == "windows":
                 info = self._get_windows_info(info)
 
             # PATH 环境变量
-            path_str = os.environ.get('PATH', '')
+            path_str = os.environ.get("PATH", "")
             info.path = path_str.split(os.pathsep) if path_str else []
 
             # 环境变量（过滤敏感信息）
-            safe_env_keys = ['HOME', 'USER', 'SHELL', 'PWD', 'LANG', 'PATH', 'TERM']
-            info.environment = {
-                k: v for k, v in os.environ.items()
-                if k in safe_env_keys
-            }
+            safe_env_keys = ["HOME", "USER", "SHELL", "PWD", "LANG", "PATH", "TERM"]
+            info.environment = {k: v for k, v in os.environ.items() if k in safe_env_keys}
 
             self._system_info = info
 
@@ -152,12 +152,12 @@ class PrivilegeEnumerator:
         """收集 Linux 特定信息"""
         try:
             info.current_uid = os.getuid()
-            info.home_directory = os.path.expanduser('~')
-            info.shell = os.environ.get('SHELL', '/bin/sh')
+            info.home_directory = os.path.expanduser("~")
+            info.shell = os.environ.get("SHELL", "/bin/sh")
 
             # 读取内核版本
             try:
-                with open('/proc/version', 'r', encoding='utf-8') as f:
+                with open("/proc/version", "r", encoding="utf-8") as f:
                     info.kernel_version = f.read().strip()
             except (FileNotFoundError, PermissionError):
                 info.kernel_version = platform.release()
@@ -170,22 +170,23 @@ class PrivilegeEnumerator:
     def _get_windows_info(self, info: SystemInfo) -> SystemInfo:
         """收集 Windows 特定信息"""
         try:
-            info.home_directory = os.environ.get('USERPROFILE', '')
-            info.shell = os.environ.get('COMSPEC', 'cmd.exe')
+            info.home_directory = os.environ.get("USERPROFILE", "")
+            info.shell = os.environ.get("COMSPEC", "cmd.exe")
 
             # 获取 Windows 版本详情
             try:
                 import subprocess
+
                 result = subprocess.run(
-                    ['wmic', 'os', 'get', 'Caption,Version', '/value'],
+                    ["wmic", "os", "get", "Caption,Version", "/value"],
                     capture_output=True,
                     text=True,
-                    timeout=10
+                    timeout=10,
                 )
                 if result.returncode == 0:
-                    for line in result.stdout.strip().split('\n'):
-                        if line.startswith('Caption='):
-                            info.os_version = line.split('=', 1)[1].strip()
+                    for line in result.stdout.strip().split("\n"):
+                        if line.startswith("Caption="):
+                            info.os_version = line.split("=", 1)[1].strip()
             except (subprocess.SubprocessError, FileNotFoundError):
                 pass
 
@@ -202,15 +203,16 @@ class PrivilegeEnumerator:
             EnumerationResult 对象
         """
         import time
+
         start_time = time.time()
 
         try:
             system_info = self.get_system_info()
 
             # 根据平台枚举向量
-            if system_info.os_name.lower() == 'linux':
+            if system_info.os_name.lower() == "linux":
                 vectors = self._enumerate_linux_vectors()
-            elif system_info.os_name.lower() == 'windows':
+            elif system_info.os_name.lower() == "windows":
                 vectors = self._enumerate_windows_vectors()
             else:
                 vectors = []
@@ -218,18 +220,11 @@ class PrivilegeEnumerator:
             duration = time.time() - start_time
 
             return EnumerationResult(
-                success=True,
-                system_info=system_info,
-                vectors=vectors,
-                duration=duration
+                success=True, system_info=system_info, vectors=vectors, duration=duration
             )
 
         except Exception as e:
-            return EnumerationResult(
-                success=False,
-                error=str(e),
-                duration=time.time() - start_time
-            )
+            return EnumerationResult(success=False, error=str(e), duration=time.time() - start_time)
 
     def _enumerate_linux_vectors(self) -> List[Dict[str, Any]]:
         """枚举 Linux 提权向量"""
@@ -289,33 +284,34 @@ class PrivilegeEnumerator:
 
         # 已知可利用的 SUID 二进制
         exploitable_suid = {
-            'nmap': ('nmap --interactive', 0.9),
-            'vim': ('vim -c ":!sh"', 0.9),
-            'find': ('find . -exec /bin/sh -p \\;', 0.9),
-            'bash': ('bash -p', 0.95),
-            'less': ('less /etc/passwd -> !/bin/sh', 0.8),
-            'more': ('more /etc/passwd -> !/bin/sh', 0.8),
-            'nano': ('nano -> Ctrl+R -> Ctrl+X -> sh', 0.7),
-            'cp': ('cp /bin/sh /tmp/sh; chmod +s /tmp/sh', 0.8),
-            'python': ("python -c 'import os; os.setuid(0); os.system(\"/bin/sh\")'", 0.9),
-            'python3': ("python3 -c 'import os; os.setuid(0); os.system(\"/bin/sh\")'", 0.9),
-            'perl': ("perl -e 'exec \"/bin/sh\";'", 0.9),
-            'ruby': ("ruby -e 'exec \"/bin/sh\"'", 0.9),
-            'awk': ("awk 'BEGIN {system(\"/bin/sh\")}'", 0.9),
-            'env': ('env /bin/sh -p', 0.9),
+            "nmap": ("nmap --interactive", 0.9),
+            "vim": ('vim -c ":!sh"', 0.9),
+            "find": ("find . -exec /bin/sh -p \\;", 0.9),
+            "bash": ("bash -p", 0.95),
+            "less": ("less /etc/passwd -> !/bin/sh", 0.8),
+            "more": ("more /etc/passwd -> !/bin/sh", 0.8),
+            "nano": ("nano -> Ctrl+R -> Ctrl+X -> sh", 0.7),
+            "cp": ("cp /bin/sh /tmp/sh; chmod +s /tmp/sh", 0.8),
+            "python": ("python -c 'import os; os.setuid(0); os.system(\"/bin/sh\")'", 0.9),
+            "python3": ("python3 -c 'import os; os.setuid(0); os.system(\"/bin/sh\")'", 0.9),
+            "perl": ("perl -e 'exec \"/bin/sh\";'", 0.9),
+            "ruby": ("ruby -e 'exec \"/bin/sh\"'", 0.9),
+            "awk": ("awk 'BEGIN {system(\"/bin/sh\")}'", 0.9),
+            "env": ("env /bin/sh -p", 0.9),
         }
 
         try:
             import subprocess
+
             # 查找 SUID 二进制
             result = subprocess.run(
-                ['find', '/', '-perm', '-4000', '-type', 'f', '-readable'],
+                ["find", "/", "-perm", "-4000", "-type", "f", "-readable"],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
-            suid_files = result.stdout.strip().split('\n') if result.stdout else []
+            suid_files = result.stdout.strip().split("\n") if result.stdout else []
 
             for suid_path in suid_files:
                 if not suid_path:
@@ -324,17 +320,19 @@ class PrivilegeEnumerator:
                 binary_name = os.path.basename(suid_path)
                 if binary_name in exploitable_suid:
                     exploit_cmd, probability = exploitable_suid[binary_name]
-                    vectors.append({
-                        'method': 'suid',
-                        'name': f'SUID {binary_name}',
-                        'description': f'利用 SUID {binary_name} 提权',
-                        'success_probability': probability,
-                        'requires_interaction': False,
-                        'detected_info': {
-                            'path': suid_path,
-                            'exploit_command': exploit_cmd,
+                    vectors.append(
+                        {
+                            "method": "suid",
+                            "name": f"SUID {binary_name}",
+                            "description": f"利用 SUID {binary_name} 提权",
+                            "success_probability": probability,
+                            "requires_interaction": False,
+                            "detected_info": {
+                                "path": suid_path,
+                                "exploit_command": exploit_cmd,
+                            },
                         }
-                    })
+                    )
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             self.logger.debug(f"SUID check error: {e}")
@@ -349,41 +347,40 @@ class PrivilegeEnumerator:
             import subprocess
 
             # 检查 sudo -l 输出
-            result = subprocess.run(
-                ['sudo', '-l'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            result = subprocess.run(["sudo", "-l"], capture_output=True, text=True, timeout=10)
 
             if result.returncode == 0 and result.stdout:
                 output = result.stdout
 
                 # 检查 NOPASSWD
-                if 'NOPASSWD' in output:
-                    vectors.append({
-                        'method': 'sudo',
-                        'name': 'Sudo NOPASSWD',
-                        'description': '发现 sudo NOPASSWD 配置',
-                        'success_probability': 0.9,
-                        'requires_interaction': False,
-                        'detected_info': {
-                            'sudo_output': output[:500],
+                if "NOPASSWD" in output:
+                    vectors.append(
+                        {
+                            "method": "sudo",
+                            "name": "Sudo NOPASSWD",
+                            "description": "发现 sudo NOPASSWD 配置",
+                            "success_probability": 0.9,
+                            "requires_interaction": False,
+                            "detected_info": {
+                                "sudo_output": output[:500],
+                            },
                         }
-                    })
+                    )
 
                 # 检查可以运行 /bin/sh 或 /bin/bash
-                if '/bin/sh' in output or '/bin/bash' in output:
-                    vectors.append({
-                        'method': 'sudo',
-                        'name': 'Sudo Shell',
-                        'description': 'sudo 允许执行 shell',
-                        'success_probability': 0.95,
-                        'requires_interaction': False,
-                        'detected_info': {
-                            'command': 'sudo /bin/sh',
+                if "/bin/sh" in output or "/bin/bash" in output:
+                    vectors.append(
+                        {
+                            "method": "sudo",
+                            "name": "Sudo Shell",
+                            "description": "sudo 允许执行 shell",
+                            "success_probability": 0.95,
+                            "requires_interaction": False,
+                            "detected_info": {
+                                "command": "sudo /bin/sh",
+                            },
                         }
-                    })
+                    )
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             self.logger.debug(f"Sudo check error: {e}")
@@ -396,40 +393,40 @@ class PrivilegeEnumerator:
 
         # 已知可利用的 capabilities
         exploitable_caps = {
-            'cap_setuid': 0.9,
-            'cap_setgid': 0.8,
-            'cap_dac_override': 0.7,
-            'cap_dac_read_search': 0.6,
-            'cap_sys_admin': 0.9,
-            'cap_sys_ptrace': 0.7,
+            "cap_setuid": 0.9,
+            "cap_setgid": 0.8,
+            "cap_dac_override": 0.7,
+            "cap_dac_read_search": 0.6,
+            "cap_sys_admin": 0.9,
+            "cap_sys_ptrace": 0.7,
         }
 
         try:
             import subprocess
+
             result = subprocess.run(
-                ['getcap', '-r', '/'],
-                capture_output=True,
-                text=True,
-                timeout=30
+                ["getcap", "-r", "/"], capture_output=True, text=True, timeout=30
             )
 
             if result.returncode == 0 and result.stdout:
-                for line in result.stdout.strip().split('\n'):
+                for line in result.stdout.strip().split("\n"):
                     if not line:
                         continue
                     for cap, probability in exploitable_caps.items():
                         if cap in line.lower():
-                            vectors.append({
-                                'method': 'capability',
-                                'name': f'Capability {cap}',
-                                'description': f'发现可利用的 capability: {cap}',
-                                'success_probability': probability,
-                                'requires_interaction': False,
-                                'detected_info': {
-                                    'line': line,
-                                    'capability': cap,
+                            vectors.append(
+                                {
+                                    "method": "capability",
+                                    "name": f"Capability {cap}",
+                                    "description": f"发现可利用的 capability: {cap}",
+                                    "success_probability": probability,
+                                    "requires_interaction": False,
+                                    "detected_info": {
+                                        "line": line,
+                                        "capability": cap,
+                                    },
                                 }
-                            })
+                            )
                             break
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
@@ -442,21 +439,23 @@ class PrivilegeEnumerator:
         vectors = []
 
         # 检查 PATH 中的可写目录
-        path_dirs = os.environ.get('PATH', '').split(':')
+        path_dirs = os.environ.get("PATH", "").split(":")
 
         for path_dir in path_dirs:
             if path_dir and os.path.isdir(path_dir):
                 if os.access(path_dir, os.W_OK):
-                    vectors.append({
-                        'method': 'path_hijack',
-                        'name': f'Writable PATH: {path_dir}',
-                        'description': f'PATH 中存在可写目录: {path_dir}',
-                        'success_probability': 0.5,
-                        'requires_interaction': False,
-                        'detected_info': {
-                            'writable_path': path_dir,
+                    vectors.append(
+                        {
+                            "method": "path_hijack",
+                            "name": f"Writable PATH: {path_dir}",
+                            "description": f"PATH 中存在可写目录: {path_dir}",
+                            "success_probability": 0.5,
+                            "requires_interaction": False,
+                            "detected_info": {
+                                "writable_path": path_dir,
+                            },
                         }
-                    })
+                    )
 
         return vectors
 
@@ -469,25 +468,27 @@ class PrivilegeEnumerator:
 
             # 已知易受攻击的内核版本（示例）
             vulnerable_kernels = {
-                '3.13.0': ('overlayfs', 'CVE-2015-1328', 0.7),
-                '4.4.0': ('dirty_cow', 'CVE-2016-5195', 0.8),
-                '4.8.0': ('exploit_sock_sendpage', 'CVE-2017-7308', 0.6),
+                "3.13.0": ("overlayfs", "CVE-2015-1328", 0.7),
+                "4.4.0": ("dirty_cow", "CVE-2016-5195", 0.8),
+                "4.8.0": ("exploit_sock_sendpage", "CVE-2017-7308", 0.6),
             }
 
             for version_prefix, (name, cve, probability) in vulnerable_kernels.items():
                 if kernel_release.startswith(version_prefix):
-                    vectors.append({
-                        'method': 'kernel',
-                        'name': f'Kernel {name}',
-                        'description': f'内核版本可能存在漏洞: {cve}',
-                        'success_probability': probability,
-                        'requires_interaction': False,
-                        'detected_info': {
-                            'kernel_version': kernel_release,
-                            'cve': cve,
-                            'exploit_name': name,
+                    vectors.append(
+                        {
+                            "method": "kernel",
+                            "name": f"Kernel {name}",
+                            "description": f"内核版本可能存在漏洞: {cve}",
+                            "success_probability": probability,
+                            "requires_interaction": False,
+                            "detected_info": {
+                                "kernel_version": kernel_release,
+                                "cve": cve,
+                                "exploit_name": name,
+                            },
                         }
-                    })
+                    )
 
         except Exception as e:
             self.logger.debug(f"Kernel check error: {e}")
@@ -503,46 +504,57 @@ class PrivilegeEnumerator:
 
             # 查询 UAC 注册表设置
             result = subprocess.run(
-                ['reg', 'query', 'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System',
-                 '/v', 'EnableLUA'],
+                [
+                    "reg",
+                    "query",
+                    "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System",
+                    "/v",
+                    "EnableLUA",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
 
-            if result.returncode == 0 and '0x0' in result.stdout:
-                vectors.append({
-                    'method': 'uac_bypass',
-                    'name': 'UAC Disabled',
-                    'description': 'UAC 已禁用',
-                    'success_probability': 0.95,
-                    'requires_interaction': False,
-                    'detected_info': {
-                        'uac_status': 'disabled',
+            if result.returncode == 0 and "0x0" in result.stdout:
+                vectors.append(
+                    {
+                        "method": "uac_bypass",
+                        "name": "UAC Disabled",
+                        "description": "UAC 已禁用",
+                        "success_probability": 0.95,
+                        "requires_interaction": False,
+                        "detected_info": {
+                            "uac_status": "disabled",
+                        },
                     }
-                })
+                )
             else:
                 # UAC 启用，检查可用的绕过方法
-                vectors.append({
-                    'method': 'uac_bypass',
-                    'name': 'UAC Bypass (fodhelper)',
-                    'description': '尝试使用 fodhelper.exe 绕过 UAC',
-                    'success_probability': 0.7,
-                    'requires_interaction': False,
-                    'detected_info': {
-                        'technique': 'fodhelper',
+                vectors.append(
+                    {
+                        "method": "uac_bypass",
+                        "name": "UAC Bypass (fodhelper)",
+                        "description": "尝试使用 fodhelper.exe 绕过 UAC",
+                        "success_probability": 0.7,
+                        "requires_interaction": False,
+                        "detected_info": {
+                            "technique": "fodhelper",
+                        },
                     }
-                })
-                vectors.append({
-                    'method': 'uac_bypass',
-                    'name': 'UAC Bypass (eventvwr)',
-                    'description': '尝试使用 eventvwr.exe 绕过 UAC',
-                    'success_probability': 0.6,
-                    'requires_interaction': False,
-                    'detected_info': {
-                        'technique': 'eventvwr',
+                )
+                vectors.append(
+                    {
+                        "method": "uac_bypass",
+                        "name": "UAC Bypass (eventvwr)",
+                        "description": "尝试使用 eventvwr.exe 绕过 UAC",
+                        "success_probability": 0.6,
+                        "requires_interaction": False,
+                        "detected_info": {
+                            "technique": "eventvwr",
+                        },
                     }
-                })
+                )
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             self.logger.debug(f"UAC check error: {e}")
@@ -558,34 +570,46 @@ class PrivilegeEnumerator:
 
             # 检查 HKCU
             result_hkcu = subprocess.run(
-                ['reg', 'query', 'HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer',
-                 '/v', 'AlwaysInstallElevated'],
+                [
+                    "reg",
+                    "query",
+                    "HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer",
+                    "/v",
+                    "AlwaysInstallElevated",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
 
             # 检查 HKLM
             result_hklm = subprocess.run(
-                ['reg', 'query', 'HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer',
-                 '/v', 'AlwaysInstallElevated'],
+                [
+                    "reg",
+                    "query",
+                    "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer",
+                    "/v",
+                    "AlwaysInstallElevated",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
 
-            if ('0x1' in result_hkcu.stdout and '0x1' in result_hklm.stdout):
-                vectors.append({
-                    'method': 'always_install_elevated',
-                    'name': 'AlwaysInstallElevated',
-                    'description': 'AlwaysInstallElevated 策略已启用',
-                    'success_probability': 0.9,
-                    'requires_interaction': False,
-                    'detected_info': {
-                        'hkcu': '0x1',
-                        'hklm': '0x1',
+            if "0x1" in result_hkcu.stdout and "0x1" in result_hklm.stdout:
+                vectors.append(
+                    {
+                        "method": "always_install_elevated",
+                        "name": "AlwaysInstallElevated",
+                        "description": "AlwaysInstallElevated 策略已启用",
+                        "success_probability": 0.9,
+                        "requires_interaction": False,
+                        "detected_info": {
+                            "hkcu": "0x1",
+                            "hklm": "0x1",
+                        },
                     }
-                })
+                )
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             self.logger.debug(f"AlwaysInstallElevated check error: {e}")
@@ -609,26 +633,28 @@ class PrivilegeEnumerator:
             import subprocess
 
             result = subprocess.run(
-                ['wmic', 'service', 'get', 'name,displayname,pathname,startmode'],
+                ["wmic", "service", "get", "name,displayname,pathname,startmode"],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             if result.returncode == 0:
-                for line in result.stdout.strip().split('\n')[1:]:
+                for line in result.stdout.strip().split("\n")[1:]:
                     # 检查包含空格但未用引号的路径
-                    if ' ' in line and '"' not in line and 'C:\\' in line:
-                        vectors.append({
-                            'method': 'unquoted_service_path',
-                            'name': 'Unquoted Service Path',
-                            'description': f'发现未引用的服务路径',
-                            'success_probability': 0.6,
-                            'requires_interaction': False,
-                            'detected_info': {
-                                'service_info': line[:200],
+                    if " " in line and '"' not in line and "C:\\" in line:
+                        vectors.append(
+                            {
+                                "method": "unquoted_service_path",
+                                "name": "Unquoted Service Path",
+                                "description": f"发现未引用的服务路径",
+                                "success_probability": 0.6,
+                                "requires_interaction": False,
+                                "detected_info": {
+                                    "service_info": line[:200],
+                                },
                             }
-                        })
+                        )
                         break  # 只报告第一个
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
@@ -643,54 +669,55 @@ class PrivilegeEnumerator:
         try:
             import subprocess
 
-            result = subprocess.run(
-                ['whoami', '/priv'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            result = subprocess.run(["whoami", "/priv"], capture_output=True, text=True, timeout=10)
 
             if result.returncode == 0:
                 output = result.stdout
 
                 # 检查 SeImpersonatePrivilege（Potato 攻击）
-                if 'SeImpersonatePrivilege' in output and 'Enabled' in output:
-                    vectors.append({
-                        'method': 'potato',
-                        'name': 'SeImpersonatePrivilege',
-                        'description': 'SeImpersonatePrivilege 已启用，可尝试 Potato 攻击',
-                        'success_probability': 0.8,
-                        'requires_interaction': False,
-                        'detected_info': {
-                            'privilege': 'SeImpersonatePrivilege',
+                if "SeImpersonatePrivilege" in output and "Enabled" in output:
+                    vectors.append(
+                        {
+                            "method": "potato",
+                            "name": "SeImpersonatePrivilege",
+                            "description": "SeImpersonatePrivilege 已启用，可尝试 Potato 攻击",
+                            "success_probability": 0.8,
+                            "requires_interaction": False,
+                            "detected_info": {
+                                "privilege": "SeImpersonatePrivilege",
+                            },
                         }
-                    })
+                    )
 
                 # 检查 SeAssignPrimaryTokenPrivilege
-                if 'SeAssignPrimaryTokenPrivilege' in output and 'Enabled' in output:
-                    vectors.append({
-                        'method': 'token_impersonation',
-                        'name': 'SeAssignPrimaryTokenPrivilege',
-                        'description': 'SeAssignPrimaryTokenPrivilege 已启用',
-                        'success_probability': 0.7,
-                        'requires_interaction': False,
-                        'detected_info': {
-                            'privilege': 'SeAssignPrimaryTokenPrivilege',
+                if "SeAssignPrimaryTokenPrivilege" in output and "Enabled" in output:
+                    vectors.append(
+                        {
+                            "method": "token_impersonation",
+                            "name": "SeAssignPrimaryTokenPrivilege",
+                            "description": "SeAssignPrimaryTokenPrivilege 已启用",
+                            "success_probability": 0.7,
+                            "requires_interaction": False,
+                            "detected_info": {
+                                "privilege": "SeAssignPrimaryTokenPrivilege",
+                            },
                         }
-                    })
+                    )
 
                 # 检查 SeDebugPrivilege
-                if 'SeDebugPrivilege' in output and 'Enabled' in output:
-                    vectors.append({
-                        'method': 'token_impersonation',
-                        'name': 'SeDebugPrivilege',
-                        'description': 'SeDebugPrivilege 已启用，可进行进程注入',
-                        'success_probability': 0.75,
-                        'requires_interaction': False,
-                        'detected_info': {
-                            'privilege': 'SeDebugPrivilege',
+                if "SeDebugPrivilege" in output and "Enabled" in output:
+                    vectors.append(
+                        {
+                            "method": "token_impersonation",
+                            "name": "SeDebugPrivilege",
+                            "description": "SeDebugPrivilege 已启用，可进行进程注入",
+                            "success_probability": 0.75,
+                            "requires_interaction": False,
+                            "detected_info": {
+                                "privilege": "SeDebugPrivilege",
+                            },
                         }
-                    })
+                    )
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             self.logger.debug(f"Token privilege check error: {e}")
@@ -699,7 +726,7 @@ class PrivilegeEnumerator:
 
 
 __all__ = [
-    'SystemInfo',
-    'EnumerationResult',
-    'PrivilegeEnumerator',
+    "SystemInfo",
+    "EnumerationResult",
+    "PrivilegeEnumerator",
 ]

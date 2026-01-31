@@ -9,12 +9,12 @@ Payload 变异器模块 - 统一的 WAF 绕过变异引擎
 消除了两个文件中的重复变异方法实现
 """
 
-import re
-import random
 import logging
+import random
+import re
 import urllib.parse
-from typing import Any, Dict, List, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 from .signatures import WAF_BYPASS_STRATEGIES
 
@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class MutationType(Enum):
     """变异方法枚举"""
+
     CASE_SWAP = "case"
     URL_ENCODE = "url_encode"
     DOUBLE_URL = "double_url"
@@ -73,9 +74,22 @@ class PayloadMutator:
 
     # SQL 关键字列表（用于注释分割）
     SQL_KEYWORDS = [
-        "SELECT", "UNION", "FROM", "WHERE", "AND", "OR",
-        "INSERT", "UPDATE", "DELETE", "DROP", "CREATE",
-        "ORDER", "GROUP", "HAVING", "LIMIT", "OFFSET",
+        "SELECT",
+        "UNION",
+        "FROM",
+        "WHERE",
+        "AND",
+        "OR",
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "DROP",
+        "CREATE",
+        "ORDER",
+        "GROUP",
+        "HAVING",
+        "LIMIT",
+        "OFFSET",
     ]
 
     # Unicode 特殊字符映射
@@ -120,9 +134,7 @@ class PayloadMutator:
             methods = mutations
         elif waf:
             waf_lower = waf.lower()
-            methods = WAF_MUTATION_STRATEGIES.get(
-                waf_lower, WAF_MUTATION_STRATEGIES["default"]
-            )
+            methods = WAF_MUTATION_STRATEGIES.get(waf_lower, WAF_MUTATION_STRATEGIES["default"])
         else:
             methods = list(MUTATION_DESCRIPTIONS.keys())
 
@@ -282,9 +294,7 @@ class PayloadMutator:
         # 在 SQL 关键字前插入换行
         for kw in ["SELECT", "UNION", "FROM", "WHERE"]:
             if kw.lower() in payload.lower():
-                payload = re.sub(
-                    f"({kw})", r"%0a\1", payload, flags=re.IGNORECASE
-                )
+                payload = re.sub(f"({kw})", r"%0a\1", payload, flags=re.IGNORECASE)
         return payload
 
     @classmethod
@@ -337,19 +347,21 @@ class PayloadMutator:
                 mutated = cls._apply_mutation(payload, method)
                 if mutated not in seen:
                     seen.add(mutated)
-                    variants.append({
-                        "payload": mutated,
-                        "mutation": method,
-                        "description": MUTATION_DESCRIPTIONS.get(method, method),
-                    })
+                    variants.append(
+                        {
+                            "payload": mutated,
+                            "mutation": method,
+                            "description": MUTATION_DESCRIPTIONS.get(method, method),
+                        }
+                    )
             except Exception:
                 continue
 
         # 组合变异（如果单一变异数量不足）
         if len(variants) < count:
             methods = list(MUTATION_DESCRIPTIONS.keys())
-            for i, m1 in enumerate(methods[:len(methods)//2]):
-                for m2 in methods[len(methods)//2:]:
+            for i, m1 in enumerate(methods[: len(methods) // 2]):
+                for m2 in methods[len(methods) // 2 :]:
                     if len(variants) >= count:
                         break
                     try:
@@ -357,11 +369,13 @@ class PayloadMutator:
                         p2 = cls._apply_mutation(p1, m2)
                         if p2 not in seen:
                             seen.add(p2)
-                            variants.append({
-                                "payload": p2,
-                                "mutation": f"{m1}+{m2}",
-                                "description": f"{MUTATION_DESCRIPTIONS.get(m1, m1)} + {MUTATION_DESCRIPTIONS.get(m2, m2)}",
-                            })
+                            variants.append(
+                                {
+                                    "payload": p2,
+                                    "mutation": f"{m1}+{m2}",
+                                    "description": f"{MUTATION_DESCRIPTIONS.get(m1, m1)} + {MUTATION_DESCRIPTIONS.get(m2, m2)}",
+                                }
+                            )
                     except Exception:
                         continue
                 if len(variants) >= count:
@@ -382,25 +396,20 @@ class PayloadMutator:
         """
         waf_lower = waf.lower() if waf else "default"
 
-        mutations = WAF_MUTATION_STRATEGIES.get(
-            waf_lower, WAF_MUTATION_STRATEGIES["default"]
-        )
-        bypass_info = WAF_BYPASS_STRATEGIES.get(
-            waf_lower, WAF_BYPASS_STRATEGIES.get("default", {})
-        )
+        mutations = WAF_MUTATION_STRATEGIES.get(waf_lower, WAF_MUTATION_STRATEGIES["default"])
+        bypass_info = WAF_BYPASS_STRATEGIES.get(waf_lower, WAF_BYPASS_STRATEGIES.get("default", {}))
 
         return {
             "waf": waf,
             "mutations": mutations,
-            "mutation_descriptions": [
-                MUTATION_DESCRIPTIONS.get(m, m) for m in mutations
-            ],
+            "mutation_descriptions": [MUTATION_DESCRIPTIONS.get(m, m) for m in mutations],
             "difficulty": bypass_info.get("difficulty", "unknown"),
             "specific_payloads": bypass_info.get("specific_payloads", []),
         }
 
 
 # ============== 便捷函数 ==============
+
 
 def mutate_payload(
     payload: str,

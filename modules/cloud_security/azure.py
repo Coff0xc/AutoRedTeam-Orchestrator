@@ -20,8 +20,8 @@ from typing import Any, Dict, List, Optional
 from .base import (
     BaseCloudTester,
     CloudFinding,
-    CloudVulnType,
     CloudSeverity,
+    CloudVulnType,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,10 +29,11 @@ logger = logging.getLogger(__name__)
 # 尝试导入Azure SDK
 try:
     from azure.identity import DefaultAzureCredential
-    from azure.mgmt.storage import StorageManagementClient
-    from azure.mgmt.network import NetworkManagementClient
-    from azure.mgmt.keyvault import KeyVaultManagementClient
     from azure.mgmt.authorization import AuthorizationManagementClient
+    from azure.mgmt.keyvault import KeyVaultManagementClient
+    from azure.mgmt.network import NetworkManagementClient
+    from azure.mgmt.storage import StorageManagementClient
+
     HAS_AZURE_SDK = True
 except ImportError:
     HAS_AZURE_SDK = False
@@ -51,27 +52,27 @@ class AzureTester(BaseCloudTester):
         findings = tester.scan()
     """
 
-    name = 'azure'
-    provider = 'azure'
-    description = 'Azure安全测试器'
-    version = '3.0.0'
+    name = "azure"
+    provider = "azure"
+    description = "Azure安全测试器"
+    version = "3.0.0"
 
     # 危险NSG端口
     SENSITIVE_PORTS = {
-        22: 'SSH',
-        3389: 'RDP',
-        3306: 'MySQL',
-        5432: 'PostgreSQL',
-        1433: 'MSSQL',
-        27017: 'MongoDB',
-        6379: 'Redis',
+        22: "SSH",
+        3389: "RDP",
+        3306: "MySQL",
+        5432: "PostgreSQL",
+        1433: "MSSQL",
+        27017: "MongoDB",
+        6379: "Redis",
     }
 
     # 危险RBAC角色
     DANGEROUS_ROLES = [
-        'Owner',
-        'Contributor',
-        'User Access Administrator',
+        "Owner",
+        "Contributor",
+        "User Access Administrator",
     ]
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -87,22 +88,22 @@ class AzureTester(BaseCloudTester):
         super().__init__(config)
 
         if not HAS_AZURE_SDK:
-            logger.warning('Azure SDK未安装，Azure扫描功能受限')
+            logger.warning("Azure SDK未安装，Azure扫描功能受限")
             return
 
-        self.subscription_id = self.config.get('subscription_id')
-        self.tenant_id = self.config.get('tenant_id')
-        self.resource_group = self.config.get('resource_group')
+        self.subscription_id = self.config.get("subscription_id")
+        self.tenant_id = self.config.get("tenant_id")
+        self.resource_group = self.config.get("resource_group")
 
         if not self.subscription_id:
-            logger.warning('未提供Azure订阅ID')
+            logger.warning("未提供Azure订阅ID")
             self._credential = None
             return
 
         try:
             self._credential = DefaultAzureCredential()
         except Exception as e:
-            logger.error(f'Azure认证失败: {e}')
+            logger.error(f"Azure认证失败: {e}")
             self._credential = None
 
     def scan(self) -> List[CloudFinding]:
@@ -110,7 +111,7 @@ class AzureTester(BaseCloudTester):
         self.clear_findings()
 
         if not HAS_AZURE_SDK or not self._credential:
-            logger.warning('无法执行Azure扫描：SDK未初始化或认证失败')
+            logger.warning("无法执行Azure扫描：SDK未初始化或认证失败")
             return self._findings
 
         try:
@@ -122,7 +123,7 @@ class AzureTester(BaseCloudTester):
             self.check_sql_firewalls()
 
         except Exception as e:
-            logger.error(f'Azure扫描失败: {e}')
+            logger.error(f"Azure扫描失败: {e}")
 
         return self._findings
 
@@ -131,39 +132,35 @@ class AzureTester(BaseCloudTester):
         findings = []
 
         try:
-            storage_client = StorageManagementClient(
-                self._credential,
-                self.subscription_id
-            )
+            storage_client = StorageManagementClient(self._credential, self.subscription_id)
 
             accounts = storage_client.storage_accounts.list()
 
             for account in accounts:
                 account_name = account.name
-                resource_group = account.id.split('/')[4]
+                resource_group = account.id.split("/")[4]
 
                 # 检查是否允许公共Blob访问
                 if account.allow_blob_public_access:
                     finding = self._create_finding(
                         vuln_type=CloudVulnType.AZURE_STORAGE_PUBLIC,
                         severity=CloudSeverity.HIGH,
-                        resource_type='StorageAccount',
+                        resource_type="StorageAccount",
                         resource_name=account_name,
-                        title=f'存储账户允许公共Blob访问: {account_name}',
+                        title=f"存储账户允许公共Blob访问: {account_name}",
                         description=(
-                            f'存储账户 {account_name} 允许公共Blob访问，'
-                            '可能导致数据泄露。'
+                            f"存储账户 {account_name} 允许公共Blob访问，" "可能导致数据泄露。"
                         ),
                         remediation=(
-                            '1. 禁用公共Blob访问\n'
-                            '2. 使用SAS令牌或Azure AD进行访问控制\n'
-                            '3. 配置私有终结点'
+                            "1. 禁用公共Blob访问\n"
+                            "2. 使用SAS令牌或Azure AD进行访问控制\n"
+                            "3. 配置私有终结点"
                         ),
                         evidence={
-                            'allow_blob_public_access': True,
-                            'resource_group': resource_group
+                            "allow_blob_public_access": True,
+                            "resource_group": resource_group,
                         },
-                        compliance=['CIS-Azure-3.1', 'HIPAA']
+                        compliance=["CIS-Azure-3.1", "HIPAA"],
                     )
                     findings.append(finding)
 
@@ -172,12 +169,12 @@ class AzureTester(BaseCloudTester):
                     self._create_finding(
                         vuln_type=CloudVulnType.AZURE_STORAGE_PUBLIC,
                         severity=CloudSeverity.MEDIUM,
-                        resource_type='StorageAccount',
+                        resource_type="StorageAccount",
                         resource_name=account_name,
-                        title=f'存储账户允许HTTP访问: {account_name}',
-                        description='存储账户未强制使用HTTPS',
+                        title=f"存储账户允许HTTP访问: {account_name}",
+                        description="存储账户未强制使用HTTPS",
                         remediation='启用"需要安全传输"选项',
-                        evidence={'enable_https_only': False}
+                        evidence={"enable_https_only": False},
                     )
 
                 # 检查加密
@@ -186,16 +183,16 @@ class AzureTester(BaseCloudTester):
                     self._create_finding(
                         vuln_type=CloudVulnType.AZURE_STORAGE_PUBLIC,
                         severity=CloudSeverity.MEDIUM,
-                        resource_type='StorageAccount',
+                        resource_type="StorageAccount",
                         resource_name=account_name,
-                        title=f'存储账户加密配置不完整: {account_name}',
-                        description='存储账户加密配置不完整',
-                        remediation='确保启用存储加密',
-                        evidence={}
+                        title=f"存储账户加密配置不完整: {account_name}",
+                        description="存储账户加密配置不完整",
+                        remediation="确保启用存储加密",
+                        evidence={},
                     )
 
         except Exception as e:
-            logger.error(f'存储账户检查失败: {e}')
+            logger.error(f"存储账户检查失败: {e}")
 
         return findings
 
@@ -204,10 +201,7 @@ class AzureTester(BaseCloudTester):
         findings = []
 
         try:
-            network_client = NetworkManagementClient(
-                self._credential,
-                self.subscription_id
-            )
+            network_client = NetworkManagementClient(self._credential, self.subscription_id)
 
             nsgs = network_client.network_security_groups.list_all()
 
@@ -216,45 +210,45 @@ class AzureTester(BaseCloudTester):
                 nsg_id = nsg.id
 
                 for rule in nsg.security_rules or []:
-                    if rule.direction != 'Inbound' or rule.access != 'Allow':
+                    if rule.direction != "Inbound" or rule.access != "Allow":
                         continue
 
-                    source = rule.source_address_prefix or ''
+                    source = rule.source_address_prefix or ""
 
                     # 检查是否允许任意来源
-                    if source in ['*', 'Internet', '0.0.0.0/0']:
+                    if source in ["*", "Internet", "0.0.0.0/0"]:
                         dest_port = rule.destination_port_range
 
                         # 检查敏感端口
                         for port, service in self.SENSITIVE_PORTS.items():
-                            if dest_port == '*' or dest_port == str(port):
+                            if dest_port == "*" or dest_port == str(port):
                                 self._create_finding(
                                     vuln_type=CloudVulnType.AZURE_NSG_WIDE_OPEN,
                                     severity=CloudSeverity.HIGH,
-                                    resource_type='NetworkSecurityGroup',
+                                    resource_type="NetworkSecurityGroup",
                                     resource_name=nsg_name,
                                     resource_id=nsg_id,
-                                    title=f'NSG开放敏感端口到互联网: {service}({port})',
+                                    title=f"NSG开放敏感端口到互联网: {service}({port})",
                                     description=(
-                                        f'NSG {nsg_name} 的规则 {rule.name} '
-                                        f'允许从互联网访问端口 {port} ({service})'
+                                        f"NSG {nsg_name} 的规则 {rule.name} "
+                                        f"允许从互联网访问端口 {port} ({service})"
                                     ),
                                     remediation=(
-                                        '1. 限制源地址范围\n'
-                                        '2. 使用Azure Bastion\n'
-                                        '3. 配置Just-In-Time访问'
+                                        "1. 限制源地址范围\n"
+                                        "2. 使用Azure Bastion\n"
+                                        "3. 配置Just-In-Time访问"
                                     ),
                                     evidence={
-                                        'rule_name': rule.name,
-                                        'port': port,
-                                        'source': source
+                                        "rule_name": rule.name,
+                                        "port": port,
+                                        "source": source,
                                     },
-                                    compliance=['CIS-Azure-6.1']
+                                    compliance=["CIS-Azure-6.1"],
                                 )
                                 break
 
         except Exception as e:
-            logger.error(f'NSG检查失败: {e}')
+            logger.error(f"NSG检查失败: {e}")
 
         return findings
 
@@ -263,10 +257,7 @@ class AzureTester(BaseCloudTester):
         findings = []
 
         try:
-            kv_client = KeyVaultManagementClient(
-                self._credential,
-                self.subscription_id
-            )
+            kv_client = KeyVaultManagementClient(self._credential, self.subscription_id)
 
             vaults = kv_client.vaults.list()
 
@@ -279,12 +270,12 @@ class AzureTester(BaseCloudTester):
                     self._create_finding(
                         vuln_type=CloudVulnType.AZURE_KEY_VAULT,
                         severity=CloudSeverity.MEDIUM,
-                        resource_type='KeyVault',
+                        resource_type="KeyVault",
                         resource_name=vault_name,
-                        title=f'Key Vault未启用软删除: {vault_name}',
-                        description='Key Vault未启用软删除保护',
-                        remediation='启用软删除以防止意外删除',
-                        compliance=['CIS-Azure-8.4']
+                        title=f"Key Vault未启用软删除: {vault_name}",
+                        description="Key Vault未启用软删除保护",
+                        remediation="启用软删除以防止意外删除",
+                        compliance=["CIS-Azure-8.4"],
                     )
 
                 # 检查清除保护
@@ -292,29 +283,29 @@ class AzureTester(BaseCloudTester):
                     self._create_finding(
                         vuln_type=CloudVulnType.AZURE_KEY_VAULT,
                         severity=CloudSeverity.MEDIUM,
-                        resource_type='KeyVault',
+                        resource_type="KeyVault",
                         resource_name=vault_name,
-                        title=f'Key Vault未启用清除保护: {vault_name}',
-                        description='Key Vault未启用清除保护',
-                        remediation='启用清除保护以增强安全性'
+                        title=f"Key Vault未启用清除保护: {vault_name}",
+                        description="Key Vault未启用清除保护",
+                        remediation="启用清除保护以增强安全性",
                     )
 
                 # 检查网络规则
                 network_acls = properties.network_acls
-                if network_acls and network_acls.default_action == 'Allow':
+                if network_acls and network_acls.default_action == "Allow":
                     self._create_finding(
                         vuln_type=CloudVulnType.AZURE_KEY_VAULT,
                         severity=CloudSeverity.HIGH,
-                        resource_type='KeyVault',
+                        resource_type="KeyVault",
                         resource_name=vault_name,
-                        title=f'Key Vault允许公共网络访问: {vault_name}',
-                        description='Key Vault的默认网络规则允许所有网络访问',
-                        remediation='配置网络规则，限制访问来源',
-                        compliance=['CIS-Azure-8.6']
+                        title=f"Key Vault允许公共网络访问: {vault_name}",
+                        description="Key Vault的默认网络规则允许所有网络访问",
+                        remediation="配置网络规则，限制访问来源",
+                        compliance=["CIS-Azure-8.6"],
                     )
 
         except Exception as e:
-            logger.error(f'Key Vault检查失败: {e}')
+            logger.error(f"Key Vault检查失败: {e}")
 
         return findings
 
@@ -323,10 +314,7 @@ class AzureTester(BaseCloudTester):
         findings = []
 
         try:
-            auth_client = AuthorizationManagementClient(
-                self._credential,
-                self.subscription_id
-            )
+            auth_client = AuthorizationManagementClient(self._credential, self.subscription_id)
 
             # 获取所有角色分配
             assignments = auth_client.role_assignments.list()
@@ -344,34 +332,34 @@ class AzureTester(BaseCloudTester):
                     # 检查危险角色
                     if role_name in self.DANGEROUS_ROLES:
                         # 检查是否在订阅级别
-                        if scope == f'/subscriptions/{self.subscription_id}':
+                        if scope == f"/subscriptions/{self.subscription_id}":
                             self._create_finding(
                                 vuln_type=CloudVulnType.AZURE_RBAC_OVERPERMISSION,
                                 severity=CloudSeverity.HIGH,
-                                resource_type='RoleAssignment',
+                                resource_type="RoleAssignment",
                                 resource_name=assignment.name,
-                                title=f'订阅级别的高权限角色分配: {role_name}',
+                                title=f"订阅级别的高权限角色分配: {role_name}",
                                 description=(
-                                    f'Principal {principal_id} 被分配了订阅级别的 {role_name} 角色'
+                                    f"Principal {principal_id} 被分配了订阅级别的 {role_name} 角色"
                                 ),
                                 remediation=(
-                                    '1. 使用最小权限原则\n'
-                                    '2. 在资源组级别分配权限\n'
-                                    '3. 创建自定义角色'
+                                    "1. 使用最小权限原则\n"
+                                    "2. 在资源组级别分配权限\n"
+                                    "3. 创建自定义角色"
                                 ),
                                 evidence={
-                                    'role_name': role_name,
-                                    'principal_id': principal_id,
-                                    'scope': scope
+                                    "role_name": role_name,
+                                    "principal_id": principal_id,
+                                    "scope": scope,
                                 },
-                                compliance=['CIS-Azure-1.23']
+                                compliance=["CIS-Azure-1.23"],
                             )
 
                 except Exception:
                     continue
 
         except Exception as e:
-            logger.error(f'RBAC检查失败: {e}')
+            logger.error(f"RBAC检查失败: {e}")
 
         return findings
 
@@ -383,62 +371,56 @@ class AzureTester(BaseCloudTester):
             # 注意：需要azure-mgmt-sql包
             from azure.mgmt.sql import SqlManagementClient
 
-            sql_client = SqlManagementClient(
-                self._credential,
-                self.subscription_id
-            )
+            sql_client = SqlManagementClient(self._credential, self.subscription_id)
 
             servers = sql_client.servers.list()
 
             for server in servers:
                 server_name = server.name
-                resource_group = server.id.split('/')[4]
+                resource_group = server.id.split("/")[4]
 
                 # 获取防火墙规则
-                rules = sql_client.firewall_rules.list_by_server(
-                    resource_group,
-                    server_name
-                )
+                rules = sql_client.firewall_rules.list_by_server(resource_group, server_name)
 
                 for rule in rules:
                     start_ip = rule.start_ip_address
                     end_ip = rule.end_ip_address
 
                     # 检查是否允许所有Azure服务
-                    if start_ip == '0.0.0.0' and end_ip == '0.0.0.0':
+                    if start_ip == "0.0.0.0" and end_ip == "0.0.0.0":
                         self._create_finding(
                             vuln_type=CloudVulnType.AZURE_SQL_FIREWALL,
                             severity=CloudSeverity.MEDIUM,
-                            resource_type='SQLServer',
+                            resource_type="SQLServer",
                             resource_name=server_name,
-                            title=f'SQL Server允许所有Azure服务访问: {server_name}',
-                            description='防火墙规则允许所有Azure服务访问',
-                            remediation='仅允许特定的Azure服务访问',
-                            evidence={'rule_name': rule.name}
+                            title=f"SQL Server允许所有Azure服务访问: {server_name}",
+                            description="防火墙规则允许所有Azure服务访问",
+                            remediation="仅允许特定的Azure服务访问",
+                            evidence={"rule_name": rule.name},
                         )
 
                     # 检查是否开放所有IP
-                    if start_ip == '0.0.0.0' and end_ip == '255.255.255.255':
+                    if start_ip == "0.0.0.0" and end_ip == "255.255.255.255":
                         self._create_finding(
                             vuln_type=CloudVulnType.AZURE_SQL_FIREWALL,
                             severity=CloudSeverity.CRITICAL,
-                            resource_type='SQLServer',
+                            resource_type="SQLServer",
                             resource_name=server_name,
-                            title=f'SQL Server防火墙完全开放: {server_name}',
-                            description='防火墙规则允许所有IP地址访问',
-                            remediation='限制防火墙规则，仅允许必要的IP',
+                            title=f"SQL Server防火墙完全开放: {server_name}",
+                            description="防火墙规则允许所有IP地址访问",
+                            remediation="限制防火墙规则，仅允许必要的IP",
                             evidence={
-                                'rule_name': rule.name,
-                                'start_ip': start_ip,
-                                'end_ip': end_ip
+                                "rule_name": rule.name,
+                                "start_ip": start_ip,
+                                "end_ip": end_ip,
                             },
-                            compliance=['CIS-Azure-4.1.1']
+                            compliance=["CIS-Azure-4.1.1"],
                         )
 
         except ImportError:
-            logger.debug('azure-mgmt-sql未安装，跳过SQL检查')
+            logger.debug("azure-mgmt-sql未安装，跳过SQL检查")
         except Exception as e:
-            logger.error(f'SQL防火墙检查失败: {e}')
+            logger.error(f"SQL防火墙检查失败: {e}")
 
         return findings
 
@@ -454,14 +436,12 @@ def scan_azure(subscription_id: str) -> Dict[str, Any]:
     Returns:
         扫描结果摘要
     """
-    tester = AzureTester(config={
-        'subscription_id': subscription_id
-    })
+    tester = AzureTester(config={"subscription_id": subscription_id})
     findings = tester.scan()
     return tester.get_summary().to_dict()
 
 
 __all__ = [
-    'AzureTester',
-    'scan_azure',
+    "AzureTester",
+    "scan_azure",
 ]

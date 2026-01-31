@@ -49,13 +49,13 @@ def register_supply_chain_tools(mcp):
             }
         """
         try:
-            from modules.supply_chain.sbom_generator import SBOMGenerator, SBOMFormat
+            from modules.supply_chain.sbom_generator import SBOMFormat, SBOMGenerator
 
             # 格式映射
             format_map = {
                 "cyclonedx": SBOMFormat.CYCLONEDX,
                 "spdx": SBOMFormat.SPDX,
-                "simple": SBOMFormat.SIMPLE
+                "simple": SBOMFormat.SIMPLE,
             }
 
             fmt = format_map.get(format.lower(), SBOMFormat.CYCLONEDX)
@@ -71,7 +71,7 @@ def register_supply_chain_tools(mcp):
                 "production_dependencies": summary["production_dependencies"],
                 "dev_dependencies": summary["dev_dependencies"],
                 "ecosystems": summary["ecosystems"],
-                "sbom": sbom
+                "sbom": sbom,
             }
 
         except ImportError as e:
@@ -102,10 +102,7 @@ def register_supply_chain_tools(mcp):
             generator = SBOMGenerator(project_path)
             generator.scan_all()
 
-            return {
-                "success": True,
-                **generator.get_summary()
-            }
+            return {"success": True, **generator.get_summary()}
 
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -146,10 +143,7 @@ def register_supply_chain_tools(mcp):
             scanner = DependencyScanner()
             result = scanner.scan_project(project_path)
 
-            return {
-                "success": True,
-                **result
-            }
+            return {"success": True, **result}
 
         except ImportError as e:
             return {"success": False, "error": f"模块导入失败: {e}"}
@@ -159,8 +153,7 @@ def register_supply_chain_tools(mcp):
     registered_tools.append("dependency_audit")
 
     @mcp.tool()
-    def dependency_check_package(package: str, version: str,
-                                  ecosystem: str = "PyPI") -> dict:
+    def dependency_check_package(package: str, version: str, ecosystem: str = "PyPI") -> dict:
         """单包漏洞检查 - 检查单个依赖包的漏洞
 
         Args:
@@ -195,10 +188,10 @@ def register_supply_chain_tools(mcp):
                         "severity": v.severity.value,
                         "title": v.title,
                         "cvss": v.cvss_score,
-                        "fixed_version": v.fixed_version
+                        "fixed_version": v.fixed_version,
                     }
                     for v in vulns
-                ]
+                ],
             }
 
         except Exception as e:
@@ -232,8 +225,8 @@ def register_supply_chain_tools(mcp):
                 "summary": {
                     "scanned": result["scanned"],
                     "vulnerable": result["vulnerable"],
-                    "by_severity": result["by_severity"]
-                }
+                    "by_severity": result["by_severity"],
+                },
             }
 
         except Exception as e:
@@ -277,10 +270,7 @@ def register_supply_chain_tools(mcp):
             scanner = CICDSecurityScanner(project_path)
             result = scanner.scan_all()
 
-            return {
-                "success": True,
-                **result
-            }
+            return {"success": True, **result}
 
         except ImportError as e:
             return {"success": False, "error": f"模块导入失败: {e}"}
@@ -319,10 +309,10 @@ def register_supply_chain_tools(mcp):
                         "type": f.vuln_type.value,
                         "title": f.title,
                         "description": f.description,
-                        "remediation": f.remediation
+                        "remediation": f.remediation,
                     }
                     for f in findings
-                ]
+                ],
             }
 
         except Exception as e:
@@ -356,8 +346,8 @@ def register_supply_chain_tools(mcp):
                 "summary": {
                     "total_findings": result["total_findings"],
                     "by_severity": result["by_severity"],
-                    "by_platform": result["by_platform"]
-                }
+                    "by_platform": result["by_platform"],
+                },
             }
 
         except Exception as e:
@@ -393,14 +383,11 @@ def register_supply_chain_tools(mcp):
             }
         """
         try:
-            from modules.supply_chain.sbom_generator import SBOMGenerator, SBOMFormat
-            from modules.supply_chain.dependency_scanner import DependencyScanner
             from modules.supply_chain.cicd_security import CICDSecurityScanner
+            from modules.supply_chain.dependency_scanner import DependencyScanner
+            from modules.supply_chain.sbom_generator import SBOMFormat, SBOMGenerator
 
-            results = {
-                "success": True,
-                "project_path": project_path
-            }
+            results = {"success": True, "project_path": project_path}
 
             # 1. SBOM生成
             try:
@@ -409,7 +396,7 @@ def register_supply_chain_tools(mcp):
                 sbom_summary = sbom_gen.get_summary()
                 results["sbom"] = {
                     "total": sbom_summary["total_dependencies"],
-                    "ecosystems": sbom_summary["ecosystems"]
+                    "ecosystems": sbom_summary["ecosystems"],
                 }
             except Exception as e:
                 results["sbom"] = {"error": str(e)}
@@ -422,7 +409,7 @@ def register_supply_chain_tools(mcp):
                     "scanned": dep_result["scanned"],
                     "vulnerable": dep_result["vulnerable"],
                     "by_severity": dep_result["by_severity"],
-                    "top_vulns": dep_result["vulnerabilities"][:10]  # 限制数量
+                    "top_vulns": dep_result["vulnerabilities"][:10],  # 限制数量
                 }
             except Exception as e:
                 results["dependency_vulns"] = {"error": str(e)}
@@ -434,7 +421,7 @@ def register_supply_chain_tools(mcp):
                 results["cicd_findings"] = {
                     "total": cicd_result["total_findings"],
                     "by_severity": cicd_result["by_severity"],
-                    "by_platform": cicd_result["by_platform"]
+                    "by_platform": cicd_result["by_platform"],
                 }
             except Exception as e:
                 results["cicd_findings"] = {"error": str(e)}
@@ -470,7 +457,7 @@ def register_supply_chain_tools(mcp):
                 "vulnerable_packages": results.get("dependency_vulns", {}).get("vulnerable", 0),
                 "cicd_issues": results.get("cicd_findings", {}).get("total", 0),
                 "risk_score": risk_score,
-                "risk_level": risk_level
+                "risk_level": risk_level,
             }
 
             return results

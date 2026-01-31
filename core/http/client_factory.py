@@ -18,9 +18,9 @@
 
 import logging
 import warnings
-from typing import Optional, Dict, Any
-from enum import Enum
 from contextlib import asynccontextmanager
+from enum import Enum
+from typing import Any, Dict, Optional
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -31,12 +31,14 @@ logger = logging.getLogger(__name__)
 
 class ClientType(Enum):
     """客户端类型"""
+
     SYNC = "sync"
     ASYNC = "async"
 
 
 class SecurityWarning(UserWarning):
     """安全警告"""
+
     pass
 
 
@@ -64,7 +66,7 @@ class HTTPClientFactory:
         proxy: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
         max_retries: Optional[int] = None,
-        force_new: bool = False
+        force_new: bool = False,
     ) -> requests.Session:
         """获取同步 HTTP 客户端 (单例复用)
 
@@ -85,7 +87,7 @@ class HTTPClientFactory:
                 verify_ssl=verify_ssl,
                 proxy=proxy,
                 headers=headers,
-                max_retries=max_retries or cls._default_max_retries
+                max_retries=max_retries or cls._default_max_retries,
             )
             if not force_new:
                 cls._sync_session = session
@@ -100,7 +102,7 @@ class HTTPClientFactory:
         verify_ssl: bool,
         proxy: Optional[str],
         headers: Optional[Dict[str, str]],
-        max_retries: int
+        max_retries: int,
     ) -> requests.Session:
         """创建同步 Session"""
         session = requests.Session()
@@ -115,25 +117,20 @@ class HTTPClientFactory:
             total=max_retries,
             backoff_factor=1,
             status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["HEAD", "GET", "OPTIONS", "POST", "PUT", "DELETE"]
+            allowed_methods=["HEAD", "GET", "OPTIONS", "POST", "PUT", "DELETE"],
         )
         adapter = HTTPAdapter(max_retries=retry_strategy, pool_maxsize=50)
         session.mount("http://", adapter)
         session.mount("https://", adapter)
 
         # 设置默认 headers
-        session.headers.update({
-            "User-Agent": cls._default_user_agent,
-            "Accept": "*/*",
-            **(headers or {})
-        })
+        session.headers.update(
+            {"User-Agent": cls._default_user_agent, "Accept": "*/*", **(headers or {})}
+        )
 
         # 代理配置
         if proxy:
-            session.proxies.update({
-                "http": proxy,
-                "https": proxy
-            })
+            session.proxies.update({"http": proxy, "https": proxy})
 
         return session
 
@@ -145,7 +142,7 @@ class HTTPClientFactory:
         verify_ssl: bool = True,
         concurrency: int = 50,
         proxy: Optional[str] = None,
-        headers: Optional[Dict[str, str]] = None
+        headers: Optional[Dict[str, str]] = None,
     ):
         """获取异步 HTTP 客户端 (上下文管理)
 
@@ -172,20 +169,12 @@ class HTTPClientFactory:
             cls._warn_ssl_disabled()
 
         timeout_obj = aiohttp.ClientTimeout(total=timeout or cls._default_timeout)
-        connector = aiohttp.TCPConnector(
-            limit=concurrency,
-            ssl=verify_ssl
-        )
+        connector = aiohttp.TCPConnector(limit=concurrency, ssl=verify_ssl)
 
-        default_headers = {
-            "User-Agent": cls._default_user_agent,
-            **(headers or {})
-        }
+        default_headers = {"User-Agent": cls._default_user_agent, **(headers or {})}
 
         async with aiohttp.ClientSession(
-            connector=connector,
-            timeout=timeout_obj,
-            headers=default_headers
+            connector=connector, timeout=timeout_obj, headers=default_headers
         ) as session:
             yield session
 
@@ -193,16 +182,16 @@ class HTTPClientFactory:
     def _warn_ssl_disabled(cls):
         """发出 SSL 禁用警告"""
         warnings.warn(
-            "SSL 验证已禁用！可能存在中间人攻击风险。"
-            "仅在测试环境或明确信任的网络中使用。",
+            "SSL 验证已禁用！可能存在中间人攻击风险。" "仅在测试环境或明确信任的网络中使用。",
             SecurityWarning,
-            stacklevel=4
+            stacklevel=4,
         )
         logger.warning("SSL 验证已禁用")
 
         # 禁用 urllib3 的 SSL 警告（避免噪音）
         try:
             import urllib3
+
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         except Exception as exc:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
@@ -223,7 +212,7 @@ class HTTPClientFactory:
         cls,
         default_timeout: Optional[int] = None,
         default_user_agent: Optional[str] = None,
-        default_max_retries: Optional[int] = None
+        default_max_retries: Optional[int] = None,
     ):
         """配置工厂默认参数
 

@@ -16,17 +16,22 @@ from typing import Any, Callable
 def _wrap_tool_func(func: Callable[..., Any]) -> Callable[..., Any]:
     """包装工具函数，标准化返回值为 ToolResult.to_dict()"""
     if inspect.iscoroutinefunction(func):
+
         @functools.wraps(func)
         async def wrapper(*args, **kwargs) -> Any:
             # 延迟导入避免循环依赖
             from core.result import ensure_tool_result
+
             result = await func(*args, **kwargs)
             return ensure_tool_result(result).to_dict()
+
     else:
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Any:
             # 延迟导入避免循环依赖
             from core.result import ensure_tool_result
+
             result = func(*args, **kwargs)
             return ensure_tool_result(result).to_dict()
 

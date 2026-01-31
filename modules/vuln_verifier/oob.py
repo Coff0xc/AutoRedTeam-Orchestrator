@@ -8,6 +8,7 @@ OOB (Out-of-Band) 验证模块
   - HTTP 回调
   - 多协议支持
 """
+
 import hashlib
 import logging
 import secrets
@@ -381,8 +382,8 @@ def verify_with_oob(url: str, param: str, vuln_type: str) -> Dict[str, Any]:
     Returns:
         验证结果字典
     """
-    import urllib.request
     import urllib.parse
+    import urllib.request
 
     verifier = OOBIntegratedVerifier()
 

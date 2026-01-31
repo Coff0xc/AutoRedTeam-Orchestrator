@@ -9,4 +9,4 @@
 from .lfi import LFIDetector
 from .upload import FileUploadDetector
 
-__all__ = ['LFIDetector', 'FileUploadDetector']
+__all__ = ["LFIDetector", "FileUploadDetector"]

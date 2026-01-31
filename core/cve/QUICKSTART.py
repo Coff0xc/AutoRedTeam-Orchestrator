@@ -31,8 +31,9 @@ data/
 步骤1: 导入模块
 """
 
-from core.cve import CVEUpdateManager
 import asyncio
+
+from core.cve import CVEUpdateManager
 
 # 步骤2: 初始化管理器
 manager = CVEUpdateManager()
@@ -45,6 +46,7 @@ manager = CVEUpdateManager()
 📊 示例1: 同步CVE数据
 ==========================================
 """
+
 
 async def example_sync():
     # 同步最近7天的数据
@@ -66,6 +68,7 @@ async def example_sync():
 ==========================================
 """
 
+
 def example_search():
     # 搜索严重漏洞
     critical = manager.search(severity="CRITICAL", min_cvss=9.0)
@@ -74,12 +77,7 @@ def example_search():
     apache = manager.search(keyword="Apache", poc_only=True)
 
     # 复合查询
-    results = manager.search(
-        keyword="SQL injection",
-        severity="HIGH",
-        min_cvss=7.0,
-        poc_only=True
-    )
+    results = manager.search(keyword="SQL injection", severity="HIGH", min_cvss=7.0, poc_only=True)
 
     for cve in results[:5]:
         print(f"{cve.cve_id} [CVSS: {cve.cvss}]")
@@ -94,6 +92,7 @@ def example_search():
 ==========================================
 """
 
+
 def example_stats():
     stats = manager.get_stats()
 
@@ -101,11 +100,11 @@ def example_stats():
     print(f"有PoC: {stats['poc_available']}")
 
     print("\n按严重性:")
-    for severity, count in stats['by_severity'].items():
+    for severity, count in stats["by_severity"].items():
         print(f"  {severity}: {count}")
 
     print("\n按来源:")
-    for source, count in stats['by_source'].items():
+    for source, count in stats["by_source"].items():
         print(f"  {source}: {count}")
 
 
@@ -150,12 +149,7 @@ export GITHUB_TOKEN="ghp_your_token"
 步骤1: 导入模块
 """
 
-from core.cve.mcp_integration import (
-    init_cve_manager,
-    cve_sync_all,
-    cve_search,
-    cve_stats
-)
+from core.cve.mcp_integration import cve_search, cve_stats, cve_sync_all, init_cve_manager
 
 """
 步骤2: 初始化 (在服务器启动时)
@@ -186,6 +180,7 @@ if __name__ == "__main__":
 场景1: 每日威胁情报收集
 """
 
+
 async def daily_intel():
     manager = CVEUpdateManager()
 
@@ -203,6 +198,7 @@ async def daily_intel():
 场景2: 产品安全监控
 """
 
+
 def monitor_products():
     manager = CVEUpdateManager()
 
@@ -218,8 +214,10 @@ def monitor_products():
 场景3: 导出JSON报告
 """
 
+
 def export_report():
     import json
+
     manager = CVEUpdateManager()
 
     results = manager.search(severity="CRITICAL", min_cvss=9.0)
@@ -227,10 +225,10 @@ def export_report():
     report = {
         "date": datetime.now().isoformat(),
         "total": len(results),
-        "cves": [cve.to_dict() for cve in results]
+        "cves": [cve.to_dict() for cve in results],
     }
 
-    with open("cve_report.json", "w", encoding='utf-8') as f:
+    with open("cve_report.json", "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
 
 

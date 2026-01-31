@@ -18,33 +18,33 @@ base.py - 侦察引擎基类
             pass
 """
 
-import ssl
-import socket
 import asyncio
-import threading
 import logging
+import socket
+import ssl
+import threading
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Any, Callable, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 from urllib.parse import urlparse
-from concurrent.futures import ThreadPoolExecutor
 
 from .phases import (
-    ReconPhase,
+    DEFAULT_PHASE_ORDER,
+    PhaseManager,
     PhaseResult,
     PhaseStatus,
-    PhaseManager,
-    DEFAULT_PHASE_ORDER,
+    ReconPhase,
 )
-
 
 logger = logging.getLogger(__name__)
 
 
 class Severity(Enum):
     """漏洞严重级别"""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -53,8 +53,7 @@ class Severity(Enum):
 
     def __lt__(self, other: "Severity") -> bool:
         """支持比较排序"""
-        order = [Severity.INFO, Severity.LOW, Severity.MEDIUM,
-                 Severity.HIGH, Severity.CRITICAL]
+        order = [Severity.INFO, Severity.LOW, Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL]
         return order.index(self) < order.index(other)
 
 
@@ -90,6 +89,7 @@ class ReconConfig:
         proxy: 代理设置 (http://host:port)
         headers: 自定义请求头
     """
+
     # 基础配置
     timeout: float = 30.0
     max_threads: int = 10
@@ -184,6 +184,7 @@ class Finding:
         url: 相关URL
         metadata: 额外元数据
     """
+
     type: str
     severity: Severity
     title: str
@@ -235,6 +236,7 @@ class ReconResult:
         errors: 错误列表
         metadata: 元数据
     """
+
     target: str
     success: bool = False
 
@@ -286,7 +288,6 @@ class ReconResult:
             "start_time": self.start_time,
             "end_time": self.end_time,
             "duration": round(self.duration, 3),
-
             # 资产信息
             "ip_addresses": self.ip_addresses,
             "open_ports": self.open_ports,
@@ -296,16 +297,12 @@ class ReconResult:
             "directories": self.directories[:100],
             "sensitive_files": self.sensitive_files,
             "waf_detected": self.waf_detected,
-
             # 发现
             "findings": [f.to_dict() for f in self.findings],
-
             # 摘要
             "summary": self._generate_summary(),
-
             # 错误
             "errors": self.errors,
-
             # 阶段结果
             "phase_results": [pr.to_dict() for pr in self.phase_results],
         }
@@ -336,14 +333,12 @@ class ReconResult:
             "subdomains_count": len(self.subdomains),
             "directories_count": len(self.directories),
             "technologies": self.technologies[:10],
-            "phases_completed": len([
-                pr for pr in self.phase_results
-                if pr.status == PhaseStatus.SUCCESS
-            ]),
-            "phases_failed": len([
-                pr for pr in self.phase_results
-                if pr.status == PhaseStatus.FAILED
-            ]),
+            "phases_completed": len(
+                [pr for pr in self.phase_results if pr.status == PhaseStatus.SUCCESS]
+            ),
+            "phases_failed": len(
+                [pr for pr in self.phase_results if pr.status == PhaseStatus.FAILED]
+            ),
         }
 
 
@@ -374,11 +369,7 @@ class BaseReconEngine(ABC):
     # 默认配置
     DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
-    def __init__(
-        self,
-        target: str,
-        config: Optional[ReconConfig] = None
-    ):
+    def __init__(self, target: str, config: Optional[ReconConfig] = None):
         """初始化侦察引擎
 
         Args:
@@ -449,12 +440,7 @@ class BaseReconEngine(ABC):
         """
         self._progress_callback = callback
 
-    def _report_progress(
-        self,
-        phase: ReconPhase,
-        progress: int,
-        message: str = ""
-    ) -> None:
+    def _report_progress(self, phase: ReconPhase, progress: int, message: str = "") -> None:
         """报告进度"""
         self._current_phase = phase
         if self._progress_callback:
@@ -527,6 +513,7 @@ class BaseReconEngine(ABC):
             PhaseResult 阶段结果
         """
         import time
+
         start = time.time()
 
         if self.is_stopped():
@@ -558,6 +545,7 @@ class BaseReconEngine(ABC):
     def export_json(self) -> str:
         """导出JSON格式结果"""
         import json
+
         return json.dumps(self.result.to_dict(), ensure_ascii=False, indent=2)
 
     def export_dict(self) -> Dict[str, Any]:

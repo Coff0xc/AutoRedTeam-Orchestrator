@@ -43,14 +43,14 @@ class GraphQLTester(BaseAPITester):
         results = tester.test()
     """
 
-    name = 'graphql'
-    description = 'GraphQL API安全测试器'
-    version = '3.0.0'
+    name = "graphql"
+    description = "GraphQL API安全测试器"
+    version = "3.0.0"
 
     # Introspection查询
     INTROSPECTION_QUERIES = [
         # 基础Schema查询
-        '''
+        """
         query IntrospectionQuery {
             __schema {
                 types {
@@ -60,9 +60,9 @@ class GraphQLTester(BaseAPITester):
                 }
             }
         }
-        ''',
+        """,
         # 完整Schema查询
-        '''
+        """
         query FullIntrospection {
             __schema {
                 queryType { name }
@@ -89,9 +89,9 @@ class GraphQLTester(BaseAPITester):
                 }
             }
         }
-        ''',
+        """,
         # 简化版本
-        '{__schema{types{name}}}',
+        "{__schema{types{name}}}",
         # __type查询
         '{__type(name:"Query"){fields{name}}}',
     ]
@@ -99,22 +99,22 @@ class GraphQLTester(BaseAPITester):
     # SQL注入Payload
     INJECTION_PAYLOADS = [
         # SQL注入
-        ("'", 'single_quote'),
-        ('"', 'double_quote'),
-        ("' OR '1'='1", 'or_injection'),
-        ("1' AND '1'='1", 'and_injection'),
-        ("'; DROP TABLE users; --", 'drop_injection'),
-        ("1 UNION SELECT NULL--", 'union_injection'),
-        ("1; WAITFOR DELAY '0:0:5'--", 'time_blind'),
+        ("'", "single_quote"),
+        ('"', "double_quote"),
+        ("' OR '1'='1", "or_injection"),
+        ("1' AND '1'='1", "and_injection"),
+        ("'; DROP TABLE users; --", "drop_injection"),
+        ("1 UNION SELECT NULL--", "union_injection"),
+        ("1; WAITFOR DELAY '0:0:5'--", "time_blind"),
         # NoSQL注入
-        ('{"$gt": ""}', 'nosql_gt'),
-        ('{"$ne": null}', 'nosql_ne'),
-        ('{"$regex": ".*"}', 'nosql_regex'),
+        ('{"$gt": ""}', "nosql_gt"),
+        ('{"$ne": null}', "nosql_ne"),
+        ('{"$regex": ".*"}', "nosql_regex"),
         # 模板注入
-        ('{{7*7}}', 'ssti'),
-        ('${7*7}', 'expression'),
+        ("{{7*7}}", "ssti"),
+        ("${7*7}", "expression"),
         # 路径遍历
-        ('../../../etc/passwd', 'path_traversal'),
+        ("../../../etc/passwd", "path_traversal"),
     ]
 
     def __init__(self, target: str, config: Optional[Dict[str, Any]] = None):
@@ -132,10 +132,10 @@ class GraphQLTester(BaseAPITester):
         super().__init__(target, config)
 
         # 配置项
-        self.max_depth = self.config.get('max_depth', 50)
-        self.max_batch = self.config.get('max_batch', 100)
-        self.field_name = self.config.get('field_name', 'user')
-        self.auth_header = self.config.get('auth_header', {})
+        self.max_depth = self.config.get("max_depth", 50)
+        self.max_batch = self.config.get("max_batch", 100)
+        self.field_name = self.config.get("field_name", "user")
+        self.auth_header = self.config.get("auth_header", {})
 
         # 存储发现的Schema信息
         self._schema_info: Dict[str, Any] = {}
@@ -170,46 +170,46 @@ class GraphQLTester(BaseAPITester):
         for query in self.INTROSPECTION_QUERIES:
             response = self._send_query(query.strip())
 
-            if not response.get('success'):
+            if not response.get("success"):
                 continue
 
-            data = response.get('data', {})
+            data = response.get("data", {})
 
             # 检查是否返回Schema数据
-            if 'data' in data:
-                schema_data = data.get('data', {})
+            if "data" in data:
+                schema_data = data.get("data", {})
 
-                if '__schema' in schema_data or '__type' in schema_data:
+                if "__schema" in schema_data or "__type" in schema_data:
                     # 提取Schema信息
                     self._extract_schema_info(schema_data)
 
-                    types_count = len(self._schema_info.get('types', []))
-                    queries_count = len(self._schema_info.get('queries', []))
-                    mutations_count = len(self._schema_info.get('mutations', []))
+                    types_count = len(self._schema_info.get("types", []))
+                    queries_count = len(self._schema_info.get("queries", []))
+                    mutations_count = len(self._schema_info.get("mutations", []))
 
                     result = self._create_result(
                         vulnerable=True,
                         vuln_type=APIVulnType.GRAPHQL_INTROSPECTION,
                         severity=Severity.MEDIUM,
-                        title='GraphQL Introspection已启用',
+                        title="GraphQL Introspection已启用",
                         description=(
-                            'GraphQL Introspection功能已启用，'
-                            f'可以获取完整的API Schema。'
-                            f'发现{types_count}个类型、{queries_count}个Query、{mutations_count}个Mutation。'
+                            "GraphQL Introspection功能已启用，"
+                            f"可以获取完整的API Schema。"
+                            f"发现{types_count}个类型、{queries_count}个Query、{mutations_count}个Mutation。"
                         ),
                         evidence={
-                            'types_count': types_count,
-                            'queries_count': queries_count,
-                            'mutations_count': mutations_count,
-                            'sample_types': self._schema_info.get('types', [])[:10],
-                            'sample_queries': self._schema_info.get('queries', [])[:10]
+                            "types_count": types_count,
+                            "queries_count": queries_count,
+                            "mutations_count": mutations_count,
+                            "sample_types": self._schema_info.get("types", [])[:10],
+                            "sample_queries": self._schema_info.get("queries", [])[:10],
                         },
                         remediation=(
-                            '1. 在生产环境禁用Introspection\n'
-                            '2. 对于Apollo: plugins: [ApolloServerPluginDisableIntrospection()]\n'
-                            '3. 对于graphql-yoga: 设置 disableIntrospection: true\n'
-                            '4. 使用API网关在生产环境拦截Introspection查询'
-                        )
+                            "1. 在生产环境禁用Introspection\n"
+                            "2. 对于Apollo: plugins: [ApolloServerPluginDisableIntrospection()]\n"
+                            "3. 对于graphql-yoga: 设置 disableIntrospection: true\n"
+                            "4. 使用API网关在生产环境拦截Introspection查询"
+                        ),
                     )
                     return result
 
@@ -240,20 +240,17 @@ class GraphQLTester(BaseAPITester):
             response = self._send_batch(batch)
             elapsed = time.time() - start_time
 
-            response_times.append({
-                'count': count,
-                'time': round(elapsed, 3)
-            })
+            response_times.append({"count": count, "time": round(elapsed, 3)})
 
-            if not response.get('success'):
+            if not response.get("success"):
                 break
 
-            data = response.get('data', {})
+            data = response.get("data", {})
 
             # 检查是否接受批量查询
             if isinstance(data, list) and len(data) >= count:
                 max_accepted = count
-            elif response.get('status_code', 0) >= 400:
+            elif response.get("status_code", 0) >= 400:
                 break
 
         if max_accepted > 0:
@@ -263,21 +260,17 @@ class GraphQLTester(BaseAPITester):
                 vulnerable=True,
                 vuln_type=APIVulnType.GRAPHQL_BATCH_DOS,
                 severity=severity,
-                title='GraphQL批量查询DoS',
+                title="GraphQL批量查询DoS",
                 description=(
-                    f'服务端接受最多{max_accepted}个批量查询，'
-                    '攻击者可以利用此特性进行DoS攻击。'
+                    f"服务端接受最多{max_accepted}个批量查询，" "攻击者可以利用此特性进行DoS攻击。"
                 ),
-                evidence={
-                    'max_queries_accepted': max_accepted,
-                    'response_times': response_times
-                },
+                evidence={"max_queries_accepted": max_accepted, "response_times": response_times},
                 remediation=(
-                    '1. 限制单次请求的查询数量（建议不超过10个）\n'
-                    '2. 实施查询复杂度限制\n'
-                    '3. 使用速率限制\n'
-                    '4. 对于Apollo: 使用 BatchHttpLink 的 batchMax 配置'
-                )
+                    "1. 限制单次请求的查询数量（建议不超过10个）\n"
+                    "2. 实施查询复杂度限制\n"
+                    "3. 使用速率限制\n"
+                    "4. 对于Apollo: 使用 BatchHttpLink 的 batchMax 配置"
+                ),
             )
             return result
 
@@ -307,24 +300,20 @@ class GraphQLTester(BaseAPITester):
             response = self._send_query(query)
             elapsed = time.time() - start_time
 
-            response_times.append({
-                'depth': depth,
-                'time': round(elapsed, 3)
-            })
+            response_times.append({"depth": depth, "time": round(elapsed, 3)})
 
-            if not response.get('success'):
+            if not response.get("success"):
                 break
 
-            data = response.get('data', {})
-            errors = data.get('errors', [])
+            data = response.get("data", {})
+            errors = data.get("errors", [])
 
             # 检查是否有深度限制错误
             depth_error = any(
-                'depth' in str(e).lower() or 'nested' in str(e).lower()
-                for e in errors
+                "depth" in str(e).lower() or "nested" in str(e).lower() for e in errors
             )
 
-            if depth_error or response.get('status_code', 0) >= 400:
+            if depth_error or response.get("status_code", 0) >= 400:
                 break
             else:
                 max_accepted = depth
@@ -336,22 +325,21 @@ class GraphQLTester(BaseAPITester):
                 vulnerable=True,
                 vuln_type=APIVulnType.GRAPHQL_DEEP_NESTING,
                 severity=severity,
-                title='GraphQL深度嵌套DoS',
+                title="GraphQL深度嵌套DoS",
                 description=(
-                    f'服务端接受最深{max_accepted}层嵌套查询，'
-                    '攻击者可以利用此特性进行DoS攻击。'
+                    f"服务端接受最深{max_accepted}层嵌套查询，" "攻击者可以利用此特性进行DoS攻击。"
                 ),
                 evidence={
-                    'max_depth_accepted': max_accepted,
-                    'response_times': response_times,
-                    'field_tested': self.field_name
+                    "max_depth_accepted": max_accepted,
+                    "response_times": response_times,
+                    "field_tested": self.field_name,
                 },
                 remediation=(
-                    '1. 限制查询嵌套深度（建议不超过10层）\n'
-                    '2. 实施查询复杂度限制\n'
-                    '3. 使用 graphql-depth-limit 库\n'
-                    '4. 对于Apollo: 使用 depthLimit 插件'
-                )
+                    "1. 限制查询嵌套深度（建议不超过10层）\n"
+                    "2. 实施查询复杂度限制\n"
+                    "3. 使用 graphql-depth-limit 库\n"
+                    "4. 对于Apollo: 使用 depthLimit 插件"
+                ),
             )
             return result
 
@@ -370,11 +358,11 @@ class GraphQLTester(BaseAPITester):
         """
         # 测试常见的错误拼写
         test_queries = [
-            '{usr{id}}',      # user的错误拼写
-            '{pasword}',      # password的错误拼写
-            '{admn}',         # admin的错误拼写
-            '{usrs{emal}}',   # users.email的错误拼写
-            '{accont{blance}}',  # account.balance的错误拼写
+            "{usr{id}}",  # user的错误拼写
+            "{pasword}",  # password的错误拼写
+            "{admn}",  # admin的错误拼写
+            "{usrs{emal}}",  # users.email的错误拼写
+            "{accont{blance}}",  # account.balance的错误拼写
         ]
 
         suggestions_found: List[Dict[str, Any]] = []
@@ -382,50 +370,48 @@ class GraphQLTester(BaseAPITester):
         for query in test_queries:
             response = self._send_query(query)
 
-            if not response.get('success'):
+            if not response.get("success"):
                 continue
 
-            data = response.get('data', {})
-            errors = data.get('errors', [])
+            data = response.get("data", {})
+            errors = data.get("errors", [])
 
             for error in errors:
-                message = str(error.get('message', ''))
+                message = str(error.get("message", ""))
 
                 # 检查是否包含建议
-                if 'did you mean' in message.lower() or 'suggest' in message.lower():
+                if "did you mean" in message.lower() or "suggest" in message.lower():
                     # 提取建议的字段名
                     suggested = re.findall(r'"([^"]+)"', message)
 
-                    suggestions_found.append({
-                        'query': query,
-                        'message': message[:200],
-                        'suggestions': suggested
-                    })
+                    suggestions_found.append(
+                        {"query": query, "message": message[:200], "suggestions": suggested}
+                    )
 
         if suggestions_found:
             all_suggestions = []
             for s in suggestions_found:
-                all_suggestions.extend(s.get('suggestions', []))
+                all_suggestions.extend(s.get("suggestions", []))
             all_suggestions = list(set(all_suggestions))
 
             result = self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.GRAPHQL_FIELD_SUGGESTION,
                 severity=Severity.LOW,
-                title='GraphQL字段建议信息泄露',
+                title="GraphQL字段建议信息泄露",
                 description=(
-                    f'GraphQL返回字段建议信息，发现{len(all_suggestions)}个可能的字段名。'
-                    '这可能帮助攻击者枚举API Schema。'
+                    f"GraphQL返回字段建议信息，发现{len(all_suggestions)}个可能的字段名。"
+                    "这可能帮助攻击者枚举API Schema。"
                 ),
                 evidence={
-                    'suggestions_found': suggestions_found,
-                    'unique_suggestions': all_suggestions
+                    "suggestions_found": suggestions_found,
+                    "unique_suggestions": all_suggestions,
                 },
                 remediation=(
-                    '1. 在生产环境禁用字段建议\n'
-                    '2. 返回通用错误消息\n'
-                    '3. 使用自定义错误格式化器过滤建议'
-                )
+                    "1. 在生产环境禁用字段建议\n"
+                    "2. 返回通用错误消息\n"
+                    "3. 使用自定义错误格式化器过滤建议"
+                ),
             )
             return result
 
@@ -446,31 +432,28 @@ class GraphQLTester(BaseAPITester):
         response_times: List[Dict[str, Any]] = []
 
         for count in [10, 50, 100, 200]:
-            aliases = ' '.join([f'a{i}: __typename' for i in range(count)])
-            query = f'query {{ {aliases} }}'
+            aliases = " ".join([f"a{i}: __typename" for i in range(count)])
+            query = f"query {{ {aliases} }}"
 
             start_time = time.time()
             response = self._send_query(query)
             elapsed = time.time() - start_time
 
-            response_times.append({
-                'count': count,
-                'time': round(elapsed, 3)
-            })
+            response_times.append({"count": count, "time": round(elapsed, 3)})
 
-            if not response.get('success'):
+            if not response.get("success"):
                 break
 
-            data = response.get('data', {})
+            data = response.get("data", {})
 
             # 检查是否返回所有别名的结果
-            if 'data' in data and isinstance(data['data'], dict):
-                result_count = len(data['data'])
+            if "data" in data and isinstance(data["data"], dict):
+                result_count = len(data["data"])
                 if result_count >= count:
                     max_accepted = count
                 else:
                     break
-            elif response.get('status_code', 0) >= 400:
+            elif response.get("status_code", 0) >= 400:
                 break
 
         if max_accepted > 0:
@@ -480,20 +463,16 @@ class GraphQLTester(BaseAPITester):
                 vulnerable=True,
                 vuln_type=APIVulnType.GRAPHQL_ALIAS_OVERLOAD,
                 severity=severity,
-                title='GraphQL别名重载攻击',
+                title="GraphQL别名重载攻击",
                 description=(
-                    f'服务端接受最多{max_accepted}个别名，'
-                    '攻击者可以利用此特性放大查询负载。'
+                    f"服务端接受最多{max_accepted}个别名，" "攻击者可以利用此特性放大查询负载。"
                 ),
-                evidence={
-                    'max_aliases_accepted': max_accepted,
-                    'response_times': response_times
-                },
+                evidence={"max_aliases_accepted": max_accepted, "response_times": response_times},
                 remediation=(
-                    '1. 限制单次查询的别名数量\n'
-                    '2. 实施查询复杂度限制\n'
-                    '3. 使用 graphql-query-complexity 库'
-                )
+                    "1. 限制单次查询的别名数量\n"
+                    "2. 实施查询复杂度限制\n"
+                    "3. 使用 graphql-query-complexity 库"
+                ),
             )
             return result
 
@@ -512,38 +491,32 @@ class GraphQLTester(BaseAPITester):
         """
         # 测试@include和@skip指令
         for count in [10, 50, 100]:
-            directives = ' '.join([
-                f'@include(if: true)' if i % 2 == 0 else '@skip(if: false)'
-                for i in range(count)
-            ])
+            directives = " ".join(
+                [f"@include(if: true)" if i % 2 == 0 else "@skip(if: false)" for i in range(count)]
+            )
 
-            query = f'''
+            query = f"""
             query {{
                 __typename {directives}
             }}
-            '''
+            """
 
             response = self._send_query(query)
 
-            if response.get('success') and response.get('status_code', 0) < 400:
-                data = response.get('data', {})
-                if 'data' in data:
+            if response.get("success") and response.get("status_code", 0) < 400:
+                data = response.get("data", {})
+                if "data" in data:
                     result = self._create_result(
                         vulnerable=True,
                         vuln_type=APIVulnType.GRAPHQL_DIRECTIVE_OVERLOAD,
                         severity=Severity.LOW,
-                        title='GraphQL指令重载',
-                        description=(
-                            f'服务端接受{count}个指令，可能导致资源耗尽。'
-                        ),
+                        title="GraphQL指令重载",
+                        description=(f"服务端接受{count}个指令，可能导致资源耗尽。"),
                         evidence={
-                            'directives_accepted': count,
-                            'directive_types': ['@include', '@skip']
+                            "directives_accepted": count,
+                            "directive_types": ["@include", "@skip"],
                         },
-                        remediation=(
-                            '1. 限制单次查询的指令数量\n'
-                            '2. 验证指令的使用合理性'
-                        )
+                        remediation=("1. 限制单次查询的指令数量\n" "2. 验证指令的使用合理性"),
                     )
                     return result
 
@@ -561,7 +534,7 @@ class GraphQLTester(BaseAPITester):
             测试结果或None
         """
         # 构造循环片段
-        query = '''
+        query = """
         query {
             __typename
             ...FragA
@@ -576,37 +549,33 @@ class GraphQLTester(BaseAPITester):
             __typename
             ...FragA
         }
-        '''
+        """
 
         response = self._send_query(query)
 
-        if response.get('success'):
-            data = response.get('data', {})
-            errors = data.get('errors', [])
+        if response.get("success"):
+            data = response.get("data", {})
+            errors = data.get("errors", [])
 
             # 检查是否有循环检测错误
             has_cycle_error = any(
-                'cycle' in str(e).lower() or 'circular' in str(e).lower() or 'recursive' in str(e).lower()
+                "cycle" in str(e).lower()
+                or "circular" in str(e).lower()
+                or "recursive" in str(e).lower()
                 for e in errors
             )
 
-            if not has_cycle_error and 'data' in data:
+            if not has_cycle_error and "data" in data:
                 result = self._create_result(
                     vulnerable=True,
                     vuln_type=APIVulnType.GRAPHQL_DOS,
                     severity=Severity.MEDIUM,
-                    title='GraphQL循环片段未检测',
-                    description=(
-                        '服务端未正确检测循环片段引用，可能导致无限循环或栈溢出。'
-                    ),
-                    evidence={
-                        'query': query[:200] + '...'
-                    },
+                    title="GraphQL循环片段未检测",
+                    description=("服务端未正确检测循环片段引用，可能导致无限循环或栈溢出。"),
+                    evidence={"query": query[:200] + "..."},
                     remediation=(
-                        '1. 启用循环片段检测\n'
-                        '2. 使用标准GraphQL验证规则\n'
-                        '3. 限制片段嵌套深度'
-                    )
+                        "1. 启用循环片段检测\n" "2. 使用标准GraphQL验证规则\n" "3. 限制片段嵌套深度"
+                    ),
                 )
                 return result
 
@@ -624,7 +593,7 @@ class GraphQLTester(BaseAPITester):
             测试结果或None
         """
         # 如果没有从Introspection获取到查询，使用通用测试
-        test_fields = self._schema_info.get('queries', []) or ['user', 'users', 'account']
+        test_fields = self._schema_info.get("queries", []) or ["user", "users", "account"]
 
         vulnerable_payloads: List[Dict[str, Any]] = []
 
@@ -634,27 +603,37 @@ class GraphQLTester(BaseAPITester):
 
                 response = self._send_query(query)
 
-                if not response.get('success'):
+                if not response.get("success"):
                     continue
 
-                data = response.get('data', {})
-                text = response.get('text', '').lower()
+                data = response.get("data", {})
+                text = response.get("text", "").lower()
 
                 # 检查SQL错误特征
                 sql_error_patterns = [
-                    'sql', 'syntax error', 'mysql', 'postgresql',
-                    'sqlite', 'ora-', 'mssql', 'query error',
-                    'unterminated', 'invalid', 'unexpected'
+                    "sql",
+                    "syntax error",
+                    "mysql",
+                    "postgresql",
+                    "sqlite",
+                    "ora-",
+                    "mssql",
+                    "query error",
+                    "unterminated",
+                    "invalid",
+                    "unexpected",
                 ]
 
                 for pattern in sql_error_patterns:
                     if pattern in text:
-                        vulnerable_payloads.append({
-                            'field': field,
-                            'payload': payload,
-                            'attack_type': attack_type,
-                            'evidence': text[:200]
-                        })
+                        vulnerable_payloads.append(
+                            {
+                                "field": field,
+                                "payload": payload,
+                                "attack_type": attack_type,
+                                "evidence": text[:200],
+                            }
+                        )
                         break
 
         if vulnerable_payloads:
@@ -662,20 +641,18 @@ class GraphQLTester(BaseAPITester):
                 vulnerable=True,
                 vuln_type=APIVulnType.GRAPHQL_INJECTION,
                 severity=Severity.CRITICAL,
-                title='GraphQL参数注入漏洞',
+                title="GraphQL参数注入漏洞",
                 description=(
-                    f'发现{len(vulnerable_payloads)}个可能的注入点，'
-                    'GraphQL参数可能被直接拼接到数据库查询中。'
+                    f"发现{len(vulnerable_payloads)}个可能的注入点，"
+                    "GraphQL参数可能被直接拼接到数据库查询中。"
                 ),
-                evidence={
-                    'vulnerable_payloads': vulnerable_payloads
-                },
+                evidence={"vulnerable_payloads": vulnerable_payloads},
                 remediation=(
-                    '1. 使用参数化查询/预编译语句\n'
-                    '2. 对所有输入进行验证和转义\n'
-                    '3. 使用ORM而不是原始SQL\n'
-                    '4. 实施输入验证schema'
-                )
+                    "1. 使用参数化查询/预编译语句\n"
+                    "2. 对所有输入进行验证和转义\n"
+                    "3. 使用ORM而不是原始SQL\n"
+                    "4. 实施输入验证schema"
+                ),
             )
             return result
 
@@ -683,46 +660,37 @@ class GraphQLTester(BaseAPITester):
 
     # ==================== 辅助方法 ====================
 
-    def _send_query(
-        self,
-        query: str,
-        variables: Optional[Dict] = None
-    ) -> Dict[str, Any]:
+    def _send_query(self, query: str, variables: Optional[Dict] = None) -> Dict[str, Any]:
         """发送GraphQL查询"""
         try:
             client = self._get_http_client()
 
-            payload = {'query': query}
+            payload = {"query": query}
             if variables:
-                payload['variables'] = variables
+                payload["variables"] = variables
 
             headers = self.extra_headers.copy()
-            headers['Content-Type'] = 'application/json'
+            headers["Content-Type"] = "application/json"
             headers.update(self.auth_header)
 
-            response = client.post(
-                self.target,
-                json=payload,
-                headers=headers,
-                timeout=self.timeout
-            )
+            response = client.post(self.target, json=payload, headers=headers, timeout=self.timeout)
 
             try:
                 data = response.json()
             except (json.JSONDecodeError, ValueError) as e:
-                logger.debug(f'JSON解析失败: {e}')
+                logger.debug(f"JSON解析失败: {e}")
                 data = {}
 
             return {
-                'success': True,
-                'status_code': response.status_code,
-                'data': data,
-                'text': response.text[:2000] if hasattr(response, 'text') else ''
+                "success": True,
+                "status_code": response.status_code,
+                "data": data,
+                "text": response.text[:2000] if hasattr(response, "text") else "",
             }
 
         except Exception as e:
-            logger.debug(f'GraphQL请求失败: {e}')
-            return {'success': False, 'error': str(e)}
+            logger.debug(f"GraphQL请求失败: {e}")
+            return {"success": False, "error": str(e)}
 
     def _send_batch(self, batch: List[Dict]) -> Dict[str, Any]:
         """发送批量GraphQL查询"""
@@ -730,74 +698,64 @@ class GraphQLTester(BaseAPITester):
             client = self._get_http_client()
 
             headers = self.extra_headers.copy()
-            headers['Content-Type'] = 'application/json'
+            headers["Content-Type"] = "application/json"
             headers.update(self.auth_header)
 
-            response = client.post(
-                self.target,
-                json=batch,
-                headers=headers,
-                timeout=self.timeout
-            )
+            response = client.post(self.target, json=batch, headers=headers, timeout=self.timeout)
 
             try:
                 data = response.json()
             except (json.JSONDecodeError, ValueError) as e:
-                logger.debug(f'批量响应JSON解析失败: {e}')
+                logger.debug(f"批量响应JSON解析失败: {e}")
                 data = {}
 
-            return {
-                'success': True,
-                'status_code': response.status_code,
-                'data': data
-            }
+            return {"success": True, "status_code": response.status_code, "data": data}
 
         except Exception as e:
-            logger.debug(f'GraphQL批量请求失败: {e}')
-            return {'success': False, 'error': str(e)}
+            logger.debug(f"GraphQL批量请求失败: {e}")
+            return {"success": False, "error": str(e)}
 
     def _generate_nested_query(self, depth: int) -> str:
         """生成深度嵌套查询"""
-        inner = '__typename'
+        inner = "__typename"
         for _ in range(depth):
-            inner = f'{self.field_name} {{ {inner} }}'
-        return f'query {{ {inner} }}'
+            inner = f"{self.field_name} {{ {inner} }}"
+        return f"query {{ {inner} }}"
 
     def _extract_schema_info(self, schema_data: Dict) -> None:
         """从Introspection结果提取Schema信息"""
-        if '__schema' in schema_data:
-            schema = schema_data['__schema']
+        if "__schema" in schema_data:
+            schema = schema_data["__schema"]
 
             # 提取类型
-            types = schema.get('types', [])
-            self._schema_info['types'] = [
-                t['name'] for t in types
-                if not t['name'].startswith('__')
+            types = schema.get("types", [])
+            self._schema_info["types"] = [
+                t["name"] for t in types if not t["name"].startswith("__")
             ]
 
             # 提取Query类型
-            query_type = schema.get('queryType', {})
+            query_type = schema.get("queryType", {})
             if query_type:
-                self._schema_info['query_type'] = query_type.get('name', '')
+                self._schema_info["query_type"] = query_type.get("name", "")
 
             # 提取Mutation类型
-            mutation_type = schema.get('mutationType', {})
+            mutation_type = schema.get("mutationType", {})
             if mutation_type:
-                self._schema_info['mutation_type'] = mutation_type.get('name', '')
+                self._schema_info["mutation_type"] = mutation_type.get("name", "")
 
             # 提取字段
             for type_info in types:
-                if type_info['name'] == self._schema_info.get('query_type'):
-                    fields = type_info.get('fields', [])
-                    self._schema_info['queries'] = [f['name'] for f in fields] if fields else []
-                elif type_info['name'] == self._schema_info.get('mutation_type'):
-                    fields = type_info.get('fields', [])
-                    self._schema_info['mutations'] = [f['name'] for f in fields] if fields else []
+                if type_info["name"] == self._schema_info.get("query_type"):
+                    fields = type_info.get("fields", [])
+                    self._schema_info["queries"] = [f["name"] for f in fields] if fields else []
+                elif type_info["name"] == self._schema_info.get("mutation_type"):
+                    fields = type_info.get("fields", [])
+                    self._schema_info["mutations"] = [f["name"] for f in fields] if fields else []
 
-        elif '__type' in schema_data:
-            type_info = schema_data['__type']
-            if type_info and 'fields' in type_info:
-                self._schema_info['queries'] = [f['name'] for f in type_info['fields']]
+        elif "__type" in schema_data:
+            type_info = schema_data["__type"]
+            if type_info and "fields" in type_info:
+                self._schema_info["queries"] = [f["name"] for f in type_info["fields"]]
 
 
 # 便捷函数
@@ -817,6 +775,6 @@ def quick_graphql_test(target: str) -> Dict[str, Any]:
 
 
 __all__ = [
-    'GraphQLTester',
-    'quick_graphql_test',
+    "GraphQLTester",
+    "quick_graphql_test",
 ]

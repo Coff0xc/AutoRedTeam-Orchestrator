@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 # 统一 HTTP 客户端工厂
 try:
     from core.http import get_sync_client
+
     HAS_HTTP_FACTORY = True
 except ImportError:
     HAS_HTTP_FACTORY = False
@@ -26,19 +27,21 @@ except ImportError:
 
 class CORSVulnType(Enum):
     """CORS漏洞类型"""
-    ORIGIN_REFLECTED = "origin_reflected"           # Origin直接反射
-    NULL_ORIGIN = "null_origin_allowed"             # 允许null Origin
-    SUBDOMAIN_BYPASS = "subdomain_bypass"           # 子域名绕过
-    REGEX_BYPASS = "regex_bypass"                   # 正则绕过
-    CREDENTIALS_LEAK = "credentials_leak"           # 凭证泄露
+
+    ORIGIN_REFLECTED = "origin_reflected"  # Origin直接反射
+    NULL_ORIGIN = "null_origin_allowed"  # 允许null Origin
+    SUBDOMAIN_BYPASS = "subdomain_bypass"  # 子域名绕过
+    REGEX_BYPASS = "regex_bypass"  # 正则绕过
+    CREDENTIALS_LEAK = "credentials_leak"  # 凭证泄露
     WILDCARD_WITH_CREDS = "wildcard_with_credentials"  # 通配符+凭证
-    PREFIX_BYPASS = "prefix_bypass"                 # 前缀绕过
-    SUFFIX_BYPASS = "suffix_bypass"                 # 后缀绕过
+    PREFIX_BYPASS = "prefix_bypass"  # 前缀绕过
+    SUFFIX_BYPASS = "suffix_bypass"  # 后缀绕过
 
 
 @dataclass
 class CORSTestResult:
     """CORS测试结果"""
+
     vuln_type: CORSVulnType
     severity: str
     origin_sent: str
@@ -51,6 +54,7 @@ class CORSTestResult:
 @dataclass
 class CORSVulnerability:
     """CORS漏洞详情"""
+
     url: str
     vuln_type: CORSVulnType
     severity: str
@@ -70,7 +74,6 @@ class CORSEnhancedTester:
         # === 基础测试 ===
         ("null", "null_origin", "空Origin (iframe/data URI)"),
         ("", "empty_origin", "无Origin头"),
-
         # === 子域名欺骗 ===
         ("http://{target}.evil.com", "subdomain_suffix", "目标作为子域名后缀"),
         ("http://evil.{target}", "subdomain_prefix", "目标作为子域名前缀"),
@@ -78,13 +81,11 @@ class CORSEnhancedTester:
         ("http://evil{target_nodot}.com", "no_dot_prefix", "无点连接前缀"),
         ("http://www.{target}.evil.com", "www_subdomain", "www子域名"),
         ("http://api.{target}.evil.com", "api_subdomain", "api子域名"),
-
         # === 协议混淆 ===
         ("http://{target}", "http_downgrade", "HTTP降级"),
         ("https://{target}:443", "explicit_port", "显式端口"),
         ("https://{target}:80", "wrong_port", "错误端口"),
         ("https://{target}@evil.com", "userinfo", "用户信息注入"),
-
         # === URL编码绕过 ===
         ("https://{target}%60.evil.com", "backtick_encoded", "反引号编码"),
         ("https://{target}%09.evil.com", "tab_encoded", "Tab编码"),
@@ -92,7 +93,6 @@ class CORSEnhancedTester:
         ("https://{target}%0d.evil.com", "cr_encoded", "回车编码"),
         ("https://{target}%0a.evil.com", "lf_encoded", "换行编码"),
         ("https://{target}%20.evil.com", "space_encoded", "空格编码"),
-
         # === 特殊字符 ===
         ("https://{target}_.evil.com", "underscore", "下划线"),
         ("https://{target}-.evil.com", "hyphen", "连字符"),
@@ -100,17 +100,14 @@ class CORSEnhancedTester:
         ("https://{target}$.evil.com", "dollar", "美元符"),
         ("https://{target}&.evil.com", "ampersand", "与符号"),
         ("https://{target}#.evil.com", "hash", "井号"),
-
         # === Unicode绕过 ===
         ("https://{target}\u3002evil.com", "unicode_dot", "Unicode句号"),
         ("https://{target}\uff0eevil.com", "fullwidth_dot", "全角句号"),
         ("https://{target}\u2024evil.com", "one_dot_leader", "Unicode点"),
-
         # === 正则绕过 ===
         ("https://{target}.com.evil.com", "domain_extension", "域名扩展"),
         ("https://not{target}", "prefix_injection", "前缀注入"),
         ("https://{target}test.com", "suffix_injection", "后缀注入"),
-
         # === 反射检测 ===
         ("https://{target}", "exact_match", "完全匹配"),
         ("https://ATTACKER.COM", "attacker_domain", "攻击者域名"),
@@ -143,9 +140,9 @@ class CORSEnhancedTester:
             self._session = get_sync_client(proxy=proxy, force_new=True)
         else:
             self._session = requests.Session()
-        self._session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        })
+        self._session.headers.update(
+            {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        )
 
     def _extract_domain(self, url: str) -> Tuple[str, str]:
         """
@@ -157,10 +154,10 @@ class CORSEnhancedTester:
         parsed = urlparse(url)
         domain = parsed.netloc
         # 移除端口
-        if ':' in domain:
-            domain = domain.split(':')[0]
+        if ":" in domain:
+            domain = domain.split(":")[0]
         # 无点版本
-        domain_nodot = domain.replace('.', '')
+        domain_nodot = domain.replace(".", "")
         return domain, domain_nodot
 
     def _generate_payloads(self, target_url: str) -> List[Tuple[str, str, str]]:
@@ -175,18 +172,14 @@ class CORSEnhancedTester:
 
         for template, payload_type, desc in self.ORIGIN_BYPASS_TEMPLATES:
             if template:
-                origin = template.format(
-                    target=domain,
-                    target_nodot=domain_nodot
-                )
+                origin = template.format(target=domain, target_nodot=domain_nodot)
             else:
                 origin = template
             payloads.append((origin, payload_type, desc))
 
         return payloads
 
-    def _send_cors_request(self, url: str, origin: str,
-                           method: str = "GET") -> Dict[str, Any]:
+    def _send_cors_request(self, url: str, origin: str, method: str = "GET") -> Dict[str, Any]:
         """
         发送CORS测试请求
 
@@ -204,7 +197,7 @@ class CORSEnhancedTester:
                 headers=headers,
                 timeout=self.timeout,
                 proxies=self.proxies,
-                allow_redirects=False
+                allow_redirects=False,
             )
 
             return {
@@ -219,13 +212,11 @@ class CORSEnhancedTester:
             }
 
         except requests.RequestException as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
-    def _analyze_response(self, origin_sent: str,
-                          response: Dict[str, Any]) -> Optional[CORSTestResult]:
+    def _analyze_response(
+        self, origin_sent: str, response: Dict[str, Any]
+    ) -> Optional[CORSTestResult]:
         """
         分析CORS响应,判断是否存在漏洞
         """
@@ -277,7 +268,7 @@ class CORSEnhancedTester:
                 origin_received=acao,
                 allow_credentials=acac,
                 description=description,
-                exploitable=exploitable
+                exploitable=exploitable,
             )
 
         return None
@@ -299,7 +290,7 @@ class CORSEnhancedTester:
             "url": url,
             "origin_sent": origin,
             "success": response.get("success", False),
-            "vulnerable": False
+            "vulnerable": False,
         }
 
         if not response.get("success"):
@@ -319,14 +310,18 @@ class CORSEnhancedTester:
                 "type": vuln.vuln_type.value,
                 "severity": vuln.severity,
                 "exploitable": vuln.exploitable,
-                "description": vuln.description
+                "description": vuln.description,
             }
 
         return result
 
-    def test_preflight(self, url: str, origin: str = "https://evil.com",
-                       method: str = "PUT",
-                       headers: str = "X-Custom-Header") -> Dict[str, Any]:
+    def test_preflight(
+        self,
+        url: str,
+        origin: str = "https://evil.com",
+        method: str = "PUT",
+        headers: str = "X-Custom-Header",
+    ) -> Dict[str, Any]:
         """
         测试预检请求 (OPTIONS)
 
@@ -336,11 +331,7 @@ class CORSEnhancedTester:
             method: Access-Control-Request-Method
             headers: Access-Control-Request-Headers
         """
-        result = {
-            "url": url,
-            "type": "preflight",
-            "vulnerable": False
-        }
+        result = {"url": url, "type": "preflight", "vulnerable": False}
 
         try:
             resp = self._session.options(
@@ -348,10 +339,10 @@ class CORSEnhancedTester:
                 headers={
                     "Origin": origin,
                     "Access-Control-Request-Method": method,
-                    "Access-Control-Request-Headers": headers
+                    "Access-Control-Request-Headers": headers,
                 },
                 timeout=self.timeout,
-                proxies=self.proxies
+                proxies=self.proxies,
             )
 
             result["response"] = {
@@ -376,8 +367,7 @@ class CORSEnhancedTester:
 
         return result
 
-    def test_all_bypasses(self, url: str,
-                          include_preflight: bool = True) -> Dict[str, Any]:
+    def test_all_bypasses(self, url: str, include_preflight: bool = True) -> Dict[str, Any]:
         """
         测试所有绕过方法
 
@@ -393,11 +383,7 @@ class CORSEnhancedTester:
             "total_tests": 0,
             "vulnerabilities": [],
             "tests": [],
-            "summary": {
-                "vulnerable": False,
-                "highest_severity": "none",
-                "exploitable_count": 0
-            }
+            "summary": {"vulnerable": False, "highest_severity": "none", "exploitable_count": 0},
         }
 
         severity_order = {"critical": 4, "high": 3, "medium": 2, "low": 1, "none": 0}
@@ -412,7 +398,7 @@ class CORSEnhancedTester:
             test_result = {
                 "payload_type": payload_type,
                 "description": description,
-                "origin": origin
+                "origin": origin,
             }
 
             response = self._send_cors_request(url, origin)
@@ -432,13 +418,15 @@ class CORSEnhancedTester:
                 test_result["severity"] = vuln.severity
                 test_result["exploitable"] = vuln.exploitable
 
-                result["vulnerabilities"].append({
-                    "type": vuln.vuln_type.value,
-                    "severity": vuln.severity,
-                    "origin_payload": origin,
-                    "exploitable": vuln.exploitable,
-                    "description": vuln.description
-                })
+                result["vulnerabilities"].append(
+                    {
+                        "type": vuln.vuln_type.value,
+                        "severity": vuln.severity,
+                        "origin_payload": origin,
+                        "exploitable": vuln.exploitable,
+                        "description": vuln.description,
+                    }
+                )
 
                 if vuln.exploitable:
                     result["summary"]["exploitable_count"] += 1
@@ -458,11 +446,13 @@ class CORSEnhancedTester:
             result["total_tests"] += 1
 
             if preflight_result.get("vulnerable"):
-                result["vulnerabilities"].append({
-                    "type": "preflight_bypass",
-                    "severity": preflight_result.get("severity", "medium"),
-                    "description": preflight_result.get("description", "")
-                })
+                result["vulnerabilities"].append(
+                    {
+                        "type": "preflight_bypass",
+                        "severity": preflight_result.get("severity", "medium"),
+                        "description": preflight_result.get("description", ""),
+                    }
+                )
 
         # 更新摘要
         result["summary"]["vulnerable"] = len(result["vulnerabilities"]) > 0
@@ -539,7 +529,7 @@ def quick_cors_scan(url: str) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     # 测试示例
     test_url = "https://example.com/api/user"
 

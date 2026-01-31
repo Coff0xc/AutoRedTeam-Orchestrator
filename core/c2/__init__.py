@@ -46,86 +46,85 @@ Usage:
 
 # 基础类和数据结构
 from .base import (
-    C2Status,
-    TunnelType,
+    BaseC2,
+    BaseTunnel,
+    BeaconInfo,
     C2Config,
+    C2Status,
     Task,
     TaskResult,
-    BeaconInfo,
-    BaseTunnel,
-    BaseC2,
     TaskTypes,
+    TunnelType,
 )
 
 # Beacon 通信
 from .beacon import (
-    BeaconMode,
-    BeaconConfig,
     Beacon,
+    BeaconConfig,
+    BeaconMode,
     BeaconServer,
     create_beacon,
     start_beacon_server,
 )
 
-# 隧道
-from .tunnels import (
-    HTTPTunnel,
-    DNSTunnel,
-    WebSocketTunnel,
-    create_tunnel,
-    get_tunnel_class,
-    register_tunnel,
-    list_available_tunnels,
-    TUNNEL_REGISTRY,
-)
-
 # 加密
 from .crypto import (
-    CryptoAlgorithm,
-    CryptoResult,
-    C2Crypto,
-    create_crypto,
-    quick_encrypt,
-    quick_decrypt,
     HAS_CRYPTOGRAPHY,
     HAS_PYCRYPTODOME,
+    C2Crypto,
+    CryptoAlgorithm,
+    CryptoResult,
+    create_crypto,
+    quick_decrypt,
+    quick_encrypt,
 )
 
 # 编码
 from .encoding import (
-    EncodingType,
-    EncodedData,
     C2Encoder,
     ChunkEncoder,
+    EncodedData,
+    EncodingType,
     JSONEncoder,
     TrafficObfuscator,
-    base64_encode,
-    base64_decode,
-    base32_encode,
     base32_decode,
-    url_safe_encode,
+    base32_encode,
+    base64_decode,
+    base64_encode,
     url_safe_decode,
+    url_safe_encode,
 )
 
 # 协议
 from .protocol import (
+    HEADER_SIZE,
     PROTOCOL_MAGIC,
     PROTOCOL_VERSION,
-    HEADER_SIZE,
-    MessageType,
+    HTTPProtocolAdapter,
+    Message,
     MessageFlags,
     MessageHeader,
-    Message,
+    MessageType,
     ProtocolCodec,
-    HTTPProtocolAdapter,
-    encode_heartbeat,
     decode_heartbeat,
-    encode_tasks,
-    decode_tasks,
-    encode_result,
     decode_result,
+    decode_tasks,
+    encode_heartbeat,
+    encode_result,
+    encode_tasks,
 )
 
+# 隧道
+from .tunnels import (
+    TUNNEL_REGISTRY,
+    DNSTunnel,
+    HTTPTunnel,
+    WebSocketTunnel,
+    create_tunnel,
+    get_tunnel_class,
+    list_available_tunnels,
+    register_tunnel,
+)
 
 # 向后兼容 - 保留旧版本的类名
 LightBeacon = Beacon
@@ -134,81 +133,75 @@ TunnelConfig = C2Config
 
 __all__ = [
     # 基础类
-    'C2Status',
-    'TunnelType',
-    'C2Config',
-    'Task',
-    'TaskResult',
-    'BeaconInfo',
-    'BaseTunnel',
-    'BaseC2',
-    'TaskTypes',
-
+    "C2Status",
+    "TunnelType",
+    "C2Config",
+    "Task",
+    "TaskResult",
+    "BeaconInfo",
+    "BaseTunnel",
+    "BaseC2",
+    "TaskTypes",
     # Beacon
-    'BeaconMode',
-    'BeaconConfig',
-    'Beacon',
-    'BeaconServer',
-    'create_beacon',
-    'start_beacon_server',
-
+    "BeaconMode",
+    "BeaconConfig",
+    "Beacon",
+    "BeaconServer",
+    "create_beacon",
+    "start_beacon_server",
     # 隧道
-    'HTTPTunnel',
-    'DNSTunnel',
-    'WebSocketTunnel',
-    'create_tunnel',
-    'get_tunnel_class',
-    'register_tunnel',
-    'list_available_tunnels',
-    'TUNNEL_REGISTRY',
-
+    "HTTPTunnel",
+    "DNSTunnel",
+    "WebSocketTunnel",
+    "create_tunnel",
+    "get_tunnel_class",
+    "register_tunnel",
+    "list_available_tunnels",
+    "TUNNEL_REGISTRY",
     # 加密
-    'CryptoAlgorithm',
-    'CryptoResult',
-    'C2Crypto',
-    'create_crypto',
-    'quick_encrypt',
-    'quick_decrypt',
-    'HAS_CRYPTOGRAPHY',
-    'HAS_PYCRYPTODOME',
-
+    "CryptoAlgorithm",
+    "CryptoResult",
+    "C2Crypto",
+    "create_crypto",
+    "quick_encrypt",
+    "quick_decrypt",
+    "HAS_CRYPTOGRAPHY",
+    "HAS_PYCRYPTODOME",
     # 编码
-    'EncodingType',
-    'EncodedData',
-    'C2Encoder',
-    'ChunkEncoder',
-    'JSONEncoder',
-    'TrafficObfuscator',
-    'base64_encode',
-    'base64_decode',
-    'base32_encode',
-    'base32_decode',
-    'url_safe_encode',
-    'url_safe_decode',
-
+    "EncodingType",
+    "EncodedData",
+    "C2Encoder",
+    "ChunkEncoder",
+    "JSONEncoder",
+    "TrafficObfuscator",
+    "base64_encode",
+    "base64_decode",
+    "base32_encode",
+    "base32_decode",
+    "url_safe_encode",
+    "url_safe_decode",
     # 协议
-    'PROTOCOL_MAGIC',
-    'PROTOCOL_VERSION',
-    'HEADER_SIZE',
-    'MessageType',
-    'MessageFlags',
-    'MessageHeader',
-    'Message',
-    'ProtocolCodec',
-    'HTTPProtocolAdapter',
-    'encode_heartbeat',
-    'decode_heartbeat',
-    'encode_tasks',
-    'decode_tasks',
-    'encode_result',
-    'decode_result',
-
+    "PROTOCOL_MAGIC",
+    "PROTOCOL_VERSION",
+    "HEADER_SIZE",
+    "MessageType",
+    "MessageFlags",
+    "MessageHeader",
+    "Message",
+    "ProtocolCodec",
+    "HTTPProtocolAdapter",
+    "encode_heartbeat",
+    "decode_heartbeat",
+    "encode_tasks",
+    "decode_tasks",
+    "encode_result",
+    "decode_result",
     # 向后兼容
-    'LightBeacon',
-    'TunnelConfig',
+    "LightBeacon",
+    "TunnelConfig",
 ]
 
 
 # 版本信息
-__version__ = '2.0.0'
-__author__ = 'AutoRedTeam'
+__version__ = "2.0.0"
+__author__ = "AutoRedTeam"

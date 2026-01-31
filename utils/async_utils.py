@@ -23,17 +23,14 @@
     async def fetch_data():
         ...
 """
-import logging
 
 import asyncio
 import functools
-from typing import (
-    TypeVar, Callable, List, Any, Optional, Coroutine,
-    Union, Awaitable, Sequence
-)
+import logging
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Awaitable, Callable, Coroutine, List, Optional, Sequence, TypeVar, Union
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def run_sync(coro: Coroutine[Any, Any, T]) -> T:
@@ -66,6 +63,7 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
         # 在已有事件循环中，使用线程池执行
         # 这避免了"cannot be called from a running event loop"错误
         import concurrent.futures
+
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(asyncio.run, coro)
             return future.result()
@@ -120,9 +118,7 @@ def ensure_sync(func: Callable[..., Union[T, Awaitable[T]]]) -> Callable[..., T]
 
 
 async def gather_with_limit(
-    coros: Sequence[Coroutine[Any, Any, T]],
-    limit: int = 10,
-    return_exceptions: bool = True
+    coros: Sequence[Coroutine[Any, Any, T]], limit: int = 10, return_exceptions: bool = True
 ) -> List[Union[T, Exception]]:
     """
     带并发限制的 asyncio.gather
@@ -177,7 +173,7 @@ async def timeout_wrapper(
     coro: Coroutine[Any, Any, T],
     timeout: float,
     default: Optional[T] = None,
-    raise_on_timeout: bool = False
+    raise_on_timeout: bool = False,
 ) -> Optional[T]:
     """
     为协程添加超时处理
@@ -207,7 +203,7 @@ def async_retry(
     delay: float = 1.0,
     backoff: float = 2.0,
     exceptions: tuple = (Exception,),
-    on_retry: Optional[Callable[[Exception, int], None]] = None
+    on_retry: Optional[Callable[[Exception, int], None]] = None,
 ) -> Callable:
     """
     异步重试装饰器
@@ -227,6 +223,7 @@ def async_retry(
         async def unstable_api_call():
             ...
     """
+
     def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs) -> T:
@@ -251,14 +248,12 @@ def async_retry(
             raise last_exception  # type: ignore
 
         return wrapper
+
     return decorator
 
 
 async def run_in_executor(
-    func: Callable[..., T],
-    *args,
-    executor: Optional[ThreadPoolExecutor] = None,
-    **kwargs
+    func: Callable[..., T], *args, executor: Optional[ThreadPoolExecutor] = None, **kwargs
 ) -> T:
     """
     在线程池中运行同步函数
@@ -278,9 +273,7 @@ async def run_in_executor(
 
 
 async def async_map(
-    func: Callable[[T], Awaitable[Any]],
-    items: Sequence[T],
-    limit: int = 10
+    func: Callable[[T], Awaitable[Any]], items: Sequence[T], limit: int = 10
 ) -> List[Any]:
     """
     异步 map 函数
@@ -306,9 +299,7 @@ async def async_map(
 
 
 async def async_filter(
-    func: Callable[[T], Awaitable[bool]],
-    items: Sequence[T],
-    limit: int = 10
+    func: Callable[[T], Awaitable[bool]], items: Sequence[T], limit: int = 10
 ) -> List[T]:
     """
     异步 filter 函数
@@ -321,6 +312,7 @@ async def async_filter(
     Returns:
         过滤后的列表
     """
+
     async def check(item: T) -> tuple:
         result = await func(item)
         return item, result
@@ -397,7 +389,7 @@ class AsyncBatcher:
         self,
         batch_func: Callable[[List[T]], Awaitable[List[Any]]],
         max_size: int = 100,
-        max_wait: float = 0.5
+        max_wait: float = 0.5,
     ):
         """
         初始化批处理器
@@ -446,10 +438,7 @@ class AsyncBatcher:
         while True:
             # 等待批量大小或超时
             try:
-                await asyncio.wait_for(
-                    self._event.wait(),
-                    timeout=self.max_wait
-                )
+                await asyncio.wait_for(self._event.wait(), timeout=self.max_wait)
             except asyncio.TimeoutError:
                 pass
 
@@ -460,8 +449,8 @@ class AsyncBatcher:
                 if not self._queue:
                     return
 
-                batch = self._queue[:self.max_size]
-                self._queue = self._queue[self.max_size:]
+                batch = self._queue[: self.max_size]
+                self._queue = self._queue[self.max_size :]
 
             # 处理批次
             items = [item for item, _ in batch]
@@ -479,8 +468,7 @@ class AsyncBatcher:
 
 
 async def async_first(
-    coros: Sequence[Coroutine[Any, Any, T]],
-    predicate: Optional[Callable[[T], bool]] = None
+    coros: Sequence[Coroutine[Any, Any, T]], predicate: Optional[Callable[[T], bool]] = None
 ) -> Optional[T]:
     """
     返回第一个完成（或满足条件）的协程结果
@@ -496,10 +484,7 @@ async def async_first(
 
     try:
         while tasks:
-            done, pending = await asyncio.wait(
-                tasks,
-                return_when=asyncio.FIRST_COMPLETED
-            )
+            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
 
             for task in done:
                 try:
@@ -540,10 +525,7 @@ async def async_race(coros: Sequence[Coroutine[Any, Any, T]]) -> T:
     tasks = [asyncio.create_task(coro) for coro in coros]
 
     try:
-        done, pending = await asyncio.wait(
-            tasks,
-            return_when=asyncio.FIRST_COMPLETED
-        )
+        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
 
         # 取消其他任务
         for task in pending:
@@ -559,17 +541,17 @@ async def async_race(coros: Sequence[Coroutine[Any, Any, T]]) -> T:
 
 
 __all__ = [
-    'run_sync',
-    'ensure_async',
-    'ensure_sync',
-    'gather_with_limit',
-    'timeout_wrapper',
-    'async_retry',
-    'run_in_executor',
-    'async_map',
-    'async_filter',
-    'AsyncThrottle',
-    'AsyncBatcher',
-    'async_first',
-    'async_race',
+    "run_sync",
+    "ensure_async",
+    "ensure_sync",
+    "gather_with_limit",
+    "timeout_wrapper",
+    "async_retry",
+    "run_in_executor",
+    "async_map",
+    "async_filter",
+    "AsyncThrottle",
+    "AsyncBatcher",
+    "async_first",
+    "async_race",
 ]

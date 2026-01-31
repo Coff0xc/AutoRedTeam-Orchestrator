@@ -5,27 +5,29 @@
 """
 
 import asyncio
-import socket
-import time
 import logging
+import socket
 import threading
-from typing import Any, Dict, List, Optional, Callable
-from dataclasses import dataclass, field
-from urllib.parse import urlparse, urljoin
-from concurrent.futures import ThreadPoolExecutor
+import time
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional
+from urllib.parse import urljoin, urlparse
 
 logger = logging.getLogger(__name__)
 
 # 尝试导入异步库
 try:
     import httpx
+
     HAS_HTTPX = True
 except ImportError:
     HAS_HTTPX = False
 
 try:
     import aiohttp
+
     HAS_AIOHTTP = True
 except ImportError:
     HAS_AIOHTTP = False
@@ -34,6 +36,7 @@ except ImportError:
 @dataclass
 class ScanResult:
     """扫描结果"""
+
     target: str
     success: bool
     data: Dict[str, Any]
@@ -45,6 +48,7 @@ class ScanResult:
 @dataclass
 class ScannerStats:
     """扫描器统计信息"""
+
     total_requests: int = 0
     successful_requests: int = 0
     failed_requests: int = 0
@@ -138,8 +142,13 @@ class AdaptiveConcurrencyController:
 class AsyncScanner:
     """异步扫描器基类 - 增强版（并发安全）"""
 
-    def __init__(self, concurrency: int = 50, timeout: float = 10.0,
-                 max_retries: int = 2, adaptive: bool = True):
+    def __init__(
+        self,
+        concurrency: int = 50,
+        timeout: float = 10.0,
+        max_retries: int = 2,
+        adaptive: bool = True,
+    ):
         self.concurrency = concurrency
         self.timeout = timeout
         self.max_retries = max_retries
@@ -149,14 +158,20 @@ class AsyncScanner:
         self._stats = ScannerStats()
         self._stats_lock = threading.Lock()
         self._circuit_breaker = CircuitBreaker()
-        self._concurrency_controller = AdaptiveConcurrencyController(concurrency) if adaptive else None
+        self._concurrency_controller = (
+            AdaptiveConcurrencyController(concurrency) if adaptive else None
+        )
 
     async def _get_semaphore(self) -> asyncio.Semaphore:
         """获取信号量（双重检查锁定模式）"""
         if self._semaphore is None:
             async with self._semaphore_lock:
                 if self._semaphore is None:
-                    concurrency = self._concurrency_controller.current if self._concurrency_controller else self.concurrency
+                    concurrency = (
+                        self._concurrency_controller.current
+                        if self._concurrency_controller
+                        else self.concurrency
+                    )
                     self._semaphore = asyncio.Semaphore(concurrency)
         return self._semaphore
 
@@ -167,7 +182,7 @@ class AsyncScanner:
                 new_concurrency = self._concurrency_controller.current
                 if self._semaphore is not None and self._semaphore._value != new_concurrency:
                     self._semaphore = asyncio.Semaphore(new_concurrency)
-    
+
     async def _retry_with_backoff(self, coro_func: Callable, *args, **kwargs):
         """带退避的重试机制"""
         for attempt in range(self.max_retries + 1):
@@ -177,13 +192,13 @@ class AsyncScanner:
             except Exception as e:
                 if attempt < self.max_retries:
                     # 指数退避
-                    wait_time = (2 ** attempt) * 0.5
+                    wait_time = (2**attempt) * 0.5
                     await asyncio.sleep(wait_time)
                     self._stats.total_retries += 1
                 else:
                     raise e
         return None, self.max_retries
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """获取扫描统计"""
         return {
@@ -193,7 +208,11 @@ class AsyncScanner:
             "success_rate": f"{self._stats.successful_requests / max(self._stats.total_requests, 1) * 100:.1f}%",
             "total_retries": self._stats.total_retries,
             "avg_response_time": f"{self._stats.avg_response_time:.2f}s",
-            "current_concurrency": self._concurrency_controller.current if self._concurrency_controller else self.concurrency,
+            "current_concurrency": (
+                self._concurrency_controller.current
+                if self._concurrency_controller
+                else self.concurrency
+            ),
         }
 
 
@@ -204,8 +223,7 @@ class AsyncPortScanner(AsyncScanner):
         """扫描单个端口"""
         try:
             _, writer = await asyncio.wait_for(
-                asyncio.open_connection(host, port),
-                timeout=self.timeout
+                asyncio.open_connection(host, port), timeout=self.timeout
             )
             writer.close()
             await writer.wait_closed()
@@ -213,11 +231,7 @@ class AsyncPortScanner(AsyncScanner):
             # 尝试获取banner
             banner = await self._grab_banner(host, port)
 
-            return {
-                "port": port,
-                "state": "open",
-                "banner": banner
-            }
+            return {"port": port, "state": "open", "banner": banner}
         except asyncio.TimeoutError:
             return None
         except ConnectionRefusedError:
@@ -229,8 +243,7 @@ class AsyncPortScanner(AsyncScanner):
         """获取服务banner"""
         try:
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(host, port),
-                timeout=2.0
+                asyncio.open_connection(host, port), timeout=2.0
             )
 
             # 发送探测数据
@@ -245,7 +258,7 @@ class AsyncPortScanner(AsyncScanner):
             writer.close()
             await writer.wait_closed()
 
-            return banner.decode('utf-8', errors='ignore')[:200]
+            return banner.decode("utf-8", errors="ignore")[:200]
         except (asyncio.TimeoutError, ConnectionRefusedError, OSError):
             return ""
 
@@ -267,7 +280,7 @@ class AsyncPortScanner(AsyncScanner):
             "host": host,
             "open_ports": open_ports,
             "scanned": len(ports),
-            "duration": round(time.time() - start_time, 2)
+            "duration": round(time.time() - start_time, 2),
         }
 
 
@@ -275,11 +288,32 @@ class AsyncDirScanner(AsyncScanner):
     """异步目录扫描器"""
 
     COMMON_DIRS = [
-        "admin", "login", "api", "backup", ".git", ".env", "config",
-        "upload", "uploads", "static", "assets", "js", "css",
-        "phpinfo.php", "test.php", "robots.txt", "sitemap.xml",
-        "wp-admin", "wp-login.php", "phpmyadmin", "console",
-        "swagger", "api-docs", "graphql", "actuator", "metrics"
+        "admin",
+        "login",
+        "api",
+        "backup",
+        ".git",
+        ".env",
+        "config",
+        "upload",
+        "uploads",
+        "static",
+        "assets",
+        "js",
+        "css",
+        "phpinfo.php",
+        "test.php",
+        "robots.txt",
+        "sitemap.xml",
+        "wp-admin",
+        "wp-login.php",
+        "phpmyadmin",
+        "console",
+        "swagger",
+        "api-docs",
+        "graphql",
+        "actuator",
+        "metrics",
     ]
 
     def __init__(self, concurrency: int = 20, timeout: float = 5.0):
@@ -299,9 +333,7 @@ class AsyncDirScanner(AsyncScanner):
         if self._client is None:
             if HAS_HTTPX:
                 self._client = httpx.AsyncClient(
-                    timeout=self.timeout,
-                    follow_redirects=False,
-                    verify=False
+                    timeout=self.timeout, follow_redirects=False, verify=False
                 )
             elif HAS_AIOHTTP:
                 self._client = aiohttp.ClientSession(
@@ -325,12 +357,7 @@ class AsyncDirScanner(AsyncScanner):
                     length = len(await resp.read())
 
             if status in [200, 301, 302, 403]:
-                return {
-                    "path": path,
-                    "url": url,
-                    "status": status,
-                    "length": length
-                }
+                return {"path": path, "url": url, "status": status, "length": length}
         except Exception as exc:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
@@ -355,7 +382,7 @@ class AsyncDirScanner(AsyncScanner):
             "base_url": base_url,
             "found": found,
             "scanned": len(paths),
-            "duration": round(time.time() - start_time, 2)
+            "duration": round(time.time() - start_time, 2),
         }
 
     async def close(self):
@@ -370,21 +397,44 @@ class AsyncSubdomainScanner(AsyncScanner):
     """异步子域名扫描器"""
 
     COMMON_SUBDOMAINS = [
-        "www", "mail", "ftp", "api", "dev", "test", "staging",
-        "admin", "portal", "vpn", "remote", "m", "mobile",
-        "cdn", "static", "img", "blog", "shop", "store",
-        "git", "gitlab", "jenkins", "ci", "db", "mysql",
-        "redis", "mongo", "auth", "sso", "pay", "demo"
+        "www",
+        "mail",
+        "ftp",
+        "api",
+        "dev",
+        "test",
+        "staging",
+        "admin",
+        "portal",
+        "vpn",
+        "remote",
+        "m",
+        "mobile",
+        "cdn",
+        "static",
+        "img",
+        "blog",
+        "shop",
+        "store",
+        "git",
+        "gitlab",
+        "jenkins",
+        "ci",
+        "db",
+        "mysql",
+        "redis",
+        "mongo",
+        "auth",
+        "sso",
+        "pay",
+        "demo",
     ]
 
     async def resolve(self, domain: str) -> Optional[List[str]]:
         """解析域名"""
         try:
             loop = asyncio.get_event_loop()
-            result = await asyncio.wait_for(
-                loop.getaddrinfo(domain, None),
-                timeout=self.timeout
-            )
+            result = await asyncio.wait_for(loop.getaddrinfo(domain, None), timeout=self.timeout)
             return list(set(r[4][0] for r in result))
         except (asyncio.TimeoutError, socket.gaierror, OSError):
             return None
@@ -412,7 +462,7 @@ class AsyncSubdomainScanner(AsyncScanner):
             "domain": domain,
             "found": found,
             "scanned": len(subdomains),
-            "duration": round(time.time() - start_time, 2)
+            "duration": round(time.time() - start_time, 2),
         }
 
 
@@ -435,15 +485,13 @@ class AsyncVulnScanner(AsyncScanner):
     async def _get_client(self):
         if self._client is None and HAS_HTTPX:
             self._client = httpx.AsyncClient(
-                timeout=self.timeout,
-                follow_redirects=True,
-                verify=False
+                timeout=self.timeout, follow_redirects=True, verify=False
             )
         return self._client
 
     async def test_sqli(self, url: str, param: str) -> Dict[str, Any]:
         """测试SQL注入"""
-        payloads = ["'", "\"", "' OR '1'='1", "1' AND '1'='1", "1 AND 1=1"]
+        payloads = ["'", '"', "' OR '1'='1", "1' AND '1'='1", "1 AND 1=1"]
         errors = ["sql", "mysql", "syntax", "query", "oracle", "postgresql"]
 
         client = await self._get_client()
@@ -461,7 +509,7 @@ class AsyncVulnScanner(AsyncScanner):
                         "vulnerable": True,
                         "type": "sqli",
                         "payload": payload,
-                        "evidence": "SQL error detected"
+                        "evidence": "SQL error detected",
                     }
             except (asyncio.TimeoutError, ConnectionError, OSError):
                 continue
@@ -473,7 +521,7 @@ class AsyncVulnScanner(AsyncScanner):
         payloads = [
             "<script>alert(1)</script>",
             "<img src=x onerror=alert(1)>",
-            "'\"><script>alert(1)</script>"
+            "'\"><script>alert(1)</script>",
         ]
 
         client = await self._get_client()
@@ -490,7 +538,7 @@ class AsyncVulnScanner(AsyncScanner):
                         "vulnerable": True,
                         "type": "xss",
                         "payload": payload,
-                        "evidence": "Payload reflected"
+                        "evidence": "Payload reflected",
                     }
             except (asyncio.TimeoutError, ConnectionError, OSError):
                 continue
@@ -503,7 +551,7 @@ class AsyncVulnScanner(AsyncScanner):
             "../../../etc/passwd",
             "....//....//....//etc/passwd",
             "/etc/passwd",
-            "..\\..\\..\\windows\\win.ini"
+            "..\\..\\..\\windows\\win.ini",
         ]
         indicators = ["root:", "[extensions]", "daemon:"]
 
@@ -521,7 +569,7 @@ class AsyncVulnScanner(AsyncScanner):
                         "vulnerable": True,
                         "type": "lfi",
                         "payload": payload,
-                        "evidence": "File content detected"
+                        "evidence": "File content detected",
                     }
             except (asyncio.TimeoutError, ConnectionError, OSError):
                 continue
@@ -533,9 +581,7 @@ class AsyncVulnScanner(AsyncScanner):
         start_time = time.time()
 
         results = await asyncio.gather(
-            self.test_sqli(url, param),
-            self.test_xss(url, param),
-            self.test_lfi(url, param)
+            self.test_sqli(url, param), self.test_xss(url, param), self.test_lfi(url, param)
         )
 
         vulnerabilities = [r for r in results if r.get("vulnerable")]
@@ -545,7 +591,7 @@ class AsyncVulnScanner(AsyncScanner):
             "param": param,
             "vulnerabilities": vulnerabilities,
             "total_tests": len(results),
-            "duration": round(time.time() - start_time, 2)
+            "duration": round(time.time() - start_time, 2),
         }
 
     async def close(self):
@@ -561,6 +607,7 @@ def run_async(coro):
         loop = asyncio.get_running_loop()
         # 有运行中的循环时，使用线程池
         import concurrent.futures
+
         with concurrent.futures.ThreadPoolExecutor() as pool:
             return pool.submit(asyncio.run, coro).result()
     except RuntimeError:
@@ -576,6 +623,7 @@ def async_port_scan(host: str, ports: List[int], concurrency: int = 100) -> Dict
 
 def async_dir_scan(url: str, paths: Optional[List[str]] = None) -> Dict:
     """异步目录扫描（同步接口）"""
+
     async def _scan():
         scanner = AsyncDirScanner()
         try:
@@ -594,6 +642,7 @@ def async_subdomain_scan(domain: str, subdomains: Optional[List[str]] = None) ->
 
 def async_vuln_scan(url: str, param: str) -> Dict:
     """异步漏洞扫描（同步接口）"""
+
     async def _scan():
         scanner = AsyncVulnScanner()
         try:

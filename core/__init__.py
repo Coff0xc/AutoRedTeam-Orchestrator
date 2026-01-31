@@ -9,58 +9,54 @@ AI Red Team MCP - Core Module
 - handlers/modules 中的导入应使用延迟导入模式
 """
 
-# 统一的工具返回值 Schema
-from core.result import (
-    ToolResult,
-    ResultStatus,
-    ToolResultType,
-    ensure_tool_result,
+# AI决策引擎 (无循环依赖 - 仅使用标准库+可选第三方)
+from core.ai_engine import (
+    AIDecisionEngine,
+    AttackVector,
+    RiskLevel,
 )
 
 # 工具注册表 (无循环依赖 - 仅使用标准库)
 from core.registry import (
-    ToolRegistry,
     BaseTool,
     FunctionTool,
+    MCPBridge,
     ToolCategory,
     ToolParameter,
-    MCPBridge,
+    ToolRegistry,
+)
+from core.registry import get_global_bridge as get_bridge  # 向后兼容别名
+from core.registry import (
     get_registry,
-    get_global_bridge as get_bridge,  # 向后兼容别名
 )
 
-# AI决策引擎 (无循环依赖 - 仅使用标准库+可选第三方)
-from core.ai_engine import (
-    AIDecisionEngine,
-    RiskLevel,
-    AttackVector,
+# 统一的工具返回值 Schema
+from core.result import (
+    ResultStatus,
+    ToolResult,
+    ToolResultType,
+    ensure_tool_result,
 )
 
 # 会话管理 (无循环依赖 - 使用包内相对导入)
-from core.session import (
-    # Target
-    Target,
-    TargetType,
-    TargetStatus,
-    # Context
+from core.session import (  # Target; Context; Result; Manager; HTTP Manager; Storage
+    AuthContext,
+    ContextStatus,
+    HTTPSessionManager,
     ScanContext,
     ScanPhase,
-    ContextStatus,
-    # Result
-    Vulnerability,
     ScanResult,
-    Severity,
-    VulnType,
-    # Manager
     SessionManager,
+    SessionStorage,
+    Severity,
+    Target,
+    TargetStatus,
+    TargetType,
+    Vulnerability,
+    VulnType,
+    get_http_session_manager,
     get_session_manager,
     reset_session_manager,
-    # HTTP Manager
-    AuthContext,
-    HTTPSessionManager,
-    get_http_session_manager,
-    # Storage
-    SessionStorage,
 )
 
 __all__ = [
@@ -69,7 +65,6 @@ __all__ = [
     "ResultStatus",
     "ToolResultType",
     "ensure_tool_result",
-
     # 工具注册表
     "ToolRegistry",
     "BaseTool",
@@ -79,40 +74,33 @@ __all__ = [
     "MCPBridge",
     "get_registry",
     "get_bridge",
-
     # AI决策引擎
     "AIDecisionEngine",
     "RiskLevel",
     "AttackVector",
-
     # 会话管理 - Target
     "Target",
     "TargetType",
     "TargetStatus",
-
     # 会话管理 - Context
     "ScanContext",
     "ScanPhase",
     "ContextStatus",
-
     # 会话管理 - Result
     "Vulnerability",
     "ScanResult",
     "Severity",
     "VulnType",
-
     # 会话管理 - Manager
     "SessionManager",
     "get_session_manager",
     "reset_session_manager",
-
     # 会话管理 - HTTP
     "AuthContext",
     "HTTPSessionManager",
     "get_http_session_manager",
-
     # 会话管理 - Storage
     "SessionStorage",
 ]
 
-__version__ = '3.0.1'
+__version__ = "3.0.1"

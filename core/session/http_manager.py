@@ -15,7 +15,9 @@ from typing import Dict, List, Optional
 
 try:
     import requests
+
     from core.http.client_factory import HTTPClientFactory
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -71,14 +73,15 @@ class HTTPSessionManager:
         session_id = session_id or str(uuid.uuid4())[:8]
 
         sess = HTTPClientFactory.get_sync_client(
-            verify_ssl=verify_ssl,
-            force_new=True  # 每个会话独立
+            verify_ssl=verify_ssl, force_new=True  # 每个会话独立
         )
-        sess.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-        })
+        sess.headers.update(
+            {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            }
+        )
 
         self._sessions[session_id] = sess
         self._auth_contexts[session_id] = AuthContext()
@@ -99,7 +102,7 @@ class HTTPSessionManager:
         password: str,
         username_field: str = "username",
         password_field: str = "password",
-        extra_data: Dict = None
+        extra_data: Dict = None,
     ) -> Dict:
         """
         执行登录
@@ -135,7 +138,12 @@ class HTTPSessionManager:
 
             if csrf_token:
                 # 尝试常见的 CSRF 字段名
-                for field_name in ["csrf_token", "_token", "csrfmiddlewaretoken", "authenticity_token"]:
+                for field_name in [
+                    "csrf_token",
+                    "_token",
+                    "csrfmiddlewaretoken",
+                    "authenticity_token",
+                ]:
                     if field_name in resp.text:
                         login_data[field_name] = csrf_token
                         break
@@ -201,8 +209,13 @@ class HTTPSessionManager:
         """判断登录是否成功"""
         # 检查常见的失败标志
         fail_indicators = [
-            "登录失败", "login failed", "invalid", "incorrect",
-            "wrong password", "用户名或密码错误", "authentication failed"
+            "登录失败",
+            "login failed",
+            "invalid",
+            "incorrect",
+            "wrong password",
+            "用户名或密码错误",
+            "authentication failed",
         ]
         for indicator in fail_indicators:
             if indicator.lower() in resp.text.lower():
@@ -227,7 +240,7 @@ class HTTPSessionManager:
         method: str = "GET",
         data: Dict = None,
         headers: Dict = None,
-        **kwargs
+        **kwargs,
     ) -> Dict:
         """
         发送带会话的 HTTP 请求
@@ -261,7 +274,7 @@ class HTTPSessionManager:
                 data=data,
                 headers=req_headers,
                 timeout=kwargs.get("timeout", 10),
-                allow_redirects=kwargs.get("allow_redirects", True)
+                allow_redirects=kwargs.get("allow_redirects", True),
             )
 
             self._request_count[session_id] = self._request_count.get(session_id, 0) + 1

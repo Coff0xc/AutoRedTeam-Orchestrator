@@ -4,20 +4,20 @@ LFI/RFI 检测器
 检测本地文件包含 (LFI)、远程文件包含 (RFI) 和 PHP 伪协议利用漏洞
 """
 
-import re
 import logging
-from typing import List, Optional, Dict, Any
+import re
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
 from ..base import BaseDetector
-from ..result import DetectionResult, Severity, DetectorType
 from ..factory import register_detector
-from ..payloads import get_payloads, PayloadCategory
+from ..payloads import PayloadCategory, get_payloads
+from ..result import DetectionResult, DetectorType, Severity
 
 logger = logging.getLogger(__name__)
 
 
-@register_detector('lfi')
+@register_detector("lfi")
 class LFIDetector(BaseDetector):
     """LFI/RFI 文件包含检测器
 
@@ -32,18 +32,33 @@ class LFIDetector(BaseDetector):
         results = detector.detect("https://example.com", params={"file": "index.php"})
     """
 
-    name = 'lfi'
-    description = 'LFI/RFI文件包含漏洞检测器'
-    vuln_type = 'lfi'
+    name = "lfi"
+    description = "LFI/RFI文件包含漏洞检测器"
+    vuln_type = "lfi"
     severity = Severity.CRITICAL
     detector_type = DetectorType.ACCESS
-    version = '1.0.0'
+    version = "1.0.0"
 
     # 覆盖默认测试参数
     FILE_PARAMS = [
-        "file", "page", "include", "path", "doc", "document",
-        "folder", "root", "pg", "style", "template", "php_path",
-        "lang", "language", "dir", "load", "read", "content"
+        "file",
+        "page",
+        "include",
+        "path",
+        "doc",
+        "document",
+        "folder",
+        "root",
+        "pg",
+        "style",
+        "template",
+        "php_path",
+        "lang",
+        "language",
+        "dir",
+        "load",
+        "read",
+        "content",
     ]
 
     # LFI Payload (payload, indicator, os_type)
@@ -92,13 +107,21 @@ class LFIDetector(BaseDetector):
 
     # 成功指示器
     LINUX_INDICATORS = [
-        "root:", "daemon:", "bin:", "nobody:",
-        "/bin/bash", "/bin/sh", "/usr/sbin/nologin",
+        "root:",
+        "daemon:",
+        "bin:",
+        "nobody:",
+        "/bin/bash",
+        "/bin/sh",
+        "/usr/sbin/nologin",
     ]
 
     WINDOWS_INDICATORS = [
-        "[fonts]", "[extensions]", "for 16-bit app support",
-        "[mci extensions]", "[files]",
+        "[fonts]",
+        "[extensions]",
+        "for 16-bit app support",
+        "[mci extensions]",
+        "[files]",
     ]
 
     # 错误指示器 (可能表明存在漏洞)
@@ -126,17 +149,15 @@ class LFIDetector(BaseDetector):
 
         # 加载 payload
         try:
-            self.payloads = self._enhance_payloads(
-                get_payloads(PayloadCategory.LFI)
-            )
+            self.payloads = self._enhance_payloads(get_payloads(PayloadCategory.LFI))
         except (ImportError, KeyError, AttributeError):
             # 如果 PayloadCategory.LFI 不存在,使用内置 payloads
             logger.debug(f"[{self.name}] 使用内置 LFI payloads")
             self.payloads = [p[0] for p in self.LFI_PAYLOADS]
 
         # 配置
-        self.deep_scan = self.config.get('deep_scan', True)
-        self.max_params = self.config.get('max_params', 5)
+        self.deep_scan = self.config.get("deep_scan", True)
+        self.max_params = self.config.get("max_params", 5)
 
     def detect(self, url: str, **kwargs) -> List[DetectionResult]:
         """检测 LFI/RFI 漏洞
@@ -156,8 +177,8 @@ class LFIDetector(BaseDetector):
         self._log_detection_start(url)
         results: List[DetectionResult] = []
 
-        params = kwargs.get('params', {})
-        deep_scan = kwargs.get('deep_scan', self.deep_scan)
+        params = kwargs.get("params", {})
+        deep_scan = kwargs.get("deep_scan", self.deep_scan)
 
         # 识别可能的文件参数
         test_params = self._identify_file_params(params)
@@ -208,9 +229,9 @@ class LFIDetector(BaseDetector):
 
         # 如果没有识别出参数,使用默认列表
         if not file_params:
-            file_params = self.FILE_PARAMS[:self.max_params]
+            file_params = self.FILE_PARAMS[: self.max_params]
 
-        return file_params[:self.max_params]
+        return file_params[: self.max_params]
 
     def _looks_like_file_path(self, value: str) -> bool:
         """判断值是否像文件路径"""
@@ -218,43 +239,44 @@ class LFIDetector(BaseDetector):
             return False
 
         # 包含路径分隔符
-        if '/' in value or '\\' in value:
+        if "/" in value or "\\" in value:
             return True
 
         # 包含文件扩展名
-        if re.search(r'\.[a-z]{2,4}$', value.lower()):
+        if re.search(r"\.[a-z]{2,4}$", value.lower()):
             return True
 
         return False
 
     def _detect_lfi(
-        self,
-        url: str,
-        test_params: List[str],
-        kwargs: Dict[str, Any]
+        self, url: str, test_params: List[str], kwargs: Dict[str, Any]
     ) -> List[DetectionResult]:
         """检测本地文件包含"""
         results = []
-        method = kwargs.get('method', 'GET').upper()
-        headers = kwargs.get('headers', {})
+        method = kwargs.get("method", "GET").upper()
+        headers = kwargs.get("headers", {})
 
         for param_name in test_params:
             for payload, indicator, os_type in self.LFI_PAYLOADS:
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
 
                 # 构建测试参数
                 test_params_dict = {param_name: encoded_payload}
 
                 try:
-                    if method == 'GET':
-                        response = self.http_client.get(url, params=test_params_dict, headers=headers)
+                    if method == "GET":
+                        response = self.http_client.get(
+                            url, params=test_params_dict, headers=headers
+                        )
                     else:
-                        response = self.http_client.post(url, data=test_params_dict, headers=headers)
+                        response = self.http_client.post(
+                            url, data=test_params_dict, headers=headers
+                        )
 
                     if not response:
                         continue
 
-                    resp_text = getattr(response, 'text', '')
+                    resp_text = getattr(response, "text", "")
 
                     # 检查指示器
                     if indicator in resp_text:
@@ -262,8 +284,8 @@ class LFIDetector(BaseDetector):
                             method=method,
                             url=url,
                             headers=headers,
-                            params=test_params_dict if method == 'GET' else None,
-                            data=test_params_dict if method != 'GET' else None
+                            params=test_params_dict if method == "GET" else None,
+                            data=test_params_dict if method != "GET" else None,
                         )
                         response_info = self._build_response_info(response)
 
@@ -280,13 +302,13 @@ class LFIDetector(BaseDetector):
                             remediation="使用白名单验证文件路径,避免直接使用用户输入构造文件路径",
                             references=[
                                 "https://owasp.org/www-community/attacks/Path_Traversal",
-                                "https://portswigger.net/web-security/file-path-traversal"
+                                "https://portswigger.net/web-security/file-path-traversal",
                             ],
                             extra={
-                                'os_type': os_type,
-                                'indicator': indicator,
-                                'vuln_subtype': 'LFI'
-                            }
+                                "os_type": os_type,
+                                "indicator": indicator,
+                                "vuln_subtype": "LFI",
+                            },
                         )
                         results.append(result)
                         break  # 找到一个就停止该参数的测试
@@ -297,39 +319,40 @@ class LFIDetector(BaseDetector):
         return results
 
     def _detect_php_wrapper(
-        self,
-        url: str,
-        test_params: List[str],
-        kwargs: Dict[str, Any]
+        self, url: str, test_params: List[str], kwargs: Dict[str, Any]
     ) -> List[DetectionResult]:
         """检测 PHP 伪协议利用"""
         results = []
-        method = kwargs.get('method', 'GET').upper()
-        headers = kwargs.get('headers', {})
+        method = kwargs.get("method", "GET").upper()
+        headers = kwargs.get("headers", {})
 
         for param_name in test_params:
             for payload, indicator, wrapper_type in self.PHP_WRAPPER_PAYLOADS:
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
                 test_params_dict = {param_name: encoded_payload}
 
                 try:
-                    if method == 'GET':
-                        response = self.http_client.get(url, params=test_params_dict, headers=headers)
+                    if method == "GET":
+                        response = self.http_client.get(
+                            url, params=test_params_dict, headers=headers
+                        )
                     else:
-                        response = self.http_client.post(url, data=test_params_dict, headers=headers)
+                        response = self.http_client.post(
+                            url, data=test_params_dict, headers=headers
+                        )
 
                     if not response:
                         continue
 
-                    resp_text = getattr(response, 'text', '')
+                    resp_text = getattr(response, "text", "")
 
                     if indicator in resp_text:
                         request_info = self._build_request_info(
                             method=method,
                             url=url,
                             headers=headers,
-                            params=test_params_dict if method == 'GET' else None,
-                            data=test_params_dict if method != 'GET' else None
+                            params=test_params_dict if method == "GET" else None,
+                            data=test_params_dict if method != "GET" else None,
                         )
                         response_info = self._build_response_info(response)
 
@@ -346,13 +369,13 @@ class LFIDetector(BaseDetector):
                             remediation="禁用危险的 PHP 伪协议,使用白名单验证输入",
                             references=[
                                 "https://www.php.net/manual/en/wrappers.php",
-                                "https://owasp.org/www-community/attacks/File_Inclusion"
+                                "https://owasp.org/www-community/attacks/File_Inclusion",
                             ],
                             extra={
-                                'wrapper_type': wrapper_type,
-                                'indicator': indicator,
-                                'vuln_subtype': 'PHP_WRAPPER'
-                            }
+                                "wrapper_type": wrapper_type,
+                                "indicator": indicator,
+                                "vuln_subtype": "PHP_WRAPPER",
+                            },
                         )
                         results.append(result)
                         break
@@ -363,31 +386,32 @@ class LFIDetector(BaseDetector):
         return results
 
     def _detect_rfi(
-        self,
-        url: str,
-        test_params: List[str],
-        kwargs: Dict[str, Any]
+        self, url: str, test_params: List[str], kwargs: Dict[str, Any]
     ) -> List[DetectionResult]:
         """检测远程文件包含"""
         results = []
-        method = kwargs.get('method', 'GET').upper()
-        headers = kwargs.get('headers', {})
+        method = kwargs.get("method", "GET").upper()
+        headers = kwargs.get("headers", {})
 
         for param_name in test_params:
             for payload in self.RFI_PAYLOADS:
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
                 test_params_dict = {param_name: encoded_payload}
 
                 try:
-                    if method == 'GET':
-                        response = self.http_client.get(url, params=test_params_dict, headers=headers)
+                    if method == "GET":
+                        response = self.http_client.get(
+                            url, params=test_params_dict, headers=headers
+                        )
                     else:
-                        response = self.http_client.post(url, data=test_params_dict, headers=headers)
+                        response = self.http_client.post(
+                            url, data=test_params_dict, headers=headers
+                        )
 
                     if not response:
                         continue
 
-                    resp_text = getattr(response, 'text', '').lower()
+                    resp_text = getattr(response, "text", "").lower()
 
                     # 检查 RFI 指示器
                     rfi_indicators = [
@@ -403,8 +427,8 @@ class LFIDetector(BaseDetector):
                                 method=method,
                                 url=url,
                                 headers=headers,
-                                params=test_params_dict if method == 'GET' else None,
-                                data=test_params_dict if method != 'GET' else None
+                                params=test_params_dict if method == "GET" else None,
+                                data=test_params_dict if method != "GET" else None,
                             )
                             response_info = self._build_response_info(response)
 
@@ -426,10 +450,7 @@ class LFIDetector(BaseDetector):
                                 references=[
                                     "https://owasp.org/www-community/attacks/File_Inclusion"
                                 ],
-                                extra={
-                                    'indicator': indicator,
-                                    'vuln_subtype': vuln_subtype
-                                }
+                                extra={"indicator": indicator, "vuln_subtype": vuln_subtype},
                             )
                             results.append(result)
                             break
@@ -440,15 +461,12 @@ class LFIDetector(BaseDetector):
         return results
 
     def _detect_error_based(
-        self,
-        url: str,
-        test_params: List[str],
-        kwargs: Dict[str, Any]
+        self, url: str, test_params: List[str], kwargs: Dict[str, Any]
     ) -> List[DetectionResult]:
         """检测基于错误的文件包含 (可能存在漏洞)"""
         results = []
-        method = kwargs.get('method', 'GET').upper()
-        headers = kwargs.get('headers', {})
+        method = kwargs.get("method", "GET").upper()
+        headers = kwargs.get("headers", {})
 
         # 使用可能触发错误的 Payload
         error_payloads = [
@@ -459,19 +477,23 @@ class LFIDetector(BaseDetector):
 
         for param_name in test_params:
             for payload in error_payloads:
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
                 test_params_dict = {param_name: encoded_payload}
 
                 try:
-                    if method == 'GET':
-                        response = self.http_client.get(url, params=test_params_dict, headers=headers)
+                    if method == "GET":
+                        response = self.http_client.get(
+                            url, params=test_params_dict, headers=headers
+                        )
                     else:
-                        response = self.http_client.post(url, data=test_params_dict, headers=headers)
+                        response = self.http_client.post(
+                            url, data=test_params_dict, headers=headers
+                        )
 
                     if not response:
                         continue
 
-                    resp_text = getattr(response, 'text', '').lower()
+                    resp_text = getattr(response, "text", "").lower()
 
                     # 检查错误指示器
                     for indicator in self.ERROR_INDICATORS:
@@ -480,8 +502,8 @@ class LFIDetector(BaseDetector):
                                 method=method,
                                 url=url,
                                 headers=headers,
-                                params=test_params_dict if method == 'GET' else None,
-                                data=test_params_dict if method != 'GET' else None
+                                params=test_params_dict if method == "GET" else None,
+                                data=test_params_dict if method != "GET" else None,
                             )
                             response_info = self._build_response_info(response)
 
@@ -503,10 +525,7 @@ class LFIDetector(BaseDetector):
                                 references=[
                                     "https://owasp.org/www-community/attacks/File_Inclusion"
                                 ],
-                                extra={
-                                    'indicator': indicator,
-                                    'vuln_subtype': 'ERROR_BASED'
-                                }
+                                extra={"indicator": indicator, "vuln_subtype": "ERROR_BASED"},
                             )
                             results.append(result)
                             break

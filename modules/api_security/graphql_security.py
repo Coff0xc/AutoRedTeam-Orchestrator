@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # 统一 HTTP 客户端工厂
 try:
     from core.http import get_sync_client
+
     HAS_HTTP_FACTORY = True
 except ImportError:
     HAS_HTTP_FACTORY = False
@@ -27,20 +28,22 @@ except ImportError:
 
 class GraphQLVulnType(Enum):
     """GraphQL漏洞类型"""
-    INTROSPECTION_ENABLED = "introspection_enabled"      # 内省开启
-    BATCH_QUERY_DOS = "batch_query_dos"                  # 批量查询DoS
-    DEEP_NESTING_DOS = "deep_nesting_dos"               # 深层嵌套DoS
-    FIELD_SUGGESTION = "field_suggestion"               # 字段建议泄露
-    ALIAS_OVERLOAD = "alias_overload"                   # 别名重载攻击
-    DIRECTIVE_OVERLOAD = "directive_overload"           # 指令重载
-    CIRCULAR_FRAGMENT = "circular_fragment"             # 循环片段
-    SQLI_IN_ARGS = "sqli_in_arguments"                  # 参数SQL注入
-    IDOR_IN_ARGS = "idor_in_arguments"                  # 参数IDOR
+
+    INTROSPECTION_ENABLED = "introspection_enabled"  # 内省开启
+    BATCH_QUERY_DOS = "batch_query_dos"  # 批量查询DoS
+    DEEP_NESTING_DOS = "deep_nesting_dos"  # 深层嵌套DoS
+    FIELD_SUGGESTION = "field_suggestion"  # 字段建议泄露
+    ALIAS_OVERLOAD = "alias_overload"  # 别名重载攻击
+    DIRECTIVE_OVERLOAD = "directive_overload"  # 指令重载
+    CIRCULAR_FRAGMENT = "circular_fragment"  # 循环片段
+    SQLI_IN_ARGS = "sqli_in_arguments"  # 参数SQL注入
+    IDOR_IN_ARGS = "idor_in_arguments"  # 参数IDOR
 
 
 @dataclass
 class GraphQLEndpoint:
     """GraphQL端点信息"""
+
     url: str
     introspection_enabled: bool = False
     schema: Dict[str, Any] = field(default_factory=dict)
@@ -53,6 +56,7 @@ class GraphQLEndpoint:
 @dataclass
 class GraphQLVulnerability:
     """GraphQL漏洞结果"""
+
     vuln_type: GraphQLVulnType
     severity: str
     description: str
@@ -110,15 +114,17 @@ class GraphQLSecurityTester:
             self._session = get_sync_client(proxy=proxy, force_new=True)
         else:
             self._session = requests.Session()
-        self._session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        })
+        self._session.headers.update(
+            {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            }
+        )
 
-    def _send_query(self, url: str, query: str,
-                    variables: Optional[Dict] = None,
-                    headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def _send_query(
+        self, url: str, query: str, variables: Optional[Dict] = None, headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         发送GraphQL查询
 
@@ -138,7 +144,7 @@ class GraphQLSecurityTester:
                 json=payload,
                 headers=request_headers,
                 timeout=self.timeout,
-                proxies=self.proxies
+                proxies=self.proxies,
             )
 
             return {
@@ -146,7 +152,7 @@ class GraphQLSecurityTester:
                 "status_code": resp.status_code,
                 "response_time": resp.elapsed.total_seconds(),
                 "data": resp.json() if resp.text else {},
-                "text": resp.text[:2000]
+                "text": resp.text[:2000],
             }
 
         except json.JSONDecodeError:
@@ -155,27 +161,19 @@ class GraphQLSecurityTester:
                 "status_code": resp.status_code,
                 "data": {},
                 "text": resp.text[:2000],
-                "parse_error": True
+                "parse_error": True,
             }
         except requests.RequestException as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
-    def _send_raw(self, url: str, body: str,
-                  headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def _send_raw(self, url: str, body: str, headers: Optional[Dict] = None) -> Dict[str, Any]:
         """发送原始请求体"""
         try:
             request_headers = headers.copy() if headers else {}
             request_headers.setdefault("Content-Type", "application/json")
 
             resp = self._session.post(
-                url,
-                data=body,
-                headers=request_headers,
-                timeout=self.timeout,
-                proxies=self.proxies
+                url, data=body, headers=request_headers, timeout=self.timeout, proxies=self.proxies
             )
 
             return {
@@ -183,13 +181,12 @@ class GraphQLSecurityTester:
                 "status_code": resp.status_code,
                 "response_time": resp.elapsed.total_seconds(),
                 "data": resp.json() if resp.text else {},
-                "text": resp.text[:2000]
+                "text": resp.text[:2000],
             }
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def test_introspection(self, url: str,
-                           headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_introspection(self, url: str, headers: Optional[Dict] = None) -> Dict[str, Any]:
         """
         测试内省查询是否开启
 
@@ -206,7 +203,7 @@ class GraphQLSecurityTester:
             "types": [],
             "queries": [],
             "mutations": [],
-            "remediation": "在生产环境禁用内省查询: schema.introspection = False"
+            "remediation": "在生产环境禁用内省查询: schema.introspection = False",
         }
 
         for query_body in self.INTROSPECTION_QUERIES:
@@ -227,8 +224,7 @@ class GraphQLSecurityTester:
                 # 提取类型
                 if "types" in schema:
                     result["types"] = [
-                        t["name"] for t in schema["types"]
-                        if not t["name"].startswith("__")
+                        t["name"] for t in schema["types"] if not t["name"].startswith("__")
                     ]
 
                 # 提取Query类型
@@ -253,9 +249,9 @@ class GraphQLSecurityTester:
 
         return result
 
-    def test_batch_dos(self, url: str, max_queries: int = 100,
-                       step: int = 10,
-                       headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_batch_dos(
+        self, url: str, max_queries: int = 100, step: int = 10, headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         测试批量查询DoS
 
@@ -269,7 +265,7 @@ class GraphQLSecurityTester:
             "max_queries_tested": 0,
             "max_queries_accepted": 0,
             "response_times": [],
-            "remediation": "限制单次请求的查询数量,建议不超过10个"
+            "remediation": "限制单次请求的查询数量,建议不超过10个",
         }
 
         base_query = '{"query":"{__typename}"}'
@@ -285,10 +281,7 @@ class GraphQLSecurityTester:
             response = self._send_raw(url, batch_body, headers)
             elapsed = time.time() - start_time
 
-            result["response_times"].append({
-                "count": count,
-                "time": round(elapsed, 3)
-            })
+            result["response_times"].append({"count": count, "time": round(elapsed, 3)})
 
             if not response.get("success"):
                 break
@@ -310,9 +303,13 @@ class GraphQLSecurityTester:
 
         return result
 
-    def test_deep_nesting(self, url: str, max_depth: int = 50,
-                          field_name: str = "user",
-                          headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_deep_nesting(
+        self,
+        url: str,
+        max_depth: int = 50,
+        field_name: str = "user",
+        headers: Optional[Dict] = None,
+    ) -> Dict[str, Any]:
         """
         测试深层嵌套DoS
 
@@ -329,7 +326,7 @@ class GraphQLSecurityTester:
             "max_depth_tested": 0,
             "max_depth_accepted": 0,
             "response_times": [],
-            "remediation": "限制查询嵌套深度,建议不超过10层"
+            "remediation": "限制查询嵌套深度,建议不超过10层",
         }
 
         for depth in range(5, max_depth + 1, 5):
@@ -343,10 +340,7 @@ class GraphQLSecurityTester:
             response = self._send_query(url, query, headers=headers)
             elapsed = time.time() - start_time
 
-            result["response_times"].append({
-                "depth": depth,
-                "time": round(elapsed, 3)
-            })
+            result["response_times"].append({"depth": depth, "time": round(elapsed, 3)})
 
             if not response.get("success"):
                 break
@@ -356,8 +350,7 @@ class GraphQLSecurityTester:
             errors = data.get("errors", [])
 
             depth_error = any(
-                "depth" in str(e).lower() or "nested" in str(e).lower()
-                for e in errors
+                "depth" in str(e).lower() or "nested" in str(e).lower() for e in errors
             )
 
             if depth_error or response.get("status_code") == 400:
@@ -380,8 +373,7 @@ class GraphQLSecurityTester:
             inner = f"{field}{{{inner}}}"
         return f"query{{{inner}}}"
 
-    def test_field_suggestion(self, url: str,
-                              headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_field_suggestion(self, url: str, headers: Optional[Dict] = None) -> Dict[str, Any]:
         """
         测试字段建议信息泄露
 
@@ -393,14 +385,14 @@ class GraphQLSecurityTester:
             "severity": "low",
             "description": "GraphQL返回字段建议可能帮助攻击者枚举Schema",
             "suggestions_found": [],
-            "remediation": "禁用字段建议功能或限制错误信息详细程度"
+            "remediation": "禁用字段建议功能或限制错误信息详细程度",
         }
 
         # 测试常见错误字段名
         test_queries = [
             '{"query":"{usr{id}}"}',  # user的错误拼写
-            '{"query":"{pasword}"}',   # password的错误拼写
-            '{"query":"{admn}"}',      # admin的错误拼写
+            '{"query":"{pasword}"}',  # password的错误拼写
+            '{"query":"{admn}"}',  # admin的错误拼写
             '{"query":"{usrs{emal}}"}',  # users.email的错误拼写
         ]
 
@@ -430,8 +422,9 @@ class GraphQLSecurityTester:
 
         return result
 
-    def test_alias_overload(self, url: str, max_aliases: int = 100,
-                            headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_alias_overload(
+        self, url: str, max_aliases: int = 100, headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         测试别名重载攻击
 
@@ -443,7 +436,7 @@ class GraphQLSecurityTester:
             "severity": "medium",
             "description": "GraphQL允许大量别名可能导致DoS",
             "max_aliases_accepted": 0,
-            "remediation": "限制单次查询的别名数量"
+            "remediation": "限制单次查询的别名数量",
         }
 
         for count in [10, 50, 100, 200]:
@@ -473,8 +466,9 @@ class GraphQLSecurityTester:
 
         return result
 
-    def test_sqli_in_args(self, url: str, param_name: str = "id",
-                          headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_sqli_in_args(
+        self, url: str, param_name: str = "id", headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         测试GraphQL参数SQL注入
         """
@@ -484,7 +478,7 @@ class GraphQLSecurityTester:
             "severity": "critical",
             "description": "GraphQL参数可能存在SQL注入",
             "vulnerable_payloads": [],
-            "remediation": "使用参数化查询,对所有输入进行验证"
+            "remediation": "使用参数化查询,对所有输入进行验证",
         }
 
         for payload, desc in self.SQLI_PAYLOADS:
@@ -502,18 +496,24 @@ class GraphQLSecurityTester:
 
             # 检查SQL错误特征
             sql_error_patterns = [
-                "sql", "syntax", "mysql", "postgresql", "sqlite",
-                "ora-", "mssql", "query", "column", "table"
+                "sql",
+                "syntax",
+                "mysql",
+                "postgresql",
+                "sqlite",
+                "ora-",
+                "mssql",
+                "query",
+                "column",
+                "table",
             ]
 
             for pattern in sql_error_patterns:
                 if pattern in text:
                     result["vulnerable"] = True
-                    result["vulnerable_payloads"].append({
-                        "payload": payload,
-                        "type": desc,
-                        "evidence": text[:200]
-                    })
+                    result["vulnerable_payloads"].append(
+                        {"payload": payload, "type": desc, "evidence": text[:200]}
+                    )
                     break
 
         if result["vulnerable"]:
@@ -521,8 +521,7 @@ class GraphQLSecurityTester:
 
         return result
 
-    def full_scan(self, url: str,
-                  headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def full_scan(self, url: str, headers: Optional[Dict] = None) -> Dict[str, Any]:
         """
         完整GraphQL安全扫描
         """
@@ -530,12 +529,8 @@ class GraphQLSecurityTester:
             "url": url,
             "vulnerabilities": [],
             "tests": {},
-            "summary": {
-                "total_tests": 0,
-                "vulnerable_count": 0,
-                "highest_severity": "none"
-            },
-            "recommendations": []
+            "summary": {"total_tests": 0, "vulnerable_count": 0, "highest_severity": "none"},
+            "recommendations": [],
         }
 
         severity_order = {"critical": 4, "high": 3, "medium": 2, "low": 1, "none": 0}
@@ -563,12 +558,14 @@ class GraphQLSecurityTester:
                     if severity_order.get(severity, 0) > severity_order.get(highest_severity, 0):
                         highest_severity = severity
 
-                    result["vulnerabilities"].append({
-                        "type": test_name,
-                        "severity": severity,
-                        "proof": test_result.get("proof", ""),
-                        "remediation": test_result.get("remediation", "")
-                    })
+                    result["vulnerabilities"].append(
+                        {
+                            "type": test_name,
+                            "severity": severity,
+                            "proof": test_result.get("proof", ""),
+                            "remediation": test_result.get("remediation", ""),
+                        }
+                    )
 
                     if test_result.get("remediation"):
                         result["recommendations"].append(test_result["remediation"])
@@ -591,7 +588,7 @@ def quick_graphql_scan(url: str) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     # 测试示例
     test_url = "https://example.com/graphql"
 

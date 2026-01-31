@@ -4,8 +4,9 @@
 """
 
 from typing import Any, Dict
+
+from .error_handling import ErrorCategory, extract_file_path, handle_errors
 from .tooling import tool
-from .error_handling import handle_errors, ErrorCategory, extract_file_path
 
 
 def register_supply_chain_tools(mcp, counter, logger):
@@ -37,10 +38,10 @@ def register_supply_chain_tools(mcp, counter, logger):
         sbom = generator.generate(project_path, format=output_format)
 
         return {
-            'success': True,
-            'project': project_path,
-            'format': output_format,
-            'sbom': sbom if isinstance(sbom, dict) else sbom.to_dict()
+            "success": True,
+            "project": project_path,
+            "format": output_format,
+            "sbom": sbom if isinstance(sbom, dict) else sbom.to_dict(),
         }
 
     @tool(mcp)
@@ -62,10 +63,10 @@ def register_supply_chain_tools(mcp, counter, logger):
         results = scanner.scan(project_path)
 
         return {
-            'success': True,
-            'project': project_path,
-            'vulnerabilities': results if isinstance(results, list) else [results],
-            'total': len(results) if isinstance(results, list) else 1
+            "success": True,
+            "project": project_path,
+            "vulnerabilities": results if isinstance(results, list) else [results],
+            "total": len(results) if isinstance(results, list) else 1,
         }
 
     @tool(mcp)
@@ -87,11 +88,11 @@ def register_supply_chain_tools(mcp, counter, logger):
         findings = scanner.scan(config_path)
 
         return {
-            'success': True,
-            'config': config_path,
-            'findings': findings if isinstance(findings, list) else [findings],
-            'total': len(findings) if isinstance(findings, list) else 1
+            "success": True,
+            "config": config_path,
+            "findings": findings if isinstance(findings, list) else [findings],
+            "total": len(findings) if isinstance(findings, list) else 1,
         }
 
-    counter.add('supply_chain', 3)
+    counter.add("supply_chain", 3)
     logger.info("[Supply Chain] 已注册 3 个供应链安全工具")

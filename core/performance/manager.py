@@ -7,34 +7,29 @@
 import logging
 from typing import Any, Dict, Optional
 
+from .concurrency import (
+    Bulkhead,
+    CircuitBreaker,
+    ConnectionPoolManager,
+    DynamicThreadPool,
+    RateLimiter,
+)
 from .config import PerformanceConfig, get_performance_config
 from .memory_optimizer import (
-    StreamingResultProcessor,
+    CompressedStorage,
+    MemoryMonitor,
     ObjectPool,
     ResultPaginator,
-    MemoryMonitor,
-    CompressedStorage
+    StreamingResultProcessor,
 )
-from .concurrency import (
-    DynamicThreadPool,
-    ConnectionPoolManager,
-    RateLimiter,
-    CircuitBreaker,
-    Bulkhead
-)
+from .monitoring import AlertManager, LogController, MetricsCollector, PerformanceMetrics
 from .reliability import (
-    RetryPolicy,
-    RetryExecutor,
-    RetryStrategy,
     CheckpointManager,
     FaultRecovery,
-    RecoverableTask
-)
-from .monitoring import (
-    MetricsCollector,
-    PerformanceMetrics,
-    LogController,
-    AlertManager
+    RecoverableTask,
+    RetryExecutor,
+    RetryPolicy,
+    RetryStrategy,
 )
 
 logger = logging.getLogger(__name__)
@@ -113,14 +108,12 @@ class PerformanceManager:
         cfg = self.config.memory
 
         self.memory_monitor = MemoryMonitor(
-            threshold=cfg.gc_threshold,
-            max_memory_mb=cfg.max_memory_mb
+            threshold=cfg.gc_threshold, max_memory_mb=cfg.max_memory_mb
         )
         self.memory_monitor.start()
 
         self.result_processor = StreamingResultProcessor(
-            chunk_size=cfg.stream_chunk_size,
-            max_buffer_size=cfg.max_result_size
+            chunk_size=cfg.stream_chunk_size, max_buffer_size=cfg.max_result_size
         )
 
         self.compressed_storage = CompressedStorage()
@@ -133,28 +126,20 @@ class PerformanceManager:
             min_threads=cfg.min_threads,
             max_threads=cfg.max_threads,
             initial_threads=cfg.initial_threads,
-            queue_size=cfg.queue_size
+            queue_size=cfg.queue_size,
         )
         self.thread_pool.start()
 
-        self.connection_pool = ConnectionPoolManager(
-            max_connections=cfg.connection_pool_size
-        )
+        self.connection_pool = ConnectionPoolManager(max_connections=cfg.connection_pool_size)
         self.connection_pool.start()
 
-        self.rate_limiter = RateLimiter(
-            rate=cfg.rate_limit_rps,
-            burst=cfg.rate_limit_burst
-        )
+        self.rate_limiter = RateLimiter(rate=cfg.rate_limit_rps, burst=cfg.rate_limit_burst)
 
         self.circuit_breaker = CircuitBreaker(
-            failure_threshold=cfg.circuit_breaker_threshold,
-            timeout=cfg.circuit_breaker_timeout
+            failure_threshold=cfg.circuit_breaker_threshold, timeout=cfg.circuit_breaker_timeout
         )
 
-        self.bulkhead = Bulkhead(
-            max_concurrent=cfg.bulkhead_max_concurrent
-        )
+        self.bulkhead = Bulkhead(max_concurrent=cfg.bulkhead_max_concurrent)
 
     def _init_reliability(self):
         """初始化可靠性组件"""
@@ -165,14 +150,13 @@ class PerformanceManager:
             max_retries=cfg.max_retries,
             base_delay=cfg.retry_base_delay,
             max_delay=cfg.retry_max_delay,
-            strategy=strategy
+            strategy=strategy,
         )
         self.retry_executor = RetryExecutor(policy)
 
         if cfg.checkpoint_enabled:
             self.checkpoint_manager = CheckpointManager(
-                checkpoint_dir=cfg.checkpoint_dir,
-                auto_save_interval=cfg.checkpoint_interval
+                checkpoint_dir=cfg.checkpoint_dir, auto_save_interval=cfg.checkpoint_interval
             )
 
         self.fault_recovery = FaultRecovery()
@@ -187,21 +171,19 @@ class PerformanceManager:
         self.log_controller = LogController(
             level=cfg.log_level,
             max_message_size=cfg.log_max_size,
-            sampling_rate=cfg.log_sampling_rate
+            sampling_rate=cfg.log_sampling_rate,
         )
 
         if cfg.alert_enabled:
             self.alert_manager = AlertManager(
-                thresholds=cfg.alert_thresholds,
-                webhook_url=cfg.alert_webhook
+                thresholds=cfg.alert_thresholds, webhook_url=cfg.alert_webhook
             )
 
             # 连接内存监控到告警
             if self.memory_monitor and self.alert_manager:
                 self.memory_monitor.add_callback(
                     lambda usage: self.alert_manager.check_threshold(
-                        "memory_usage",
-                        usage["rss_mb"] / self.config.memory.max_memory_mb
+                        "memory_usage", usage["rss_mb"] / self.config.memory.max_memory_mb
                     )
                 )
 
@@ -267,10 +249,7 @@ class PerformanceManager:
         return stats
 
     def create_recoverable_task(
-        self,
-        task_id: str,
-        task_type: str = "generic",
-        total: int = 0
+        self, task_id: str, task_type: str = "generic", total: int = 0
     ) -> RecoverableTask:
         """创建可恢复任务"""
         if not self.checkpoint_manager:
@@ -282,7 +261,7 @@ class PerformanceManager:
             task_type=task_type,
             total=total,
             retry_policy=self.retry_executor.policy if self.retry_executor else None,
-            fault_recovery=self.fault_recovery
+            fault_recovery=self.fault_recovery,
         )
 
     def __enter__(self):

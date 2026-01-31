@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SecurityHeader:
     """安全头信息"""
+
     name: str
     value: str
     present: bool
@@ -47,6 +48,7 @@ class SecurityHeader:
 @dataclass
 class SecurityScore:
     """安全评分"""
+
     total_score: int
     max_score: int
     grade: str
@@ -67,61 +69,61 @@ class SecurityHeadersTester(BaseAPITester):
         score = tester.get_security_score()
     """
 
-    name = 'security_headers'
-    description = 'HTTP安全头测试器'
-    version = '3.0.0'
+    name = "security_headers"
+    description = "HTTP安全头测试器"
+    version = "3.0.0"
 
     # 安全头定义和权重
     SECURITY_HEADERS = {
-        'Strict-Transport-Security': {
-            'weight': 15,
-            'required': True,
-            'aliases': ['strict-transport-security'],
+        "Strict-Transport-Security": {
+            "weight": 15,
+            "required": True,
+            "aliases": ["strict-transport-security"],
         },
-        'Content-Security-Policy': {
-            'weight': 20,
-            'required': True,
-            'aliases': ['content-security-policy'],
+        "Content-Security-Policy": {
+            "weight": 20,
+            "required": True,
+            "aliases": ["content-security-policy"],
         },
-        'X-Frame-Options': {
-            'weight': 10,
-            'required': True,
-            'aliases': ['x-frame-options'],
+        "X-Frame-Options": {
+            "weight": 10,
+            "required": True,
+            "aliases": ["x-frame-options"],
         },
-        'X-Content-Type-Options': {
-            'weight': 10,
-            'required': True,
-            'aliases': ['x-content-type-options'],
+        "X-Content-Type-Options": {
+            "weight": 10,
+            "required": True,
+            "aliases": ["x-content-type-options"],
         },
-        'X-XSS-Protection': {
-            'weight': 5,
-            'required': False,  # 已被CSP替代
-            'aliases': ['x-xss-protection'],
+        "X-XSS-Protection": {
+            "weight": 5,
+            "required": False,  # 已被CSP替代
+            "aliases": ["x-xss-protection"],
         },
-        'Referrer-Policy': {
-            'weight': 10,
-            'required': True,
-            'aliases': ['referrer-policy'],
+        "Referrer-Policy": {
+            "weight": 10,
+            "required": True,
+            "aliases": ["referrer-policy"],
         },
-        'Permissions-Policy': {
-            'weight': 10,
-            'required': False,
-            'aliases': ['permissions-policy', 'feature-policy'],
+        "Permissions-Policy": {
+            "weight": 10,
+            "required": False,
+            "aliases": ["permissions-policy", "feature-policy"],
         },
-        'Cross-Origin-Opener-Policy': {
-            'weight': 5,
-            'required': False,
-            'aliases': ['cross-origin-opener-policy'],
+        "Cross-Origin-Opener-Policy": {
+            "weight": 5,
+            "required": False,
+            "aliases": ["cross-origin-opener-policy"],
         },
-        'Cross-Origin-Resource-Policy': {
-            'weight': 5,
-            'required': False,
-            'aliases': ['cross-origin-resource-policy'],
+        "Cross-Origin-Resource-Policy": {
+            "weight": 5,
+            "required": False,
+            "aliases": ["cross-origin-resource-policy"],
         },
-        'Cross-Origin-Embedder-Policy': {
-            'weight': 5,
-            'required': False,
-            'aliases': ['cross-origin-embedder-policy'],
+        "Cross-Origin-Embedder-Policy": {
+            "weight": 5,
+            "required": False,
+            "aliases": ["cross-origin-embedder-policy"],
         },
     }
 
@@ -155,8 +157,8 @@ class SecurityHeadersTester(BaseAPITester):
             self._create_result(
                 vulnerable=False,
                 severity=Severity.INFO,
-                title='无法获取响应头',
-                description=f'无法连接到目标: {self.target}'
+                title="无法获取响应头",
+                description=f"无法连接到目标: {self.target}",
             )
             return self._results
 
@@ -181,14 +183,12 @@ class SecurityHeadersTester(BaseAPITester):
             response = client.get(self.target, timeout=self.timeout)
 
             # 存储响应头（小写键名）
-            self._response_headers = {
-                k.lower(): v for k, v in response.headers.items()
-            }
+            self._response_headers = {k.lower(): v for k, v in response.headers.items()}
 
             return True
 
         except Exception as e:
-            logger.error(f'获取响应头失败: {e}')
+            logger.error(f"获取响应头失败: {e}")
             return False
 
     def test_hsts(self) -> Optional[APITestResult]:
@@ -204,23 +204,20 @@ class SecurityHeadersTester(BaseAPITester):
         Returns:
             测试结果或None
         """
-        header_value = self._get_header('strict-transport-security')
+        header_value = self._get_header("strict-transport-security")
 
         if not header_value:
             result = self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.HEADERS_MISSING_HSTS,
                 severity=Severity.HIGH,
-                title='缺少HSTS安全头',
-                description=(
-                    '未设置Strict-Transport-Security头，'
-                    '可能遭受SSL剥离攻击。'
-                ),
-                evidence={'header': 'Strict-Transport-Security', 'value': None},
+                title="缺少HSTS安全头",
+                description=("未设置Strict-Transport-Security头，" "可能遭受SSL剥离攻击。"),
+                evidence={"header": "Strict-Transport-Security", "value": None},
                 remediation=(
-                    '添加HSTS头:\n'
-                    'Strict-Transport-Security: max-age=31536000; includeSubDomains; preload'
-                )
+                    "添加HSTS头:\n"
+                    "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload"
+                ),
             )
             return result
 
@@ -229,29 +226,29 @@ class SecurityHeadersTester(BaseAPITester):
         max_age = self._extract_max_age(header_value)
 
         if max_age is None:
-            issues.append('缺少max-age参数')
+            issues.append("缺少max-age参数")
         elif max_age < 31536000:  # 1年
-            issues.append(f'max-age过短: {max_age}秒（建议至少1年）')
+            issues.append(f"max-age过短: {max_age}秒（建议至少1年）")
 
-        if 'includesubdomains' not in header_value.lower():
-            issues.append('未包含includeSubDomains')
+        if "includesubdomains" not in header_value.lower():
+            issues.append("未包含includeSubDomains")
 
         if issues:
             result = self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.HEADERS_WEAK_HSTS,
                 severity=Severity.MEDIUM,
-                title='HSTS配置不完善',
+                title="HSTS配置不完善",
                 description=f'HSTS存在以下问题: {"; ".join(issues)}',
                 evidence={
-                    'header': 'Strict-Transport-Security',
-                    'value': header_value,
-                    'issues': issues
+                    "header": "Strict-Transport-Security",
+                    "value": header_value,
+                    "issues": issues,
                 },
                 remediation=(
-                    '建议配置:\n'
-                    'Strict-Transport-Security: max-age=31536000; includeSubDomains; preload'
-                )
+                    "建议配置:\n"
+                    "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload"
+                ),
             )
             return result
 
@@ -270,23 +267,20 @@ class SecurityHeadersTester(BaseAPITester):
         Returns:
             测试结果或None
         """
-        header_value = self._get_header('content-security-policy')
+        header_value = self._get_header("content-security-policy")
 
         if not header_value:
             result = self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.HEADERS_MISSING_CSP,
                 severity=Severity.HIGH,
-                title='缺少CSP安全头',
-                description=(
-                    '未设置Content-Security-Policy头，'
-                    '无法有效防护XSS攻击。'
-                ),
-                evidence={'header': 'Content-Security-Policy', 'value': None},
+                title="缺少CSP安全头",
+                description=("未设置Content-Security-Policy头，" "无法有效防护XSS攻击。"),
+                evidence={"header": "Content-Security-Policy", "value": None},
                 remediation=(
                     "添加CSP头，最小配置:\n"
                     "Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'"
-                )
+                ),
             )
             return result
 
@@ -295,34 +289,36 @@ class SecurityHeadersTester(BaseAPITester):
 
         for directive in self.INSECURE_CSP_DIRECTIVES:
             if directive in header_value.lower():
-                issues.append(f'包含不安全指令: {directive}')
+                issues.append(f"包含不安全指令: {directive}")
 
         # 检查是否有default-src
-        if 'default-src' not in header_value.lower():
-            issues.append('缺少default-src指令')
+        if "default-src" not in header_value.lower():
+            issues.append("缺少default-src指令")
 
         # 检查report-uri/report-to
-        if 'report' not in header_value.lower():
-            issues.append('未配置CSP报告机制')
+        if "report" not in header_value.lower():
+            issues.append("未配置CSP报告机制")
 
         if issues:
             result = self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.HEADERS_INSECURE_CSP,
                 severity=Severity.MEDIUM,
-                title='CSP配置存在安全问题',
+                title="CSP配置存在安全问题",
                 description=f'CSP存在以下问题: {"; ".join(issues)}',
                 evidence={
-                    'header': 'Content-Security-Policy',
-                    'value': header_value[:200] + '...' if len(header_value) > 200 else header_value,
-                    'issues': issues
+                    "header": "Content-Security-Policy",
+                    "value": (
+                        header_value[:200] + "..." if len(header_value) > 200 else header_value
+                    ),
+                    "issues": issues,
                 },
                 remediation=(
                     "1. 移除 'unsafe-inline' 和 'unsafe-eval'\n"
                     "2. 使用nonce或hash替代内联脚本\n"
                     "3. 配置report-uri收集违规报告\n"
                     "4. 使用CSP Evaluator工具检查配置"
-                )
+                ),
             )
             return result
 
@@ -335,38 +331,37 @@ class SecurityHeadersTester(BaseAPITester):
         Returns:
             测试结果或None
         """
-        header_value = self._get_header('x-frame-options')
+        header_value = self._get_header("x-frame-options")
 
         if not header_value:
             # 检查是否有CSP frame-ancestors
-            csp = self._get_header('content-security-policy')
-            if csp and 'frame-ancestors' in csp.lower():
+            csp = self._get_header("content-security-policy")
+            if csp and "frame-ancestors" in csp.lower():
                 return None  # CSP frame-ancestors替代
 
             result = self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.HEADERS_MISSING_X_FRAME,
                 severity=Severity.MEDIUM,
-                title='缺少X-Frame-Options头',
-                description=(
-                    '未设置X-Frame-Options头，'
-                    '可能遭受点击劫持攻击。'
-                ),
-                evidence={'header': 'X-Frame-Options', 'value': None},
-                remediation='添加: X-Frame-Options: DENY 或 SAMEORIGIN'
+                title="缺少X-Frame-Options头",
+                description=("未设置X-Frame-Options头，" "可能遭受点击劫持攻击。"),
+                evidence={"header": "X-Frame-Options", "value": None},
+                remediation="添加: X-Frame-Options: DENY 或 SAMEORIGIN",
             )
             return result
 
         # 验证值
-        valid_values = ['deny', 'sameorigin']
-        if header_value.lower() not in valid_values and not header_value.lower().startswith('allow-from'):
+        valid_values = ["deny", "sameorigin"]
+        if header_value.lower() not in valid_values and not header_value.lower().startswith(
+            "allow-from"
+        ):
             self._create_result(
                 vulnerable=False,
                 severity=Severity.INFO,
-                title='X-Frame-Options值非标准',
-                description=f'X-Frame-Options值为: {header_value}',
-                evidence={'value': header_value},
-                remediation='建议使用: DENY 或 SAMEORIGIN'
+                title="X-Frame-Options值非标准",
+                description=f"X-Frame-Options值为: {header_value}",
+                evidence={"value": header_value},
+                remediation="建议使用: DENY 或 SAMEORIGIN",
             )
 
         return None
@@ -378,31 +373,28 @@ class SecurityHeadersTester(BaseAPITester):
         Returns:
             测试结果或None
         """
-        header_value = self._get_header('x-content-type-options')
+        header_value = self._get_header("x-content-type-options")
 
         if not header_value:
             result = self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.HEADERS_MISSING_X_CONTENT_TYPE,
                 severity=Severity.LOW,
-                title='缺少X-Content-Type-Options头',
-                description=(
-                    '未设置X-Content-Type-Options头，'
-                    '可能遭受MIME类型嗅探攻击。'
-                ),
-                evidence={'header': 'X-Content-Type-Options', 'value': None},
-                remediation='添加: X-Content-Type-Options: nosniff'
+                title="缺少X-Content-Type-Options头",
+                description=("未设置X-Content-Type-Options头，" "可能遭受MIME类型嗅探攻击。"),
+                evidence={"header": "X-Content-Type-Options", "value": None},
+                remediation="添加: X-Content-Type-Options: nosniff",
             )
             return result
 
-        if header_value.lower() != 'nosniff':
+        if header_value.lower() != "nosniff":
             self._create_result(
                 vulnerable=False,
                 severity=Severity.INFO,
-                title='X-Content-Type-Options值不正确',
-                description=f'X-Content-Type-Options值为: {header_value}',
-                evidence={'value': header_value},
-                remediation='应设置为: nosniff'
+                title="X-Content-Type-Options值不正确",
+                description=f"X-Content-Type-Options值为: {header_value}",
+                evidence={"value": header_value},
+                remediation="应设置为: nosniff",
             )
 
         return None
@@ -414,30 +406,30 @@ class SecurityHeadersTester(BaseAPITester):
         Returns:
             测试结果或None
         """
-        header_value = self._get_header('referrer-policy')
+        header_value = self._get_header("referrer-policy")
 
         if not header_value:
             self._create_result(
                 vulnerable=False,
                 severity=Severity.INFO,
-                title='缺少Referrer-Policy头',
-                description='未设置Referrer-Policy头，使用浏览器默认策略。',
-                evidence={'header': 'Referrer-Policy', 'value': None},
-                remediation='添加: Referrer-Policy: strict-origin-when-cross-origin'
+                title="缺少Referrer-Policy头",
+                description="未设置Referrer-Policy头，使用浏览器默认策略。",
+                evidence={"header": "Referrer-Policy", "value": None},
+                remediation="添加: Referrer-Policy: strict-origin-when-cross-origin",
             )
             return None
 
         # 检查不安全策略
-        unsafe_policies = ['unsafe-url', 'no-referrer-when-downgrade']
+        unsafe_policies = ["unsafe-url", "no-referrer-when-downgrade"]
 
         if header_value.lower() in unsafe_policies:
             self._create_result(
                 vulnerable=True,
                 severity=Severity.LOW,
-                title='Referrer-Policy配置不安全',
-                description=f'Referrer-Policy值为: {header_value}，可能泄露敏感信息。',
-                evidence={'value': header_value},
-                remediation='建议使用: strict-origin-when-cross-origin 或 no-referrer'
+                title="Referrer-Policy配置不安全",
+                description=f"Referrer-Policy值为: {header_value}，可能泄露敏感信息。",
+                evidence={"value": header_value},
+                remediation="建议使用: strict-origin-when-cross-origin 或 no-referrer",
             )
 
         return None
@@ -449,23 +441,23 @@ class SecurityHeadersTester(BaseAPITester):
         Returns:
             测试结果或None
         """
-        header_value = self._get_header('permissions-policy')
+        header_value = self._get_header("permissions-policy")
 
         if not header_value:
             # 检查旧版Feature-Policy
-            header_value = self._get_header('feature-policy')
+            header_value = self._get_header("feature-policy")
 
         if not header_value:
             self._create_result(
                 vulnerable=False,
                 severity=Severity.INFO,
-                title='缺少Permissions-Policy头',
-                description='未设置Permissions-Policy头，未限制浏览器功能。',
-                evidence={'header': 'Permissions-Policy', 'value': None},
+                title="缺少Permissions-Policy头",
+                description="未设置Permissions-Policy头，未限制浏览器功能。",
+                evidence={"header": "Permissions-Policy", "value": None},
                 remediation=(
-                    '添加Permissions-Policy限制敏感功能:\n'
-                    'Permissions-Policy: geolocation=(), camera=(), microphone=()'
-                )
+                    "添加Permissions-Policy限制敏感功能:\n"
+                    "Permissions-Policy: geolocation=(), camera=(), microphone=()"
+                ),
             )
 
         return None
@@ -477,31 +469,31 @@ class SecurityHeadersTester(BaseAPITester):
         Returns:
             测试结果或None
         """
-        coop = self._get_header('cross-origin-opener-policy')
-        coep = self._get_header('cross-origin-embedder-policy')
-        corp = self._get_header('cross-origin-resource-policy')
+        coop = self._get_header("cross-origin-opener-policy")
+        coep = self._get_header("cross-origin-embedder-policy")
+        corp = self._get_header("cross-origin-resource-policy")
 
         missing = []
         if not coop:
-            missing.append('Cross-Origin-Opener-Policy')
+            missing.append("Cross-Origin-Opener-Policy")
         if not coep:
-            missing.append('Cross-Origin-Embedder-Policy')
+            missing.append("Cross-Origin-Embedder-Policy")
         if not corp:
-            missing.append('Cross-Origin-Resource-Policy')
+            missing.append("Cross-Origin-Resource-Policy")
 
         if missing:
             self._create_result(
                 vulnerable=False,
                 severity=Severity.INFO,
-                title='缺少跨域隔离策略',
+                title="缺少跨域隔离策略",
                 description=f'缺少以下跨域策略头: {", ".join(missing)}',
-                evidence={'missing': missing},
+                evidence={"missing": missing},
                 remediation=(
-                    '添加跨域隔离策略:\n'
-                    'Cross-Origin-Opener-Policy: same-origin\n'
-                    'Cross-Origin-Embedder-Policy: require-corp\n'
-                    'Cross-Origin-Resource-Policy: same-origin'
-                )
+                    "添加跨域隔离策略:\n"
+                    "Cross-Origin-Opener-Policy: same-origin\n"
+                    "Cross-Origin-Embedder-Policy: require-corp\n"
+                    "Cross-Origin-Resource-Policy: same-origin"
+                ),
             )
 
         return None
@@ -515,17 +507,17 @@ class SecurityHeadersTester(BaseAPITester):
         weak = []
 
         for header_name, config in self.SECURITY_HEADERS.items():
-            weight = config['weight']
+            weight = config["weight"]
             max_score += weight
 
             header_value = self._get_header(header_name.lower())
 
             header_info = SecurityHeader(
                 name=header_name,
-                value=header_value or '',
+                value=header_value or "",
                 present=bool(header_value),
                 secure=False,
-                max_score=weight
+                max_score=weight,
             )
 
             if header_value:
@@ -541,7 +533,7 @@ class SecurityHeadersTester(BaseAPITester):
                     weak.append(header_name)
             else:
                 header_info.score = 0
-                if config['required']:
+                if config["required"]:
                     missing.append(header_name)
 
             headers_info[header_name] = header_info
@@ -550,15 +542,15 @@ class SecurityHeadersTester(BaseAPITester):
         percentage = (total_score / max_score) * 100 if max_score > 0 else 0
 
         if percentage >= 90:
-            grade = 'A'
+            grade = "A"
         elif percentage >= 80:
-            grade = 'B'
+            grade = "B"
         elif percentage >= 70:
-            grade = 'C'
+            grade = "C"
         elif percentage >= 60:
-            grade = 'D'
+            grade = "D"
         else:
-            grade = 'F'
+            grade = "F"
 
         self._security_score = SecurityScore(
             total_score=total_score,
@@ -566,13 +558,11 @@ class SecurityHeadersTester(BaseAPITester):
             grade=grade,
             headers=headers_info,
             missing_headers=missing,
-            weak_headers=weak
+            weak_headers=weak,
         )
 
     def _evaluate_header_config(
-        self,
-        header_name: str,
-        header_value: str
+        self, header_name: str, header_value: str
     ) -> Tuple[float, List[str], List[str], bool]:
         """根据配置质量评估安全头得分"""
         value = header_value.strip()
@@ -581,7 +571,7 @@ class SecurityHeadersTester(BaseAPITester):
         recommendations: List[str] = []
         ratio = 1.0
 
-        if header_name == 'Strict-Transport-Security':
+        if header_name == "Strict-Transport-Security":
             max_age = self._extract_max_age(lower)
             if not max_age:
                 ratio = 0.5
@@ -592,17 +582,17 @@ class SecurityHeadersTester(BaseAPITester):
                 issues.append("HSTS max-age too low")
                 recommendations.append("Increase max-age to 31536000 (1 year)")
 
-            if 'includesubdomains' not in lower:
+            if "includesubdomains" not in lower:
                 ratio -= 0.2
                 issues.append("HSTS missing includeSubDomains")
                 recommendations.append("Add includeSubDomains to HSTS")
 
-            if 'preload' not in lower:
+            if "preload" not in lower:
                 ratio -= 0.1
                 recommendations.append("Consider enabling HSTS preload")
 
-        elif header_name == 'Content-Security-Policy':
-            if 'default-src' not in lower:
+        elif header_name == "Content-Security-Policy":
+            if "default-src" not in lower:
                 ratio = min(ratio, 0.7)
                 issues.append("CSP missing default-src")
                 recommendations.append("Add default-src 'self' or stricter directives")
@@ -612,35 +602,35 @@ class SecurityHeadersTester(BaseAPITester):
                 issues.append("CSP contains insecure directives")
                 recommendations.append("Remove unsafe-inline/unsafe-eval and wildcards")
 
-            if 'report-uri' not in lower and 'report-to' not in lower:
+            if "report-uri" not in lower and "report-to" not in lower:
                 ratio -= 0.1
                 recommendations.append("Add report-uri or report-to for CSP reporting")
 
-        elif header_name == 'X-Frame-Options':
-            valid = ['deny', 'sameorigin']
-            if lower not in valid and not lower.startswith('allow-from'):
+        elif header_name == "X-Frame-Options":
+            valid = ["deny", "sameorigin"]
+            if lower not in valid and not lower.startswith("allow-from"):
                 ratio = 0.6
                 issues.append("X-Frame-Options non-standard value")
                 recommendations.append("Use DENY or SAMEORIGIN")
 
-        elif header_name == 'X-Content-Type-Options':
-            if lower != 'nosniff':
+        elif header_name == "X-Content-Type-Options":
+            if lower != "nosniff":
                 ratio = 0.6
                 issues.append("X-Content-Type-Options should be nosniff")
                 recommendations.append("Set X-Content-Type-Options: nosniff")
 
-        elif header_name == 'X-XSS-Protection':
-            if lower == '0':
+        elif header_name == "X-XSS-Protection":
+            if lower == "0":
                 ratio = 0.3
                 issues.append("X-XSS-Protection disabled")
                 recommendations.append("Set X-XSS-Protection: 1; mode=block")
-            elif lower != '1; mode=block':
+            elif lower != "1; mode=block":
                 ratio = 0.6
                 recommendations.append("Use X-XSS-Protection: 1; mode=block")
 
-        elif header_name == 'Referrer-Policy':
-            unsafe = ['unsafe-url', 'no-referrer-when-downgrade']
-            strong = ['no-referrer', 'strict-origin', 'strict-origin-when-cross-origin']
+        elif header_name == "Referrer-Policy":
+            unsafe = ["unsafe-url", "no-referrer-when-downgrade"]
+            strong = ["no-referrer", "strict-origin", "strict-origin-when-cross-origin"]
             if lower in unsafe:
                 ratio = 0.4
                 issues.append("Referrer-Policy is too permissive")
@@ -649,23 +639,23 @@ class SecurityHeadersTester(BaseAPITester):
                 ratio = 0.7
                 recommendations.append("Prefer strict-origin-when-cross-origin")
 
-        elif header_name == 'Permissions-Policy':
-            if '()' not in lower and '=' in lower:
+        elif header_name == "Permissions-Policy":
+            if "()" not in lower and "=" in lower:
                 ratio = 0.7
                 recommendations.append("Restrict sensitive features with ()")
 
-        elif header_name == 'Cross-Origin-Opener-Policy':
-            if lower not in ['same-origin', 'same-origin-allow-popups']:
+        elif header_name == "Cross-Origin-Opener-Policy":
+            if lower not in ["same-origin", "same-origin-allow-popups"]:
                 ratio = 0.6
                 recommendations.append("Use same-origin or same-origin-allow-popups")
 
-        elif header_name == 'Cross-Origin-Embedder-Policy':
-            if lower != 'require-corp':
+        elif header_name == "Cross-Origin-Embedder-Policy":
+            if lower != "require-corp":
                 ratio = 0.6
                 recommendations.append("Use Cross-Origin-Embedder-Policy: require-corp")
 
-        elif header_name == 'Cross-Origin-Resource-Policy':
-            if lower not in ['same-origin', 'same-site']:
+        elif header_name == "Cross-Origin-Resource-Policy":
+            if lower not in ["same-origin", "same-site"]:
                 ratio = 0.6
                 recommendations.append("Use Cross-Origin-Resource-Policy: same-origin")
 
@@ -688,7 +678,7 @@ class SecurityHeadersTester(BaseAPITester):
         # 查找别名
         for header_name, config in self.SECURITY_HEADERS.items():
             if name.lower() == header_name.lower():
-                for alias in config.get('aliases', []):
+                for alias in config.get("aliases", []):
                     if alias in self._response_headers:
                         return self._response_headers[alias]
 
@@ -696,7 +686,7 @@ class SecurityHeadersTester(BaseAPITester):
 
     def _extract_max_age(self, hsts_value: str) -> Optional[int]:
         """从HSTS值中提取max-age"""
-        match = re.search(r'max-age=(\d+)', hsts_value, re.IGNORECASE)
+        match = re.search(r"max-age=(\d+)", hsts_value, re.IGNORECASE)
         if match:
             return int(match.group(1))
         return None
@@ -718,17 +708,17 @@ class SecurityHeadersTester(BaseAPITester):
         self_score = self.get_security_score()
 
         comparison = {
-            'target1': {
-                'url': self.target,
-                'score': self_score.total_score if self_score else 0,
-                'grade': self_score.grade if self_score else 'F'
+            "target1": {
+                "url": self.target,
+                "score": self_score.total_score if self_score else 0,
+                "grade": self_score.grade if self_score else "F",
             },
-            'target2': {
-                'url': other_url,
-                'score': other_score.total_score if other_score else 0,
-                'grade': other_score.grade if other_score else 'F'
+            "target2": {
+                "url": other_url,
+                "score": other_score.total_score if other_score else 0,
+                "grade": other_score.grade if other_score else "F",
             },
-            'header_comparison': {}
+            "header_comparison": {},
         }
 
         if self_score and other_score:
@@ -736,11 +726,11 @@ class SecurityHeadersTester(BaseAPITester):
                 h1 = self_score.headers.get(header_name)
                 h2 = other_score.headers.get(header_name)
 
-                comparison['header_comparison'][header_name] = {
-                    'target1_present': h1.present if h1 else False,
-                    'target2_present': h2.present if h2 else False,
-                    'target1_value': h1.value if h1 else None,
-                    'target2_value': h2.value if h2 else None,
+                comparison["header_comparison"][header_name] = {
+                    "target1_present": h1.present if h1 else False,
+                    "target2_present": h2.present if h2 else False,
+                    "target1_value": h1.value if h1 else None,
+                    "target2_value": h2.value if h2 else None,
                 }
 
         return comparison
@@ -768,16 +758,22 @@ class SecurityHeadersTester(BaseAPITester):
             icon = "[+]" if header_info.present else "[-]"
             lines.append(f"{icon} {header_name}: {status}")
             if header_info.value:
-                value_preview = header_info.value[:50] + '...' if len(header_info.value) > 50 else header_info.value
+                value_preview = (
+                    header_info.value[:50] + "..."
+                    if len(header_info.value) > 50
+                    else header_info.value
+                )
                 lines.append(f"    Value: {value_preview}")
 
         if score.missing_headers:
-            lines.extend([
-                "",
-                "-" * 60,
-                "缺失的必需安全头:",
-                "-" * 60,
-            ])
+            lines.extend(
+                [
+                    "",
+                    "-" * 60,
+                    "缺失的必需安全头:",
+                    "-" * 60,
+                ]
+            )
             for header in score.missing_headers:
                 lines.append(f"  - {header}")
 
@@ -802,13 +798,13 @@ def quick_headers_test(target: str) -> Dict[str, Any]:
     score = tester.get_security_score()
 
     return {
-        'summary': tester.get_summary().to_dict(),
-        'score': {
-            'total': score.total_score if score else 0,
-            'max': score.max_score if score else 0,
-            'grade': score.grade if score else 'F',
-            'missing': score.missing_headers if score else [],
-        }
+        "summary": tester.get_summary().to_dict(),
+        "score": {
+            "total": score.total_score if score else 0,
+            "max": score.max_score if score else 0,
+            "grade": score.grade if score else "F",
+            "missing": score.missing_headers if score else [],
+        },
     }
 
 
@@ -829,9 +825,9 @@ def compare_security_headers(url1: str, url2: str) -> Dict[str, Any]:
 
 
 __all__ = [
-    'SecurityHeadersTester',
-    'SecurityHeader',
-    'SecurityScore',
-    'quick_headers_test',
-    'compare_security_headers',
+    "SecurityHeadersTester",
+    "SecurityHeader",
+    "SecurityScore",
+    "quick_headers_test",
+    "compare_security_headers",
 ]

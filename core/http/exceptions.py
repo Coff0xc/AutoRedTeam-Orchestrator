@@ -4,7 +4,7 @@ HTTP 相关异常定义
 提供统一的 HTTP 层异常类型，便于精确捕获和处理网络错误
 """
 
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 
 class HTTPError(Exception):
@@ -15,7 +15,7 @@ class HTTPError(Exception):
         message: str,
         status_code: Optional[int] = None,
         url: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         """
         初始化 HTTP 异常
@@ -55,7 +55,7 @@ class HTTPError(Exception):
             "message": self.message,
             "status_code": self.status_code,
             "url": self.url,
-            "details": self.details
+            "details": self.details,
         }
 
 
@@ -67,7 +67,7 @@ class TimeoutError(HTTPError):
         message: str = "请求超时",
         url: Optional[str] = None,
         timeout: Optional[float] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         """
         初始化超时异常
@@ -93,7 +93,7 @@ class ConnectionError(HTTPError):
         message: str = "连接失败",
         url: Optional[str] = None,
         reason: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         """
         初始化连接异常
@@ -118,7 +118,7 @@ class SSLError(HTTPError):
         self,
         message: str = "SSL 验证失败",
         url: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(message=message, url=url, details=details)
 
@@ -131,7 +131,7 @@ class ProxyError(HTTPError):
         message: str = "代理连接失败",
         url: Optional[str] = None,
         proxy: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         """
         初始化代理异常
@@ -157,7 +157,7 @@ class RedirectError(HTTPError):
         message: str = "重定向错误",
         url: Optional[str] = None,
         redirect_count: Optional[int] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         _details = details or {}
         if redirect_count is not None:
@@ -174,7 +174,7 @@ class RequestError(HTTPError):
         message: str = "请求失败",
         url: Optional[str] = None,
         method: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         _details = details or {}
         if method:
@@ -191,14 +191,9 @@ class ResponseError(HTTPError):
         message: str = "响应处理失败",
         status_code: Optional[int] = None,
         url: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__(
-            message=message,
-            status_code=status_code,
-            url=url,
-            details=details
-        )
+        super().__init__(message=message, status_code=status_code, url=url, details=details)
 
 
 class RateLimitError(HTTPError):
@@ -209,7 +204,7 @@ class RateLimitError(HTTPError):
         message: str = "请求被限流",
         url: Optional[str] = None,
         retry_after: Optional[float] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         """
         初始化限流异常
@@ -236,7 +231,7 @@ class AuthenticationError(HTTPError):
         status_code: Optional[int] = None,
         url: Optional[str] = None,
         auth_type: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         """
         初始化认证异常
@@ -251,12 +246,7 @@ class AuthenticationError(HTTPError):
         _details = details or {}
         if auth_type:
             _details["auth_type"] = auth_type
-        super().__init__(
-            message=message,
-            status_code=status_code or 401,
-            url=url,
-            details=_details
-        )
+        super().__init__(message=message, status_code=status_code or 401, url=url, details=_details)
         self.auth_type = auth_type
 
 
@@ -268,14 +258,9 @@ class ServerError(HTTPError):
         message: str = "服务器错误",
         status_code: Optional[int] = None,
         url: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__(
-            message=message,
-            status_code=status_code or 500,
-            url=url,
-            details=details
-        )
+        super().__init__(message=message, status_code=status_code or 500, url=url, details=details)
 
 
 class ClientError(HTTPError):
@@ -286,14 +271,9 @@ class ClientError(HTTPError):
         message: str = "客户端错误",
         status_code: Optional[int] = None,
         url: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__(
-            message=message,
-            status_code=status_code or 400,
-            url=url,
-            details=details
-        )
+        super().__init__(message=message, status_code=status_code or 400, url=url, details=details)
 
 
 # 异常类型映射 - 用于从状态码创建对应的异常
@@ -312,7 +292,7 @@ def exception_from_status_code(
     status_code: int,
     message: Optional[str] = None,
     url: Optional[str] = None,
-    details: Optional[Dict[str, Any]] = None
+    details: Optional[Dict[str, Any]] = None,
 ) -> HTTPError:
     """
     根据 HTTP 状态码创建对应的异常
@@ -332,17 +312,13 @@ def exception_from_status_code(
     if exc_class:
         # RateLimitError 不接受 status_code 参数（固定为 429）
         if exc_class == RateLimitError:
-            return exc_class(
-                message=message or f"HTTP {status_code}",
-                url=url,
-                details=details
-            )
+            return exc_class(message=message or f"HTTP {status_code}", url=url, details=details)
         # 其他异常类正常传递 status_code
         return exc_class(
             message=message or f"HTTP {status_code}",
             status_code=status_code,
             url=url,
-            details=details
+            details=details,
         )
 
     # 按状态码范围判断
@@ -351,14 +327,14 @@ def exception_from_status_code(
             message=message or f"客户端错误 {status_code}",
             status_code=status_code,
             url=url,
-            details=details
+            details=details,
         )
     elif status_code >= 500:
         return ServerError(
             message=message or f"服务器错误 {status_code}",
             status_code=status_code,
             url=url,
-            details=details
+            details=details,
         )
 
     # 默认返回基础异常
@@ -366,7 +342,7 @@ def exception_from_status_code(
         message=message or f"HTTP 错误 {status_code}",
         status_code=status_code,
         url=url,
-        details=details
+        details=details,
     )
 
 

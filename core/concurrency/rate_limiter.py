@@ -7,13 +7,13 @@
 - 自适应限流 (Adaptive Rate Limiting)
 """
 
-import time
 import asyncio
+import logging
 import threading
-from typing import Optional
+import time
 from collections import deque
 from dataclasses import dataclass, field
-import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +29,7 @@ class TokenBucket:
     - 支持突发流量（桶内有足够令牌时）
     """
 
-    def __init__(
-        self,
-        rate: float,
-        capacity: Optional[float] = None
-    ):
+    def __init__(self, rate: float, capacity: Optional[float] = None):
         """
         初始化令牌桶
 
@@ -186,11 +182,7 @@ class SlidingWindowRateLimiter:
     - 新请求只有在窗口内请求数未达上限时才允许
     """
 
-    def __init__(
-        self,
-        max_requests: int,
-        window_seconds: float
-    ):
+    def __init__(self, max_requests: int, window_seconds: float):
         """
         初始化滑动窗口限流器
 
@@ -329,6 +321,7 @@ class SlidingWindowRateLimiter:
 @dataclass
 class AdaptiveMetrics:
     """自适应限流指标"""
+
     success_count: int = 0
     failure_count: int = 0
     consecutive_successes: int = 0
@@ -355,7 +348,7 @@ class AdaptiveRateLimiter:
         decrease_factor: float = 0.5,
         success_threshold: int = 10,
         failure_threshold: int = 3,
-        cooldown_seconds: float = 1.0
+        cooldown_seconds: float = 1.0,
     ):
         """
         初始化自适应限流器
@@ -477,20 +470,17 @@ class AdaptiveRateLimiter:
         """统计信息"""
         with self._lock:
             total = self._metrics.success_count + self._metrics.failure_count
-            success_rate = (
-                self._metrics.success_count / total
-                if total > 0 else 1.0
-            )
+            success_rate = self._metrics.success_count / total if total > 0 else 1.0
 
             return {
-                'current_rate': self._current_rate,
-                'min_rate': self.min_rate,
-                'max_rate': self.max_rate,
-                'success_count': self._metrics.success_count,
-                'failure_count': self._metrics.failure_count,
-                'success_rate': success_rate,
-                'consecutive_successes': self._metrics.consecutive_successes,
-                'consecutive_failures': self._metrics.consecutive_failures
+                "current_rate": self._current_rate,
+                "min_rate": self.min_rate,
+                "max_rate": self.max_rate,
+                "success_count": self._metrics.success_count,
+                "failure_count": self._metrics.failure_count,
+                "success_rate": success_rate,
+                "consecutive_successes": self._metrics.consecutive_successes,
+                "consecutive_failures": self._metrics.consecutive_failures,
             }
 
     def reset(self) -> None:
@@ -519,10 +509,7 @@ class RateLimiterGroup:
         self._lock = threading.Lock()
 
     def get(
-        self,
-        name: str,
-        rate: Optional[float] = None,
-        limiter_type: str = 'token_bucket'
+        self, name: str, rate: Optional[float] = None, limiter_type: str = "token_bucket"
     ) -> TokenBucket:
         """
         获取或创建命名限流器
@@ -539,17 +526,14 @@ class RateLimiterGroup:
             if name not in self._limiters:
                 actual_rate = rate if rate is not None else self.default_rate
 
-                if limiter_type == 'token_bucket':
+                if limiter_type == "token_bucket":
                     self._limiters[name] = TokenBucket(rate=actual_rate)
-                elif limiter_type == 'sliding_window':
+                elif limiter_type == "sliding_window":
                     self._limiters[name] = SlidingWindowRateLimiter(
-                        max_requests=int(actual_rate),
-                        window_seconds=1.0
+                        max_requests=int(actual_rate), window_seconds=1.0
                     )
-                elif limiter_type == 'adaptive':
-                    self._limiters[name] = AdaptiveRateLimiter(
-                        initial_rate=actual_rate
-                    )
+                elif limiter_type == "adaptive":
+                    self._limiters[name] = AdaptiveRateLimiter(initial_rate=actual_rate)
                 else:
                     raise ValueError(f"未知的限流器类型: {limiter_type}")
 
@@ -597,10 +581,7 @@ def get_limiter_group() -> RateLimiterGroup:
         return _global_limiter_group
 
 
-def rate_limit(
-    rate: float = 10.0,
-    name: Optional[str] = None
-):
+def rate_limit(rate: float = 10.0, name: Optional[str] = None):
     """
     限流装饰器
 

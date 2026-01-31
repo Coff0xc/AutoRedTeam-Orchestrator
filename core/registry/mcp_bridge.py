@@ -8,16 +8,14 @@ MCP协议桥接模块
 
 from __future__ import annotations
 
-import logging
 import asyncio
 import functools
-from typing import (
-    Any, Callable, Dict, List, Optional, Set, Type, TYPE_CHECKING
-)
+import logging
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Type
 
-from .categories import ToolCategory
 from .base import BaseTool, FunctionTool, ToolMetadata, ToolParameter, ToolResult
+from .categories import ToolCategory
 
 if TYPE_CHECKING:
     from .registry import ToolRegistry
@@ -37,6 +35,7 @@ class MCPToolSchema:
         description: 工具描述
         inputSchema: 输入参数的JSON Schema
     """
+
     name: str
     description: str
     inputSchema: Dict[str, Any]
@@ -48,9 +47,9 @@ class MCPToolSchema:
             Schema字典
         """
         return {
-            'name': self.name,
-            'description': self.description,
-            'inputSchema': self.inputSchema,
+            "name": self.name,
+            "description": self.description,
+            "inputSchema": self.inputSchema,
         }
 
 
@@ -78,11 +77,7 @@ class MCPBridge:
         bridge.register_function(my_scanner, ToolCategory.RECON)
     """
 
-    def __init__(
-        self,
-        mcp_server: Any = None,
-        registry: Optional['ToolRegistry'] = None
-    ):
+    def __init__(self, mcp_server: Any = None, registry: Optional["ToolRegistry"] = None):
         """初始化桥接器
 
         Args:
@@ -100,10 +95,11 @@ class MCPBridge:
         return self._mcp
 
     @property
-    def registry(self) -> 'ToolRegistry':
+    def registry(self) -> "ToolRegistry":
         """获取注册表实例"""
         if self._registry is None:
             from .registry import get_registry
+
             self._registry = get_registry()
         return self._registry
 
@@ -123,9 +119,7 @@ class MCPBridge:
             self._pending_tools.clear()
 
     def register_from_registry(
-        self,
-        categories: Optional[List[ToolCategory]] = None,
-        exclude: Optional[List[str]] = None
+        self, categories: Optional[List[ToolCategory]] = None, exclude: Optional[List[str]] = None
     ) -> int:
         """从注册表批量注册工具到MCP
 
@@ -167,12 +161,7 @@ class MCPBridge:
         logger.info(f"从注册表同步 {count} 个工具到MCP")
         return count
 
-    def register_tool(
-        self,
-        tool: BaseTool,
-        to_registry: bool = True,
-        to_mcp: bool = True
-    ) -> None:
+    def register_tool(self, tool: BaseTool, to_registry: bool = True, to_mcp: bool = True) -> None:
         """注册工具
 
         Args:
@@ -203,7 +192,7 @@ class MCPBridge:
         description: Optional[str] = None,
         to_registry: bool = True,
         to_mcp: bool = True,
-        **kwargs
+        **kwargs,
     ) -> BaseTool:
         """注册函数为工具
 
@@ -220,11 +209,7 @@ class MCPBridge:
             创建的工具实例
         """
         tool = FunctionTool.from_function(
-            fn,
-            category=category,
-            name=name,
-            description=description,
-            **kwargs
+            fn, category=category, name=name, description=description, **kwargs
         )
         self.register_tool(tool, to_registry=to_registry, to_mcp=to_mcp)
         return tool
@@ -270,16 +255,20 @@ class MCPBridge:
         """
         # 判断工具是否支持异步
         if tool.metadata.async_support:
+
             @functools.wraps(tool.execute)
             async def async_wrapper(**kwargs) -> Any:
                 result = await tool.async_execute(**kwargs)
                 return self._format_mcp_result(result)
+
             return async_wrapper
         else:
+
             @functools.wraps(tool.execute)
             def sync_wrapper(**kwargs) -> Any:
                 result = tool.execute(**kwargs)
                 return self._format_mcp_result(result)
+
             return sync_wrapper
 
     def _format_mcp_result(self, result: ToolResult) -> Any:
@@ -296,9 +285,9 @@ class MCPBridge:
         else:
             # 对于错误，返回包含错误信息的字典
             return {
-                'success': False,
-                'error': result.error,
-                'data': result.data,
+                "success": False,
+                "error": result.error,
+                "data": result.data,
             }
 
     def get_mcp_schema(self, tool: BaseTool) -> MCPToolSchema:
@@ -346,14 +335,15 @@ class MCPBridge:
             统计信息字典
         """
         return {
-            'registry_count': len(self.registry),
-            'mcp_registered': self.registered_count,
-            'pending_count': len(self._pending_tools),
-            'mcp_bound': self._mcp is not None,
+            "registry_count": len(self.registry),
+            "mcp_registered": self.registered_count,
+            "pending_count": len(self._pending_tools),
+            "mcp_bound": self._mcp is not None,
         }
 
 
 # ============ 便捷函数 ============
+
 
 def create_mcp_tool(
     mcp_server: Any,
@@ -361,7 +351,7 @@ def create_mcp_tool(
     description: str,
     category: ToolCategory,
     parameters: Optional[List[ToolParameter]] = None,
-    **kwargs
+    **kwargs,
 ) -> Callable:
     """创建MCP工具装饰器
 
@@ -383,6 +373,7 @@ def create_mcp_tool(
     Returns:
         装饰器函数
     """
+
     def decorator(fn: Callable) -> Callable:
         from .registry import get_registry
 
@@ -392,11 +383,7 @@ def create_mcp_tool(
             params = FunctionTool._infer_parameters(fn)
 
         metadata = ToolMetadata(
-            name=name,
-            description=description,
-            category=category,
-            parameters=params,
-            **kwargs
+            name=name, description=description, category=category, parameters=params, **kwargs
         )
 
         # 创建工具并注册
@@ -416,10 +403,7 @@ def create_mcp_tool(
 
 
 def mcp_tool(
-    category: ToolCategory,
-    name: Optional[str] = None,
-    description: Optional[str] = None,
-    **kwargs
+    category: ToolCategory, name: Optional[str] = None, description: Optional[str] = None, **kwargs
 ) -> Callable:
     """简化的MCP工具装饰器
 
@@ -440,15 +424,12 @@ def mcp_tool(
     Returns:
         装饰器函数
     """
+
     def decorator(fn: Callable) -> Callable:
         from .registry import get_registry
 
         tool = FunctionTool.from_function(
-            fn,
-            category=category,
-            name=name,
-            description=description,
-            **kwargs
+            fn, category=category, name=name, description=description, **kwargs
         )
         get_registry().register(tool)
 
@@ -514,7 +495,7 @@ class MCPToolBuilder:
             name: 工具名称
         """
         self._name = name
-        self._description = ''
+        self._description = ""
         self._category = ToolCategory.MISC
         self._parameters: List[ToolParameter] = []
         self._timeout = 60.0
@@ -524,12 +505,12 @@ class MCPToolBuilder:
         self._requires_auth = False
         self._examples: List[Dict] = []
 
-    def description(self, desc: str) -> 'MCPToolBuilder':
+    def description(self, desc: str) -> "MCPToolBuilder":
         """设置描述"""
         self._description = desc
         return self
 
-    def category(self, cat: ToolCategory) -> 'MCPToolBuilder':
+    def category(self, cat: ToolCategory) -> "MCPToolBuilder":
         """设置分类"""
         self._category = cat
         return self
@@ -537,51 +518,53 @@ class MCPToolBuilder:
     def param(
         self,
         name: str,
-        param_type: 'ParamType',
+        param_type: "ParamType",
         description: str,
         required: bool = True,
         default: Any = None,
-        **kwargs
-    ) -> 'MCPToolBuilder':
+        **kwargs,
+    ) -> "MCPToolBuilder":
         """添加参数"""
         from .base import ParamType as PT
 
-        self._parameters.append(ToolParameter(
-            name=name,
-            type=param_type,
-            description=description,
-            required=required,
-            default=default,
-            **kwargs
-        ))
+        self._parameters.append(
+            ToolParameter(
+                name=name,
+                type=param_type,
+                description=description,
+                required=required,
+                default=default,
+                **kwargs,
+            )
+        )
         return self
 
-    def timeout(self, seconds: float) -> 'MCPToolBuilder':
+    def timeout(self, seconds: float) -> "MCPToolBuilder":
         """设置超时"""
         self._timeout = seconds
         return self
 
-    def tags(self, *tags: str) -> 'MCPToolBuilder':
+    def tags(self, *tags: str) -> "MCPToolBuilder":
         """添加标签"""
         self._tags.extend(tags)
         return self
 
-    def async_support(self, enabled: bool = True) -> 'MCPToolBuilder':
+    def async_support(self, enabled: bool = True) -> "MCPToolBuilder":
         """设置异步支持"""
         self._async_support = enabled
         return self
 
-    def requires_auth(self, required: bool = True) -> 'MCPToolBuilder':
+    def requires_auth(self, required: bool = True) -> "MCPToolBuilder":
         """设置认证要求"""
         self._requires_auth = required
         return self
 
-    def example(self, **kwargs) -> 'MCPToolBuilder':
+    def example(self, **kwargs) -> "MCPToolBuilder":
         """添加使用示例"""
         self._examples.append(kwargs)
         return self
 
-    def handler(self, fn: Callable) -> 'MCPToolBuilder':
+    def handler(self, fn: Callable) -> "MCPToolBuilder":
         """设置处理函数"""
         self._handler = fn
         return self
@@ -617,6 +600,7 @@ class MCPToolBuilder:
 
         if register:
             from .registry import get_registry
+
             get_registry().register(tool)
 
         return tool

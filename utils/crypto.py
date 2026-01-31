@@ -26,10 +26,10 @@ import hashlib
 import hmac
 import secrets
 import string
-from typing import Union, Optional
+from typing import Optional, Union
 
 
-def _ensure_bytes(data: Union[str, bytes], encoding: str = 'utf-8') -> bytes:
+def _ensure_bytes(data: Union[str, bytes], encoding: str = "utf-8") -> bytes:
     """确保数据为bytes类型"""
     if isinstance(data, str):
         return data.encode(encoding)
@@ -38,7 +38,8 @@ def _ensure_bytes(data: Union[str, bytes], encoding: str = 'utf-8') -> bytes:
 
 # ==================== 哈希函数 ====================
 
-def md5(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
+
+def md5(data: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     计算MD5哈希
 
@@ -55,7 +56,7 @@ def md5(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
     return hashlib.md5(data_bytes).hexdigest()
 
 
-def sha1(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
+def sha1(data: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     计算SHA1哈希
 
@@ -72,7 +73,7 @@ def sha1(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
     return hashlib.sha1(data_bytes).hexdigest()
 
 
-def sha256(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
+def sha256(data: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     计算SHA256哈希
 
@@ -87,7 +88,7 @@ def sha256(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
     return hashlib.sha256(data_bytes).hexdigest()
 
 
-def sha384(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
+def sha384(data: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     计算SHA384哈希
 
@@ -102,7 +103,7 @@ def sha384(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
     return hashlib.sha384(data_bytes).hexdigest()
 
 
-def sha512(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
+def sha512(data: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     计算SHA512哈希
 
@@ -117,7 +118,7 @@ def sha512(data: Union[str, bytes], encoding: str = 'utf-8') -> str:
     return hashlib.sha512(data_bytes).hexdigest()
 
 
-def blake2b(data: Union[str, bytes], digest_size: int = 64, encoding: str = 'utf-8') -> str:
+def blake2b(data: Union[str, bytes], digest_size: int = 64, encoding: str = "utf-8") -> str:
     """
     计算BLAKE2b哈希
 
@@ -133,7 +134,7 @@ def blake2b(data: Union[str, bytes], digest_size: int = 64, encoding: str = 'utf
     return hashlib.blake2b(data_bytes, digest_size=digest_size).hexdigest()
 
 
-def blake2s(data: Union[str, bytes], digest_size: int = 32, encoding: str = 'utf-8') -> str:
+def blake2s(data: Union[str, bytes], digest_size: int = 32, encoding: str = "utf-8") -> str:
     """
     计算BLAKE2s哈希
 
@@ -149,7 +150,7 @@ def blake2s(data: Union[str, bytes], digest_size: int = 32, encoding: str = 'utf
     return hashlib.blake2s(data_bytes, digest_size=digest_size).hexdigest()
 
 
-def hash_file(filepath: str, algorithm: str = 'sha256', chunk_size: int = 8192) -> str:
+def hash_file(filepath: str, algorithm: str = "sha256", chunk_size: int = 8192) -> str:
     """
     计算文件哈希
 
@@ -163,7 +164,7 @@ def hash_file(filepath: str, algorithm: str = 'sha256', chunk_size: int = 8192) 
     """
     hasher = hashlib.new(algorithm)
 
-    with open(filepath, 'rb') as f:
+    with open(filepath, "rb") as f:
         while chunk := f.read(chunk_size):
             hasher.update(chunk)
 
@@ -172,7 +173,8 @@ def hash_file(filepath: str, algorithm: str = 'sha256', chunk_size: int = 8192) 
 
 # ==================== HMAC函数 ====================
 
-def hmac_md5(data: Union[str, bytes], key: Union[str, bytes], encoding: str = 'utf-8') -> str:
+
+def hmac_md5(data: Union[str, bytes], key: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     计算HMAC-MD5
 
@@ -189,7 +191,7 @@ def hmac_md5(data: Union[str, bytes], key: Union[str, bytes], encoding: str = 'u
     return hmac.new(key_bytes, data_bytes, hashlib.md5).hexdigest()
 
 
-def hmac_sha1(data: Union[str, bytes], key: Union[str, bytes], encoding: str = 'utf-8') -> str:
+def hmac_sha1(data: Union[str, bytes], key: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     计算HMAC-SHA1
 
@@ -206,7 +208,7 @@ def hmac_sha1(data: Union[str, bytes], key: Union[str, bytes], encoding: str = '
     return hmac.new(key_bytes, data_bytes, hashlib.sha1).hexdigest()
 
 
-def hmac_sha256(data: Union[str, bytes], key: Union[str, bytes], encoding: str = 'utf-8') -> str:
+def hmac_sha256(data: Union[str, bytes], key: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     计算HMAC-SHA256
 
@@ -223,7 +225,7 @@ def hmac_sha256(data: Union[str, bytes], key: Union[str, bytes], encoding: str =
     return hmac.new(key_bytes, data_bytes, hashlib.sha256).hexdigest()
 
 
-def hmac_sha512(data: Union[str, bytes], key: Union[str, bytes], encoding: str = 'utf-8') -> str:
+def hmac_sha512(data: Union[str, bytes], key: Union[str, bytes], encoding: str = "utf-8") -> str:
     """
     计算HMAC-SHA512
 
@@ -241,10 +243,7 @@ def hmac_sha512(data: Union[str, bytes], key: Union[str, bytes], encoding: str =
 
 
 def verify_hmac(
-    data: Union[str, bytes],
-    key: Union[str, bytes],
-    signature: str,
-    algorithm: str = 'sha256'
+    data: Union[str, bytes], key: Union[str, bytes], signature: str, algorithm: str = "sha256"
 ) -> bool:
     """
     验证HMAC签名
@@ -269,13 +268,14 @@ def verify_hmac(
 
 # ==================== 随机数生成 ====================
 
+
 def random_string(
     length: int = 16,
     charset: Optional[str] = None,
     include_upper: bool = True,
     include_lower: bool = True,
     include_digits: bool = True,
-    include_special: bool = False
+    include_special: bool = False,
 ) -> str:
     """
     生成随机字符串
@@ -296,7 +296,7 @@ def random_string(
     if charset:
         chars = charset
     else:
-        chars = ''
+        chars = ""
         if include_upper:
             chars += string.ascii_uppercase
         if include_lower:
@@ -309,7 +309,7 @@ def random_string(
         if not chars:
             chars = string.ascii_letters + string.digits
 
-    return ''.join(secrets.choice(chars) for _ in range(length))
+    return "".join(secrets.choice(chars) for _ in range(length))
 
 
 def random_bytes(length: int = 16) -> bytes:
@@ -363,6 +363,7 @@ def random_uuid() -> str:
         UUID字符串
     """
     import uuid
+
     return str(uuid.uuid4())
 
 
@@ -381,6 +382,7 @@ def random_token(length: int = 32) -> str:
 
 # ==================== XOR加密 ====================
 
+
 def xor_encrypt(data: bytes, key: bytes) -> bytes:
     """
     XOR加密/解密
@@ -398,7 +400,7 @@ def xor_encrypt(data: bytes, key: bytes) -> bytes:
     return bytes(d ^ key[i % key_len] for i, d in enumerate(data))
 
 
-def xor_encrypt_str(data: str, key: str, encoding: str = 'utf-8') -> bytes:
+def xor_encrypt_str(data: str, key: str, encoding: str = "utf-8") -> bytes:
     """
     XOR加密字符串
 
@@ -453,6 +455,7 @@ def rolling_xor(data: bytes, initial_key: int = 0) -> bytes:
 
 # ==================== 简单加密工具 ====================
 
+
 def caesar_cipher(text: str, shift: int = 3, decrypt: bool = False) -> str:
     """
     凯撒密码加密/解密
@@ -471,12 +474,12 @@ def caesar_cipher(text: str, shift: int = 3, decrypt: bool = False) -> str:
     result = []
     for char in text:
         if char.isalpha():
-            base = ord('A') if char.isupper() else ord('a')
+            base = ord("A") if char.isupper() else ord("a")
             result.append(chr((ord(char) - base + shift) % 26 + base))
         else:
             result.append(char)
 
-    return ''.join(result)
+    return "".join(result)
 
 
 def vigenere_cipher(text: str, key: str, decrypt: bool = False) -> str:
@@ -497,8 +500,8 @@ def vigenere_cipher(text: str, key: str, decrypt: bool = False) -> str:
 
     for char in text:
         if char.isalpha():
-            base = ord('A') if char.isupper() else ord('a')
-            shift = ord(key[key_idx % len(key)]) - ord('A')
+            base = ord("A") if char.isupper() else ord("a")
+            shift = ord(key[key_idx % len(key)]) - ord("A")
 
             if decrypt:
                 shift = -shift
@@ -508,10 +511,11 @@ def vigenere_cipher(text: str, key: str, decrypt: bool = False) -> str:
         else:
             result.append(char)
 
-    return ''.join(result)
+    return "".join(result)
 
 
 # ==================== 密码强度评估 ====================
+
 
 def password_strength(password: str) -> dict:
     """
@@ -539,9 +543,9 @@ def password_strength(password: str) -> dict:
         feedback.append("密码太短，建议至少8个字符")
 
     # 字符类型检查
-    has_lower = bool(re.search(r'[a-z]', password))
-    has_upper = bool(re.search(r'[A-Z]', password))
-    has_digit = bool(re.search(r'\d', password))
+    has_lower = bool(re.search(r"[a-z]", password))
+    has_upper = bool(re.search(r"[A-Z]", password))
+    has_digit = bool(re.search(r"\d", password))
     has_special = bool(re.search(r'[!@#$%^&*(),.?":{}|<>]', password))
 
     if has_lower:
@@ -566,71 +570,73 @@ def password_strength(password: str) -> dict:
 
     # 常见弱密码检查
     common_passwords = [
-        'password', '123456', 'qwerty', 'admin', 'letmein',
-        'welcome', 'monkey', 'dragon', 'master', 'login'
+        "password",
+        "123456",
+        "qwerty",
+        "admin",
+        "letmein",
+        "welcome",
+        "monkey",
+        "dragon",
+        "master",
+        "login",
     ]
     if password.lower() in common_passwords:
         score = max(0, score - 3)
         feedback.append("这是常见的弱密码")
 
     # 连续字符检查
-    if re.search(r'(.)\1{2,}', password):
+    if re.search(r"(.)\1{2,}", password):
         score = max(0, score - 1)
         feedback.append("避免连续重复字符")
 
     # 强度等级
     if score <= 2:
-        strength = 'weak'
+        strength = "weak"
     elif score <= 4:
-        strength = 'fair'
+        strength = "fair"
     elif score <= 6:
-        strength = 'good'
+        strength = "good"
     else:
-        strength = 'strong'
+        strength = "strong"
 
-    return {
-        'score': score,
-        'max_score': 9,
-        'strength': strength,
-        'feedback': feedback
-    }
+    return {"score": score, "max_score": 9, "strength": strength, "feedback": feedback}
 
 
 # 导入re模块用于密码强度评估
 import re
 
-
 __all__ = [
     # 哈希
-    'md5',
-    'sha1',
-    'sha256',
-    'sha384',
-    'sha512',
-    'blake2b',
-    'blake2s',
-    'hash_file',
+    "md5",
+    "sha1",
+    "sha256",
+    "sha384",
+    "sha512",
+    "blake2b",
+    "blake2s",
+    "hash_file",
     # HMAC
-    'hmac_md5',
-    'hmac_sha1',
-    'hmac_sha256',
-    'hmac_sha512',
-    'verify_hmac',
+    "hmac_md5",
+    "hmac_sha1",
+    "hmac_sha256",
+    "hmac_sha512",
+    "verify_hmac",
     # 随机数
-    'random_string',
-    'random_bytes',
-    'random_hex',
-    'random_int',
-    'random_uuid',
-    'random_token',
+    "random_string",
+    "random_bytes",
+    "random_hex",
+    "random_int",
+    "random_uuid",
+    "random_token",
     # XOR
-    'xor_encrypt',
-    'xor_encrypt_str',
-    'single_byte_xor',
-    'rolling_xor',
+    "xor_encrypt",
+    "xor_encrypt_str",
+    "single_byte_xor",
+    "rolling_xor",
     # 简单加密
-    'caesar_cipher',
-    'vigenere_cipher',
+    "caesar_cipher",
+    "vigenere_cipher",
     # 工具
-    'password_strength',
+    "password_strength",
 ]

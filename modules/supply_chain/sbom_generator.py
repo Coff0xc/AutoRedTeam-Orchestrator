@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 class SBOMFormat(Enum):
     """SBOM格式"""
+
     CYCLONEDX = "cyclonedx"
     SPDX = "spdx"
     SIMPLE = "simple"
@@ -31,6 +32,7 @@ class SBOMFormat(Enum):
 
 class PackageEcosystem(Enum):
     """包生态系统"""
+
     PYPI = "pypi"
     NPM = "npm"
     GO = "go"
@@ -42,6 +44,7 @@ class PackageEcosystem(Enum):
 @dataclass
 class Dependency:
     """依赖信息"""
+
     name: str
     version: str
     ecosystem: PackageEcosystem
@@ -56,6 +59,7 @@ class Dependency:
 @dataclass
 class SBOMDocument:
     """SBOM文档"""
+
     format: SBOMFormat
     project_name: str
     project_version: str
@@ -72,23 +76,18 @@ class SBOMGenerator:
     # 依赖文件模式
     DEPENDENCY_FILES = {
         PackageEcosystem.PYPI: [
-            "requirements.txt", "requirements*.txt",
-            "Pipfile", "Pipfile.lock",
-            "pyproject.toml", "setup.py", "setup.cfg"
+            "requirements.txt",
+            "requirements*.txt",
+            "Pipfile",
+            "Pipfile.lock",
+            "pyproject.toml",
+            "setup.py",
+            "setup.cfg",
         ],
-        PackageEcosystem.NPM: [
-            "package.json", "package-lock.json",
-            "yarn.lock", "pnpm-lock.yaml"
-        ],
-        PackageEcosystem.GO: [
-            "go.mod", "go.sum"
-        ],
-        PackageEcosystem.MAVEN: [
-            "pom.xml"
-        ],
-        PackageEcosystem.CARGO: [
-            "Cargo.toml", "Cargo.lock"
-        ],
+        PackageEcosystem.NPM: ["package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml"],
+        PackageEcosystem.GO: ["go.mod", "go.sum"],
+        PackageEcosystem.MAVEN: ["pom.xml"],
+        PackageEcosystem.CARGO: ["Cargo.toml", "Cargo.lock"],
     }
 
     def __init__(self, project_path: str):
@@ -127,8 +126,7 @@ class SBOMGenerator:
         self._detected_ecosystems = ecosystems
         return ecosystems
 
-    def _generate_purl(self, name: str, version: str,
-                       ecosystem: PackageEcosystem) -> str:
+    def _generate_purl(self, name: str, version: str, ecosystem: PackageEcosystem) -> str:
         """
         生成Package URL
 
@@ -159,21 +157,18 @@ class SBOMGenerator:
             return dependencies
 
         try:
-            content = file_path.read_text(encoding='utf-8')
+            content = file_path.read_text(encoding="utf-8")
 
             for line in content.splitlines():
                 line = line.strip()
 
                 # 跳过注释和空行
-                if not line or line.startswith('#') or line.startswith('-'):
+                if not line or line.startswith("#") or line.startswith("-"):
                     continue
 
                 # 解析包名和版本
                 # 支持格式: package==1.0.0, package>=1.0.0, package~=1.0.0
-                match = re.match(
-                    r'^([a-zA-Z0-9_-]+)\s*([><=~!]+)?\s*([0-9a-zA-Z._-]+)?',
-                    line
-                )
+                match = re.match(r"^([a-zA-Z0-9_-]+)\s*([><=~!]+)?\s*([0-9a-zA-Z._-]+)?", line)
 
                 if match:
                     name = match.group(1)
@@ -184,7 +179,7 @@ class SBOMGenerator:
                         version=version,
                         ecosystem=PackageEcosystem.PYPI,
                         purl=self._generate_purl(name, version, PackageEcosystem.PYPI),
-                        file_path=str(file_path)
+                        file_path=str(file_path),
                     )
                     dependencies.append(dep)
 
@@ -204,12 +199,12 @@ class SBOMGenerator:
             return dependencies
 
         try:
-            content = json.loads(file_path.read_text(encoding='utf-8'))
+            content = json.loads(file_path.read_text(encoding="utf-8"))
 
             # 生产依赖
             for name, version in content.get("dependencies", {}).items():
                 # 清理版本号 (移除 ^, ~, >= 等前缀)
-                clean_version = re.sub(r'^[\^~>=<]+', '', version)
+                clean_version = re.sub(r"^[\^~>=<]+", "", version)
 
                 dep = Dependency(
                     name=name,
@@ -218,13 +213,13 @@ class SBOMGenerator:
                     purl=self._generate_purl(name, clean_version, PackageEcosystem.NPM),
                     direct=True,
                     dev_dependency=False,
-                    file_path=str(file_path)
+                    file_path=str(file_path),
                 )
                 dependencies.append(dep)
 
             # 开发依赖
             for name, version in content.get("devDependencies", {}).items():
-                clean_version = re.sub(r'^[\^~>=<]+', '', version)
+                clean_version = re.sub(r"^[\^~>=<]+", "", version)
 
                 dep = Dependency(
                     name=name,
@@ -233,7 +228,7 @@ class SBOMGenerator:
                     purl=self._generate_purl(name, clean_version, PackageEcosystem.NPM),
                     direct=True,
                     dev_dependency=True,
-                    file_path=str(file_path)
+                    file_path=str(file_path),
                 )
                 dependencies.append(dep)
 
@@ -253,7 +248,7 @@ class SBOMGenerator:
             return dependencies
 
         try:
-            content = file_path.read_text(encoding='utf-8')
+            content = file_path.read_text(encoding="utf-8")
 
             # 解析require块
             in_require = False
@@ -273,7 +268,7 @@ class SBOMGenerator:
                         line = line[8:]
 
                     # 解析: module/path v1.0.0
-                    match = re.match(r'^([^\s]+)\s+(v[0-9.]+)', line)
+                    match = re.match(r"^([^\s]+)\s+(v[0-9.]+)", line)
                     if match:
                         name = match.group(1)
                         version = match.group(2)
@@ -283,7 +278,7 @@ class SBOMGenerator:
                             version=version,
                             ecosystem=PackageEcosystem.GO,
                             purl=self._generate_purl(name, version, PackageEcosystem.GO),
-                            file_path=str(file_path)
+                            file_path=str(file_path),
                         )
                         dependencies.append(dep)
 
@@ -303,7 +298,7 @@ class SBOMGenerator:
             return dependencies
 
         try:
-            content = file_path.read_text(encoding='utf-8')
+            content = file_path.read_text(encoding="utf-8")
 
             # 简单的TOML解析 (dependencies部分)
             in_dependencies = False
@@ -329,7 +324,7 @@ class SBOMGenerator:
                             version=version,
                             ecosystem=PackageEcosystem.PYPI,
                             purl=self._generate_purl(name, version, PackageEcosystem.PYPI),
-                            file_path=str(file_path)
+                            file_path=str(file_path),
                         )
                         dependencies.append(dep)
 
@@ -379,8 +374,7 @@ class SBOMGenerator:
         self._dependencies = unique_deps
         return unique_deps
 
-    def _to_cyclonedx(self, deps: List[Dependency],
-                       project_name: str) -> Dict[str, Any]:
+    def _to_cyclonedx(self, deps: List[Dependency], project_name: str) -> Dict[str, Any]:
         """转换为CycloneDX格式"""
         components = []
 
@@ -397,8 +391,7 @@ class SBOMGenerator:
 
             if dep.hashes:
                 component["hashes"] = [
-                    {"alg": alg, "content": value}
-                    for alg, value in dep.hashes.items()
+                    {"alg": alg, "content": value} for alg, value in dep.hashes.items()
                 ]
 
             components.append(component)
@@ -410,23 +403,13 @@ class SBOMGenerator:
             "version": 1,
             "metadata": {
                 "timestamp": datetime.utcnow().isoformat() + "Z",
-                "tools": [
-                    {
-                        "vendor": "AutoRedTeam",
-                        "name": "SBOM Generator",
-                        "version": "1.0.0"
-                    }
-                ],
-                "component": {
-                    "type": "application",
-                    "name": project_name
-                }
+                "tools": [{"vendor": "AutoRedTeam", "name": "SBOM Generator", "version": "1.0.0"}],
+                "component": {"type": "application", "name": project_name},
             },
-            "components": components
+            "components": components,
         }
 
-    def _to_spdx(self, deps: List[Dependency],
-                  project_name: str) -> Dict[str, Any]:
+    def _to_spdx(self, deps: List[Dependency], project_name: str) -> Dict[str, Any]:
         """转换为SPDX格式"""
         packages = []
 
@@ -440,11 +423,13 @@ class SBOMGenerator:
             }
 
             if dep.purl:
-                package["externalRefs"] = [{
-                    "referenceCategory": "PACKAGE-MANAGER",
-                    "referenceType": "purl",
-                    "referenceLocator": dep.purl
-                }]
+                package["externalRefs"] = [
+                    {
+                        "referenceCategory": "PACKAGE-MANAGER",
+                        "referenceType": "purl",
+                        "referenceLocator": dep.purl,
+                    }
+                ]
 
             packages.append(package)
 
@@ -456,9 +441,9 @@ class SBOMGenerator:
             "documentNamespace": f"https://spdx.org/spdxdocs/{project_name}-{uuid.uuid4()}",
             "creationInfo": {
                 "created": datetime.utcnow().isoformat() + "Z",
-                "creators": ["Tool: AutoRedTeam-SBOM-1.0.0"]
+                "creators": ["Tool: AutoRedTeam-SBOM-1.0.0"],
             },
-            "packages": packages
+            "packages": packages,
         }
 
     def _to_simple(self, deps: List[Dependency]) -> Dict[str, Any]:
@@ -473,14 +458,15 @@ class SBOMGenerator:
                     "ecosystem": d.ecosystem.value,
                     "purl": d.purl,
                     "dev": d.dev_dependency,
-                    "file": d.file_path
+                    "file": d.file_path,
                 }
                 for d in deps
-            ]
+            ],
         }
 
-    def generate(self, format: SBOMFormat = SBOMFormat.CYCLONEDX,
-                 project_name: str = "") -> Dict[str, Any]:
+    def generate(
+        self, format: SBOMFormat = SBOMFormat.CYCLONEDX, project_name: str = ""
+    ) -> Dict[str, Any]:
         """
         生成SBOM
 
@@ -521,13 +507,12 @@ class SBOMGenerator:
             "production_dependencies": len(self._dependencies) - dev_count,
             "dev_dependencies": dev_count,
             "ecosystems": ecosystem_counts,
-            "detected_files": [str(f) for f in self._detected_ecosystems]
+            "detected_files": [str(f) for f in self._detected_ecosystems],
         }
 
 
 # 便捷函数
-def generate_sbom(project_path: str,
-                  format: str = "cyclonedx") -> Dict[str, Any]:
+def generate_sbom(project_path: str, format: str = "cyclonedx") -> Dict[str, Any]:
     """快速生成SBOM"""
     generator = SBOMGenerator(project_path)
     fmt = SBOMFormat(format.lower())
@@ -537,7 +522,8 @@ def generate_sbom(project_path: str,
 if __name__ == "__main__":
     # 测试示例
     import sys
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     if len(sys.argv) > 1:
         path = sys.argv[1]

@@ -4,27 +4,22 @@
 
 from typing import TYPE_CHECKING
 
+from modules.recon.dns_tools import DNSEnumTool, DNSReconTool, DnsxTool
+from modules.recon.nmap_tools import (
+    NmapOSScanTool,
+    NmapQuickScanTool,
+    NmapScanTool,
+    NmapServiceScanTool,
+    NmapVulnScanTool,
+)
+from modules.recon.osint_tools import ShodanLookupTool, TheHarvesterTool, WhoisLookupTool
+from modules.recon.subdomain_tools import AmassEnumTool, AssetfinderTool, SubfinderTool
+from modules.recon.web_recon_tools import WafDetectTool, WapalyzerTool, WhatWebTool
+
 # TYPE_CHECKING imports removed (legacy)
 
-from modules.recon.nmap_tools import (
-    NmapScanTool, NmapQuickScanTool, NmapServiceScanTool, 
-    NmapOSScanTool, NmapVulnScanTool
-)
-from modules.recon.subdomain_tools import (
-    SubfinderTool, AmassEnumTool, AssetfinderTool
-)
-from modules.recon.dns_tools import (
-    DNSEnumTool, DNSReconTool, DnsxTool
-)
-from modules.recon.osint_tools import (
-    WhoisLookupTool, TheHarvesterTool, ShodanLookupTool
-)
-from modules.recon.web_recon_tools import (
-    WhatWebTool, WapalyzerTool, WafDetectTool
-)
 
-
-def register_recon_tools(server: 'MCPServer'):
+def register_recon_tools(server: "MCPServer"):
     """注册信息收集工具"""
     tools = [
         # Nmap工具
@@ -33,28 +28,24 @@ def register_recon_tools(server: 'MCPServer'):
         NmapServiceScanTool(),
         NmapOSScanTool(),
         NmapVulnScanTool(),
-        
         # 子域名工具
         SubfinderTool(),
         AmassEnumTool(),
         AssetfinderTool(),
-        
         # DNS工具
         DNSEnumTool(),
         DNSReconTool(),
         DnsxTool(),
-        
         # OSINT工具
         WhoisLookupTool(),
         TheHarvesterTool(),
         ShodanLookupTool(),
-        
         # Web侦察工具
         WhatWebTool(),
         WapalyzerTool(),
         WafDetectTool(),
     ]
-    
+
     for tool in tools:
         server.register_tool(tool)
 
@@ -62,8 +53,8 @@ def register_recon_tools(server: 'MCPServer'):
 __all__ = [
     "register_recon_tools",
     "NmapScanTool",
-    "SubfinderTool", 
+    "SubfinderTool",
     "DNSEnumTool",
     "WhoisLookupTool",
-    "WhatWebTool"
+    "WhatWebTool",
 ]

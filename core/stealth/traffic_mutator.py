@@ -4,14 +4,14 @@
 功能: 请求特征伪装、流量人性化、规避WAF/IDS检测
 """
 
-import random
-import time
 import hashlib
-import re
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, field
-from urllib.parse import urlencode, quote, urlparse, parse_qs
 import logging
+import random
+import re
+import time
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MutationConfig:
     """变异配置"""
+
     # 时间变异
     min_delay: float = 0.5
     max_delay: float = 3.0
@@ -155,10 +156,12 @@ class HeaderMutator:
     def __init__(self, ua_rotator: Optional[UserAgentRotator] = None):
         self.ua_rotator = ua_rotator or UserAgentRotator()
 
-    def generate_headers(self,
-                         base_headers: Optional[Dict[str, str]] = None,
-                         target_host: Optional[str] = None,
-                         add_noise: bool = True) -> Dict[str, str]:
+    def generate_headers(
+        self,
+        base_headers: Optional[Dict[str, str]] = None,
+        target_host: Optional[str] = None,
+        add_noise: bool = True,
+    ) -> Dict[str, str]:
         """生成伪装 Headers"""
         headers = base_headers.copy() if base_headers else {}
 
@@ -187,8 +190,7 @@ class HeaderMutator:
         if add_noise:
             # 随机选择部分噪声 header
             noise_keys = random.sample(
-                list(self.NOISE_HEADERS.keys()),
-                k=random.randint(3, len(self.NOISE_HEADERS))
+                list(self.NOISE_HEADERS.keys()), k=random.randint(3, len(self.NOISE_HEADERS))
             )
             for key in noise_keys:
                 if key not in headers:
@@ -209,10 +211,7 @@ class HeaderMutator:
 
     def _random_case(self, s: str) -> str:
         """随机大小写"""
-        return ''.join(
-            c.upper() if random.random() > 0.5 else c.lower()
-            for c in s
-        )
+        return "".join(c.upper() if random.random() > 0.5 else c.lower() for c in s)
 
 
 class ParameterMutator:
@@ -220,16 +219,16 @@ class ParameterMutator:
 
     # URL 编码变体
     ENCODING_CHARS = {
-        ' ': ['%20', '+', '%09'],
-        '/': ['%2f', '%2F', '/', '%252f'],
-        '\\': ['%5c', '%5C', '\\', '%255c'],
-        '.': ['%2e', '%2E', '.'],
-        ':': ['%3a', '%3A', ':'],
-        '=': ['%3d', '%3D', '='],
-        '&': ['%26', '&'],
-        '?': ['%3f', '%3F', '?'],
-        '#': ['%23', '#'],
-        '%': ['%25', '%'],
+        " ": ["%20", "+", "%09"],
+        "/": ["%2f", "%2F", "/", "%252f"],
+        "\\": ["%5c", "%5C", "\\", "%255c"],
+        ".": ["%2e", "%2E", "."],
+        ":": ["%3a", "%3A", ":"],
+        "=": ["%3d", "%3D", "="],
+        "&": ["%26", "&"],
+        "?": ["%3f", "%3F", "?"],
+        "#": ["%23", "#"],
+        "%": ["%25", "%"],
     }
 
     # 假参数 (增加噪声)
@@ -274,19 +273,29 @@ class ParameterMutator:
                     result.append(random.choice(self.ENCODING_CHARS[char]))
                 else:
                     result.append(char)
-            return ''.join(result)
+            return "".join(result)
 
     def mutate_case(self, value: str) -> str:
         """SQL关键字大小写变异"""
-        keywords = ['SELECT', 'UNION', 'FROM', 'WHERE', 'AND', 'OR', 'INSERT',
-                    'UPDATE', 'DELETE', 'DROP', 'EXEC', 'SCRIPT', 'ALERT']
+        keywords = [
+            "SELECT",
+            "UNION",
+            "FROM",
+            "WHERE",
+            "AND",
+            "OR",
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "DROP",
+            "EXEC",
+            "SCRIPT",
+            "ALERT",
+        ]
         result = value
         for kw in keywords:
             if kw.lower() in value.lower():
-                mutated = ''.join(
-                    c.upper() if random.random() > 0.5 else c.lower()
-                    for c in kw
-                )
+                mutated = "".join(c.upper() if random.random() > 0.5 else c.lower() for c in kw)
                 result = re.sub(kw, mutated, result, flags=re.IGNORECASE)
         return result
 
@@ -296,26 +305,26 @@ class PathMutator:
 
     def add_trailing_chars(self, path: str) -> str:
         """添加尾部字符"""
-        suffixes = ['/', '//', '/.', '/./', '/..;/', '%20', '%00', ';']
+        suffixes = ["/", "//", "/.", "/./", "/..;/", "%20", "%00", ";"]
         return path + random.choice(suffixes)
 
     def add_path_traversal_bypass(self, path: str) -> str:
         """路径遍历绕过变体"""
         bypasses = [
-            '//',
-            '/./',
-            '/.//',
-            '/%2e/',
-            '/%2e%2e/',
-            '/..;/',
-            '/.%00/',
+            "//",
+            "/./",
+            "/.//",
+            "/%2e/",
+            "/%2e%2e/",
+            "/..;/",
+            "/.%00/",
         ]
-        return random.choice(bypasses).join(path.split('/'))
+        return random.choice(bypasses).join(path.split("/"))
 
     def mutate_extension(self, path: str) -> str:
         """扩展名变异"""
-        if '.' in path:
-            base, ext = path.rsplit('.', 1)
+        if "." in path:
+            base, ext = path.rsplit(".", 1)
             mutations = [
                 f"{base}.{ext}",
                 f"{base}.{ext}%00",
@@ -396,13 +405,15 @@ class TrafficMutator:
         # 统计
         self._request_count = 0
 
-    def mutate_request(self,
-                       url: str,
-                       method: str = "GET",
-                       headers: Optional[Dict[str, str]] = None,
-                       params: Optional[Dict[str, str]] = None,
-                       data: Optional[Dict[str, Any]] = None,
-                       humanize: bool = True) -> Dict[str, Any]:
+    def mutate_request(
+        self,
+        url: str,
+        method: str = "GET",
+        headers: Optional[Dict[str, str]] = None,
+        params: Optional[Dict[str, str]] = None,
+        data: Optional[Dict[str, Any]] = None,
+        humanize: bool = True,
+    ) -> Dict[str, Any]:
         """
         变异HTTP请求
 
@@ -417,9 +428,7 @@ class TrafficMutator:
 
         # 1. Headers 变异
         mutated_headers = self.header_mutator.generate_headers(
-            base_headers=headers,
-            target_host=target_host,
-            add_noise=self.config.add_noise_headers
+            base_headers=headers, target_host=target_host, add_noise=self.config.add_noise_headers
         )
 
         # 2. 参数变异
@@ -465,10 +474,7 @@ class TrafficMutator:
             "delay": delay,  # 建议延迟时间
         }
 
-    def mutate_payload(self,
-                       payload: str,
-                       vuln_type: str = "sqli",
-                       encoding_level: int = 1) -> str:
+    def mutate_payload(self, payload: str, vuln_type: str = "sqli", encoding_level: int = 1) -> str:
         """
         变异攻击载荷
 
@@ -497,7 +503,7 @@ class TrafficMutator:
                 "delay_range": f"{self.config.min_delay}-{self.config.max_delay}s",
                 "ua_rotation": self.config.rotate_ua,
                 "param_shuffle": self.config.shuffle_params,
-            }
+            },
         }
 
     def reset_stats(self):
@@ -506,11 +512,13 @@ class TrafficMutator:
 
 
 # 便捷函数
-def create_stealth_request(url: str,
-                           method: str = "GET",
-                           headers: Optional[Dict] = None,
-                           params: Optional[Dict] = None,
-                           stealth_level: int = 2) -> Dict[str, Any]:
+def create_stealth_request(
+    url: str,
+    method: str = "GET",
+    headers: Optional[Dict] = None,
+    params: Optional[Dict] = None,
+    stealth_level: int = 2,
+) -> Dict[str, Any]:
     """
     创建隐蔽请求 (便捷函数)
 
@@ -535,12 +543,11 @@ def create_stealth_request(url: str,
 
 if __name__ == "__main__":
     # 测试
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     mutator = TrafficMutator()
 
     result = mutator.mutate_request(
-        url="http://example.com/api/user",
-        params={"id": "1", "name": "test"}
+        url="http://example.com/api/user", params={"id": "1", "name": "test"}
     )
 
     logger.info("Mutated Request:")

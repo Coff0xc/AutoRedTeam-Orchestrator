@@ -6,7 +6,7 @@
 
 import json
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
 from utils.mcp_tooling import patch_mcp_tool
 
@@ -21,11 +21,7 @@ def register_optimization_tools(mcp):
 
     @mcp.tool()
     def ai_suggest_attack(
-        url: str,
-        tech_stack: str = "{}",
-        open_ports: str = "",
-        waf: str = "",
-        found_vulns: str = ""
+        url: str, tech_stack: str = "{}", open_ports: str = "", waf: str = "", found_vulns: str = ""
     ) -> str:
         """AI智能攻击建议 - 基于目标特征推荐最优攻击路径
 
@@ -40,7 +36,7 @@ def register_optimization_tools(mcp):
             JSON格式的攻击建议
         """
         try:
-            from modules.ai_decision_engine import get_decision_engine, TargetContext
+            from modules.ai_decision_engine import TargetContext, get_decision_engine
 
             # 解析参数
             try:
@@ -57,30 +53,22 @@ def register_optimization_tools(mcp):
                 tech_stack=tech,
                 open_ports=ports,
                 waf_detected=waf if waf else None,
-                vulnerabilities_found=vulns
+                vulnerabilities_found=vulns,
             )
 
             # 获取建议
             engine = get_decision_engine()
             suggestion = engine.suggest_next_action(context)
 
-            return json.dumps({
-                "success": True,
-                "suggestion": suggestion
-            }, indent=2, ensure_ascii=False)
+            return json.dumps(
+                {"success": True, "suggestion": suggestion}, indent=2, ensure_ascii=False
+            )
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     @mcp.tool()
-    def ai_attack_chain(
-        url: str,
-        found_vulns: str = "",
-        max_depth: int = 5
-    ) -> str:
+    def ai_attack_chain(url: str, found_vulns: str = "", max_depth: int = 5) -> str:
         """AI攻击链规划 - 生成多条可能的攻击路径
 
         Args:
@@ -92,36 +80,30 @@ def register_optimization_tools(mcp):
             JSON格式的攻击链列表
         """
         try:
-            from modules.ai_decision_engine import get_decision_engine, TargetContext
+            from modules.ai_decision_engine import TargetContext, get_decision_engine
 
             vulns = [v.strip() for v in found_vulns.split(",") if v.strip()]
 
-            context = TargetContext(
-                url=url,
-                vulnerabilities_found=vulns
-            )
+            context = TargetContext(url=url, vulnerabilities_found=vulns)
 
             engine = get_decision_engine()
             chains = engine.get_attack_chain(context, max_depth=max_depth)
 
-            return json.dumps({
-                "success": True,
-                "attack_chains": chains[:10],  # 返回前10条
-                "total_chains": len(chains)
-            }, indent=2, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "success": True,
+                    "attack_chains": chains[:10],  # 返回前10条
+                    "total_chains": len(chains),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     @mcp.tool()
-    def ai_record_result(
-        attack_type: str,
-        success: bool,
-        duration: float = 0.0
-    ) -> str:
+    def ai_record_result(attack_type: str, success: bool, duration: float = 0.0) -> str:
         """记录攻击结果 - 用于AI学习优化
 
         Args:
@@ -138,16 +120,15 @@ def register_optimization_tools(mcp):
             engine = get_decision_engine()
             engine.record_result(attack_type, success, duration)
 
-            return json.dumps({
-                "success": True,
-                "message": f"已记录 {attack_type} 结果: {'成功' if success else '失败'}"
-            })
+            return json.dumps(
+                {
+                    "success": True,
+                    "message": f"已记录 {attack_type} 结果: {'成功' if success else '失败'}",
+                }
+            )
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     # ========== 性能监控工具 ==========
 
@@ -164,16 +145,10 @@ def register_optimization_tools(mcp):
             monitor = get_performance_monitor()
             summary = monitor.get_summary()
 
-            return json.dumps({
-                "success": True,
-                "summary": summary
-            }, indent=2, ensure_ascii=False)
+            return json.dumps({"success": True, "summary": summary}, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     @mcp.tool()
     def perf_bottlenecks() -> str:
@@ -188,16 +163,12 @@ def register_optimization_tools(mcp):
             monitor = get_performance_monitor()
             bottlenecks = monitor.identify_bottlenecks()
 
-            return json.dumps({
-                "success": True,
-                "bottlenecks": bottlenecks
-            }, indent=2, ensure_ascii=False)
+            return json.dumps(
+                {"success": True, "bottlenecks": bottlenecks}, indent=2, ensure_ascii=False
+            )
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     @mcp.tool()
     def perf_tool_stats(tool_name: str = "") -> str:
@@ -215,16 +186,10 @@ def register_optimization_tools(mcp):
             monitor = get_performance_monitor()
             stats = monitor.get_tool_stats(tool_name if tool_name else None)
 
-            return json.dumps({
-                "success": True,
-                "stats": stats
-            }, indent=2, ensure_ascii=False)
+            return json.dumps({"success": True, "stats": stats}, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     @mcp.tool()
     def perf_recent(limit: int = 20) -> str:
@@ -242,16 +207,10 @@ def register_optimization_tools(mcp):
             monitor = get_performance_monitor()
             recent = monitor.get_recent_executions(limit)
 
-            return json.dumps({
-                "success": True,
-                "executions": recent
-            }, indent=2, ensure_ascii=False)
+            return json.dumps({"success": True, "executions": recent}, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     # ========== 智能缓存工具 ==========
 
@@ -268,16 +227,10 @@ def register_optimization_tools(mcp):
             cache = get_smart_cache()
             stats = cache.stats()
 
-            return json.dumps({
-                "success": True,
-                "cache_stats": stats
-            }, indent=2, ensure_ascii=False)
+            return json.dumps({"success": True, "cache_stats": stats}, indent=2, ensure_ascii=False)
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     @mcp.tool()
     def cache_cleanup() -> str:
@@ -292,17 +245,16 @@ def register_optimization_tools(mcp):
             cache = get_smart_cache()
             result = cache.cleanup()
 
-            return json.dumps({
-                "success": True,
-                "cleaned": result,
-                "message": f"已清理 {sum(result.values())} 个过期条目"
-            })
+            return json.dumps(
+                {
+                    "success": True,
+                    "cleaned": result,
+                    "message": f"已清理 {sum(result.values())} 个过期条目",
+                }
+            )
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     @mcp.tool()
     def cache_clear(cache_type: str = "") -> str:
@@ -320,25 +272,20 @@ def register_optimization_tools(mcp):
             cache = get_smart_cache()
             cache.clear(cache_type if cache_type else None)
 
-            return json.dumps({
-                "success": True,
-                "message": f"已清空{'所有' if not cache_type else cache_type}缓存"
-            })
+            return json.dumps(
+                {
+                    "success": True,
+                    "message": f"已清空{'所有' if not cache_type else cache_type}缓存",
+                }
+            )
 
         except Exception as e:
-            return json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            return json.dumps({"success": False, "error": str(e)})
 
     # ========== 智能渗透测试（集成优化） ==========
 
     @mcp.tool()
-    def smart_pentest(
-        target: str,
-        auto_learn: bool = True,
-        use_cache: bool = True
-    ) -> str:
+    def smart_pentest(target: str, auto_learn: bool = True, use_cache: bool = True) -> str:
         """智能渗透测试 - 集成AI决策、性能监控、智能缓存
 
         Args:
@@ -358,11 +305,11 @@ def register_optimization_tools(mcp):
             "phases": [],
             "suggestions": [],
             "vulnerabilities": [],
-            "performance": {}
+            "performance": {},
         }
 
         try:
-            from modules.ai_decision_engine import get_decision_engine, TargetContext
+            from modules.ai_decision_engine import TargetContext, get_decision_engine
             from modules.performance_monitor import get_performance_monitor
             from modules.smart_cache import get_smart_cache
 
@@ -371,7 +318,7 @@ def register_optimization_tools(mcp):
             cache = get_smart_cache()
 
             # 确保URL格式
-            if not target.startswith(('http://', 'https://')):
+            if not target.startswith(("http://", "https://")):
                 target = f"https://{target}"
 
             parsed = urlparse(target)
@@ -386,11 +333,9 @@ def register_optimization_tools(mcp):
                 cached_recon = cache.get("recon", domain)
                 if cached_recon:
                     recon_data = cached_recon
-                    results["phases"].append({
-                        "name": "信息收集",
-                        "status": "cached",
-                        "duration": 0
-                    })
+                    results["phases"].append(
+                        {"name": "信息收集", "status": "cached", "duration": 0}
+                    )
 
             if not recon_data:
                 # 执行侦察（这里简化，实际调用full_recon）
@@ -400,17 +345,19 @@ def register_optimization_tools(mcp):
                         "domain": domain,
                         "url": target,
                         "tech_stack": {},
-                        "open_ports": [80, 443]
+                        "open_ports": [80, 443],
                     }
 
                 if use_cache:
                     cache.set("recon", domain, recon_data)
 
-                results["phases"].append({
-                    "name": "信息收集",
-                    "status": "completed",
-                    "duration": round(time.time() - phase1_start, 2)
-                })
+                results["phases"].append(
+                    {
+                        "name": "信息收集",
+                        "status": "completed",
+                        "duration": round(time.time() - phase1_start, 2),
+                    }
+                )
 
             # Phase 2: AI分析并推荐攻击
             context = TargetContext(
@@ -418,7 +365,7 @@ def register_optimization_tools(mcp):
                 tech_stack=recon_data.get("tech_stack", {}),
                 open_ports=recon_data.get("open_ports", []),
                 waf_detected=recon_data.get("waf"),
-                recon_data=recon_data
+                recon_data=recon_data,
             )
 
             suggestion = engine.suggest_next_action(context)
@@ -436,23 +383,19 @@ def register_optimization_tools(mcp):
                         attack_result = {
                             "attack": attack_type,
                             "status": "executed",
-                            "duration": round(time.time() - attack_start, 2)
+                            "duration": round(time.time() - attack_start, 2),
                         }
                         attack_results.append(attack_result)
 
                         # 记录结果用于学习
                         if auto_learn:
                             engine.record_result(
-                                attack_type,
-                                success=True,
-                                duration=attack_result["duration"]
+                                attack_type, success=True, duration=attack_result["duration"]
                             )
 
-            results["phases"].append({
-                "name": "漏洞检测",
-                "attacks": attack_results,
-                "status": "completed"
-            })
+            results["phases"].append(
+                {"name": "漏洞检测", "attacks": attack_results, "status": "completed"}
+            )
 
             # 获取性能统计
             results["performance"] = monitor.get_summary()
@@ -478,5 +421,5 @@ def register_optimization_tools(mcp):
         "cache_stats",
         "cache_cleanup",
         "cache_clear",
-        "smart_pentest"
+        "smart_pentest",
     ]

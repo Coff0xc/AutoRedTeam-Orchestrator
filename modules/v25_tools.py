@@ -6,15 +6,16 @@ v2.5 新增MCP工具注册模块
 """
 
 import asyncio
-import sys
 import os
-from typing import Dict, List, Optional
+import sys
 from pathlib import Path
+from typing import Dict, List, Optional
 
 # 添加项目路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import logging
+
 from utils.mcp_tooling import patch_mcp_tool
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,7 @@ def register_v25_tools(mcp):
                     loop = asyncio.get_running_loop()
                     # 如果有运行中的循环，使用线程池
                     import concurrent.futures
+
                     with concurrent.futures.ThreadPoolExecutor() as pool:
                         future = pool.submit(asyncio.run, _analyze())
                         result = future.result(timeout=60)
@@ -95,11 +97,7 @@ def register_v25_tools(mcp):
             """
             try:
                 endpoints = JSAnalyzer.extract_api_endpoints(js_content)
-                return {
-                    "api_endpoints": list(endpoints),
-                    "count": len(endpoints),
-                    "success": True
-                }
+                return {"api_endpoints": list(endpoints), "count": len(endpoints), "success": True}
             except Exception as e:
                 return {"error": str(e), "success": False}
 
@@ -118,7 +116,7 @@ def register_v25_tools(mcp):
                 return {
                     "secrets": secrets,
                     "count": sum(len(v) for v in secrets.values()),
-                    "success": True
+                    "success": True,
                 }
             except Exception as e:
                 return {"error": str(e), "success": False}
@@ -177,8 +175,10 @@ def register_v25_tools(mcp):
                 stats = manager.get_stats()
                 return {
                     "status": "success",
-                    "results": {k: list(v) if isinstance(v, tuple) else v for k, v in results.items()},
-                    "stats": stats
+                    "results": {
+                        k: list(v) if isinstance(v, tuple) else v for k, v in results.items()
+                    },
+                    "stats": stats,
                 }
             except Exception as e:
                 return {"status": "error", "error": str(e)}
@@ -189,7 +189,7 @@ def register_v25_tools(mcp):
             severity: str = "",
             min_cvss: float = 0.0,
             poc_only: bool = False,
-            limit: int = 50
+            limit: int = 50,
         ) -> dict:
             """高级CVE搜索 - 多条件过滤
 
@@ -210,13 +210,13 @@ def register_v25_tools(mcp):
                     keyword=keyword,
                     severity=severity.upper() if severity else None,
                     min_cvss=min_cvss,
-                    poc_only=poc_only
+                    poc_only=poc_only,
                 )
 
                 return {
                     "status": "success",
                     "total": len(results),
-                    "cves": [cve.to_dict() for cve in results[:limit]]
+                    "cves": [cve.to_dict() for cve in results[:limit]],
                 }
             except Exception as e:
                 return {"status": "error", "error": str(e)}
@@ -249,7 +249,7 @@ def register_v25_tools(mcp):
 
     # ========== PoC执行工具 ==========
     try:
-        from core.cve import PoCEngine, load_poc, execute_poc
+        from core.cve import PoCEngine, execute_poc, load_poc
 
         @mcp.tool()
         def poc_execute(target: str, poc_id: str = "", poc_file: str = "") -> dict:
@@ -288,7 +288,7 @@ def register_v25_tools(mcp):
                     "target": result.target,
                     "matched_at": result.matched_at,
                     "extracted_data": result.extracted_data,
-                    "timestamp": result.timestamp
+                    "timestamp": result.timestamp,
                 }
 
             except Exception as e:
@@ -306,16 +306,11 @@ def register_v25_tools(mcp):
                 templates = []
 
                 for yaml_file in templates_dir.glob("*.yaml"):
-                    templates.append({
-                        "file": yaml_file.name,
-                        "id": yaml_file.stem.upper().replace("-", "_")
-                    })
+                    templates.append(
+                        {"file": yaml_file.name, "id": yaml_file.stem.upper().replace("-", "_")}
+                    )
 
-                return {
-                    "success": True,
-                    "templates": templates,
-                    "count": len(templates)
-                }
+                return {"success": True, "templates": templates, "count": len(templates)}
 
             except Exception as e:
                 return {"error": str(e), "success": False}
@@ -329,13 +324,11 @@ def register_v25_tools(mcp):
     # ========== WebSocket隧道工具 ==========
     try:
         # 优先使用新架构
-        from core.c2 import WebSocketTunnel, C2Config, CryptoAlgorithm
+        from core.c2 import C2Config, CryptoAlgorithm, WebSocketTunnel
 
         @mcp.tool()
         def tunnel_websocket_create(
-            server_url: str,
-            encryption: str = "xor",
-            disguise: str = "chat"
+            server_url: str, encryption: str = "xor", disguise: str = "chat"
         ) -> dict:
             """创建WebSocket隧道配置
 
@@ -349,19 +342,16 @@ def register_v25_tools(mcp):
             """
             try:
                 # 映射加密类型
-                encryption_map = {
-                    "none": "none",
-                    "xor": "xor",
-                    "aes": "aes256_gcm"
-                }
+                encryption_map = {"none": "none", "xor": "xor", "aes": "aes256_gcm"}
                 enc_algo = encryption_map.get(encryption.lower(), "xor")
 
                 # 解析 URL
                 from urllib.parse import urlparse
+
                 parsed = urlparse(server_url)
-                protocol = 'wss' if parsed.scheme == 'wss' else 'ws'
-                server = parsed.hostname or 'localhost'
-                port = parsed.port or (443 if protocol == 'wss' else 80)
+                protocol = "wss" if parsed.scheme == "wss" else "ws"
+                server = parsed.hostname or "localhost"
+                port = parsed.port or (443 if protocol == "wss" else 80)
 
                 config = C2Config(
                     server=server,
@@ -378,7 +368,7 @@ def register_v25_tools(mcp):
                         "port": port,
                         "protocol": protocol,
                         "encryption": enc_algo,
-                    }
+                    },
                 }
 
             except Exception as e:
@@ -396,11 +386,7 @@ def register_v25_tools(mcp):
         from core.c2 import C2Encoder, ChunkEncoder
 
         @mcp.tool()
-        def chunked_split(
-            data: str,
-            chunk_size: int = 1024,
-            compress: bool = True
-        ) -> dict:
+        def chunked_split(data: str, chunk_size: int = 1024, compress: bool = True) -> dict:
             """分块传输 - 数据分割
 
             Args:
@@ -413,22 +399,22 @@ def register_v25_tools(mcp):
             """
             try:
                 encoder = C2Encoder()
-                data_bytes = data.encode('utf-8')
+                data_bytes = data.encode("utf-8")
 
                 # 使用编码器的压缩功能
-                result = encoder.encode(data_bytes, encoding='base64', compress=compress)
+                result = encoder.encode(data_bytes, encoding="base64", compress=compress)
                 encoded_data = result.data if isinstance(result.data, str) else result.data.decode()
 
                 # 分块
                 chunk_encoder = ChunkEncoder(chunk_size=chunk_size)
-                chunks = chunk_encoder.encode_chunks(data_bytes, encoding='base64')
+                chunks = chunk_encoder.encode_chunks(data_bytes, encoding="base64")
 
                 return {
                     "success": True,
                     "chunks_count": len(chunks),
                     "total_size": len(data),
                     "chunk_size": chunk_size,
-                    "compressed": compress
+                    "compressed": compress,
                 }
 
             except Exception as e:
@@ -445,7 +431,7 @@ def register_v25_tools(mcp):
 
 # 独立测试
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("v2.5 工具模块测试")
     logger.info("=" * 50)
 
@@ -453,6 +439,7 @@ if __name__ == "__main__":
     logger.info("\n1. 测试JS分析模块:")
     try:
         from modules.js_analyzer import JSAnalyzer
+
         logger.info("   [OK] JSAnalyzer 导入成功")
     except Exception as e:
         logger.error(f"   [FAIL] {e}")
@@ -460,6 +447,7 @@ if __name__ == "__main__":
     logger.info("\n2. 测试CVE模块:")
     try:
         from core.cve import CVEUpdateManager
+
         logger.info("   [OK] CVEUpdateManager 导入成功")
     except Exception as e:
         logger.error(f"   [FAIL] {e}")
@@ -467,6 +455,7 @@ if __name__ == "__main__":
     logger.info("\n3. 测试PoC模块:")
     try:
         from core.cve import PoCEngine, load_poc
+
         logger.info("   [OK] PoCEngine 导入成功")
     except Exception as e:
         logger.error(f"   [FAIL] {e}")
@@ -474,6 +463,7 @@ if __name__ == "__main__":
     logger.info("\n4. 测试WebSocket隧道:")
     try:
         from core.c2 import WebSocketTunnel
+
         logger.info("   [OK] WebSocketTunnel 导入成功")
     except Exception as e:
         logger.error(f"   [FAIL] {e}")
@@ -481,6 +471,7 @@ if __name__ == "__main__":
     logger.info("\n5. 测试分块传输:")
     try:
         from core.c2 import ChunkEncoder
+
         logger.info("   [OK] ChunkEncoder 导入成功")
     except Exception as e:
         logger.error(f"   [FAIL] {e}")

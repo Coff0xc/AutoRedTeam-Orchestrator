@@ -9,31 +9,32 @@
 - HALF_OPEN（半开）: 试探状态，允许少量请求通过
 """
 
-from enum import Enum
-from typing import Callable, Any, Optional, TypeVar, Generic
-import time
-import threading
 import functools
 import logging
+import threading
+import time
 from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Callable, Generic, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
-R = TypeVar('R')
+T = TypeVar("T")
+R = TypeVar("R")
 
 
 class CircuitState(Enum):
     """熔断器状态"""
-    CLOSED = 'closed'       # 正常状态
-    OPEN = 'open'           # 熔断状态
-    HALF_OPEN = 'half_open' # 半开状态
+
+    CLOSED = "closed"  # 正常状态
+    OPEN = "open"  # 熔断状态
+    HALF_OPEN = "half_open"  # 半开状态
 
 
 class CircuitOpenError(Exception):
     """熔断器打开异常"""
 
-    def __init__(self, message: str = "熔断器已打开", breaker_name: str = 'unknown'):
+    def __init__(self, message: str = "熔断器已打开", breaker_name: str = "unknown"):
         super().__init__(message)
         self.breaker_name = breaker_name
 
@@ -41,6 +42,7 @@ class CircuitOpenError(Exception):
 @dataclass
 class CircuitMetrics:
     """熔断器指标"""
+
     total_calls: int = 0
     success_calls: int = 0
     failure_calls: int = 0
@@ -50,18 +52,15 @@ class CircuitMetrics:
 
     def to_dict(self) -> dict:
         """转换为字典"""
-        success_rate = (
-            self.success_calls / self.total_calls
-            if self.total_calls > 0 else 1.0
-        )
+        success_rate = self.success_calls / self.total_calls if self.total_calls > 0 else 1.0
         return {
-            'total_calls': self.total_calls,
-            'success_calls': self.success_calls,
-            'failure_calls': self.failure_calls,
-            'rejected_calls': self.rejected_calls,
-            'success_rate': success_rate,
-            'state_changes': self.state_changes,
-            'last_failure_time': self.last_failure_time
+            "total_calls": self.total_calls,
+            "success_calls": self.success_calls,
+            "failure_calls": self.failure_calls,
+            "rejected_calls": self.rejected_calls,
+            "success_rate": success_rate,
+            "state_changes": self.state_changes,
+            "last_failure_time": self.last_failure_time,
         }
 
 
@@ -84,8 +83,8 @@ class CircuitBreaker:
         failure_threshold: int = 5,
         success_threshold: int = 2,
         timeout: float = 30.0,
-        name: str = 'default',
-        excluded_exceptions: Optional[tuple] = None
+        name: str = "default",
+        excluded_exceptions: Optional[tuple] = None,
     ):
         """
         初始化熔断器
@@ -117,9 +116,11 @@ class CircuitBreaker:
         self._lock = threading.RLock()
         self._metrics = CircuitMetrics()
 
-        logger.debug(f"熔断器 '{name}' 已初始化: "
-                    f"failure_threshold={failure_threshold}, "
-                    f"timeout={timeout}s")
+        logger.debug(
+            f"熔断器 '{name}' 已初始化: "
+            f"failure_threshold={failure_threshold}, "
+            f"timeout={timeout}s"
+        )
 
     @property
     def state(self) -> CircuitState:
@@ -242,8 +243,7 @@ class CircuitBreaker:
         """
         if not self.is_call_permitted():
             raise CircuitOpenError(
-                f"熔断器 '{self.name}' 已打开，请求被拒绝",
-                breaker_name=self.name
+                f"熔断器 '{self.name}' 已打开，请求被拒绝", breaker_name=self.name
             )
 
         try:
@@ -254,12 +254,7 @@ class CircuitBreaker:
             self.record_failure(e)
             raise
 
-    async def async_call(
-        self,
-        fn: Callable[..., Any],
-        *args: Any,
-        **kwargs: Any
-    ) -> Any:
+    async def async_call(self, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """
         通过熔断器异步调用函数
 
@@ -276,8 +271,7 @@ class CircuitBreaker:
         """
         if not self.is_call_permitted():
             raise CircuitOpenError(
-                f"熔断器 '{self.name}' 已打开，请求被拒绝",
-                breaker_name=self.name
+                f"熔断器 '{self.name}' 已打开，请求被拒绝", breaker_name=self.name
             )
 
         try:
@@ -309,14 +303,14 @@ class CircuitBreaker:
         """获取统计信息"""
         with self._lock:
             return {
-                'name': self.name,
-                'state': self._state.value,
-                'failure_count': self._failure_count,
-                'success_count': self._success_count,
-                'failure_threshold': self.failure_threshold,
-                'success_threshold': self.success_threshold,
-                'timeout': self.timeout,
-                'metrics': self._metrics.to_dict()
+                "name": self.name,
+                "state": self._state.value,
+                "failure_count": self._failure_count,
+                "success_count": self._success_count,
+                "failure_threshold": self.failure_threshold,
+                "success_threshold": self.success_threshold,
+                "timeout": self.timeout,
+                "metrics": self._metrics.to_dict(),
             }
 
     def __repr__(self) -> str:
@@ -328,7 +322,7 @@ def circuit_breaker(
     success_threshold: int = 2,
     timeout: float = 30.0,
     name: Optional[str] = None,
-    excluded_exceptions: Optional[tuple] = None
+    excluded_exceptions: Optional[tuple] = None,
 ) -> Callable:
     """
     熔断器装饰器
@@ -350,6 +344,7 @@ def circuit_breaker(
         def fetch_data(url: str) -> dict:
             ...
     """
+
     def decorator(fn: Callable[..., T]) -> Callable[..., T]:
         breaker_name = name if name else fn.__name__
         breaker = CircuitBreaker(
@@ -357,7 +352,7 @@ def circuit_breaker(
             success_threshold=success_threshold,
             timeout=timeout,
             name=breaker_name,
-            excluded_exceptions=excluded_exceptions
+            excluded_exceptions=excluded_exceptions,
         )
 
         @functools.wraps(fn)
@@ -388,7 +383,7 @@ class CircuitBreakerGroup:
         self,
         default_failure_threshold: int = 5,
         default_success_threshold: int = 2,
-        default_timeout: float = 30.0
+        default_timeout: float = 30.0,
     ):
         """
         初始化熔断器组
@@ -410,7 +405,7 @@ class CircuitBreakerGroup:
         name: str,
         failure_threshold: Optional[int] = None,
         success_threshold: Optional[int] = None,
-        timeout: Optional[float] = None
+        timeout: Optional[float] = None,
     ) -> CircuitBreaker:
         """
         获取或创建命名熔断器
@@ -430,7 +425,7 @@ class CircuitBreakerGroup:
                     failure_threshold=failure_threshold or self.default_failure_threshold,
                     success_threshold=success_threshold or self.default_success_threshold,
                     timeout=timeout or self.default_timeout,
-                    name=name
+                    name=name,
                 )
             return self._breakers[name]
 
@@ -464,10 +459,7 @@ class CircuitBreakerGroup:
     def get_all_stats(self) -> dict:
         """获取所有熔断器的统计信息"""
         with self._lock:
-            return {
-                name: breaker.stats
-                for name, breaker in self._breakers.items()
-            }
+            return {name: breaker.stats for name, breaker in self._breakers.items()}
 
 
 # 导入 asyncio 用于装饰器
@@ -489,9 +481,7 @@ def get_breaker_group() -> CircuitBreakerGroup:
 
 
 def get_circuit_breaker(
-    name: str,
-    failure_threshold: int = 5,
-    timeout: float = 30.0
+    name: str, failure_threshold: int = 5, timeout: float = 30.0
 ) -> CircuitBreaker:
     """
     获取或创建全局熔断器
@@ -504,8 +494,4 @@ def get_circuit_breaker(
     Returns:
         CircuitBreaker 实例
     """
-    return get_breaker_group().get(
-        name=name,
-        failure_threshold=failure_threshold,
-        timeout=timeout
-    )
+    return get_breaker_group().get(name=name, failure_threshold=failure_threshold, timeout=timeout)

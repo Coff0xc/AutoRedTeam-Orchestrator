@@ -14,17 +14,16 @@ subdomain.py - 子域名枚举模块
         print(f"{sub.subdomain} -> {sub.ip_addresses}")
 """
 
-import socket
 import asyncio
 import logging
+import socket
 import threading
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Set, Callable
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from .dns_resolver import DNSResolver
-
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +39,7 @@ class SubdomainInfo:
         cname: CNAME记录
         metadata: 额外元数据
     """
+
     subdomain: str
     ip_addresses: List[str] = field(default_factory=list)
     is_wildcard: bool = False
@@ -72,60 +72,253 @@ class SubdomainEnumerator:
     # 内置常用子域名字典
     COMMON_SUBDOMAINS: List[str] = [
         # 常见通用子域名
-        "www", "mail", "ftp", "localhost", "webmail", "smtp", "pop", "ns1", "ns2",
-        "dns", "dns1", "dns2", "ns", "mx", "mx1", "mx2",
+        "www",
+        "mail",
+        "ftp",
+        "localhost",
+        "webmail",
+        "smtp",
+        "pop",
+        "ns1",
+        "ns2",
+        "dns",
+        "dns1",
+        "dns2",
+        "ns",
+        "mx",
+        "mx1",
+        "mx2",
         # 开发/测试环境
-        "dev", "development", "staging", "stage", "test", "testing", "qa",
-        "uat", "demo", "sandbox", "beta", "alpha", "pre", "preprod",
+        "dev",
+        "development",
+        "staging",
+        "stage",
+        "test",
+        "testing",
+        "qa",
+        "uat",
+        "demo",
+        "sandbox",
+        "beta",
+        "alpha",
+        "pre",
+        "preprod",
         # 管理/后台
-        "admin", "administrator", "manage", "manager", "management",
-        "console", "dashboard", "control", "panel", "cp", "cpanel",
-        "backend", "back", "backoffice", "internal", "intranet",
+        "admin",
+        "administrator",
+        "manage",
+        "manager",
+        "management",
+        "console",
+        "dashboard",
+        "control",
+        "panel",
+        "cp",
+        "cpanel",
+        "backend",
+        "back",
+        "backoffice",
+        "internal",
+        "intranet",
         # API/服务
-        "api", "api1", "api2", "apis", "rest", "graphql", "ws", "websocket",
-        "rpc", "grpc", "gateway", "proxy", "service", "services",
+        "api",
+        "api1",
+        "api2",
+        "apis",
+        "rest",
+        "graphql",
+        "ws",
+        "websocket",
+        "rpc",
+        "grpc",
+        "gateway",
+        "proxy",
+        "service",
+        "services",
         # 移动端
-        "m", "mobile", "wap", "app", "apps", "ios", "android",
+        "m",
+        "mobile",
+        "wap",
+        "app",
+        "apps",
+        "ios",
+        "android",
         # 静态资源
-        "static", "assets", "img", "images", "image", "media", "files",
-        "css", "js", "cdn", "cdn1", "cdn2", "download", "downloads",
+        "static",
+        "assets",
+        "img",
+        "images",
+        "image",
+        "media",
+        "files",
+        "css",
+        "js",
+        "cdn",
+        "cdn1",
+        "cdn2",
+        "download",
+        "downloads",
         # 数据库/缓存
-        "db", "database", "mysql", "postgresql", "postgres", "mongo", "mongodb",
-        "redis", "memcache", "memcached", "elastic", "elasticsearch",
+        "db",
+        "database",
+        "mysql",
+        "postgresql",
+        "postgres",
+        "mongo",
+        "mongodb",
+        "redis",
+        "memcache",
+        "memcached",
+        "elastic",
+        "elasticsearch",
         # 监控/日志
-        "monitor", "monitoring", "metrics", "grafana", "prometheus",
-        "kibana", "log", "logs", "logging", "elk",
+        "monitor",
+        "monitoring",
+        "metrics",
+        "grafana",
+        "prometheus",
+        "kibana",
+        "log",
+        "logs",
+        "logging",
+        "elk",
         # CI/CD
-        "jenkins", "ci", "cd", "build", "deploy", "gitlab", "git", "svn",
-        "repo", "repository", "code", "source",
+        "jenkins",
+        "ci",
+        "cd",
+        "build",
+        "deploy",
+        "gitlab",
+        "git",
+        "svn",
+        "repo",
+        "repository",
+        "code",
+        "source",
         # 云服务
-        "cloud", "aws", "azure", "gcp", "s3", "bucket", "storage",
+        "cloud",
+        "aws",
+        "azure",
+        "gcp",
+        "s3",
+        "bucket",
+        "storage",
         # 邮件
-        "email", "mail2", "mail3", "mailserver", "exchange", "postfix",
-        "imap", "pop3", "newsletter",
+        "email",
+        "mail2",
+        "mail3",
+        "mailserver",
+        "exchange",
+        "postfix",
+        "imap",
+        "pop3",
+        "newsletter",
         # VPN/远程
-        "vpn", "vpn1", "vpn2", "remote", "rdp", "ssh", "bastion", "jump",
+        "vpn",
+        "vpn1",
+        "vpn2",
+        "remote",
+        "rdp",
+        "ssh",
+        "bastion",
+        "jump",
         # 认证
-        "auth", "login", "sso", "oauth", "identity", "ldap", "ad",
+        "auth",
+        "login",
+        "sso",
+        "oauth",
+        "identity",
+        "ldap",
+        "ad",
         # 帮助/支持
-        "help", "support", "docs", "documentation", "wiki", "kb",
-        "faq", "forum", "community", "blog",
+        "help",
+        "support",
+        "docs",
+        "documentation",
+        "wiki",
+        "kb",
+        "faq",
+        "forum",
+        "community",
+        "blog",
         # 搜索
-        "search", "solr", "elastic",
+        "search",
+        "solr",
+        "elastic",
         # 其他常见
-        "portal", "home", "shop", "store", "pay", "payment", "checkout",
-        "cart", "order", "orders", "account", "accounts", "user", "users",
-        "profile", "member", "members", "customer", "clients",
-        "partner", "partners", "vendor", "vendors", "supplier",
-        "report", "reports", "analytics", "stats", "statistics",
-        "status", "health", "ping", "alive",
-        "old", "new", "v1", "v2", "v3", "legacy", "archive",
-        "secure", "ssl", "https", "cert", "certs",
-        "www1", "www2", "www3", "web", "web1", "web2",
-        "node", "node1", "node2", "server", "server1", "server2",
-        "host", "host1", "host2", "vps", "vps1", "vps2",
-        "bbs", "news", "video", "live", "stream",
-        "oa", "erp", "crm", "hr", "finance",
+        "portal",
+        "home",
+        "shop",
+        "store",
+        "pay",
+        "payment",
+        "checkout",
+        "cart",
+        "order",
+        "orders",
+        "account",
+        "accounts",
+        "user",
+        "users",
+        "profile",
+        "member",
+        "members",
+        "customer",
+        "clients",
+        "partner",
+        "partners",
+        "vendor",
+        "vendors",
+        "supplier",
+        "report",
+        "reports",
+        "analytics",
+        "stats",
+        "statistics",
+        "status",
+        "health",
+        "ping",
+        "alive",
+        "old",
+        "new",
+        "v1",
+        "v2",
+        "v3",
+        "legacy",
+        "archive",
+        "secure",
+        "ssl",
+        "https",
+        "cert",
+        "certs",
+        "www1",
+        "www2",
+        "www3",
+        "web",
+        "web1",
+        "web2",
+        "node",
+        "node1",
+        "node2",
+        "server",
+        "server1",
+        "server2",
+        "host",
+        "host1",
+        "host2",
+        "vps",
+        "vps1",
+        "vps2",
+        "bbs",
+        "news",
+        "video",
+        "live",
+        "stream",
+        "oa",
+        "erp",
+        "crm",
+        "hr",
+        "finance",
     ]
 
     # 词表缓存（类级别，所有实例共享）
@@ -137,7 +330,7 @@ class SubdomainEnumerator:
         timeout: float = 5.0,
         threads: int = 50,
         wordlist: Optional[str] = None,
-        max_subdomains: int = 1000
+        max_subdomains: int = 1000,
     ):
         """初始化子域名枚举器
 
@@ -168,9 +361,7 @@ class SubdomainEnumerator:
         self._logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     def enumerate(
-        self,
-        domain: str,
-        custom_wordlist: Optional[List[str]] = None
+        self, domain: str, custom_wordlist: Optional[List[str]] = None
     ) -> List[SubdomainInfo]:
         """枚举子域名
 
@@ -231,10 +422,7 @@ class SubdomainEnumerator:
         return sorted(results, key=lambda x: x.subdomain)
 
     async def async_enumerate(
-        self,
-        domain: str,
-        custom_wordlist: Optional[List[str]] = None,
-        concurrency: int = 100
+        self, domain: str, custom_wordlist: Optional[List[str]] = None, concurrency: int = 100
     ) -> List[SubdomainInfo]:
         """异步枚举子域名
 
@@ -259,7 +447,7 @@ class SubdomainEnumerator:
                 subdomain = f"{word}.{domain}"
                 return await self._async_check_subdomain(subdomain, wildcard_ips)
 
-        tasks = [check_with_limit(word) for word in wordlist[:self.max_subdomains * 2]]
+        tasks = [check_with_limit(word) for word in wordlist[: self.max_subdomains * 2]]
         check_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for result in check_results:
@@ -269,11 +457,7 @@ class SubdomainEnumerator:
 
         return sorted(results, key=lambda x: x.subdomain)
 
-    def _check_subdomain(
-        self,
-        subdomain: str,
-        wildcard_ips: Set[str]
-    ) -> Optional[SubdomainInfo]:
+    def _check_subdomain(self, subdomain: str, wildcard_ips: Set[str]) -> Optional[SubdomainInfo]:
         """检查单个子域名
 
         Args:
@@ -300,9 +484,7 @@ class SubdomainEnumerator:
         return None
 
     async def _async_check_subdomain(
-        self,
-        subdomain: str,
-        wildcard_ips: Set[str]
+        self, subdomain: str, wildcard_ips: Set[str]
     ) -> Optional[SubdomainInfo]:
         """异步检查单个子域名"""
         try:
@@ -333,7 +515,7 @@ class SubdomainEnumerator:
         import random
         import string
 
-        random_sub = ''.join(random.choices(string.ascii_lowercase, k=12))
+        random_sub = "".join(random.choices(string.ascii_lowercase, k=12))
         wildcard_domain = f"{random_sub}.{domain}"
 
         try:
@@ -392,10 +574,7 @@ class SubdomainEnumerator:
 
         return list(result)
 
-    def set_progress_callback(
-        self,
-        callback: Callable[[int, int, str], None]
-    ) -> None:
+    def set_progress_callback(self, callback: Callable[[int, int, str], None]) -> None:
         """设置进度回调
 
         Args:
@@ -427,10 +606,7 @@ class SubdomainEnumerator:
 
 # 便捷函数
 def enumerate_subdomains(
-    domain: str,
-    timeout: float = 5.0,
-    threads: int = 50,
-    max_results: int = 1000
+    domain: str, timeout: float = 5.0, threads: int = 50, max_results: int = 1000
 ) -> List[SubdomainInfo]:
     """便捷函数：枚举子域名
 
@@ -443,25 +619,15 @@ def enumerate_subdomains(
     Returns:
         子域名列表
     """
-    enumerator = SubdomainEnumerator(
-        timeout=timeout,
-        threads=threads,
-        max_subdomains=max_results
-    )
+    enumerator = SubdomainEnumerator(timeout=timeout, threads=threads, max_subdomains=max_results)
     return enumerator.enumerate(domain)
 
 
 async def async_enumerate_subdomains(
-    domain: str,
-    timeout: float = 5.0,
-    concurrency: int = 100,
-    max_results: int = 1000
+    domain: str, timeout: float = 5.0, concurrency: int = 100, max_results: int = 1000
 ) -> List[SubdomainInfo]:
     """便捷函数：异步枚举子域名"""
-    enumerator = SubdomainEnumerator(
-        timeout=timeout,
-        max_subdomains=max_results
-    )
+    enumerator = SubdomainEnumerator(timeout=timeout, max_subdomains=max_results)
     return await enumerator.async_enumerate(domain, concurrency=concurrency)
 
 

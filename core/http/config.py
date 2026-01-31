@@ -5,29 +5,31 @@ HTTP 客户端配置
 支持从环境变量和配置文件加载
 """
 
-import os
 import logging
+import os
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Tuple, Any, List
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class RetryStrategy(Enum):
     """重试策略"""
-    NONE = "none"           # 不重试
-    FIXED = "fixed"         # 固定间隔重试
+
+    NONE = "none"  # 不重试
+    FIXED = "fixed"  # 固定间隔重试
     EXPONENTIAL = "exponential"  # 指数退避重试
-    JITTER = "jitter"       # 带抖动的指数退避
+    JITTER = "jitter"  # 带抖动的指数退避
 
 
 @dataclass
 class RetryConfig:
     """重试配置"""
+
     max_retries: int = 3
     retry_delay: float = 1.0  # 基础重试延迟 (秒)
-    max_delay: float = 30.0   # 最大重试延迟 (秒)
+    max_delay: float = 30.0  # 最大重试延迟 (秒)
     backoff_factor: float = 2.0  # 指数退避因子
     strategy: RetryStrategy = RetryStrategy.EXPONENTIAL
 
@@ -71,6 +73,7 @@ class RetryConfig:
         # 添加抖动
         if self.strategy == RetryStrategy.JITTER:
             import random
+
             delay = delay * (0.5 + random.random())
 
         return min(delay, self.max_delay)
@@ -79,6 +82,7 @@ class RetryConfig:
 @dataclass
 class ProxyConfig:
     """代理配置"""
+
     http_proxy: Optional[str] = None
     https_proxy: Optional[str] = None
     socks_proxy: Optional[str] = None
@@ -96,9 +100,7 @@ class ProxyConfig:
             socks_proxy=os.environ.get("SOCKS_PROXY") or os.environ.get("socks_proxy"),
             no_proxy=[
                 x.strip()
-                for x in (
-                    os.environ.get("NO_PROXY") or os.environ.get("no_proxy") or ""
-                ).split(",")
+                for x in (os.environ.get("NO_PROXY") or os.environ.get("no_proxy") or "").split(",")
                 if x.strip()
             ],
         )
@@ -122,10 +124,11 @@ class ProxyConfig:
 @dataclass
 class PoolConfig:
     """连接池配置"""
-    max_connections: int = 100       # 最大连接数
-    max_keepalive: int = 20          # 最大保持连接数
-    keepalive_timeout: float = 5.0   # 保持连接超时 (秒)
-    http2: bool = False              # 是否启用 HTTP/2
+
+    max_connections: int = 100  # 最大连接数
+    max_keepalive: int = 20  # 最大保持连接数
+    keepalive_timeout: float = 5.0  # 保持连接超时 (秒)
+    http2: bool = False  # 是否启用 HTTP/2
 
 
 @dataclass
@@ -133,27 +136,29 @@ class HTTPConfig:
     """HTTP 客户端统一配置"""
 
     # 超时配置 (秒)
-    timeout: float = 30.0            # 总超时
-    connect_timeout: float = 10.0    # 连接超时
-    read_timeout: float = 30.0       # 读取超时
-    write_timeout: float = 30.0      # 写入超时
+    timeout: float = 30.0  # 总超时
+    connect_timeout: float = 10.0  # 连接超时
+    read_timeout: float = 30.0  # 读取超时
+    write_timeout: float = 30.0  # 写入超时
 
     # SSL 配置
-    verify_ssl: bool = True          # 是否验证 SSL 证书
-    ssl_cert: Optional[str] = None   # 客户端证书路径
-    ssl_key: Optional[str] = None    # 客户端私钥路径
+    verify_ssl: bool = True  # 是否验证 SSL 证书
+    ssl_cert: Optional[str] = None  # 客户端证书路径
+    ssl_key: Optional[str] = None  # 客户端私钥路径
 
     # 重定向配置
-    follow_redirects: bool = True    # 是否跟随重定向
-    max_redirects: int = 10          # 最大重定向次数
+    follow_redirects: bool = True  # 是否跟随重定向
+    max_redirects: int = 10  # 最大重定向次数
 
     # 默认请求头
-    default_headers: Dict[str, str] = field(default_factory=lambda: {
-        "User-Agent": "AutoRedTeam/3.0",
-        "Accept": "*/*",
-        "Accept-Encoding": "gzip, deflate",
-        "Connection": "keep-alive",
-    })
+    default_headers: Dict[str, str] = field(
+        default_factory=lambda: {
+            "User-Agent": "AutoRedTeam/3.0",
+            "Accept": "*/*",
+            "Accept-Encoding": "gzip, deflate",
+            "Connection": "keep-alive",
+        }
+    )
 
     # 子配置
     retry: RetryConfig = field(default_factory=RetryConfig)
@@ -161,9 +166,9 @@ class HTTPConfig:
     pool: PoolConfig = field(default_factory=PoolConfig)
 
     # 调试选项
-    debug: bool = False              # 调试模式
-    log_requests: bool = False       # 记录请求日志
-    log_responses: bool = False      # 记录响应日志
+    debug: bool = False  # 调试模式
+    log_requests: bool = False  # 记录请求日志
+    log_responses: bool = False  # 记录响应日志
 
     def get_timeout_tuple(self) -> Tuple[float, float, float, float]:
         """
@@ -257,8 +262,10 @@ class HTTPConfig:
         # 代理配置
         config.proxy = ProxyConfig.from_env()
 
-        logger.debug(f"从环境变量加载 HTTP 配置: timeout={config.timeout}, "
-                     f"verify_ssl={config.verify_ssl}, debug={config.debug}")
+        logger.debug(
+            f"从环境变量加载 HTTP 配置: timeout={config.timeout}, "
+            f"verify_ssl={config.verify_ssl}, debug={config.debug}"
+        )
 
         return config
 
@@ -356,6 +363,7 @@ class HTTPConfig:
     def copy(self) -> "HTTPConfig":
         """创建配置副本"""
         import copy
+
         return copy.deepcopy(self)
 
 

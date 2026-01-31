@@ -4,19 +4,19 @@
 检测各种认证绕过漏洞
 """
 
-from typing import List, Optional, Dict, Any, Tuple
-import re
 import logging
-from urllib.parse import urlparse, parse_qs, urljoin
+import re
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import parse_qs, urljoin, urlparse
 
 from ..base import BaseDetector
-from ..result import DetectionResult, Severity, DetectorType
 from ..factory import register_detector
+from ..result import DetectionResult, DetectorType, Severity
 
 logger = logging.getLogger(__name__)
 
 
-@register_detector('auth_bypass')
+@register_detector("auth_bypass")
 class AuthBypassDetector(BaseDetector):
     """认证绕过检测器
 
@@ -32,106 +32,113 @@ class AuthBypassDetector(BaseDetector):
         results = detector.detect("https://example.com/admin/dashboard")
     """
 
-    name = 'auth_bypass'
-    description = '认证绕过漏洞检测器'
-    vuln_type = 'auth_bypass'
+    name = "auth_bypass"
+    description = "认证绕过漏洞检测器"
+    vuln_type = "auth_bypass"
     severity = Severity.CRITICAL
     detector_type = DetectorType.AUTH
-    version = '1.0.0'
+    version = "1.0.0"
 
     # HTTP 方法绕过测试
     HTTP_METHODS = [
-        'GET', 'POST', 'PUT', 'DELETE', 'PATCH',
-        'HEAD', 'OPTIONS', 'TRACE', 'CONNECT',
-        'PROPFIND', 'PROPPATCH', 'MKCOL', 'COPY',
-        'MOVE', 'LOCK', 'UNLOCK',
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "HEAD",
+        "OPTIONS",
+        "TRACE",
+        "CONNECT",
+        "PROPFIND",
+        "PROPPATCH",
+        "MKCOL",
+        "COPY",
+        "MOVE",
+        "LOCK",
+        "UNLOCK",
     ]
 
     # 路径绕过 payload
     PATH_BYPASS_PAYLOADS = [
         # 大小写变体
-        '{path}',
-        '{PATH}',
-        '{Path}',
-
+        "{path}",
+        "{PATH}",
+        "{Path}",
         # 路径遍历
-        '/{path}/',
-        '//{path}',
-        '/./{path}',
-        '/{path}/.',
-        '/{path}/./',
-        '/{path}/./.',
-
+        "/{path}/",
+        "//{path}",
+        "/./{path}",
+        "/{path}/.",
+        "/{path}/./",
+        "/{path}/./.",
         # URL 编码
-        '/%2e/{path}',
-        '/{path}%2f',
-        '/{path}%20',
-        '/{path}%09',
-        '/{path}%00',
-
+        "/%2e/{path}",
+        "/{path}%2f",
+        "/{path}%20",
+        "/{path}%09",
+        "/{path}%00",
         # 扩展名绕过
-        '/{path}.json',
-        '/{path}.html',
-        '/{path}.php',
-        '/{path}.asp',
-        '/{path}.aspx',
-        '/{path};.js',
-        '/{path}..;/',
-
+        "/{path}.json",
+        "/{path}.html",
+        "/{path}.php",
+        "/{path}.asp",
+        "/{path}.aspx",
+        "/{path};.js",
+        "/{path}..;/",
         # 特殊字符
-        '/{path}?',
-        '/{path}#',
-        '/{path}%23',
-        '/{path}%3f',
-
+        "/{path}?",
+        "/{path}#",
+        "/{path}%23",
+        "/{path}%3f",
         # 双重编码
-        '/%252e/{path}',
-        '/{path}%252f',
+        "/%252e/{path}",
+        "/{path}%252f",
     ]
 
     # 认证绕过头部
     AUTH_BYPASS_HEADERS = [
-        {'X-Original-URL': '{path}'},
-        {'X-Rewrite-URL': '{path}'},
-        {'X-Custom-IP-Authorization': '127.0.0.1'},
-        {'X-Forwarded-For': '127.0.0.1'},
-        {'X-Forwarded-Host': 'localhost'},
-        {'X-Host': 'localhost'},
-        {'X-Remote-IP': '127.0.0.1'},
-        {'X-Remote-Addr': '127.0.0.1'},
-        {'X-Client-IP': '127.0.0.1'},
-        {'X-Real-IP': '127.0.0.1'},
-        {'X-Originating-IP': '127.0.0.1'},
-        {'True-Client-IP': '127.0.0.1'},
-        {'Cluster-Client-IP': '127.0.0.1'},
-        {'X-ProxyUser-Ip': '127.0.0.1'},
-        {'Client-IP': '127.0.0.1'},
-        {'Forwarded': 'for=127.0.0.1'},
-        {'X-Forwarded': 'for=127.0.0.1'},
+        {"X-Original-URL": "{path}"},
+        {"X-Rewrite-URL": "{path}"},
+        {"X-Custom-IP-Authorization": "127.0.0.1"},
+        {"X-Forwarded-For": "127.0.0.1"},
+        {"X-Forwarded-Host": "localhost"},
+        {"X-Host": "localhost"},
+        {"X-Remote-IP": "127.0.0.1"},
+        {"X-Remote-Addr": "127.0.0.1"},
+        {"X-Client-IP": "127.0.0.1"},
+        {"X-Real-IP": "127.0.0.1"},
+        {"X-Originating-IP": "127.0.0.1"},
+        {"True-Client-IP": "127.0.0.1"},
+        {"Cluster-Client-IP": "127.0.0.1"},
+        {"X-ProxyUser-Ip": "127.0.0.1"},
+        {"Client-IP": "127.0.0.1"},
+        {"Forwarded": "for=127.0.0.1"},
+        {"X-Forwarded": "for=127.0.0.1"},
     ]
 
     # 后门/调试路径
     BACKDOOR_PATHS = [
-        '/admin',
-        '/administrator',
-        '/admin.php',
-        '/admin.asp',
-        '/manager',
-        '/console',
-        '/debug',
-        '/test',
-        '/backup',
-        '/config',
-        '/api/admin',
-        '/api/debug',
-        '/api/test',
-        '/.git',
-        '/.svn',
-        '/.env',
-        '/phpinfo.php',
-        '/info.php',
-        '/server-status',
-        '/server-info',
+        "/admin",
+        "/administrator",
+        "/admin.php",
+        "/admin.asp",
+        "/manager",
+        "/console",
+        "/debug",
+        "/test",
+        "/backup",
+        "/config",
+        "/api/admin",
+        "/api/debug",
+        "/api/test",
+        "/.git",
+        "/.svn",
+        "/.env",
+        "/phpinfo.php",
+        "/info.php",
+        "/server-status",
+        "/server-info",
     ]
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -146,10 +153,10 @@ class AuthBypassDetector(BaseDetector):
         """
         super().__init__(config)
 
-        self.check_method_bypass = self.config.get('check_method_bypass', True)
-        self.check_path_bypass = self.config.get('check_path_bypass', True)
-        self.check_header_bypass = self.config.get('check_header_bypass', True)
-        self.check_backdoor = self.config.get('check_backdoor', True)
+        self.check_method_bypass = self.config.get("check_method_bypass", True)
+        self.check_path_bypass = self.config.get("check_path_bypass", True)
+        self.check_header_bypass = self.config.get("check_header_bypass", True)
+        self.check_backdoor = self.config.get("check_backdoor", True)
 
     def detect(self, url: str, **kwargs) -> List[DetectionResult]:
         """检测认证绕过漏洞
@@ -166,8 +173,8 @@ class AuthBypassDetector(BaseDetector):
         self._log_detection_start(url)
         results: List[DetectionResult] = []
 
-        headers = kwargs.get('headers', {})
-        expected_status = kwargs.get('expected_status', [401, 403])
+        headers = kwargs.get("headers", {})
+        expected_status = kwargs.get("expected_status", [401, 403])
 
         # 获取基线响应（未认证）
         baseline = self._get_baseline(url, headers)
@@ -200,10 +207,7 @@ class AuthBypassDetector(BaseDetector):
         return results
 
     def _test_method_bypass(
-        self,
-        url: str,
-        headers: Dict[str, str],
-        baseline: Any
+        self, url: str, headers: Dict[str, str], baseline: Any
     ) -> List[DetectionResult]:
         """测试 HTTP 方法绕过
 
@@ -218,23 +222,25 @@ class AuthBypassDetector(BaseDetector):
         results = []
 
         for method in self.HTTP_METHODS:
-            if method == 'GET':
+            if method == "GET":
                 continue
 
             try:
                 response = self.http_client.request(method, url, headers=headers)
 
                 if self._is_bypass_success(response, baseline):
-                    results.append(self._create_result(
-                        url=url,
-                        vulnerable=True,
-                        payload=f"HTTP 方法: {method}",
-                        evidence=f"使用 {method} 方法绕过认证，状态码: {response.status_code}",
-                        confidence=0.85,
-                        verified=True,
-                        remediation="确保所有 HTTP 方法都经过认证检查",
-                        extra={'bypass_type': 'method', 'method': method}
-                    ))
+                    results.append(
+                        self._create_result(
+                            url=url,
+                            vulnerable=True,
+                            payload=f"HTTP 方法: {method}",
+                            evidence=f"使用 {method} 方法绕过认证，状态码: {response.status_code}",
+                            confidence=0.85,
+                            verified=True,
+                            remediation="确保所有 HTTP 方法都经过认证检查",
+                            extra={"bypass_type": "method", "method": method},
+                        )
+                    )
                     break
 
             except Exception as e:
@@ -243,10 +249,7 @@ class AuthBypassDetector(BaseDetector):
         return results
 
     def _test_path_bypass(
-        self,
-        url: str,
-        headers: Dict[str, str],
-        baseline: Any
+        self, url: str, headers: Dict[str, str], baseline: Any
     ) -> List[DetectionResult]:
         """测试路径绕过
 
@@ -264,9 +267,9 @@ class AuthBypassDetector(BaseDetector):
 
         for payload_template in self.PATH_BYPASS_PAYLOADS:
             # 构造测试 URL
-            test_path = payload_template.replace('{path}', path.strip('/'))
-            test_path = payload_template.replace('{PATH}', path.strip('/').upper())
-            test_path = payload_template.replace('{Path}', path.strip('/').capitalize())
+            test_path = payload_template.replace("{path}", path.strip("/"))
+            test_path = payload_template.replace("{PATH}", path.strip("/").upper())
+            test_path = payload_template.replace("{Path}", path.strip("/").capitalize())
 
             test_url = f"{parsed.scheme}://{parsed.netloc}{test_path}"
             if parsed.query:
@@ -276,16 +279,18 @@ class AuthBypassDetector(BaseDetector):
                 response = self.http_client.get(test_url, headers=headers)
 
                 if self._is_bypass_success(response, baseline):
-                    results.append(self._create_result(
-                        url=url,
-                        vulnerable=True,
-                        payload=test_path,
-                        evidence=f"路径绕过成功，状态码: {response.status_code}",
-                        confidence=0.80,
-                        verified=True,
-                        remediation="规范化 URL 路径处理，避免路径解析差异",
-                        extra={'bypass_type': 'path', 'test_url': test_url}
-                    ))
+                    results.append(
+                        self._create_result(
+                            url=url,
+                            vulnerable=True,
+                            payload=test_path,
+                            evidence=f"路径绕过成功，状态码: {response.status_code}",
+                            confidence=0.80,
+                            verified=True,
+                            remediation="规范化 URL 路径处理，避免路径解析差异",
+                            extra={"bypass_type": "path", "test_url": test_url},
+                        )
+                    )
                     return results  # 发现一个就返回
 
             except Exception as e:
@@ -294,10 +299,7 @@ class AuthBypassDetector(BaseDetector):
         return results
 
     def _test_header_bypass(
-        self,
-        url: str,
-        headers: Dict[str, str],
-        baseline: Any
+        self, url: str, headers: Dict[str, str], baseline: Any
     ) -> List[DetectionResult]:
         """测试头部绕过
 
@@ -316,22 +318,24 @@ class AuthBypassDetector(BaseDetector):
             test_headers = headers.copy()
 
             for key, value in bypass_header.items():
-                test_headers[key] = value.replace('{path}', parsed.path)
+                test_headers[key] = value.replace("{path}", parsed.path)
 
             try:
                 response = self.http_client.get(url, headers=test_headers)
 
                 if self._is_bypass_success(response, baseline):
-                    results.append(self._create_result(
-                        url=url,
-                        vulnerable=True,
-                        payload=str(bypass_header),
-                        evidence=f"头部绕过成功，状态码: {response.status_code}",
-                        confidence=0.85,
-                        verified=True,
-                        remediation="不要信任客户端提供的 IP 或路径头部",
-                        extra={'bypass_type': 'header', 'headers': bypass_header}
-                    ))
+                    results.append(
+                        self._create_result(
+                            url=url,
+                            vulnerable=True,
+                            payload=str(bypass_header),
+                            evidence=f"头部绕过成功，状态码: {response.status_code}",
+                            confidence=0.85,
+                            verified=True,
+                            remediation="不要信任客户端提供的 IP 或路径头部",
+                            extra={"bypass_type": "header", "headers": bypass_header},
+                        )
+                    )
                     return results
 
             except Exception as e:
@@ -339,11 +343,7 @@ class AuthBypassDetector(BaseDetector):
 
         return results
 
-    def _test_backdoor_paths(
-        self,
-        url: str,
-        headers: Dict[str, str]
-    ) -> List[DetectionResult]:
+    def _test_backdoor_paths(self, url: str, headers: Dict[str, str]) -> List[DetectionResult]:
         """测试后门路径
 
         Args:
@@ -367,16 +367,18 @@ class AuthBypassDetector(BaseDetector):
                 if response.status_code == 200 and len(response.text) > 100:
                     # 检查是否是有意义的内容
                     if self._is_sensitive_content(response.text):
-                        results.append(self._create_result(
-                            url=test_url,
-                            vulnerable=True,
-                            payload=path,
-                            evidence=f"发现可访问的敏感路径",
-                            confidence=0.75,
-                            verified=False,
-                            remediation="禁用或保护敏感路径",
-                            extra={'bypass_type': 'backdoor', 'path': path}
-                        ))
+                        results.append(
+                            self._create_result(
+                                url=test_url,
+                                vulnerable=True,
+                                payload=path,
+                                evidence=f"发现可访问的敏感路径",
+                                confidence=0.75,
+                                verified=False,
+                                remediation="禁用或保护敏感路径",
+                                extra={"bypass_type": "backdoor", "path": path},
+                            )
+                        )
 
             except Exception as e:
                 logger.debug(f"后门路径测试失败 ({path}): {e}")
@@ -415,16 +417,16 @@ class AuthBypassDetector(BaseDetector):
     def _is_sensitive_content(self, content: str) -> bool:
         """判断是否是敏感内容"""
         sensitive_patterns = [
-            r'<title>.*admin.*</title>',
-            r'<title>.*dashboard.*</title>',
-            r'<title>.*console.*</title>',
-            r'password',
-            r'secret',
-            r'api[_-]?key',
-            r'phpinfo',
-            r'git config',
-            r'\.env',
-            r'database',
+            r"<title>.*admin.*</title>",
+            r"<title>.*dashboard.*</title>",
+            r"<title>.*console.*</title>",
+            r"password",
+            r"secret",
+            r"api[_-]?key",
+            r"phpinfo",
+            r"git config",
+            r"\.env",
+            r"database",
         ]
 
         content_lower = content.lower()

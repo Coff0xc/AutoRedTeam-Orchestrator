@@ -10,11 +10,11 @@
 消除了三个文件中的重复定义
 """
 
-import re
 import json
 import logging
-from typing import Any, Dict, List, Optional
+import re
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +129,7 @@ class TargetProfile:
 
     整合自 smart_payload_engine.py 的 TargetProfile 类
     """
+
     url: str
     headers: Dict[str, str] = field(default_factory=dict)
     body: str = ""
@@ -179,6 +180,7 @@ class TargetProfile:
                 # 规范化 WAF 类型
                 try:
                     from core.evasion import normalize_waf_type
+
                     return normalize_waf_type(waf_name).value
                 except ImportError:
                     return waf_name
@@ -290,6 +292,7 @@ def detect_waf_from_dict(target_info: Dict[str, Any]) -> Optional[str]:
         if any(sig in combined for sig in signatures):
             try:
                 from core.evasion import normalize_waf_type
+
                 return normalize_waf_type(waf_name).value
             except ImportError:
                 return waf_name

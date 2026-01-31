@@ -6,17 +6,18 @@
 
 import queue
 import threading
-import uuid
 import time
 import traceback
-from enum import Enum
+import uuid
 from dataclasses import dataclass, field
-from typing import Callable, Any, Optional, Dict, List
 from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 
 class TaskStatus(Enum):
     """任务状态"""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -27,6 +28,7 @@ class TaskStatus(Enum):
 @dataclass
 class Task:
     """任务数据类"""
+
     id: str
     func: Callable
     args: tuple = field(default_factory=tuple)
@@ -45,6 +47,7 @@ class TaskQueue:
     - 3个后台worker处理任务
     - 支持任务提交、状态查询、取消
     """
+
     _instance = None
     _lock = threading.Lock()
 
@@ -183,12 +186,14 @@ class TaskQueue:
         """
         tasks = []
         for task_id, task in list(self._tasks.items())[-limit:]:
-            tasks.append({
-                "task_id": task.id,
-                "status": task.status.value,
-                "created_at": task.created_at,
-                "completed_at": task.completed_at,
-            })
+            tasks.append(
+                {
+                    "task_id": task.id,
+                    "status": task.status.value,
+                    "created_at": task.created_at,
+                    "completed_at": task.completed_at,
+                }
+            )
 
         # 统计
         stats = {
@@ -209,7 +214,8 @@ class TaskQueue:
     def clear_completed(self) -> dict:
         """清理已完成的任务"""
         to_remove = [
-            tid for tid, task in self._tasks.items()
+            tid
+            for tid, task in self._tasks.items()
             if task.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED)
         ]
         for tid in to_remove:

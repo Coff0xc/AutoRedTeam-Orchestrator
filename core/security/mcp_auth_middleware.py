@@ -6,17 +6,18 @@ MCP 授权中间件 - MCP Tools Authorization Middleware
 仅用于授权渗透测试和安全研究
 """
 
-import os
 import functools
 import logging
-from typing import Dict, Any, Optional, Callable, List
+import os
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 # 尝试导入AuthManager
 try:
-    from .auth_manager import AuthManager, ToolLevel, Permission, APIKey
+    from .auth_manager import APIKey, AuthManager, Permission, ToolLevel
+
     HAS_AUTH_MANAGER = True
 except ImportError:
     HAS_AUTH_MANAGER = False
@@ -25,9 +26,10 @@ except ImportError:
 
 class AuthMode(Enum):
     """授权模式"""
-    STRICT = "strict"       # 严格模式：必须提供有效API Key
+
+    STRICT = "strict"  # 严格模式：必须提供有效API Key
     PERMISSIVE = "permissive"  # 宽松模式：无Key时允许访问（记录警告）
-    DISABLED = "disabled"   # 禁用模式：不检查授权
+    DISABLED = "disabled"  # 禁用模式：不检查授权
 
 
 # 全局配置
@@ -38,7 +40,7 @@ _auth_config = {
 }
 
 
-def get_auth_manager() -> Optional['AuthManager']:
+def get_auth_manager() -> Optional["AuthManager"]:
     """获取全局AuthManager实例"""
     if _auth_config["manager"] is None and HAS_AUTH_MANAGER:
         try:
@@ -65,9 +67,7 @@ def get_api_key_from_env() -> Optional[str]:
 
 
 def require_auth(
-    tool_name: str = None,
-    level: 'ToolLevel' = None,
-    permissions: List['Permission'] = None
+    tool_name: str = None, level: "ToolLevel" = None, permissions: List["Permission"] = None
 ):
     """
     MCP工具授权装饰器
@@ -85,6 +85,7 @@ def require_auth(
         async def lateral_smb_exec(target: str, ...) -> Dict:
             ...
     """
+
     def decorator(func: Callable):
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs) -> Dict[str, Any]:
@@ -104,7 +105,7 @@ def require_auth(
                     return {
                         "success": False,
                         "error": "Authorization required. Set AUTOREDTEAM_API_KEY environment variable.",
-                        "code": "AUTH_REQUIRED"
+                        "code": "AUTH_REQUIRED",
                     }
                 else:
                     # 宽松模式：允许但记录警告
@@ -119,7 +120,7 @@ def require_auth(
                     return {
                         "success": False,
                         "error": "Authorization system unavailable",
-                        "code": "AUTH_UNAVAILABLE"
+                        "code": "AUTH_UNAVAILABLE",
                     }
                 return await func(*args, **kwargs)
 
@@ -129,7 +130,7 @@ def require_auth(
                 return {
                     "success": False,
                     "error": "Invalid or expired API key",
-                    "code": "INVALID_KEY"
+                    "code": "INVALID_KEY",
                 }
 
             # 检查权限
@@ -141,12 +142,12 @@ def require_auth(
                         actual_tool_name,
                         _sanitize_params(kwargs),
                         success=False,
-                        error="Permission denied"
+                        error="Permission denied",
                     )
                 return {
                     "success": False,
                     "error": f"Insufficient permissions for tool: {actual_tool_name}",
-                    "code": "PERMISSION_DENIED"
+                    "code": "PERMISSION_DENIED",
                 }
 
             # 执行工具
@@ -156,10 +157,7 @@ def require_auth(
                 # 记录成功审计
                 if _auth_config["audit_enabled"]:
                     auth_mgr.audit(
-                        api_key.key_id,
-                        actual_tool_name,
-                        _sanitize_params(kwargs),
-                        success=True
+                        api_key.key_id, actual_tool_name, _sanitize_params(kwargs), success=True
                     )
 
                 return result
@@ -171,7 +169,7 @@ def require_auth(
                         actual_tool_name,
                         _sanitize_params(kwargs),
                         success=False,
-                        error=str(e)
+                        error=str(e),
                     )
                 raise
 
@@ -191,7 +189,7 @@ def require_auth(
                     return {
                         "success": False,
                         "error": "Authorization required",
-                        "code": "AUTH_REQUIRED"
+                        "code": "AUTH_REQUIRED",
                     }
                 return func(*args, **kwargs)
 
@@ -201,7 +199,7 @@ def require_auth(
                     return {
                         "success": False,
                         "error": "Authorization system unavailable",
-                        "code": "AUTH_UNAVAILABLE"
+                        "code": "AUTH_UNAVAILABLE",
                     }
                 return func(*args, **kwargs)
 
@@ -210,20 +208,21 @@ def require_auth(
                 return {
                     "success": False,
                     "error": "Invalid or expired API key",
-                    "code": "INVALID_KEY"
+                    "code": "INVALID_KEY",
                 }
 
             if not auth_mgr.check_permission(api_key, actual_tool_name):
                 return {
                     "success": False,
                     "error": f"Insufficient permissions for tool: {actual_tool_name}",
-                    "code": "PERMISSION_DENIED"
+                    "code": "PERMISSION_DENIED",
                 }
 
             return func(*args, **kwargs)
 
         # 根据函数类型返回对应的wrapper
         import asyncio
+
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
@@ -242,16 +241,23 @@ def _sanitize_params(params: Dict) -> Dict:
         清理后的参数
     """
     sensitive_keys = {
-        'password', 'secret', 'key', 'token', 'credential',
-        'api_key', 'auth', 'ntlm_hash', 'ssh_key'
+        "password",
+        "secret",
+        "key",
+        "token",
+        "credential",
+        "api_key",
+        "auth",
+        "ntlm_hash",
+        "ssh_key",
     }
 
     sanitized = {}
     for k, v in params.items():
         if any(s in k.lower() for s in sensitive_keys):
-            sanitized[k] = '***REDACTED***'
+            sanitized[k] = "***REDACTED***"
         elif isinstance(v, str) and len(v) > 200:
-            sanitized[k] = v[:200] + '...[TRUNCATED]'
+            sanitized[k] = v[:200] + "...[TRUNCATED]"
         else:
             sanitized[k] = v
 

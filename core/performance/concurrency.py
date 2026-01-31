@@ -5,23 +5,24 @@
 """
 
 import asyncio
-import time
-import threading
 import logging
-from typing import Any, Dict, List, Optional, Callable, TypeVar
-from dataclasses import dataclass, field
+import threading
+import time
 from collections import deque
-from concurrent.futures import ThreadPoolExecutor, Future
+from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 # ============== 动态线程池 ==============
+
 
 class DynamicThreadPool:
     """
@@ -42,7 +43,7 @@ class DynamicThreadPool:
         queue_size: int = 1000,
         scale_up_threshold: float = 0.8,
         scale_down_threshold: float = 0.2,
-        adjust_interval: float = 5.0
+        adjust_interval: float = 5.0,
     ):
         self.min_threads = min_threads
         self.max_threads = max_threads
@@ -65,7 +66,7 @@ class DynamicThreadPool:
             "completed": 0,
             "failed": 0,
             "scale_ups": 0,
-            "scale_downs": 0
+            "scale_downs": 0,
         }
 
     def start(self):
@@ -74,16 +75,12 @@ class DynamicThreadPool:
             return
 
         self._executor = ThreadPoolExecutor(
-            max_workers=self.current_threads,
-            thread_name_prefix="DynamicPool"
+            max_workers=self.current_threads, thread_name_prefix="DynamicPool"
         )
         self._running = True
 
         # 启动自动调整线程
-        self._adjuster_thread = threading.Thread(
-            target=self._auto_adjust_loop,
-            daemon=True
-        )
+        self._adjuster_thread = threading.Thread(target=self._auto_adjust_loop, daemon=True)
         self._adjuster_thread.start()
         logger.info(f"动态线程池已启动，初始线程数: {self.current_threads}")
 
@@ -117,20 +114,14 @@ class DynamicThreadPool:
 
             if load_ratio > self.scale_up_threshold:
                 # 扩容
-                new_size = min(
-                    int(self.current_threads * 1.5),
-                    self.max_threads
-                )
+                new_size = min(int(self.current_threads * 1.5), self.max_threads)
                 if new_size > self.current_threads:
                     self._stats["scale_ups"] += 1
                     logger.debug(f"线程池扩容: {self.current_threads} -> {new_size}")
 
             elif load_ratio < self.scale_down_threshold:
                 # 缩容
-                new_size = max(
-                    int(self.current_threads * 0.7),
-                    self.min_threads
-                )
+                new_size = max(int(self.current_threads * 0.7), self.min_threads)
                 if new_size < self.current_threads:
                     self._stats["scale_downs"] += 1
                     logger.debug(f"线程池缩容: {self.current_threads} -> {new_size}")
@@ -140,13 +131,11 @@ class DynamicThreadPool:
                 # 重建线程池
                 old_executor = self._executor
                 self._executor = ThreadPoolExecutor(
-                    max_workers=new_size,
-                    thread_name_prefix="DynamicPool"
+                    max_workers=new_size, thread_name_prefix="DynamicPool"
                 )
                 # 等待旧任务完成后关闭
                 threading.Thread(
-                    target=lambda: old_executor.shutdown(wait=True),
-                    daemon=True
+                    target=lambda: old_executor.shutdown(wait=True), daemon=True
                 ).start()
 
     def submit(self, fn: Callable, *args, **kwargs) -> Future:
@@ -180,15 +169,17 @@ class DynamicThreadPool:
             **self._stats,
             "current_threads": self.current_threads,
             "active_count": self._active_count,
-            "load_ratio": self._active_count / max(self.current_threads, 1)
+            "load_ratio": self._active_count / max(self.current_threads, 1),
         }
 
 
 # ============== 连接池管理器 ==============
 
+
 @dataclass
 class ConnectionInfo:
     """连接信息"""
+
     connection: Any
     created_at: float
     last_used: float
@@ -215,7 +206,7 @@ class ConnectionPoolManager:
         health_check_interval: float = 30.0,
         factory: Optional[Callable[[], Any]] = None,
         health_checker: Optional[Callable[[Any], bool]] = None,
-        closer: Optional[Callable[[Any], None]] = None
+        closer: Optional[Callable[[Any], None]] = None,
     ):
         self.max_connections = max_connections
         self.max_per_host = max_per_host
@@ -232,22 +223,14 @@ class ConnectionPoolManager:
         self._cleaner_thread: Optional[threading.Thread] = None
 
         # 统计
-        self._stats = {
-            "created": 0,
-            "reused": 0,
-            "closed": 0,
-            "health_check_failed": 0
-        }
+        self._stats = {"created": 0, "reused": 0, "closed": 0, "health_check_failed": 0}
 
     def start(self):
         """启动连接池"""
         if self._running:
             return
         self._running = True
-        self._cleaner_thread = threading.Thread(
-            target=self._cleanup_loop,
-            daemon=True
-        )
+        self._cleaner_thread = threading.Thread(target=self._cleanup_loop, daemon=True)
         self._cleaner_thread.start()
         logger.info("连接池管理器已启动")
 
@@ -288,7 +271,7 @@ class ConnectionPoolManager:
         try:
             if self._closer:
                 self._closer(conn)
-            elif hasattr(conn, 'close'):
+            elif hasattr(conn, "close"):
                 conn.close()
             self._stats["closed"] += 1
         except Exception as e:
@@ -326,8 +309,9 @@ class ConnectionPoolManager:
                 return conn_info.connection
 
             # 检查是否达到限制
-            total_connections = sum(len(p) + len(self._in_use.get(h, set()))
-                                   for h, p in self._pools.items())
+            total_connections = sum(
+                len(p) + len(self._in_use.get(h, set())) for h, p in self._pools.items()
+            )
             if total_connections >= self.max_connections:
                 raise RuntimeError("连接池已满")
 
@@ -354,9 +338,7 @@ class ConnectionPoolManager:
                 self._pools[host] = deque()
 
             conn_info = ConnectionInfo(
-                connection=conn,
-                created_at=time.time(),
-                last_used=time.time()
+                connection=conn, created_at=time.time(), last_used=time.time()
             )
             self._pools[host].append(conn_info)
 
@@ -375,11 +357,12 @@ class ConnectionPoolManager:
             return {
                 **self._stats,
                 "pool_sizes": {h: len(p) for h, p in self._pools.items()},
-                "in_use": {h: len(s) for h, s in self._in_use.items()}
+                "in_use": {h: len(s) for h, s in self._in_use.items()},
             }
 
 
 # ============== 令牌桶限流器 ==============
+
 
 class RateLimiter:
     """
@@ -392,12 +375,7 @@ class RateLimiter:
     - 按域名/资源分组限流
     """
 
-    def __init__(
-        self,
-        rate: float = 10.0,
-        burst: int = 20,
-        per_key_rate: Optional[float] = None
-    ):
+    def __init__(self, rate: float = 10.0, burst: int = 20, per_key_rate: Optional[float] = None):
         self.rate = rate  # 每秒令牌数
         self.burst = burst  # 桶容量
         self.per_key_rate = per_key_rate or rate
@@ -411,11 +389,7 @@ class RateLimiter:
         self._key_limiters: Dict[str, Dict] = {}
 
         # 统计
-        self._stats = {
-            "allowed": 0,
-            "throttled": 0,
-            "wait_time_total": 0.0
-        }
+        self._stats = {"allowed": 0, "throttled": 0, "wait_time_total": 0.0}
 
     def _refill(self):
         """补充令牌"""
@@ -443,10 +417,7 @@ class RateLimiter:
     def _acquire_for_key(self, key: str, tokens: int) -> bool:
         """按key获取令牌"""
         if key not in self._key_limiters:
-            self._key_limiters[key] = {
-                "tokens": float(self.burst),
-                "last_update": time.monotonic()
-            }
+            self._key_limiters[key] = {"tokens": float(self.burst), "last_update": time.monotonic()}
 
         limiter = self._key_limiters[key]
         now = time.monotonic()
@@ -480,7 +451,9 @@ class RateLimiter:
         async with self._async_lock:
             return self.acquire(tokens, key)
 
-    async def async_wait(self, tokens: int = 1, key: Optional[str] = None, timeout: float = 30.0) -> bool:
+    async def async_wait(
+        self, tokens: int = 1, key: Optional[str] = None, timeout: float = 30.0
+    ) -> bool:
         """异步等待获取令牌"""
         start = time.monotonic()
         while time.monotonic() - start < timeout:
@@ -497,16 +470,18 @@ class RateLimiter:
             "current_tokens": self._tokens,
             "rate": self.rate,
             "burst": self.burst,
-            "key_count": len(self._key_limiters)
+            "key_count": len(self._key_limiters),
         }
 
 
 # ============== 熔断器 ==============
 
+
 class CircuitState(Enum):
     """熔断器状态"""
-    CLOSED = "closed"      # 正常
-    OPEN = "open"          # 熔断
+
+    CLOSED = "closed"  # 正常
+    OPEN = "open"  # 熔断
     HALF_OPEN = "half_open"  # 半开
 
 
@@ -526,7 +501,7 @@ class CircuitBreaker:
         failure_threshold: int = 5,
         success_threshold: int = 3,
         timeout: float = 30.0,
-        half_open_max_calls: int = 3
+        half_open_max_calls: int = 3,
     ):
         self.failure_threshold = failure_threshold
         self.success_threshold = success_threshold
@@ -549,7 +524,7 @@ class CircuitBreaker:
             "successful_calls": 0,
             "failed_calls": 0,
             "rejected_calls": 0,
-            "state_changes": 0
+            "state_changes": 0,
         }
 
     def _get_service_state(self, service: str) -> Dict:
@@ -560,7 +535,7 @@ class CircuitBreaker:
                 "failure_count": 0,
                 "success_count": 0,
                 "last_failure_time": None,
-                "half_open_calls": 0
+                "half_open_calls": 0,
             }
         return self._service_breakers[service]
 
@@ -573,7 +548,7 @@ class CircuitBreaker:
                 state = {
                     "state": self._state,
                     "last_failure_time": self._last_failure_time,
-                    "half_open_calls": self._half_open_calls
+                    "half_open_calls": self._half_open_calls,
                 }
 
             self._stats["total_calls"] += 1
@@ -583,8 +558,10 @@ class CircuitBreaker:
 
             if state["state"] == CircuitState.OPEN:
                 # 检查是否可以转为半开
-                if state["last_failure_time"] and \
-                   time.time() - state["last_failure_time"] > self.timeout:
+                if (
+                    state["last_failure_time"]
+                    and time.time() - state["last_failure_time"] > self.timeout
+                ):
                     self._transition_to_half_open(service)
                     return True
                 self._stats["rejected_calls"] += 1
@@ -697,11 +674,12 @@ class CircuitBreaker:
             "services": {
                 s: {"state": d["state"].value, "failures": d["failure_count"]}
                 for s, d in self._service_breakers.items()
-            }
+            },
         }
 
 
 # ============== 舱壁隔离 ==============
+
 
 class Bulkhead:
     """
@@ -715,10 +693,7 @@ class Bulkhead:
     """
 
     def __init__(
-        self,
-        max_concurrent: int = 10,
-        max_wait_queue: int = 100,
-        wait_timeout: float = 30.0
+        self, max_concurrent: int = 10, max_wait_queue: int = 100, wait_timeout: float = 30.0
     ):
         self.max_concurrent = max_concurrent
         self.max_wait_queue = max_wait_queue
@@ -734,11 +709,7 @@ class Bulkhead:
         self._service_bulkheads: Dict[str, threading.Semaphore] = {}
 
         # 统计
-        self._stats = {
-            "acquired": 0,
-            "rejected": 0,
-            "timeout": 0
-        }
+        self._stats = {"acquired": 0, "rejected": 0, "timeout": 0}
 
     def acquire(self, service: Optional[str] = None, timeout: Optional[float] = None) -> bool:
         """获取执行许可"""
@@ -800,10 +771,7 @@ class Bulkhead:
             self._async_semaphore = asyncio.Semaphore(self.max_concurrent)
 
         try:
-            await asyncio.wait_for(
-                self._async_semaphore.acquire(),
-                timeout=self.wait_timeout
-            )
+            await asyncio.wait_for(self._async_semaphore.acquire(), timeout=self.wait_timeout)
             self._stats["acquired"] += 1
             return True
         except asyncio.TimeoutError:
@@ -821,11 +789,12 @@ class Bulkhead:
             **self._stats,
             "current_count": self._current_count,
             "waiting_count": self._waiting_count,
-            "max_concurrent": self.max_concurrent
+            "max_concurrent": self.max_concurrent,
         }
 
 
 # ============== 装饰器 ==============
+
 
 def rate_limited(rate: float = 10.0, burst: int = 20, key_func: Optional[Callable] = None):
     """限流装饰器"""
@@ -838,14 +807,14 @@ def rate_limited(rate: float = 10.0, burst: int = 20, key_func: Optional[Callabl
             if not limiter.wait(key=key):
                 raise RuntimeError("请求被限流")
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
 def circuit_protected(
-    failure_threshold: int = 5,
-    timeout: float = 30.0,
-    service_func: Optional[Callable] = None
+    failure_threshold: int = 5, timeout: float = 30.0, service_func: Optional[Callable] = None
 ):
     """熔断器装饰器"""
     breaker = CircuitBreaker(failure_threshold=failure_threshold, timeout=timeout)
@@ -863,7 +832,9 @@ def circuit_protected(
             except Exception as e:
                 breaker.record_failure(service)
                 raise e
+
         return wrapper
+
     return decorator
 
 
@@ -877,5 +848,7 @@ def bulkhead_isolated(max_concurrent: int = 10, service_func: Optional[Callable]
             service = service_func(*args, **kwargs) if service_func else None
             with bulkhead.execute(service):
                 return func(*args, **kwargs)
+
         return wrapper
+
     return decorator

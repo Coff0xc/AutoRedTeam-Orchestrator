@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class GRPCVulnType(Enum):
     """gRPC漏洞类型"""
+
     REFLECTION_ENABLED = "reflection_enabled"
     NO_TLS = "no_tls"
     WEAK_TLS = "weak_tls"
@@ -33,6 +34,7 @@ class GRPCVulnType(Enum):
 
 class GRPCSeverity(Enum):
     """严重性"""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -43,6 +45,7 @@ class GRPCSeverity(Enum):
 @dataclass
 class GRPCFinding:
     """gRPC安全发现"""
+
     vuln_type: GRPCVulnType
     severity: GRPCSeverity
     title: str
@@ -55,8 +58,8 @@ class GRPCSecurityTester:
     """gRPC安全测试器"""
 
     # gRPC魔术字节
-    GRPC_MAGIC = b'\x00'  # 未压缩
-    GRPC_COMPRESSED = b'\x01'  # 压缩
+    GRPC_MAGIC = b"\x00"  # 未压缩
+    GRPC_COMPRESSED = b"\x01"  # 压缩
 
     # 反射服务名
     REFLECTION_SERVICE = "grpc.reflection.v1alpha.ServerReflection"
@@ -127,15 +130,13 @@ class GRPCSecurityTester:
 
         return host, port, use_tls
 
-    def _create_grpc_frame(self, data: bytes,
-                           compressed: bool = False) -> bytes:
+    def _create_grpc_frame(self, data: bytes, compressed: bool = False) -> bytes:
         """创建gRPC帧"""
-        flag = b'\x01' if compressed else b'\x00'
-        length = struct.pack('>I', len(data))
+        flag = b"\x01" if compressed else b"\x00"
+        length = struct.pack(">I", len(data))
         return flag + length + data
 
-    def _connect(self, host: str, port: int,
-                 use_tls: bool = False) -> Optional[socket.socket]:
+    def _connect(self, host: str, port: int, use_tls: bool = False) -> Optional[socket.socket]:
         """建立连接"""
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -177,7 +178,7 @@ class GRPCSecurityTester:
             "reflection_enabled": False,
             "services": [],
             "methods": [],
-            "remediation": ""
+            "remediation": "",
         }
 
         host, port, use_tls = self._parse_grpc_url(target)
@@ -195,15 +196,12 @@ class GRPCSecurityTester:
                 channel = grpc.insecure_channel(channel_target)
 
             try:
-                from grpc_reflection.v1alpha import reflection_pb2
-                from grpc_reflection.v1alpha import reflection_pb2_grpc
+                from grpc_reflection.v1alpha import reflection_pb2, reflection_pb2_grpc
 
                 stub = reflection_pb2_grpc.ServerReflectionStub(channel)
 
                 # 请求服务列表
-                request = reflection_pb2.ServerReflectionRequest(
-                    list_services=""
-                )
+                request = reflection_pb2.ServerReflectionRequest(list_services="")
 
                 responses = stub.ServerReflectionInfo(iter([request]))
 
@@ -231,7 +229,7 @@ class GRPCSecurityTester:
             if sock:
                 try:
                     # 发送HTTP/2 preface
-                    preface = b'PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n'
+                    preface = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
                     sock.send(preface)
 
                     # 等待响应
@@ -251,14 +249,16 @@ class GRPCSecurityTester:
         if result["vulnerable"]:
             result["remediation"] = "在生产环境禁用gRPC反射API"
 
-            self._findings.append(GRPCFinding(
-                vuln_type=GRPCVulnType.REFLECTION_ENABLED,
-                severity=GRPCSeverity.MEDIUM,
-                title="gRPC反射API启用",
-                description="服务器启用了反射API,可能泄露服务定义",
-                remediation=result["remediation"],
-                evidence={"services": result["services"]}
-            ))
+            self._findings.append(
+                GRPCFinding(
+                    vuln_type=GRPCVulnType.REFLECTION_ENABLED,
+                    severity=GRPCSeverity.MEDIUM,
+                    title="gRPC反射API启用",
+                    description="服务器启用了反射API,可能泄露服务定义",
+                    remediation=result["remediation"],
+                    evidence={"services": result["services"]},
+                )
+            )
 
         return result
 
@@ -283,7 +283,7 @@ class GRPCSecurityTester:
             "tls_version": "",
             "certificate_info": {},
             "issues": [],
-            "remediation": ""
+            "remediation": "",
         }
 
         host, port, _ = self._parse_grpc_url(target)
@@ -293,7 +293,7 @@ class GRPCSecurityTester:
         if sock:
             try:
                 # 发送HTTP/2 preface
-                preface = b'PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n'
+                preface = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
                 sock.send(preface)
                 response = sock.recv(1024)
 
@@ -344,25 +344,29 @@ class GRPCSecurityTester:
             if result.get("plaintext_allowed"):
                 result["remediation"] = "强制使用TLS,禁用明文连接"
 
-                self._findings.append(GRPCFinding(
-                    vuln_type=GRPCVulnType.NO_TLS,
-                    severity=GRPCSeverity.HIGH,
-                    title="gRPC服务接受明文连接",
-                    description="服务器接受未加密的gRPC连接,流量可被截获",
-                    remediation=result["remediation"],
-                    evidence={"plaintext_allowed": True}
-                ))
+                self._findings.append(
+                    GRPCFinding(
+                        vuln_type=GRPCVulnType.NO_TLS,
+                        severity=GRPCSeverity.HIGH,
+                        title="gRPC服务接受明文连接",
+                        description="服务器接受未加密的gRPC连接,流量可被截获",
+                        remediation=result["remediation"],
+                        evidence={"plaintext_allowed": True},
+                    )
+                )
             else:
                 result["remediation"] = "升级到TLS 1.2或更高版本"
 
-                self._findings.append(GRPCFinding(
-                    vuln_type=GRPCVulnType.WEAK_TLS,
-                    severity=GRPCSeverity.MEDIUM,
-                    title="gRPC使用弱TLS版本",
-                    description=f"服务器使用弱TLS版本: {result['tls_version']}",
-                    remediation=result["remediation"],
-                    evidence={"tls_version": result["tls_version"]}
-                ))
+                self._findings.append(
+                    GRPCFinding(
+                        vuln_type=GRPCVulnType.WEAK_TLS,
+                        severity=GRPCSeverity.MEDIUM,
+                        title="gRPC使用弱TLS版本",
+                        description=f"服务器使用弱TLS版本: {result['tls_version']}",
+                        remediation=result["remediation"],
+                        evidence={"tls_version": result["tls_version"]},
+                    )
+                )
 
         return result
 
@@ -380,12 +384,7 @@ class GRPCSecurityTester:
                 "remediation": str
             }
         """
-        result = {
-            "vulnerable": False,
-            "auth_required": False,
-            "tests": [],
-            "remediation": ""
-        }
+        result = {"vulnerable": False, "auth_required": False, "tests": [], "remediation": ""}
 
         host, port, use_tls = self._parse_grpc_url(target)
 
@@ -408,29 +407,23 @@ class GRPCSecurityTester:
                 stub = reflection_pb2_grpc.ServerReflectionStub(channel)
 
                 # 如果能调用,说明不需要认证
-                result["tests"].append({
-                    "test": "无认证调用",
-                    "success": True,
-                    "note": "服务接受无认证请求"
-                })
+                result["tests"].append(
+                    {"test": "无认证调用", "success": True, "note": "服务接受无认证请求"}
+                )
 
             except grpc.RpcError as e:
                 status_code = e.code()
 
                 if status_code == grpc.StatusCode.UNAUTHENTICATED:
                     result["auth_required"] = True
-                    result["tests"].append({
-                        "test": "无认证调用",
-                        "success": False,
-                        "note": "需要认证"
-                    })
+                    result["tests"].append(
+                        {"test": "无认证调用", "success": False, "note": "需要认证"}
+                    )
 
             except ImportError:
-                result["tests"].append({
-                    "test": "无认证调用",
-                    "success": None,
-                    "note": "需要grpc_reflection库"
-                })
+                result["tests"].append(
+                    {"test": "无认证调用", "success": None, "note": "需要grpc_reflection库"}
+                )
 
             # 测试伪造metadata
             test_metadata = [
@@ -442,11 +435,13 @@ class GRPCSecurityTester:
             for key, value in test_metadata:
                 try:
                     # 这里需要实际的服务方法来测试
-                    result["tests"].append({
-                        "test": f"metadata注入: {key}",
-                        "metadata": {key: value},
-                        "note": "需要已知服务方法进行完整测试"
-                    })
+                    result["tests"].append(
+                        {
+                            "test": f"metadata注入: {key}",
+                            "metadata": {key: value},
+                            "note": "需要已知服务方法进行完整测试",
+                        }
+                    )
                 except Exception as exc:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
@@ -467,14 +462,16 @@ class GRPCSecurityTester:
         if result["vulnerable"]:
             result["remediation"] = "实施gRPC拦截器进行认证验证"
 
-            self._findings.append(GRPCFinding(
-                vuln_type=GRPCVulnType.NO_AUTH,
-                severity=GRPCSeverity.HIGH,
-                title="gRPC服务缺少认证",
-                description="服务接受无认证的gRPC请求",
-                remediation=result["remediation"],
-                evidence={"tests": result["tests"]}
-            ))
+            self._findings.append(
+                GRPCFinding(
+                    vuln_type=GRPCVulnType.NO_AUTH,
+                    severity=GRPCSeverity.HIGH,
+                    title="gRPC服务缺少认证",
+                    description="服务接受无认证的gRPC请求",
+                    remediation=result["remediation"],
+                    evidence={"tests": result["tests"]},
+                )
+            )
 
         return result
 
@@ -491,11 +488,7 @@ class GRPCSecurityTester:
                 "remediation": str
             }
         """
-        result = {
-            "vulnerable": False,
-            "injection_tests": [],
-            "remediation": ""
-        }
+        result = {"vulnerable": False, "injection_tests": [], "remediation": ""}
 
         # 注入测试payload
         injection_payloads = [
@@ -520,12 +513,7 @@ class GRPCSecurityTester:
                 channel = grpc.insecure_channel(channel_target)
 
             for key, payload in injection_payloads:
-                test_result = {
-                    "header": key,
-                    "payload": payload,
-                    "accepted": False,
-                    "error": None
-                }
+                test_result = {"header": key, "payload": payload, "accepted": False, "error": None}
 
                 # 注意:这里需要实际的服务方法来测试
                 # 仅记录测试用例
@@ -546,8 +534,7 @@ class GRPCSecurityTester:
 
         return result
 
-    def test_message_size_limit(self, target: str,
-                                 max_size_mb: int = 10) -> Dict[str, Any]:
+    def test_message_size_limit(self, target: str, max_size_mb: int = 10) -> Dict[str, Any]:
         """测试gRPC消息大小限制
 
         Args:
@@ -561,12 +548,7 @@ class GRPCSecurityTester:
                 "remediation": str
             }
         """
-        result = {
-            "vulnerable": False,
-            "tests": [],
-            "max_accepted_size": 0,
-            "remediation": ""
-        }
+        result = {"vulnerable": False, "tests": [], "max_accepted_size": 0, "remediation": ""}
 
         host, port, use_tls = self._parse_grpc_url(target)
 
@@ -580,8 +562,8 @@ class GRPCSecurityTester:
 
             # 设置大消息选项
             options = [
-                ('grpc.max_send_message_length', max_size_mb * 1024 * 1024),
-                ('grpc.max_receive_message_length', max_size_mb * 1024 * 1024),
+                ("grpc.max_send_message_length", max_size_mb * 1024 * 1024),
+                ("grpc.max_receive_message_length", max_size_mb * 1024 * 1024),
             ]
 
             if use_tls:
@@ -613,10 +595,7 @@ class GRPCSecurityTester:
         """
         self._findings = []
 
-        results = {
-            "target": target,
-            "tests": {}
-        }
+        results = {"target": target, "tests": {}}
 
         # TLS测试
         results["tests"]["tls"] = self.test_tls(target)
@@ -633,13 +612,15 @@ class GRPCSecurityTester:
         # 统计漏洞
         vulnerabilities = []
         for finding in self._findings:
-            vulnerabilities.append({
-                "type": finding.vuln_type.value,
-                "severity": finding.severity.value,
-                "title": finding.title,
-                "description": finding.description,
-                "remediation": finding.remediation
-            })
+            vulnerabilities.append(
+                {
+                    "type": finding.vuln_type.value,
+                    "severity": finding.severity.value,
+                    "title": finding.title,
+                    "description": finding.description,
+                    "remediation": finding.remediation,
+                }
+            )
 
         results["vulnerabilities"] = vulnerabilities
 
@@ -647,7 +628,7 @@ class GRPCSecurityTester:
         results["summary"] = {
             "total_tests": len(results["tests"]),
             "vulnerable_count": len(vulnerabilities),
-            "highest_severity": self._get_highest_severity()
+            "highest_severity": self._get_highest_severity(),
         }
 
         # 建议
@@ -705,15 +686,17 @@ class GRPCSecurityTester:
                 "high": "🟠",
                 "medium": "🟡",
                 "low": "🟢",
-                "info": "ℹ️"
+                "info": "ℹ️",
             }.get(finding.severity.value, "⚪")
 
-            lines.extend([
-                f"{severity_icon} [{finding.severity.value.upper()}] {finding.title}",
-                f"   描述: {finding.description}",
-                f"   修复: {finding.remediation}",
-                ""
-            ])
+            lines.extend(
+                [
+                    f"{severity_icon} [{finding.severity.value.upper()}] {finding.title}",
+                    f"   描述: {finding.description}",
+                    f"   修复: {finding.remediation}",
+                    "",
+                ]
+            )
 
         lines.append("=" * 60)
 
@@ -729,7 +712,8 @@ def scan_grpc(target: str) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     import sys
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     if len(sys.argv) > 1:
         target = sys.argv[1]

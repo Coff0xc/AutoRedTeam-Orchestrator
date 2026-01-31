@@ -6,14 +6,14 @@ AutoRedTeam-Orchestrator 权限提升和数据外泄异常
 
 from __future__ import annotations
 
-from typing import Optional, Any
+from typing import Any, Optional
 
 from .base import AutoRedTeamError
-
 
 # ============================================================================
 # 权限提升错误
 # ============================================================================
+
 
 class PrivilegeEscalationError(AutoRedTeamError):
     """
@@ -33,7 +33,7 @@ class PrivilegeEscalationError(AutoRedTeamError):
         method: Optional[str] = None,
         current_level: Optional[str] = None,
         target_level: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         """
         初始化权限提升错误
@@ -50,11 +50,11 @@ class PrivilegeEscalationError(AutoRedTeamError):
         self.current_level = current_level
         self.target_level = target_level
         if method:
-            self.details['method'] = method
+            self.details["method"] = method
         if current_level:
-            self.details['current_level'] = current_level
+            self.details["current_level"] = current_level
         if target_level:
-            self.details['target_level'] = target_level
+            self.details["target_level"] = target_level
 
 
 class EscalationVectorNotFound(PrivilegeEscalationError):
@@ -67,6 +67,7 @@ class EscalationVectorNotFound(PrivilegeEscalationError):
         >>> raise EscalationVectorNotFound("未找到SUID提权向量")
         >>> raise EscalationVectorNotFound("UAC绕过技术不适用", method="fodhelper")
     """
+
     pass
 
 
@@ -80,6 +81,7 @@ class InsufficientPrivilege(PrivilegeEscalationError):
         >>> raise InsufficientPrivilege("需要管理员权限", current_level="user", target_level="admin")
         >>> raise InsufficientPrivilege("无法创建原始套接字", method="icmp_exfil")
     """
+
     pass
 
 
@@ -93,6 +95,7 @@ class UACBypassFailed(PrivilegeEscalationError):
         >>> raise UACBypassFailed("fodhelper绕过失败", method="fodhelper")
         >>> raise UACBypassFailed("注册表写入被拒绝", details={"key": "HKCU\\...\\shell\\open\\command"})
     """
+
     pass
 
 
@@ -106,12 +109,14 @@ class TokenManipulationError(PrivilegeEscalationError):
         >>> raise TokenManipulationError("无法打开目标进程", details={"pid": 4})
         >>> raise TokenManipulationError("Token复制失败", method="token_impersonation")
     """
+
     pass
 
 
 # ============================================================================
 # 数据外泄错误
 # ============================================================================
+
 
 class ExfiltrationError(AutoRedTeamError):
     """
@@ -129,7 +134,7 @@ class ExfiltrationError(AutoRedTeamError):
         message: str,
         channel: Optional[str] = None,
         destination: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         """
         初始化数据外泄错误
@@ -144,9 +149,9 @@ class ExfiltrationError(AutoRedTeamError):
         self.channel = channel
         self.destination = destination
         if channel:
-            self.details['channel'] = channel
+            self.details["channel"] = channel
         if destination:
-            self.details['destination'] = destination
+            self.details["destination"] = destination
 
 
 class ChannelBlocked(ExfiltrationError):
@@ -159,6 +164,7 @@ class ChannelBlocked(ExfiltrationError):
         >>> raise ChannelBlocked("DNS外泄被阻断", channel="dns")
         >>> raise ChannelBlocked("HTTPS出站被拦截", channel="https", destination="c2.example.com")
     """
+
     pass
 
 
@@ -178,7 +184,7 @@ class DataTooLarge(ExfiltrationError):
         message: str,
         data_size: Optional[int] = None,
         max_size: Optional[int] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         """
         初始化数据过大错误
@@ -193,9 +199,9 @@ class DataTooLarge(ExfiltrationError):
         self.data_size = data_size
         self.max_size = max_size
         if data_size is not None:
-            self.details['data_size'] = data_size
+            self.details["data_size"] = data_size
         if max_size is not None:
-            self.details['max_size'] = max_size
+            self.details["max_size"] = max_size
 
 
 class ChannelConnectionError(ExfiltrationError):
@@ -208,6 +214,7 @@ class ChannelConnectionError(ExfiltrationError):
         >>> raise ChannelConnectionError("SMB连接失败", channel="smb")
         >>> raise ChannelConnectionError("DNS解析器不可用", channel="dns")
     """
+
     pass
 
 
@@ -220,20 +227,21 @@ class EncryptionRequired(ExfiltrationError):
     示例:
         >>> raise EncryptionRequired("该通道要求数据加密", channel="https")
     """
+
     pass
 
 
 __all__ = [
     # 权限提升错误
-    'PrivilegeEscalationError',
-    'EscalationVectorNotFound',
-    'InsufficientPrivilege',
-    'UACBypassFailed',
-    'TokenManipulationError',
+    "PrivilegeEscalationError",
+    "EscalationVectorNotFound",
+    "InsufficientPrivilege",
+    "UACBypassFailed",
+    "TokenManipulationError",
     # 数据外泄错误
-    'ExfiltrationError',
-    'ChannelBlocked',
-    'DataTooLarge',
-    'ChannelConnectionError',
-    'EncryptionRequired',
+    "ExfiltrationError",
+    "ChannelBlocked",
+    "DataTooLarge",
+    "ChannelConnectionError",
+    "EncryptionRequired",
 ]

@@ -5,26 +5,35 @@
 """
 
 import gc
+import logging
 import sys
+import threading
 import time
 import weakref
-import threading
-import logging
-from typing import (
-    Any, Dict, List, Optional, Callable, TypeVar, Generic,
-    Iterator, Generator, Iterable
-)
-from dataclasses import dataclass, field
 from collections import deque
-from functools import wraps
 from contextlib import contextmanager
+from dataclasses import dataclass, field
+from functools import wraps
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    Generic,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    TypeVar,
+)
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 # ============== 流式结果处理器 ==============
+
 
 class StreamingResultProcessor(Generic[T]):
     """
@@ -41,7 +50,7 @@ class StreamingResultProcessor(Generic[T]):
         self,
         chunk_size: int = 1000,
         max_buffer_size: int = 10000,
-        on_chunk: Optional[Callable[[List[T]], None]] = None
+        on_chunk: Optional[Callable[[List[T]], None]] = None,
     ):
         self.chunk_size = chunk_size
         self.max_buffer_size = max_buffer_size
@@ -51,9 +60,7 @@ class StreamingResultProcessor(Generic[T]):
         self._lock = threading.Lock()
 
     def process_stream(
-        self,
-        data_source: Iterable[T],
-        processor: Callable[[T], Any]
+        self, data_source: Iterable[T], processor: Callable[[T], Any]
     ) -> Generator[Any, None, None]:
         """流式处理数据源"""
         chunk = []
@@ -88,7 +95,7 @@ class StreamingResultProcessor(Generic[T]):
         self,
         data_source: Iterable[T],
         processor: Callable[[T], Any],
-        max_results: Optional[int] = None
+        max_results: Optional[int] = None,
     ) -> List[Any]:
         """收集处理结果(带限制)"""
         results = []
@@ -107,11 +114,12 @@ class StreamingResultProcessor(Generic[T]):
         return {
             "processed_count": self._processed_count,
             "buffer_size": len(self._buffer),
-            "chunk_size": self.chunk_size
+            "chunk_size": self.chunk_size,
         }
 
 
 # ============== 对象池 ==============
+
 
 class ObjectPool(Generic[T]):
     """
@@ -130,7 +138,7 @@ class ObjectPool(Generic[T]):
         max_size: int = 100,
         min_size: int = 5,
         reset_func: Optional[Callable[[T], None]] = None,
-        validate_func: Optional[Callable[[T], bool]] = None
+        validate_func: Optional[Callable[[T], bool]] = None,
     ):
         self._factory = factory
         self._max_size = max_size
@@ -208,15 +216,17 @@ class ObjectPool(Generic[T]):
             "in_use": len(self._in_use),
             "created_count": self._created_count,
             "reuse_count": self._reuse_count,
-            "reuse_rate": self._reuse_count / max(self._reuse_count + self._created_count, 1)
+            "reuse_rate": self._reuse_count / max(self._reuse_count + self._created_count, 1),
         }
 
 
 # ============== 结果分页器 ==============
 
+
 @dataclass
 class Page(Generic[T]):
     """分页结果"""
+
     items: List[T]
     page: int
     page_size: int
@@ -236,12 +246,7 @@ class ResultPaginator(Generic[T]):
     - 支持游标分页
     """
 
-    def __init__(
-        self,
-        data_source: Iterable[T],
-        page_size: int = 100,
-        max_pages: int = 100
-    ):
+    def __init__(self, data_source: Iterable[T], page_size: int = 100, max_pages: int = 100):
         self.page_size = page_size
         self.max_pages = max_pages
         self._data_source = data_source
@@ -298,7 +303,7 @@ class ResultPaginator(Generic[T]):
             total_items=total_items,
             total_pages=total_pages,
             has_next=has_next or not self._exhausted,
-            has_prev=page > 0
+            has_prev=page > 0,
         )
 
     def iter_pages(self) -> Generator[Page[T], None, None]:
@@ -316,6 +321,7 @@ class ResultPaginator(Generic[T]):
 
 # ============== 内存监控器 ==============
 
+
 class MemoryMonitor:
     """
     内存监控器 - 实时监控内存使用
@@ -327,10 +333,7 @@ class MemoryMonitor:
     """
 
     def __init__(
-        self,
-        threshold: float = 0.8,
-        max_memory_mb: int = 512,
-        check_interval: float = 5.0
+        self, threshold: float = 0.8, max_memory_mb: int = 512, check_interval: float = 5.0
     ):
         self.threshold = threshold
         self.max_memory_mb = max_memory_mb
@@ -344,31 +347,33 @@ class MemoryMonitor:
         """获取当前内存使用情况"""
         try:
             import psutil
+
             process = psutil.Process()
             mem_info = process.memory_info()
             return {
                 "rss_mb": mem_info.rss / 1024 / 1024,
                 "vms_mb": mem_info.vms / 1024 / 1024,
                 "percent": process.memory_percent(),
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
         except ImportError:
             # 降级方案
             import resource
+
             try:
                 usage = resource.getrusage(resource.RUSAGE_SELF)
                 return {
                     "rss_mb": usage.ru_maxrss / 1024,
                     "vms_mb": 0,
                     "percent": 0,
-                    "timestamp": time.time()
+                    "timestamp": time.time(),
                 }
             except (AttributeError, OSError):
                 return {
                     "rss_mb": sys.getsizeof(gc.get_objects()) / 1024 / 1024,
                     "vms_mb": 0,
                     "percent": 0,
-                    "timestamp": time.time()
+                    "timestamp": time.time(),
                 }
 
     def _monitor_loop(self):
@@ -434,17 +439,14 @@ class MemoryMonitor:
         return {
             "before_mb": before["rss_mb"],
             "after_mb": after["rss_mb"],
-            "freed_mb": before["rss_mb"] - after["rss_mb"]
+            "freed_mb": before["rss_mb"] - after["rss_mb"],
         }
 
 
 # ============== 内存高效装饰器 ==============
 
-def memory_efficient(
-    max_items: int = 10000,
-    chunk_size: int = 1000,
-    force_gc: bool = True
-):
+
+def memory_efficient(max_items: int = 10000, chunk_size: int = 1000, force_gc: bool = True):
     """
     内存高效装饰器 - 自动限制返回结果数量
 
@@ -453,6 +455,7 @@ def memory_efficient(
         def scan_ports(target):
             ...
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -460,22 +463,19 @@ def memory_efficient(
 
             # 处理列表结果
             if isinstance(result, list) and len(result) > max_items:
-                logger.warning(
-                    f"结果数量 {len(result)} 超过限制 {max_items}，已截断"
-                )
+                logger.warning(f"结果数量 {len(result)} 超过限制 {max_items}，已截断")
                 result = result[:max_items]
 
             # 处理字典中的列表
             elif isinstance(result, dict):
                 for key, value in result.items():
                     if isinstance(value, list) and len(value) > max_items:
-                        logger.warning(
-                            f"字段 {key} 结果数量 {len(value)} 超过限制，已截断"
-                        )
+                        logger.warning(f"字段 {key} 结果数量 {len(value)} 超过限制，已截断")
                         result[key] = value[:max_items]
 
             # 处理生成器
-            elif hasattr(result, '__iter__') and not isinstance(result, (str, bytes, dict)):
+            elif hasattr(result, "__iter__") and not isinstance(result, (str, bytes, dict)):
+
                 def limited_generator():
                     count = 0
                     for item in result:
@@ -486,17 +486,21 @@ def memory_efficient(
                         count += 1
                         if force_gc and count % chunk_size == 0:
                             gc.collect()
+
                 return limited_generator()
 
             if force_gc:
                 gc.collect()
 
             return result
+
         return wrapper
+
     return decorator
 
 
 # ============== 大对象压缩存储 ==============
+
 
 class CompressedStorage:
     """
@@ -516,17 +520,20 @@ class CompressedStorage:
     def _compress(self, data: bytes) -> bytes:
         """压缩数据"""
         import zlib
+
         return zlib.compress(data, level=6)
 
     def _decompress(self, data: bytes) -> bytes:
         """解压数据"""
         import zlib
+
         return zlib.decompress(data)
 
     def set(self, key: str, value: Any):
         """存储值"""
         import json
-        data = json.dumps(value, default=str).encode('utf-8')
+
+        data = json.dumps(value, default=str).encode("utf-8")
 
         if len(data) > self.compression_threshold:
             data = self._compress(data)
@@ -539,6 +546,7 @@ class CompressedStorage:
     def get(self, key: str) -> Optional[Any]:
         """获取值"""
         import json
+
         if key not in self._storage:
             return None
 
@@ -546,7 +554,7 @@ class CompressedStorage:
         if key in self._compressed_keys:
             data = self._decompress(data)
 
-        return json.loads(data.decode('utf-8'))
+        return json.loads(data.decode("utf-8"))
 
     def delete(self, key: str):
         """删除值"""
@@ -560,5 +568,5 @@ class CompressedStorage:
             "total_keys": len(self._storage),
             "compressed_keys": len(self._compressed_keys),
             "total_size_kb": total_size / 1024,
-            "compression_rate": len(self._compressed_keys) / max(len(self._storage), 1)
+            "compression_rate": len(self._compressed_keys) / max(len(self._storage), 1),
         }

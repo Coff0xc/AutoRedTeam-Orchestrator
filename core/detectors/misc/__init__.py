@@ -10,8 +10,8 @@ from .headers import SecurityHeadersDetector
 from .info_disclosure import InfoDisclosureDetector
 
 __all__ = [
-    'CORSDetector',
-    'CSRFDetector',
-    'SecurityHeadersDetector',
-    'InfoDisclosureDetector',
+    "CORSDetector",
+    "CSRFDetector",
+    "SecurityHeadersDetector",
+    "InfoDisclosureDetector",
 ]

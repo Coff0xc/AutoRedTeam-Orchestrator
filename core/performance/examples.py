@@ -3,34 +3,28 @@
 性能优化模块使用示例
 """
 
-import time
 import asyncio
+import time
 from typing import List
 
 # 导入性能优化组件
-from core.performance import (
-    # 管理器
-    PerformanceManager,
-    init_performance,
-    # 配置
-    PerformanceConfig,
-    # 内存优化
-    StreamingResultProcessor,
-    ObjectPool,
-    ResultPaginator,
-    memory_efficient,
-    # 并发控制
-    RateLimiter,
+from core.performance import (  # 管理器; 配置; 内存优化; 并发控制; 可靠性; 监控
     CircuitBreaker,
-    # 可靠性
-    retry_with_policy,
+    ObjectPool,
+    PerformanceConfig,
+    PerformanceManager,
+    PerformanceMetrics,
+    RateLimiter,
+    ResultPaginator,
     RetryPolicy,
-    # 监控
-    PerformanceMetrics
+    StreamingResultProcessor,
+    init_performance,
+    memory_efficient,
+    retry_with_policy,
 )
 
-
 # ============== 示例1: 使用管理器 ==============
+
 
 def example_manager():
     """使用性能管理器的完整示例"""
@@ -60,12 +54,10 @@ def example_manager():
 
 # ============== 示例2: 流式处理大数据 ==============
 
+
 def example_streaming():
     """流式处理避免内存溢出"""
-    processor = StreamingResultProcessor(
-        chunk_size=100,
-        max_buffer_size=1000
-    )
+    processor = StreamingResultProcessor(chunk_size=100, max_buffer_size=1000)
 
     # 模拟大数据源
     def data_source():
@@ -82,15 +74,14 @@ def example_streaming():
 
 # ============== 示例3: 对象池复用 ==============
 
+
 def example_object_pool():
     """对象池复用昂贵对象"""
     import requests
 
     # 创建Session池
     session_pool = ObjectPool(
-        factory=lambda: requests.Session(),
-        max_size=10,
-        reset_func=lambda s: s.cookies.clear()
+        factory=lambda: requests.Session(), max_size=10, reset_func=lambda s: s.cookies.clear()
     )
 
     # 使用对象池
@@ -102,6 +93,7 @@ def example_object_pool():
 
 
 # ============== 示例4: 结果分页 ==============
+
 
 def example_pagination():
     """大结果集分页返回"""
@@ -123,6 +115,7 @@ def example_pagination():
 
 # ============== 示例5: 限流器 ==============
 
+
 def example_rate_limiter():
     """令牌桶限流"""
     limiter = RateLimiter(rate=10.0, burst=20)
@@ -141,12 +134,10 @@ def example_rate_limiter():
 
 # ============== 示例6: 熔断器 ==============
 
+
 def example_circuit_breaker():
     """熔断器防止级联故障"""
-    breaker = CircuitBreaker(
-        failure_threshold=3,
-        timeout=10.0
-    )
+    breaker = CircuitBreaker(failure_threshold=3, timeout=10.0)
 
     def call_service():
         if breaker.can_execute():
@@ -171,10 +162,12 @@ def example_circuit_breaker():
 
 # ============== 示例7: 重试装饰器 ==============
 
+
 @retry_with_policy(max_retries=3, base_delay=1.0)
 def unreliable_function():
     """不可靠的函数，会自动重试"""
     import random
+
     if random.random() < 0.7:
         raise ConnectionError("随机失败")
     return "成功"
@@ -191,6 +184,7 @@ def example_retry():
 
 # ============== 示例8: 内存高效装饰器 ==============
 
+
 @memory_efficient(max_items=1000)
 def scan_large_target():
     """扫描函数，结果自动限制"""
@@ -205,6 +199,7 @@ def example_memory_efficient():
 
 # ============== 示例9: 可恢复任务 ==============
 
+
 def example_recoverable_task():
     """断点续传任务示例"""
     perf = PerformanceManager()
@@ -212,9 +207,7 @@ def example_recoverable_task():
 
     try:
         task = perf.create_recoverable_task(
-            task_id="scan_task_001",
-            task_type="port_scan",
-            total=1000
+            task_id="scan_task_001", task_type="port_scan", total=1000
         )
 
         with task:
@@ -235,6 +228,7 @@ def example_recoverable_task():
 
 
 # ============== 示例10: 性能指标 ==============
+
 
 def example_metrics():
     """性能指标收集示例"""

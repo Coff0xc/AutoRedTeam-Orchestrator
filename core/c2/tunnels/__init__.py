@@ -11,33 +11,29 @@ C2 隧道模块 - C2 Tunnels Module
     - WebSocket 隧道
 """
 
-from typing import Optional, Union, Type
 import logging
+from typing import Optional, Type, Union
 
 from ..base import BaseTunnel, C2Config, TunnelType
-from .http import HTTPTunnel
 from .dns import DNSTunnel
+from .http import HTTPTunnel
 from .websocket import WebSocketTunnel
 
 logger = logging.getLogger(__name__)
 
 # 隧道类型映射
 TUNNEL_REGISTRY: dict[str, Type[BaseTunnel]] = {
-    'http': HTTPTunnel,
-    'https': HTTPTunnel,
-    'dns': DNSTunnel,
-    'ws': WebSocketTunnel,
-    'wss': WebSocketTunnel,
-    'websocket': WebSocketTunnel,
+    "http": HTTPTunnel,
+    "https": HTTPTunnel,
+    "dns": DNSTunnel,
+    "ws": WebSocketTunnel,
+    "wss": WebSocketTunnel,
+    "websocket": WebSocketTunnel,
 }
 
 
 def create_tunnel(
-    protocol: str,
-    server: str,
-    port: int,
-    config: Optional[C2Config] = None,
-    **kwargs
+    protocol: str, server: str, port: int, config: Optional[C2Config] = None, **kwargs
 ) -> BaseTunnel:
     """
     创建隧道实例
@@ -59,8 +55,7 @@ def create_tunnel(
 
     if protocol not in TUNNEL_REGISTRY:
         raise ValueError(
-            f"Unsupported protocol: {protocol}. "
-            f"Available: {list(TUNNEL_REGISTRY.keys())}"
+            f"Unsupported protocol: {protocol}. " f"Available: {list(TUNNEL_REGISTRY.keys())}"
         )
 
     # 创建或更新配置
@@ -118,14 +113,14 @@ def list_available_tunnels() -> list[str]:
 
 __all__ = [
     # 隧道类
-    'HTTPTunnel',
-    'DNSTunnel',
-    'WebSocketTunnel',
+    "HTTPTunnel",
+    "DNSTunnel",
+    "WebSocketTunnel",
     # 工厂函数
-    'create_tunnel',
-    'get_tunnel_class',
-    'register_tunnel',
-    'list_available_tunnels',
+    "create_tunnel",
+    "get_tunnel_class",
+    "register_tunnel",
+    "list_available_tunnels",
     # 注册表
-    'TUNNEL_REGISTRY',
+    "TUNNEL_REGISTRY",
 ]

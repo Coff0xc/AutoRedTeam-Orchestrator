@@ -17,12 +17,12 @@
 """
 
 import logging
-import sys
 import os
-from pathlib import Path
-from typing import Optional, Union
+import sys
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
+from typing import Optional, Union
 
 
 class ColoredFormatter(logging.Formatter):
@@ -35,24 +35,21 @@ class ColoredFormatter(logging.Formatter):
 
     # ANSI颜色代码
     COLORS = {
-        'DEBUG': '\033[36m',     # 青色
-        'INFO': '\033[32m',      # 绿色
-        'WARNING': '\033[33m',   # 黄色
-        'ERROR': '\033[31m',     # 红色
-        'CRITICAL': '\033[35m',  # 紫色
+        "DEBUG": "\033[36m",  # 青色
+        "INFO": "\033[32m",  # 绿色
+        "WARNING": "\033[33m",  # 黄色
+        "ERROR": "\033[31m",  # 红色
+        "CRITICAL": "\033[35m",  # 紫色
     }
-    RESET = '\033[0m'
-    BOLD = '\033[1m'
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
 
     # 时间戳颜色
-    TIME_COLOR = '\033[90m'  # 灰色
-    NAME_COLOR = '\033[94m'  # 蓝色
+    TIME_COLOR = "\033[90m"  # 灰色
+    NAME_COLOR = "\033[94m"  # 蓝色
 
     def __init__(
-        self,
-        fmt: Optional[str] = None,
-        datefmt: Optional[str] = None,
-        colored: bool = True
+        self, fmt: Optional[str] = None, datefmt: Optional[str] = None, colored: bool = True
     ):
         """
         初始化彩色格式化器
@@ -69,24 +66,22 @@ class ColoredFormatter(logging.Formatter):
     def _supports_color() -> bool:
         """检测终端是否支持颜色"""
         # 检查是否在TTY中运行
-        if not hasattr(sys.stdout, 'isatty') or not sys.stdout.isatty():
+        if not hasattr(sys.stdout, "isatty") or not sys.stdout.isatty():
             return False
 
         # Windows 10+ 支持ANSI颜色
-        if sys.platform == 'win32':
+        if sys.platform == "win32":
             try:
                 # 尝试启用Windows ANSI支持
                 import ctypes
+
                 kernel32 = ctypes.windll.kernel32
                 # ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
-                kernel32.SetConsoleMode(
-                    kernel32.GetStdHandle(-11),
-                    0x0001 | 0x0002 | 0x0004
-                )
+                kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 0x0001 | 0x0002 | 0x0004)
                 return True
             except Exception:
                 # 检查环境变量
-                return os.environ.get('TERM') or os.environ.get('ANSICON')
+                return os.environ.get("TERM") or os.environ.get("ANSICON")
 
         # Unix系统通常支持
         return True
@@ -95,7 +90,7 @@ class ColoredFormatter(logging.Formatter):
         """格式化日志记录"""
         if self.colored:
             # 获取级别对应的颜色
-            level_color = self.COLORS.get(record.levelname, '')
+            level_color = self.COLORS.get(record.levelname, "")
 
             # 保存原始值
             original_levelname = record.levelname
@@ -131,8 +126,15 @@ class SecureFileHandler(RotatingFileHandler):
 
     # 敏感关键词列表（用于过滤）
     SENSITIVE_PATTERNS = [
-        'password', 'passwd', 'secret', 'token', 'api_key',
-        'apikey', 'credential', 'private_key', 'auth'
+        "password",
+        "passwd",
+        "secret",
+        "token",
+        "api_key",
+        "apikey",
+        "credential",
+        "private_key",
+        "auth",
     ]
 
     def __init__(
@@ -140,7 +142,7 @@ class SecureFileHandler(RotatingFileHandler):
         filename: Union[str, Path],
         maxBytes: int = 10 * 1024 * 1024,  # 10MB
         backupCount: int = 5,
-        filter_sensitive: bool = True
+        filter_sensitive: bool = True,
     ):
         """
         初始化安全文件处理器
@@ -156,10 +158,7 @@ class SecureFileHandler(RotatingFileHandler):
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
         super().__init__(
-            str(log_path),
-            maxBytes=maxBytes,
-            backupCount=backupCount,
-            encoding='utf-8'
+            str(log_path), maxBytes=maxBytes, backupCount=backupCount, encoding="utf-8"
         )
 
         self.filter_sensitive = filter_sensitive
@@ -181,11 +180,15 @@ class SecureFileHandler(RotatingFileHandler):
     def _mask_sensitive(msg: str) -> str:
         """掩盖敏感信息"""
         import re
+
         # 匹配常见的敏感信息模式
         patterns = [
-            (r'(password|passwd|secret|token|api_key|apikey)[\s]*[=:]\s*["\']?([^"\'\s]+)', r'\1=***'),
-            (r'Bearer\s+[A-Za-z0-9\-_\.]+', 'Bearer ***'),
-            (r'Basic\s+[A-Za-z0-9+/=]+', 'Basic ***'),
+            (
+                r'(password|passwd|secret|token|api_key|apikey)[\s]*[=:]\s*["\']?([^"\'\s]+)',
+                r"\1=***",
+            ),
+            (r"Bearer\s+[A-Za-z0-9\-_\.]+", "Bearer ***"),
+            (r"Basic\s+[A-Za-z0-9+/=]+", "Basic ***"),
         ]
 
         for pattern, replacement in patterns:
@@ -203,7 +206,7 @@ def get_logger(
     log_to_console: bool = True,
     max_file_size: int = 10 * 1024 * 1024,
     backup_count: int = 5,
-    filter_sensitive: bool = True
+    filter_sensitive: bool = True,
 ) -> logging.Logger:
     """
     获取配置好的日志器
@@ -241,19 +244,15 @@ def get_logger(
     logger.propagate = False  # 防止重复日志
 
     # 日志格式
-    console_fmt = '%(asctime)s | %(name)s | %(levelname)s | %(message)s'
-    file_fmt = '%(asctime)s | %(name)s | %(levelname)s | %(funcName)s:%(lineno)d | %(message)s'
-    date_fmt = '%Y-%m-%d %H:%M:%S'
+    console_fmt = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+    file_fmt = "%(asctime)s | %(name)s | %(levelname)s | %(funcName)s:%(lineno)d | %(message)s"
+    date_fmt = "%Y-%m-%d %H:%M:%S"
 
     # 控制台处理器
     if log_to_console:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(level)
-        console_formatter = ColoredFormatter(
-            fmt=console_fmt,
-            datefmt=date_fmt,
-            colored=colored
-        )
+        console_formatter = ColoredFormatter(fmt=console_fmt, datefmt=date_fmt, colored=colored)
         console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
 
@@ -263,15 +262,15 @@ def get_logger(
         if log_file is None:
             # 使用默认路径：项目根目录/logs/name_date.log
             project_root = Path(__file__).parent.parent
-            log_dir = project_root / 'logs'
-            date_str = datetime.now().strftime('%Y%m%d')
-            log_file = log_dir / f'{name}_{date_str}.log'
+            log_dir = project_root / "logs"
+            date_str = datetime.now().strftime("%Y%m%d")
+            log_file = log_dir / f"{name}_{date_str}.log"
 
         file_handler = SecureFileHandler(
             filename=log_file,
             maxBytes=max_file_size,
             backupCount=backup_count,
-            filter_sensitive=filter_sensitive
+            filter_sensitive=filter_sensitive,
         )
         file_handler.setLevel(logging.DEBUG)  # 文件记录所有级别
         file_formatter = logging.Formatter(fmt=file_fmt, datefmt=date_fmt)
@@ -290,8 +289,8 @@ def configure_root_logger(
     max_file_size: int = 10 * 1024 * 1024,
     backup_count: int = 5,
     filter_sensitive: bool = True,
-    stream = sys.stderr,
-    force: bool = False
+    stream=sys.stderr,
+    force: bool = False,
 ) -> logging.Logger:
     """
     配置根日志器，确保全局日志有统一输出（文件 + 控制台）
@@ -319,33 +318,29 @@ def configure_root_logger(
 
     root_logger.setLevel(level)
 
-    console_fmt = '%(asctime)s | %(name)s | %(levelname)s | %(message)s'
-    file_fmt = '%(asctime)s | %(name)s | %(levelname)s | %(funcName)s:%(lineno)d | %(message)s'
-    date_fmt = '%Y-%m-%d %H:%M:%S'
+    console_fmt = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+    file_fmt = "%(asctime)s | %(name)s | %(levelname)s | %(funcName)s:%(lineno)d | %(message)s"
+    date_fmt = "%Y-%m-%d %H:%M:%S"
 
     if log_to_console:
         console_handler = logging.StreamHandler(stream)
         console_handler.setLevel(level)
-        console_formatter = ColoredFormatter(
-            fmt=console_fmt,
-            datefmt=date_fmt,
-            colored=colored
-        )
+        console_formatter = ColoredFormatter(fmt=console_fmt, datefmt=date_fmt, colored=colored)
         console_handler.setFormatter(console_formatter)
         root_logger.addHandler(console_handler)
 
     if log_to_file:
         if log_file is None:
             project_root = Path(__file__).parent.parent
-            log_dir = project_root / 'logs'
-            date_str = datetime.now().strftime('%Y%m%d')
-            log_file = log_dir / f'root_{date_str}.log'
+            log_dir = project_root / "logs"
+            date_str = datetime.now().strftime("%Y%m%d")
+            log_file = log_dir / f"root_{date_str}.log"
 
         file_handler = SecureFileHandler(
             filename=log_file,
             maxBytes=max_file_size,
             backupCount=backup_count,
-            filter_sensitive=filter_sensitive
+            filter_sensitive=filter_sensitive,
         )
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(logging.Formatter(fmt=file_fmt, datefmt=date_fmt))
@@ -373,11 +368,7 @@ def set_log_level(logger_name: str, level: Union[int, str]) -> None:
         handler.setLevel(level)
 
 
-def add_file_handler(
-    logger_name: str,
-    log_file: Path,
-    level: int = logging.DEBUG
-) -> None:
+def add_file_handler(logger_name: str, log_file: Path, level: int = logging.DEBUG) -> None:
     """
     为已存在的日志器添加文件处理器
 
@@ -391,14 +382,14 @@ def add_file_handler(
     file_handler = SecureFileHandler(filename=log_file)
     file_handler.setLevel(level)
 
-    file_fmt = '%(asctime)s | %(name)s | %(levelname)s | %(funcName)s:%(lineno)d | %(message)s'
+    file_fmt = "%(asctime)s | %(name)s | %(levelname)s | %(funcName)s:%(lineno)d | %(message)s"
     file_handler.setFormatter(logging.Formatter(file_fmt))
 
     logger.addHandler(file_handler)
 
 
 # 创建预配置的默认日志器
-logger = get_logger('autoredt', level=logging.INFO)
+logger = get_logger("autoredt", level=logging.INFO)
 
 
 # 向后兼容：保留旧的 setup_logger 函数
@@ -418,12 +409,12 @@ def setup_logger(name: str, level: str = "INFO") -> logging.Logger:
 
 
 __all__ = [
-    'ColoredFormatter',
-    'SecureFileHandler',
-    'get_logger',
-    'configure_root_logger',
-    'set_log_level',
-    'add_file_handler',
-    'logger',
-    'setup_logger',
+    "ColoredFormatter",
+    "SecureFileHandler",
+    "get_logger",
+    "configure_root_logger",
+    "set_log_level",
+    "add_file_handler",
+    "logger",
+    "setup_logger",
 ]

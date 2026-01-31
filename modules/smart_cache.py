@@ -4,23 +4,24 @@
 支持DNS缓存、技术栈缓存、CVE缓存、Payload缓存
 """
 
-import time
 import hashlib
 import json
-import threading
 import logging
-from enum import Enum
-from typing import Any, Dict, Optional, Callable, TypeVar, Generic, Union
-from dataclasses import dataclass, field
+import threading
+import time
 from collections import OrderedDict
-from pathlib import Path
+from dataclasses import dataclass, field
+from enum import Enum
 from functools import wraps
+from pathlib import Path
+from typing import Any, Callable, Dict, Generic, Optional, TypeVar, Union
 
 logger = logging.getLogger(__name__)
 
 
 class CacheType(str, Enum):
     """缓存类型枚举 - 继承str实现向后兼容"""
+
     DNS = "dns"
     TECH = "tech"
     CVE = "cve"
@@ -28,12 +29,14 @@ class CacheType(str, Enum):
     RECON = "recon"
     VULN = "vuln"
 
-T = TypeVar('T')
+
+T = TypeVar("T")
 
 
 @dataclass
 class CacheEntry(Generic[T]):
     """缓存条目"""
+
     value: T
     created_at: float
     ttl: float
@@ -91,9 +94,7 @@ class LRUCache(Generic[T]):
                 self._stats["evictions"] += 1
 
             self._cache[key] = CacheEntry(
-                value=value,
-                created_at=time.time(),
-                ttl=ttl or self.default_ttl
+                value=value, created_at=time.time(), ttl=ttl or self.default_ttl
             )
 
     def delete(self, key: str) -> bool:
@@ -128,7 +129,7 @@ class LRUCache(Generic[T]):
                 "hits": self._stats["hits"],
                 "misses": self._stats["misses"],
                 "evictions": self._stats["evictions"],
-                "hit_rate": self._stats["hits"] / max(total, 1)
+                "hit_rate": self._stats["hits"] / max(total, 1),
             }
 
 
@@ -137,16 +138,16 @@ class SmartCache:
 
     # 缓存类型配置
     CACHE_CONFIG = {
-        "dns": {"maxsize": 1000, "ttl": 300},      # DNS: 5分钟
-        "tech": {"maxsize": 500, "ttl": 3600},     # 技术栈: 1小时
-        "cve": {"maxsize": 500, "ttl": 7200},      # CVE: 2小时
-        "payload": {"maxsize": 200, "ttl": 86400}, # Payload: 24小时
-        "recon": {"maxsize": 100, "ttl": 1800},    # 侦察结果: 30分钟
-        "vuln": {"maxsize": 200, "ttl": 3600},     # 漏洞结果: 1小时
-        "fingerprint": {"maxsize": 500, "ttl": 7200}, # 组件指纹: 2小时
+        "dns": {"maxsize": 1000, "ttl": 300},  # DNS: 5分钟
+        "tech": {"maxsize": 500, "ttl": 3600},  # 技术栈: 1小时
+        "cve": {"maxsize": 500, "ttl": 7200},  # CVE: 2小时
+        "payload": {"maxsize": 200, "ttl": 86400},  # Payload: 24小时
+        "recon": {"maxsize": 100, "ttl": 1800},  # 侦察结果: 30分钟
+        "vuln": {"maxsize": 200, "ttl": 3600},  # 漏洞结果: 1小时
+        "fingerprint": {"maxsize": 500, "ttl": 7200},  # 组件指纹: 2小时
         "response": {"maxsize": 300, "ttl": 600},  # 响应缓存: 10分钟
     }
-    
+
     # 预热配置
     PREHEAT_CONFIG = {
         "dns": ["google.com", "cloudflare.com", "github.com"],
@@ -159,11 +160,11 @@ class SmartCache:
         self._redis_client = None
         self._use_redis = False
         self._bloom_filters: Dict[str, set] = {}  # 简化版布隆过滤器
-        
+
         # 初始化Redis分布式缓存
         if redis_url:
             self._init_redis(redis_url)
-            
+
         self._init_caches()
         self._load_persistent()
 
@@ -171,6 +172,7 @@ class SmartCache:
         """初始化Redis分布式缓存"""
         try:
             import redis
+
             self._redis_client = redis.from_url(redis_url, decode_responses=True)
             self._redis_client.ping()
             self._use_redis = True
@@ -184,8 +186,7 @@ class SmartCache:
         """初始化各类型缓存"""
         for cache_type, config in self.CACHE_CONFIG.items():
             self._caches[cache_type] = LRUCache(
-                maxsize=config["maxsize"],
-                default_ttl=config["ttl"]
+                maxsize=config["maxsize"], default_ttl=config["ttl"]
             )
             self._bloom_filters[cache_type] = set()  # 初始化布隆过滤器
 
@@ -195,7 +196,7 @@ class SmartCache:
             return
 
         try:
-            with open(self.persist_path, 'r', encoding='utf-8') as f:
+            with open(self.persist_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             for cache_type, entries in data.items():
@@ -203,9 +204,7 @@ class SmartCache:
                     for key, entry in entries.items():
                         # 检查是否过期
                         if time.time() - entry["created_at"] < entry["ttl"]:
-                            self._caches[cache_type].set(
-                                key, entry["value"], entry["ttl"]
-                            )
+                            self._caches[cache_type].set(key, entry["value"], entry["ttl"])
             logger.info(f"加载持久化缓存成功")
         except Exception as e:
             logger.warning(f"加载持久化缓存失败: {e}")
@@ -224,11 +223,11 @@ class SmartCache:
                         data[cache_type][key] = {
                             "value": entry.value,
                             "created_at": entry.created_at,
-                            "ttl": entry.ttl
+                            "ttl": entry.ttl,
                         }
 
             self.persist_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.persist_path, 'w', encoding='utf-8') as f:
+            with open(self.persist_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, default=str)
         except Exception as e:
             logger.warning(f"保存持久化缓存失败: {e}")
@@ -238,17 +237,17 @@ class SmartCache:
         ct = str(cache_type)
         if ct not in self._caches:
             return None
-            
+
         # 布隆过滤器快速判断（避免无效查询）
         key_hash = hashlib.md5(key.encode()).hexdigest()[:16]
         if key_hash not in self._bloom_filters.get(ct, set()):
             return None
-            
+
         # L1: 本地缓存
         value = self._caches[ct].get(key)
         if value is not None:
             return value
-            
+
         # L2: Redis分布式缓存
         if self._use_redis and self._redis_client:
             try:
@@ -261,22 +260,24 @@ class SmartCache:
                     return value
             except Exception as e:
                 logger.debug(f"Redis读取失败: {e}")
-                
+
         return None
 
-    def set(self, cache_type: Union[CacheType, str], key: str, value: Any, ttl: Optional[float] = None):
+    def set(
+        self, cache_type: Union[CacheType, str], key: str, value: Any, ttl: Optional[float] = None
+    ):
         """设置缓存 - 双写L1+L2"""
         ct = str(cache_type)
         if ct not in self._caches:
             self._caches[ct] = LRUCache(maxsize=500, default_ttl=ttl or 300)
-            
+
         # L1: 本地缓存
         self._caches[ct].set(key, value, ttl)
-        
+
         # 更新布隆过滤器
         key_hash = hashlib.md5(key.encode()).hexdigest()[:16]
         self._bloom_filters.setdefault(ct, set()).add(key_hash)
-        
+
         # L2: Redis分布式缓存
         if self._use_redis and self._redis_client:
             try:
@@ -312,10 +313,7 @@ class SmartCache:
 
     def stats(self) -> Dict[str, Any]:
         """获取所有缓存统计"""
-        return {
-            cache_type: cache.stats
-            for cache_type, cache in self._caches.items()
-        }
+        return {cache_type: cache.stats for cache_type, cache in self._caches.items()}
 
     def save(self):
         """手动保存"""
@@ -339,19 +337,19 @@ class SmartCache:
 
     def get_cve(self, keyword: str) -> Optional[list]:
         return self.get("cve", keyword)
-    
+
     def preheat(self, cache_type: Optional[str] = None, data_loader: Optional[Callable] = None):
         """缓存预热 - 提前加载常用数据"""
         if cache_type:
             types_to_preheat = [cache_type]
         else:
             types_to_preheat = list(self.PREHEAT_CONFIG.keys())
-            
+
         preheated = 0
         for ct in types_to_preheat:
             if ct not in self.PREHEAT_CONFIG:
                 continue
-                
+
             for key in self.PREHEAT_CONFIG[ct]:
                 if self.get(ct, key) is None and data_loader:
                     try:
@@ -361,15 +359,15 @@ class SmartCache:
                             preheated += 1
                     except Exception as e:
                         logger.debug(f"预热失败 {ct}:{key}: {e}")
-                        
+
         logger.info(f"缓存预热完成，加载 {preheated} 条数据")
         return preheated
-    
+
     def batch_get(self, cache_type: str, keys: List[str]) -> Dict[str, Any]:
         """批量获取缓存"""
         result = {}
         missing_keys = []
-        
+
         # 本地缓存批量获取
         for key in keys:
             value = self._caches.get(cache_type, LRUCache()).get(key)
@@ -377,7 +375,7 @@ class SmartCache:
                 result[key] = value
             else:
                 missing_keys.append(key)
-                
+
         # Redis批量获取缺失的key
         if missing_keys and self._use_redis and self._redis_client:
             try:
@@ -391,14 +389,14 @@ class SmartCache:
                         self._caches[cache_type].set(key, parsed)
             except Exception as e:
                 logger.debug(f"Redis批量读取失败: {e}")
-                
+
         return result
-    
+
     def batch_set(self, cache_type: str, data: Dict[str, Any], ttl: Optional[float] = None):
         """批量设置缓存"""
         for key, value in data.items():
             self.set(cache_type, key, value, ttl)
-            
+
         # Redis管道批量写入
         if self._use_redis and self._redis_client:
             try:
@@ -410,33 +408,42 @@ class SmartCache:
                 pipe.execute()
             except Exception as e:
                 logger.debug(f"Redis批量写入失败: {e}")
-    
-    def get_or_set(self, cache_type: str, key: str, loader: Callable, ttl: Optional[float] = None) -> Any:
+
+    def get_or_set(
+        self, cache_type: str, key: str, loader: Callable, ttl: Optional[float] = None
+    ) -> Any:
         """获取缓存，不存在则通过loader加载并设置"""
         value = self.get(cache_type, key)
         if value is not None:
             return value
-            
+
         value = loader()
         if value is not None:
             self.set(cache_type, key, value, ttl)
         return value
-    
-    async def async_get_or_set(self, cache_type: str, key: str, loader: Callable, ttl: Optional[float] = None) -> Any:
+
+    async def async_get_or_set(
+        self, cache_type: str, key: str, loader: Callable, ttl: Optional[float] = None
+    ) -> Any:
         """异步获取缓存，不存在则通过loader加载并设置"""
         value = self.get(cache_type, key)
         if value is not None:
             return value
-            
+
         value = await loader()
         if value is not None:
             self.set(cache_type, key, value, ttl)
         return value
 
 
-def cached(cache_type: Union[CacheType, str], key_func: Optional[Callable] = None, ttl: Optional[float] = None):
+def cached(
+    cache_type: Union[CacheType, str],
+    key_func: Optional[Callable] = None,
+    ttl: Optional[float] = None,
+):
     """缓存装饰器"""
     ct = str(cache_type)
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -456,12 +463,18 @@ def cached(cache_type: Union[CacheType, str], key_func: Optional[Callable] = Non
             return result
 
         return wrapper
+
     return decorator
 
 
-def async_cached(cache_type: Union[CacheType, str], key_func: Optional[Callable] = None, ttl: Optional[float] = None):
+def async_cached(
+    cache_type: Union[CacheType, str],
+    key_func: Optional[Callable] = None,
+    ttl: Optional[float] = None,
+):
     """异步缓存装饰器"""
     ct = str(cache_type)
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -481,17 +494,20 @@ def async_cached(cache_type: Union[CacheType, str], key_func: Optional[Callable]
             return result
 
         return wrapper
+
     return decorator
 
 
 # 全局缓存实例
 _cache_instance: Optional[SmartCache] = None
 
+
 def get_smart_cache() -> SmartCache:
     """获取智能缓存单例"""
     global _cache_instance
     if _cache_instance is None:
         import tempfile
+
         persist_path = Path(tempfile.gettempdir()) / "autored_cache.json"
         _cache_instance = SmartCache(persist_path=persist_path)
     return _cache_instance

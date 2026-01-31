@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class K8sVulnType(Enum):
     """K8s漏洞类型"""
+
     POD_ESCAPE = "pod_escape"
     PRIVILEGED_CONTAINER = "privileged_container"
     HOST_PATH_MOUNT = "host_path_mount"
@@ -33,6 +34,7 @@ class K8sVulnType(Enum):
 
 class K8sSeverity(Enum):
     """严重性"""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -43,6 +45,7 @@ class K8sSeverity(Enum):
 @dataclass
 class K8sFinding:
     """K8s安全发现"""
+
     vuln_type: K8sVulnType
     severity: K8sSeverity
     resource_type: str
@@ -107,8 +110,7 @@ class KubernetesSecurityTester:
         self.kubeconfig = kubeconfig
         self._findings: List[K8sFinding] = []
 
-    def _run_kubectl(self, args: List[str],
-                     timeout: int = 30) -> Tuple[bool, str]:
+    def _run_kubectl(self, args: List[str], timeout: int = 30) -> Tuple[bool, str]:
         """执行kubectl命令"""
         cmd = ["kubectl"]
 
@@ -118,12 +120,7 @@ class KubernetesSecurityTester:
         cmd.extend(args)
 
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
             return result.returncode == 0, result.stdout
         except subprocess.TimeoutExpired:
             return False, "Command timed out"
@@ -136,6 +133,7 @@ class KubernetesSecurityTester:
         """解析YAML manifest"""
         try:
             import yaml
+
             docs = list(yaml.safe_load_all(content))
             return [d for d in docs if d is not None]
         except ImportError:
@@ -150,15 +148,15 @@ class KubernetesSecurityTester:
         docs = []
         current_doc = {}
 
-        for line in content.split('\n'):
-            if line.strip() == '---':
+        for line in content.split("\n"):
+            if line.strip() == "---":
                 if current_doc:
                     docs.append(current_doc)
                     current_doc = {}
                 continue
 
-            if ':' in line and not line.strip().startswith('#'):
-                key, value = line.split(':', 1)
+            if ":" in line and not line.strip().startswith("#"):
+                key, value = line.split(":", 1)
                 key = key.strip()
                 value = value.strip()
                 if value:
@@ -169,15 +167,11 @@ class KubernetesSecurityTester:
 
         return docs
 
-    def check_privileged_containers(self,
-                                     namespace: str = "default") -> List[K8sFinding]:
+    def check_privileged_containers(self, namespace: str = "default") -> List[K8sFinding]:
         """检查特权容器"""
         findings = []
 
-        success, output = self._run_kubectl([
-            "get", "pods", "-n", namespace,
-            "-o", "json"
-        ])
+        success, output = self._run_kubectl(["get", "pods", "-n", namespace, "-o", "json"])
 
         if not success:
             logger.warning(f"无法获取Pod列表: {output}")
@@ -195,17 +189,19 @@ class KubernetesSecurityTester:
 
                     # 检查特权模式
                     if security_context.get("privileged", False):
-                        findings.append(K8sFinding(
-                            vuln_type=K8sVulnType.PRIVILEGED_CONTAINER,
-                            severity=K8sSeverity.CRITICAL,
-                            resource_type="Pod",
-                            resource_name=pod_name,
-                            namespace=namespace,
-                            title=f"特权容器: {container_name}",
-                            description="容器以特权模式运行,可能导致容器逃逸",
-                            remediation="移除privileged: true配置,使用最小权限原则",
-                            evidence={"container": container_name}
-                        ))
+                        findings.append(
+                            K8sFinding(
+                                vuln_type=K8sVulnType.PRIVILEGED_CONTAINER,
+                                severity=K8sSeverity.CRITICAL,
+                                resource_type="Pod",
+                                resource_name=pod_name,
+                                namespace=namespace,
+                                title=f"特权容器: {container_name}",
+                                description="容器以特权模式运行,可能导致容器逃逸",
+                                remediation="移除privileged: true配置,使用最小权限原则",
+                                evidence={"container": container_name},
+                            )
+                        )
 
                     # 检查危险能力
                     capabilities = security_context.get("capabilities", {})
@@ -213,32 +209,30 @@ class KubernetesSecurityTester:
 
                     for cap in add_caps:
                         if cap in self.DANGEROUS_CAPABILITIES:
-                            findings.append(K8sFinding(
-                                vuln_type=K8sVulnType.INSECURE_CAPABILITY,
-                                severity=K8sSeverity.HIGH,
-                                resource_type="Pod",
-                                resource_name=pod_name,
-                                namespace=namespace,
-                                title=f"危险能力: {cap}",
-                                description=f"容器添加了危险能力{cap},可能导致安全风险",
-                                remediation="移除不必要的能力,仅保留必需权限",
-                                evidence={"container": container_name, "capability": cap}
-                            ))
+                            findings.append(
+                                K8sFinding(
+                                    vuln_type=K8sVulnType.INSECURE_CAPABILITY,
+                                    severity=K8sSeverity.HIGH,
+                                    resource_type="Pod",
+                                    resource_name=pod_name,
+                                    namespace=namespace,
+                                    title=f"危险能力: {cap}",
+                                    description=f"容器添加了危险能力{cap},可能导致安全风险",
+                                    remediation="移除不必要的能力,仅保留必需权限",
+                                    evidence={"container": container_name, "capability": cap},
+                                )
+                            )
 
         except json.JSONDecodeError:
             logger.error("解析Pod JSON失败")
 
         return findings
 
-    def check_host_path_mounts(self,
-                                namespace: str = "default") -> List[K8sFinding]:
+    def check_host_path_mounts(self, namespace: str = "default") -> List[K8sFinding]:
         """检查宿主机路径挂载"""
         findings = []
 
-        success, output = self._run_kubectl([
-            "get", "pods", "-n", namespace,
-            "-o", "json"
-        ])
+        success, output = self._run_kubectl(["get", "pods", "-n", namespace, "-o", "json"])
 
         if not success:
             return findings
@@ -263,32 +257,30 @@ class KubernetesSecurityTester:
                                 severity = K8sSeverity.CRITICAL
                                 break
 
-                        findings.append(K8sFinding(
-                            vuln_type=K8sVulnType.HOST_PATH_MOUNT,
-                            severity=severity,
-                            resource_type="Pod",
-                            resource_name=pod_name,
-                            namespace=namespace,
-                            title=f"宿主机路径挂载: {path}",
-                            description=f"Pod挂载了宿主机路径{path},可能导致信息泄露或容器逃逸",
-                            remediation="避免挂载宿主机路径,使用PVC或ConfigMap/Secret",
-                            evidence={"volume": volume_name, "path": path}
-                        ))
+                        findings.append(
+                            K8sFinding(
+                                vuln_type=K8sVulnType.HOST_PATH_MOUNT,
+                                severity=severity,
+                                resource_type="Pod",
+                                resource_name=pod_name,
+                                namespace=namespace,
+                                title=f"宿主机路径挂载: {path}",
+                                description=f"Pod挂载了宿主机路径{path},可能导致信息泄露或容器逃逸",
+                                remediation="避免挂载宿主机路径,使用PVC或ConfigMap/Secret",
+                                evidence={"volume": volume_name, "path": path},
+                            )
+                        )
 
         except json.JSONDecodeError:
             pass
 
         return findings
 
-    def check_service_account_tokens(self,
-                                      namespace: str = "default") -> List[K8sFinding]:
+    def check_service_account_tokens(self, namespace: str = "default") -> List[K8sFinding]:
         """检查ServiceAccount Token自动挂载"""
         findings = []
 
-        success, output = self._run_kubectl([
-            "get", "pods", "-n", namespace,
-            "-o", "json"
-        ])
+        success, output = self._run_kubectl(["get", "pods", "-n", namespace, "-o", "json"])
 
         if not success:
             return findings
@@ -306,33 +298,31 @@ class KubernetesSecurityTester:
                 if automount:
                     sa_name = spec.get("serviceAccountName", "default")
 
-                    findings.append(K8sFinding(
-                        vuln_type=K8sVulnType.SERVICE_ACCOUNT_TOKEN,
-                        severity=K8sSeverity.MEDIUM,
-                        resource_type="Pod",
-                        resource_name=pod_name,
-                        namespace=namespace,
-                        title=f"自动挂载ServiceAccount Token",
-                        description=f"Pod自动挂载了{sa_name}的Token,可能被攻击者利用",
-                        remediation="设置automountServiceAccountToken: false,仅在需要时挂载",
-                        evidence={"service_account": sa_name}
-                    ))
+                    findings.append(
+                        K8sFinding(
+                            vuln_type=K8sVulnType.SERVICE_ACCOUNT_TOKEN,
+                            severity=K8sSeverity.MEDIUM,
+                            resource_type="Pod",
+                            resource_name=pod_name,
+                            namespace=namespace,
+                            title=f"自动挂载ServiceAccount Token",
+                            description=f"Pod自动挂载了{sa_name}的Token,可能被攻击者利用",
+                            remediation="设置automountServiceAccountToken: false,仅在需要时挂载",
+                            evidence={"service_account": sa_name},
+                        )
+                    )
 
         except json.JSONDecodeError:
             pass
 
         return findings
 
-    def check_rbac_permissions(self,
-                                namespace: str = "default") -> List[K8sFinding]:
+    def check_rbac_permissions(self, namespace: str = "default") -> List[K8sFinding]:
         """检查RBAC权限配置"""
         findings = []
 
         # 获取ClusterRoleBindings
-        success, output = self._run_kubectl([
-            "get", "clusterrolebindings",
-            "-o", "json"
-        ])
+        success, output = self._run_kubectl(["get", "clusterrolebindings", "-o", "json"])
 
         if success:
             try:
@@ -347,29 +337,28 @@ class KubernetesSecurityTester:
                     if role_ref.get("name") == "cluster-admin":
                         for subject in subjects:
                             if subject.get("kind") == "ServiceAccount":
-                                findings.append(K8sFinding(
-                                    vuln_type=K8sVulnType.RBAC_OVERPERMISSION,
-                                    severity=K8sSeverity.CRITICAL,
-                                    resource_type="ClusterRoleBinding",
-                                    resource_name=binding_name,
-                                    namespace="cluster",
-                                    title=f"ServiceAccount绑定cluster-admin",
-                                    description="ServiceAccount拥有集群管理员权限,风险极高",
-                                    remediation="使用最小权限原则,创建自定义Role",
-                                    evidence={
-                                        "subject": subject.get("name"),
-                                        "namespace": subject.get("namespace", "default")
-                                    }
-                                ))
+                                findings.append(
+                                    K8sFinding(
+                                        vuln_type=K8sVulnType.RBAC_OVERPERMISSION,
+                                        severity=K8sSeverity.CRITICAL,
+                                        resource_type="ClusterRoleBinding",
+                                        resource_name=binding_name,
+                                        namespace="cluster",
+                                        title=f"ServiceAccount绑定cluster-admin",
+                                        description="ServiceAccount拥有集群管理员权限,风险极高",
+                                        remediation="使用最小权限原则,创建自定义Role",
+                                        evidence={
+                                            "subject": subject.get("name"),
+                                            "namespace": subject.get("namespace", "default"),
+                                        },
+                                    )
+                                )
 
             except json.JSONDecodeError:
                 pass
 
         # 获取RoleBindings
-        success, output = self._run_kubectl([
-            "get", "rolebindings", "-n", namespace,
-            "-o", "json"
-        ])
+        success, output = self._run_kubectl(["get", "rolebindings", "-n", namespace, "-o", "json"])
 
         if success:
             try:
@@ -383,33 +372,33 @@ class KubernetesSecurityTester:
                     if role_ref.get("kind") == "ClusterRole":
                         role_name = role_ref.get("name", "")
                         if role_name in ["admin", "edit", "cluster-admin"]:
-                            findings.append(K8sFinding(
-                                vuln_type=K8sVulnType.RBAC_OVERPERMISSION,
-                                severity=K8sSeverity.HIGH,
-                                resource_type="RoleBinding",
-                                resource_name=binding_name,
-                                namespace=namespace,
-                                title=f"绑定高权限ClusterRole: {role_name}",
-                                description=f"RoleBinding引用了高权限的{role_name}角色",
-                                remediation="创建自定义Role,仅授予必要权限",
-                                evidence={"role": role_name}
-                            ))
+                            findings.append(
+                                K8sFinding(
+                                    vuln_type=K8sVulnType.RBAC_OVERPERMISSION,
+                                    severity=K8sSeverity.HIGH,
+                                    resource_type="RoleBinding",
+                                    resource_name=binding_name,
+                                    namespace=namespace,
+                                    title=f"绑定高权限ClusterRole: {role_name}",
+                                    description=f"RoleBinding引用了高权限的{role_name}角色",
+                                    remediation="创建自定义Role,仅授予必要权限",
+                                    evidence={"role": role_name},
+                                )
+                            )
 
             except json.JSONDecodeError:
                 pass
 
         return findings
 
-    def check_network_policies(self,
-                                namespace: str = "default") -> List[K8sFinding]:
+    def check_network_policies(self, namespace: str = "default") -> List[K8sFinding]:
         """检查网络策略"""
         findings = []
 
         # 获取命名空间的NetworkPolicy
-        success, output = self._run_kubectl([
-            "get", "networkpolicies", "-n", namespace,
-            "-o", "json"
-        ])
+        success, output = self._run_kubectl(
+            ["get", "networkpolicies", "-n", namespace, "-o", "json"]
+        )
 
         if not success:
             return findings
@@ -419,32 +408,30 @@ class KubernetesSecurityTester:
             policies = data.get("items", [])
 
             if not policies:
-                findings.append(K8sFinding(
-                    vuln_type=K8sVulnType.NETWORK_POLICY_MISSING,
-                    severity=K8sSeverity.MEDIUM,
-                    resource_type="Namespace",
-                    resource_name=namespace,
-                    namespace=namespace,
-                    title="缺少NetworkPolicy",
-                    description="命名空间没有定义NetworkPolicy,所有Pod间可以自由通信",
-                    remediation="定义NetworkPolicy限制Pod间网络访问",
-                    evidence={}
-                ))
+                findings.append(
+                    K8sFinding(
+                        vuln_type=K8sVulnType.NETWORK_POLICY_MISSING,
+                        severity=K8sSeverity.MEDIUM,
+                        resource_type="Namespace",
+                        resource_name=namespace,
+                        namespace=namespace,
+                        title="缺少NetworkPolicy",
+                        description="命名空间没有定义NetworkPolicy,所有Pod间可以自由通信",
+                        remediation="定义NetworkPolicy限制Pod间网络访问",
+                        evidence={},
+                    )
+                )
 
         except json.JSONDecodeError:
             pass
 
         return findings
 
-    def check_secrets_in_env(self,
-                              namespace: str = "default") -> List[K8sFinding]:
+    def check_secrets_in_env(self, namespace: str = "default") -> List[K8sFinding]:
         """检查环境变量中的敏感信息"""
         findings = []
 
-        success, output = self._run_kubectl([
-            "get", "pods", "-n", namespace,
-            "-o", "json"
-        ])
+        success, output = self._run_kubectl(["get", "pods", "-n", namespace, "-o", "json"])
 
         if not success:
             return findings
@@ -454,8 +441,14 @@ class KubernetesSecurityTester:
 
             # 敏感关键词
             sensitive_keywords = [
-                "password", "passwd", "pwd", "secret",
-                "api_key", "apikey", "token", "credential"
+                "password",
+                "passwd",
+                "pwd",
+                "secret",
+                "api_key",
+                "apikey",
+                "token",
+                "credential",
             ]
 
             for pod in data.get("items", []):
@@ -471,17 +464,22 @@ class KubernetesSecurityTester:
 
                         # 检查是否直接设置了敏感值
                         if env_value and any(kw in env_name for kw in sensitive_keywords):
-                            findings.append(K8sFinding(
-                                vuln_type=K8sVulnType.SECRET_EXPOSURE,
-                                severity=K8sSeverity.HIGH,
-                                resource_type="Pod",
-                                resource_name=pod_name,
-                                namespace=namespace,
-                                title=f"环境变量中硬编码敏感信息: {env.get('name')}",
-                                description="敏感信息直接在环境变量中硬编码,应使用Secret",
-                                remediation="使用Kubernetes Secret存储敏感信息",
-                                evidence={"container": container_name, "env_name": env.get('name')}
-                            ))
+                            findings.append(
+                                K8sFinding(
+                                    vuln_type=K8sVulnType.SECRET_EXPOSURE,
+                                    severity=K8sSeverity.HIGH,
+                                    resource_type="Pod",
+                                    resource_name=pod_name,
+                                    namespace=namespace,
+                                    title=f"环境变量中硬编码敏感信息: {env.get('name')}",
+                                    description="敏感信息直接在环境变量中硬编码,应使用Secret",
+                                    remediation="使用Kubernetes Secret存储敏感信息",
+                                    evidence={
+                                        "container": container_name,
+                                        "env_name": env.get("name"),
+                                    },
+                                )
+                            )
 
         except json.JSONDecodeError:
             pass
@@ -494,7 +492,7 @@ class KubernetesSecurityTester:
 
         try:
             path = Path(file_path)
-            content = path.read_text(encoding='utf-8')
+            content = path.read_text(encoding="utf-8")
 
             docs = self._parse_yaml_manifest(content)
 
@@ -508,22 +506,17 @@ class KubernetesSecurityTester:
                 namespace = metadata.get("namespace", "default")
 
                 if kind == "Pod":
-                    findings.extend(self._scan_pod_spec(
-                        doc.get("spec", {}), name, namespace
-                    ))
+                    findings.extend(self._scan_pod_spec(doc.get("spec", {}), name, namespace))
                 elif kind in ["Deployment", "DaemonSet", "StatefulSet", "ReplicaSet"]:
                     pod_spec = doc.get("spec", {}).get("template", {}).get("spec", {})
-                    findings.extend(self._scan_pod_spec(
-                        pod_spec, name, namespace
-                    ))
+                    findings.extend(self._scan_pod_spec(pod_spec, name, namespace))
 
         except Exception as e:
             logger.error(f"扫描manifest失败: {e}")
 
         return findings
 
-    def _scan_pod_spec(self, spec: Dict, name: str,
-                       namespace: str) -> List[K8sFinding]:
+    def _scan_pod_spec(self, spec: Dict, name: str, namespace: str) -> List[K8sFinding]:
         """扫描Pod Spec"""
         findings = []
 
@@ -533,33 +526,37 @@ class KubernetesSecurityTester:
 
             # 特权容器
             if security_context.get("privileged", False):
-                findings.append(K8sFinding(
-                    vuln_type=K8sVulnType.PRIVILEGED_CONTAINER,
-                    severity=K8sSeverity.CRITICAL,
-                    resource_type="Pod",
-                    resource_name=name,
-                    namespace=namespace,
-                    title=f"特权容器: {container_name}",
-                    description="容器配置为特权模式",
-                    remediation="移除privileged: true",
-                    evidence={"container": container_name}
-                ))
+                findings.append(
+                    K8sFinding(
+                        vuln_type=K8sVulnType.PRIVILEGED_CONTAINER,
+                        severity=K8sSeverity.CRITICAL,
+                        resource_type="Pod",
+                        resource_name=name,
+                        namespace=namespace,
+                        title=f"特权容器: {container_name}",
+                        description="容器配置为特权模式",
+                        remediation="移除privileged: true",
+                        evidence={"container": container_name},
+                    )
+                )
 
             # 危险能力
             caps = security_context.get("capabilities", {}).get("add", [])
             for cap in caps:
                 if cap in self.DANGEROUS_CAPABILITIES:
-                    findings.append(K8sFinding(
-                        vuln_type=K8sVulnType.INSECURE_CAPABILITY,
-                        severity=K8sSeverity.HIGH,
-                        resource_type="Pod",
-                        resource_name=name,
-                        namespace=namespace,
-                        title=f"危险能力: {cap}",
-                        description=f"容器添加了{cap}能力",
-                        remediation="移除不必要的能力",
-                        evidence={"container": container_name, "capability": cap}
-                    ))
+                    findings.append(
+                        K8sFinding(
+                            vuln_type=K8sVulnType.INSECURE_CAPABILITY,
+                            severity=K8sSeverity.HIGH,
+                            resource_type="Pod",
+                            resource_name=name,
+                            namespace=namespace,
+                            title=f"危险能力: {cap}",
+                            description=f"容器添加了{cap}能力",
+                            remediation="移除不必要的能力",
+                            evidence={"container": container_name, "capability": cap},
+                        )
+                    )
 
         # 宿主机路径挂载
         for volume in spec.get("volumes", []):
@@ -568,17 +565,19 @@ class KubernetesSecurityTester:
                 path = host_path.get("path", "")
                 severity = K8sSeverity.HIGH if path in self.SENSITIVE_PATHS else K8sSeverity.MEDIUM
 
-                findings.append(K8sFinding(
-                    vuln_type=K8sVulnType.HOST_PATH_MOUNT,
-                    severity=severity,
-                    resource_type="Pod",
-                    resource_name=name,
-                    namespace=namespace,
-                    title=f"宿主机路径挂载: {path}",
-                    description=f"挂载了宿主机路径{path}",
-                    remediation="避免挂载宿主机路径",
-                    evidence={"volume": volume.get("name"), "path": path}
-                ))
+                findings.append(
+                    K8sFinding(
+                        vuln_type=K8sVulnType.HOST_PATH_MOUNT,
+                        severity=severity,
+                        resource_type="Pod",
+                        resource_name=name,
+                        namespace=namespace,
+                        title=f"宿主机路径挂载: {path}",
+                        description=f"挂载了宿主机路径{path}",
+                        remediation="避免挂载宿主机路径",
+                        evidence={"volume": volume.get("name"), "path": path},
+                    )
+                )
 
         return findings
 
@@ -628,10 +627,10 @@ class KubernetesSecurityTester:
                     "title": f.title,
                     "description": f.description,
                     "remediation": f.remediation,
-                    "evidence": f.evidence
+                    "evidence": f.evidence,
                 }
                 for f in all_findings
-            ]
+            ],
         }
 
     def generate_report(self) -> str:
@@ -653,17 +652,19 @@ class KubernetesSecurityTester:
                 "high": "🟠",
                 "medium": "🟡",
                 "low": "🟢",
-                "info": "ℹ️"
+                "info": "ℹ️",
             }.get(finding.severity.value, "⚪")
 
-            lines.extend([
-                f"{severity_icon} [{finding.severity.value.upper()}] {finding.title}",
-                f"   资源: {finding.resource_type}/{finding.resource_name}",
-                f"   命名空间: {finding.namespace}",
-                f"   描述: {finding.description}",
-                f"   修复: {finding.remediation}",
-                ""
-            ])
+            lines.extend(
+                [
+                    f"{severity_icon} [{finding.severity.value.upper()}] {finding.title}",
+                    f"   资源: {finding.resource_type}/{finding.resource_name}",
+                    f"   命名空间: {finding.namespace}",
+                    f"   描述: {finding.description}",
+                    f"   修复: {finding.remediation}",
+                    "",
+                ]
+            )
 
         lines.append("=" * 60)
 
@@ -671,8 +672,7 @@ class KubernetesSecurityTester:
 
 
 # 便捷函数
-def scan_k8s_namespace(namespace: str = "default",
-                        kubeconfig: str = None) -> Dict[str, Any]:
+def scan_k8s_namespace(namespace: str = "default", kubeconfig: str = None) -> Dict[str, Any]:
     """快速扫描K8s命名空间"""
     tester = KubernetesSecurityTester(kubeconfig)
     return tester.full_scan(namespace)
@@ -680,7 +680,8 @@ def scan_k8s_namespace(namespace: str = "default",
 
 if __name__ == "__main__":
     import sys
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     namespace = sys.argv[1] if len(sys.argv) > 1 else "default"
 

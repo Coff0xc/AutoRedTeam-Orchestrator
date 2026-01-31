@@ -13,11 +13,11 @@ ATT&CK Tactic: TA0010 - Exfiltration
 """
 
 from .base import (
+    BaseExfiltration,
     ExfilChannel,
-    ExfilStatus,
     ExfilConfig,
     ExfilResult,
-    BaseExfiltration,
+    ExfilStatus,
 )
 
 
@@ -46,22 +46,27 @@ class ExfilFactory:
         """
         if config.channel == ExfilChannel.HTTPS:
             from .channels.http import HTTPSExfiltration
+
             return HTTPSExfiltration(config)
 
         elif config.channel == ExfilChannel.HTTP:
             from .channels.http import HTTPExfiltration
+
             return HTTPExfiltration(config)
 
         elif config.channel == ExfilChannel.DNS:
             from .channels.dns import DNSExfiltration
+
             return DNSExfiltration(config)
 
         elif config.channel == ExfilChannel.ICMP:
             from .channels.icmp import ICMPExfiltration
+
             return ICMPExfiltration(config)
 
         elif config.channel == ExfilChannel.SMB:
             from .channels.smb import SMBExfiltration
+
             return SMBExfiltration(config)
 
         else:
@@ -70,16 +75,13 @@ class ExfilFactory:
 
 __all__ = [
     # 枚举
-    'ExfilChannel',
-    'ExfilStatus',
-
+    "ExfilChannel",
+    "ExfilStatus",
     # 数据类
-    'ExfilConfig',
-    'ExfilResult',
-
+    "ExfilConfig",
+    "ExfilResult",
     # 基类
-    'BaseExfiltration',
-
+    "BaseExfiltration",
     # 工厂
-    'ExfilFactory',
+    "ExfilFactory",
 ]

@@ -12,29 +12,31 @@ C2 加密模块 - C2 Crypto Module
     - XOR (简单，仅用于混淆)
 """
 
-import os
 import hashlib
 import hmac
 import logging
-from typing import Optional, Tuple
+import os
 from dataclasses import dataclass
 from enum import Enum
+from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 # 尝试导入加密库
 try:
-    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-    from cryptography.hazmat.primitives import padding
     from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import padding
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
     HAS_CRYPTOGRAPHY = True
 except ImportError:
     HAS_CRYPTOGRAPHY = False
 
 try:
     from Crypto.Cipher import AES, ChaCha20_Poly1305
-    from Crypto.Util.Padding import pad, unpad
     from Crypto.Random import get_random_bytes
+    from Crypto.Util.Padding import pad, unpad
+
     HAS_PYCRYPTODOME = True
 except ImportError:
     HAS_PYCRYPTODOME = False
@@ -42,20 +44,22 @@ except ImportError:
 
 class CryptoAlgorithm(Enum):
     """加密算法"""
-    NONE = 'none'
-    XOR = 'xor'
-    AES256_CBC = 'aes256_cbc'
-    AES256_GCM = 'aes256_gcm'
-    CHACHA20 = 'chacha20'
-    CHACHA20_POLY1305 = 'chacha20_poly1305'
+
+    NONE = "none"
+    XOR = "xor"
+    AES256_CBC = "aes256_cbc"
+    AES256_GCM = "aes256_gcm"
+    CHACHA20 = "chacha20"
+    CHACHA20_POLY1305 = "chacha20_poly1305"
 
 
 @dataclass
 class CryptoResult:
     """加密结果"""
+
     ciphertext: bytes
     iv: Optional[bytes] = None
-    tag: Optional[bytes] = None     # AEAD 认证标签
+    tag: Optional[bytes] = None  # AEAD 认证标签
 
 
 class C2Crypto:
@@ -79,17 +83,17 @@ class C2Crypto:
     # AES 块大小
     AES_BLOCK_SIZE = 16
     # 密钥长度
-    KEY_SIZE = 32       # 256 bits
+    KEY_SIZE = 32  # 256 bits
     # IV/Nonce 长度
-    IV_SIZE = 16        # AES CBC
-    NONCE_SIZE = 12     # GCM/ChaCha20
+    IV_SIZE = 16  # AES CBC
+    NONCE_SIZE = 12  # GCM/ChaCha20
 
     def __init__(
         self,
-        algorithm: str = 'aes256_gcm',
+        algorithm: str = "aes256_gcm",
         key: Optional[bytes] = None,
         derive_key: bool = True,
-        kdf_salt: Optional[bytes] = None
+        kdf_salt: Optional[bytes] = None,
     ):
         """
         初始化加密器
@@ -100,7 +104,7 @@ class C2Crypto:
             derive_key: 是否从密钥派生（用于短密钥/密码）
             kdf_salt: KDF盐值，如果为 None 则自动生成（用于密钥派生）
         """
-        self.algorithm = CryptoAlgorithm(algorithm.lower().replace('-', '_'))
+        self.algorithm = CryptoAlgorithm(algorithm.lower().replace("-", "_"))
         self._derive_key = derive_key
         self._kdf_salt = kdf_salt
 
@@ -110,7 +114,11 @@ class C2Crypto:
         elif derive_key and len(key) != self.KEY_SIZE:
             self.key = self._derive_key_from_password(key)
         else:
-            self.key = key[:self.KEY_SIZE] if len(key) > self.KEY_SIZE else key.ljust(self.KEY_SIZE, b'\x00')
+            self.key = (
+                key[: self.KEY_SIZE]
+                if len(key) > self.KEY_SIZE
+                else key.ljust(self.KEY_SIZE, b"\x00")
+            )
 
         # 检查加密库可用性
         self._check_crypto_available()
@@ -158,12 +166,12 @@ class C2Crypto:
                 length=self.KEY_SIZE,
                 salt=salt,
                 iterations=100000,
-                backend=default_backend()
+                backend=default_backend(),
             )
             return kdf.derive(password)
         else:
             # 回退到简单 SHA256 派生
-            return hashlib.pbkdf2_hmac('sha256', password, salt, 100000, self.KEY_SIZE)
+            return hashlib.pbkdf2_hmac("sha256", password, salt, 100000, self.KEY_SIZE)
 
     def get_kdf_salt(self) -> Optional[bytes]:
         """
@@ -177,7 +185,11 @@ class C2Crypto:
     def _generate_iv(self, size: int = None) -> bytes:
         """生成随机 IV/Nonce"""
         if size is None:
-            size = self.NONCE_SIZE if 'gcm' in self.algorithm.value or 'poly1305' in self.algorithm.value else self.IV_SIZE
+            size = (
+                self.NONCE_SIZE
+                if "gcm" in self.algorithm.value or "poly1305" in self.algorithm.value
+                else self.IV_SIZE
+            )
         return os.urandom(size)
 
     def encrypt(self, plaintext: bytes) -> CryptoResult:
@@ -208,10 +220,7 @@ class C2Crypto:
         raise ValueError(f"Unsupported algorithm: {self.algorithm}")
 
     def decrypt(
-        self,
-        ciphertext: bytes,
-        iv: Optional[bytes] = None,
-        tag: Optional[bytes] = None
+        self, ciphertext: bytes, iv: Optional[bytes] = None, tag: Optional[bytes] = None
     ) -> bytes:
         """
         解密数据
@@ -260,11 +269,7 @@ class C2Crypto:
 
         if HAS_CRYPTOGRAPHY:
             # 使用 cryptography
-            cipher = Cipher(
-                algorithms.AES(self.key),
-                modes.CBC(iv),
-                backend=default_backend()
-            )
+            cipher = Cipher(algorithms.AES(self.key), modes.CBC(iv), backend=default_backend())
             encryptor = cipher.encryptor()
 
             # PKCS7 填充
@@ -290,11 +295,7 @@ class C2Crypto:
             raise ValueError("IV required for AES-CBC decryption")
 
         if HAS_CRYPTOGRAPHY:
-            cipher = Cipher(
-                algorithms.AES(self.key),
-                modes.CBC(iv),
-                backend=default_backend()
-            )
+            cipher = Cipher(algorithms.AES(self.key), modes.CBC(iv), backend=default_backend())
             decryptor = cipher.decryptor()
             padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
 
@@ -319,11 +320,7 @@ class C2Crypto:
         nonce = self._generate_iv(self.NONCE_SIZE)
 
         if HAS_CRYPTOGRAPHY:
-            cipher = Cipher(
-                algorithms.AES(self.key),
-                modes.GCM(nonce),
-                backend=default_backend()
-            )
+            cipher = Cipher(algorithms.AES(self.key), modes.GCM(nonce), backend=default_backend())
             encryptor = cipher.encryptor()
             ciphertext = encryptor.update(plaintext) + encryptor.finalize()
             tag = encryptor.tag
@@ -344,9 +341,7 @@ class C2Crypto:
 
         if HAS_CRYPTOGRAPHY:
             cipher = Cipher(
-                algorithms.AES(self.key),
-                modes.GCM(nonce, tag),
-                backend=default_backend()
+                algorithms.AES(self.key), modes.GCM(nonce, tag), backend=default_backend()
             )
             decryptor = cipher.decryptor()
             plaintext = decryptor.update(ciphertext) + decryptor.finalize()
@@ -368,6 +363,7 @@ class C2Crypto:
 
         if HAS_CRYPTOGRAPHY:
             from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+
             cipher = ChaCha20Poly1305(self.key)
             # ChaCha20Poly1305 将 tag 附加到密文
             ciphertext_with_tag = cipher.encrypt(nonce, plaintext, None)
@@ -391,6 +387,7 @@ class C2Crypto:
 
         if HAS_CRYPTOGRAPHY:
             from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+
             cipher = ChaCha20Poly1305(self.key)
             # 重新组合密文和 tag
             ciphertext_with_tag = ciphertext + tag
@@ -422,7 +419,7 @@ class C2Crypto:
         result = self.encrypt(plaintext)
 
         # 构建头部
-        algo_byte = list(CryptoAlgorithm).index(self.algorithm).to_bytes(1, 'big')
+        algo_byte = list(CryptoAlgorithm).index(self.algorithm).to_bytes(1, "big")
 
         if self.algorithm == CryptoAlgorithm.NONE:
             return algo_byte + result.ciphertext
@@ -431,8 +428,8 @@ class C2Crypto:
             return algo_byte + result.ciphertext
 
         # AEAD 算法
-        nonce = result.iv or b'\x00' * self.NONCE_SIZE
-        tag = result.tag or b'\x00' * 16
+        nonce = result.iv or b"\x00" * self.NONCE_SIZE
+        tag = result.tag or b"\x00" * 16
 
         return algo_byte + nonce + tag + result.ciphertext
 
@@ -472,12 +469,10 @@ class C2Crypto:
         """
         if HAS_CRYPTOGRAPHY:
             from cryptography.hazmat.primitives.asymmetric import x25519
+
             private_key = x25519.X25519PrivateKey.generate()
             public_key = private_key.public_key()
-            return (
-                private_key.private_bytes_raw(),
-                public_key.public_bytes_raw()
-            )
+            return (private_key.private_bytes_raw(), public_key.public_bytes_raw())
         else:
             # 回退到简单随机密钥
             private_key = os.urandom(32)
@@ -496,10 +491,9 @@ class C2Crypto:
 
 # ==================== 便捷函数 ====================
 
+
 def create_crypto(
-    algorithm: str = 'aes256_gcm',
-    key: Optional[bytes] = None,
-    password: Optional[str] = None
+    algorithm: str = "aes256_gcm", key: Optional[bytes] = None, password: Optional[str] = None
 ) -> C2Crypto:
     """
     创建加密器
@@ -519,7 +513,7 @@ def create_crypto(
     return C2Crypto(algorithm, key, derive_key=False)
 
 
-def quick_encrypt(plaintext: bytes, key: bytes, algorithm: str = 'aes256_gcm') -> bytes:
+def quick_encrypt(plaintext: bytes, key: bytes, algorithm: str = "aes256_gcm") -> bytes:
     """快速加密"""
     crypto = C2Crypto(algorithm, key)
     return crypto.encrypt_with_header(plaintext)
@@ -535,12 +529,12 @@ def quick_decrypt(ciphertext: bytes, key: bytes) -> bytes:
 
 
 __all__ = [
-    'CryptoAlgorithm',
-    'CryptoResult',
-    'C2Crypto',
-    'create_crypto',
-    'quick_encrypt',
-    'quick_decrypt',
-    'HAS_CRYPTOGRAPHY',
-    'HAS_PYCRYPTODOME',
+    "CryptoAlgorithm",
+    "CryptoResult",
+    "C2Crypto",
+    "create_crypto",
+    "quick_encrypt",
+    "quick_decrypt",
+    "HAS_CRYPTOGRAPHY",
+    "HAS_PYCRYPTODOME",
 ]

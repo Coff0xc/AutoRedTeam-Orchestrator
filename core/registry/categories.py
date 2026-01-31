@@ -18,86 +18,86 @@ class ToolCategory(Enum):
     """
 
     # ============ 信息收集 ============
-    RECON = 'recon'                    # 综合信息收集
-    FINGERPRINT = 'fingerprint'        # 指纹识别
-    SUBDOMAIN = 'subdomain'            # 子域名枚举
-    PORT_SCAN = 'port_scan'            # 端口扫描
-    DNS = 'dns'                        # DNS查询
-    WHOIS = 'whois'                    # WHOIS查询
-    WEB_PROBE = 'web_probe'            # Web探测
-    OSINT = 'osint'                    # 开源情报
+    RECON = "recon"  # 综合信息收集
+    FINGERPRINT = "fingerprint"  # 指纹识别
+    SUBDOMAIN = "subdomain"  # 子域名枚举
+    PORT_SCAN = "port_scan"  # 端口扫描
+    DNS = "dns"  # DNS查询
+    WHOIS = "whois"  # WHOIS查询
+    WEB_PROBE = "web_probe"  # Web探测
+    OSINT = "osint"  # 开源情报
 
     # ============ 漏洞检测 ============
-    VULN_SCAN = 'vuln_scan'            # 综合漏洞扫描
-    INJECTION = 'injection'            # 注入漏洞 (SQLi, CMDi, etc.)
-    XSS = 'xss'                        # 跨站脚本
-    SSRF = 'ssrf'                      # 服务端请求伪造
-    XXE = 'xxe'                        # XML外部实体
-    SSTI = 'ssti'                      # 服务端模板注入
-    LFI = 'lfi'                        # 本地文件包含
-    RFI = 'rfi'                        # 远程文件包含
-    DESERIALIZE = 'deserialize'        # 反序列化漏洞
-    AUTH = 'auth'                      # 认证漏洞
-    CSRF = 'csrf'                      # 跨站请求伪造
-    IDOR = 'idor'                      # 不安全的直接对象引用
-    UPLOAD = 'upload'                  # 文件上传漏洞
+    VULN_SCAN = "vuln_scan"  # 综合漏洞扫描
+    INJECTION = "injection"  # 注入漏洞 (SQLi, CMDi, etc.)
+    XSS = "xss"  # 跨站脚本
+    SSRF = "ssrf"  # 服务端请求伪造
+    XXE = "xxe"  # XML外部实体
+    SSTI = "ssti"  # 服务端模板注入
+    LFI = "lfi"  # 本地文件包含
+    RFI = "rfi"  # 远程文件包含
+    DESERIALIZE = "deserialize"  # 反序列化漏洞
+    AUTH = "auth"  # 认证漏洞
+    CSRF = "csrf"  # 跨站请求伪造
+    IDOR = "idor"  # 不安全的直接对象引用
+    UPLOAD = "upload"  # 文件上传漏洞
 
     # ============ API安全 ============
-    API_SECURITY = 'api_security'      # API安全综合
-    JWT = 'jwt'                        # JWT安全测试
-    CORS = 'cors'                      # CORS配置测试
-    GRAPHQL = 'graphql'                # GraphQL安全
-    WEBSOCKET = 'websocket'            # WebSocket安全
-    OAUTH = 'oauth'                    # OAuth安全
-    REST = 'rest'                      # REST API安全
-    GRPC = 'grpc'                      # gRPC安全
+    API_SECURITY = "api_security"  # API安全综合
+    JWT = "jwt"  # JWT安全测试
+    CORS = "cors"  # CORS配置测试
+    GRAPHQL = "graphql"  # GraphQL安全
+    WEBSOCKET = "websocket"  # WebSocket安全
+    OAUTH = "oauth"  # OAuth安全
+    REST = "rest"  # REST API安全
+    GRPC = "grpc"  # gRPC安全
 
     # ============ 供应链安全 ============
-    SUPPLY_CHAIN = 'supply_chain'      # 供应链安全综合
-    SBOM = 'sbom'                      # 软件物料清单
-    DEPENDENCY = 'dependency'          # 依赖审计
-    CICD = 'cicd'                      # CI/CD安全
+    SUPPLY_CHAIN = "supply_chain"  # 供应链安全综合
+    SBOM = "sbom"  # 软件物料清单
+    DEPENDENCY = "dependency"  # 依赖审计
+    CICD = "cicd"  # CI/CD安全
 
     # ============ 云原生安全 ============
-    CLOUD_NATIVE = 'cloud_native'      # 云原生综合
-    K8S = 'k8s'                        # Kubernetes安全
-    DOCKER = 'docker'                  # Docker安全
-    AWS = 'aws'                        # AWS安全
-    AZURE = 'azure'                    # Azure安全
-    GCP = 'gcp'                        # GCP安全
+    CLOUD_NATIVE = "cloud_native"  # 云原生综合
+    K8S = "k8s"  # Kubernetes安全
+    DOCKER = "docker"  # Docker安全
+    AWS = "aws"  # AWS安全
+    AZURE = "azure"  # Azure安全
+    GCP = "gcp"  # GCP安全
 
     # ============ 红队工具 ============
-    C2 = 'c2'                          # C2通信
-    LATERAL = 'lateral'                # 横向移动
-    PERSISTENCE = 'persistence'        # 持久化
-    CREDENTIAL = 'credential'          # 凭证获取
-    EVASION = 'evasion'                # 免杀绕过
-    STEALTH = 'stealth'                # 隐蔽通信
-    AD = 'ad'                          # Active Directory
-    POST_EXPLOIT = 'post_exploit'      # 后渗透
-    PRIVILEGE_ESC = 'privilege_esc'    # 提权
+    C2 = "c2"  # C2通信
+    LATERAL = "lateral"  # 横向移动
+    PERSISTENCE = "persistence"  # 持久化
+    CREDENTIAL = "credential"  # 凭证获取
+    EVASION = "evasion"  # 免杀绕过
+    STEALTH = "stealth"  # 隐蔽通信
+    AD = "ad"  # Active Directory
+    POST_EXPLOIT = "post_exploit"  # 后渗透
+    PRIVILEGE_ESC = "privilege_esc"  # 提权
 
     # ============ 漏洞情报 ============
-    CVE = 'cve'                        # CVE情报
-    POC = 'poc'                        # PoC生成/执行
-    EXPLOIT = 'exploit'                # 漏洞利用
+    CVE = "cve"  # CVE情报
+    POC = "poc"  # PoC生成/执行
+    EXPLOIT = "exploit"  # 漏洞利用
 
     # ============ 前端分析 ============
-    JS_ANALYSIS = 'js_analysis'        # JavaScript分析
-    FRONTEND = 'frontend'              # 前端安全
+    JS_ANALYSIS = "js_analysis"  # JavaScript分析
+    FRONTEND = "frontend"  # 前端安全
 
     # ============ 系统工具 ============
-    REPORT = 'report'                  # 报告生成
-    TASK = 'task'                      # 任务队列
-    CONFIG = 'config'                  # 配置管理
-    SESSION = 'session'                # 会话管理
-    AI = 'ai'                          # AI决策
-    PAYLOAD = 'payload'                # Payload生成
+    REPORT = "report"  # 报告生成
+    TASK = "task"  # 任务队列
+    CONFIG = "config"  # 配置管理
+    SESSION = "session"  # 会话管理
+    AI = "ai"  # AI决策
+    PAYLOAD = "payload"  # Payload生成
 
     # ============ 综合测试 ============
-    PENTEST = 'pentest'                # 综合渗透测试
-    EXTERNAL = 'external'              # 外部工具集成
-    MISC = 'misc'                      # 其他工具
+    PENTEST = "pentest"  # 综合渗透测试
+    EXTERNAL = "external"  # 外部工具集成
+    MISC = "misc"  # 其他工具
 
 
 # 分类描述映射
@@ -111,7 +111,6 @@ CATEGORY_DESCRIPTIONS: Dict[ToolCategory, str] = {
     ToolCategory.WHOIS: "WHOIS信息查询",
     ToolCategory.WEB_PROBE: "Web服务探测",
     ToolCategory.OSINT: "开源情报收集",
-
     # 漏洞检测
     ToolCategory.VULN_SCAN: "综合漏洞扫描",
     ToolCategory.INJECTION: "注入漏洞检测 (SQL/CMD/LDAP)",
@@ -126,7 +125,6 @@ CATEGORY_DESCRIPTIONS: Dict[ToolCategory, str] = {
     ToolCategory.CSRF: "跨站请求伪造检测",
     ToolCategory.IDOR: "不安全直接对象引用检测",
     ToolCategory.UPLOAD: "文件上传漏洞检测",
-
     # API安全
     ToolCategory.API_SECURITY: "API安全综合测试",
     ToolCategory.JWT: "JWT令牌安全测试",
@@ -136,13 +134,11 @@ CATEGORY_DESCRIPTIONS: Dict[ToolCategory, str] = {
     ToolCategory.OAUTH: "OAuth认证安全测试",
     ToolCategory.REST: "REST API安全测试",
     ToolCategory.GRPC: "gRPC服务安全测试",
-
     # 供应链
     ToolCategory.SUPPLY_CHAIN: "供应链安全综合检测",
     ToolCategory.SBOM: "软件物料清单生成与分析",
     ToolCategory.DEPENDENCY: "依赖组件漏洞审计",
     ToolCategory.CICD: "CI/CD流水线安全检测",
-
     # 云原生
     ToolCategory.CLOUD_NATIVE: "云原生安全综合检测",
     ToolCategory.K8S: "Kubernetes集群安全检测",
@@ -150,7 +146,6 @@ CATEGORY_DESCRIPTIONS: Dict[ToolCategory, str] = {
     ToolCategory.AWS: "AWS云服务安全检测",
     ToolCategory.AZURE: "Azure云服务安全检测",
     ToolCategory.GCP: "GCP云服务安全检测",
-
     # 红队
     ToolCategory.C2: "Command & Control通信",
     ToolCategory.LATERAL: "横向移动工具",
@@ -161,16 +156,13 @@ CATEGORY_DESCRIPTIONS: Dict[ToolCategory, str] = {
     ToolCategory.AD: "Active Directory渗透",
     ToolCategory.POST_EXPLOIT: "后渗透利用工具",
     ToolCategory.PRIVILEGE_ESC: "权限提升工具",
-
     # CVE
     ToolCategory.CVE: "CVE漏洞情报查询",
     ToolCategory.POC: "PoC生成与执行",
     ToolCategory.EXPLOIT: "漏洞利用模块",
-
     # 前端
     ToolCategory.JS_ANALYSIS: "JavaScript代码分析",
     ToolCategory.FRONTEND: "前端安全检测",
-
     # 系统
     ToolCategory.REPORT: "渗透测试报告生成",
     ToolCategory.TASK: "异步任务队列管理",
@@ -178,7 +170,6 @@ CATEGORY_DESCRIPTIONS: Dict[ToolCategory, str] = {
     ToolCategory.SESSION: "会话状态管理",
     ToolCategory.AI: "AI辅助决策引擎",
     ToolCategory.PAYLOAD: "Payload生成器",
-
     # 综合
     ToolCategory.PENTEST: "综合渗透测试工具",
     ToolCategory.EXTERNAL: "外部工具集成接口",
@@ -189,7 +180,7 @@ CATEGORY_DESCRIPTIONS: Dict[ToolCategory, str] = {
 # 分类层级结构 - 用于工具组织和展示
 CATEGORY_HIERARCHY: Dict[str, List[ToolCategory]] = {
     # 信息收集阶段
-    'reconnaissance': [
+    "reconnaissance": [
         ToolCategory.RECON,
         ToolCategory.FINGERPRINT,
         ToolCategory.SUBDOMAIN,
@@ -199,9 +190,8 @@ CATEGORY_HIERARCHY: Dict[str, List[ToolCategory]] = {
         ToolCategory.WEB_PROBE,
         ToolCategory.OSINT,
     ],
-
     # 漏洞检测阶段
-    'vulnerability': [
+    "vulnerability": [
         ToolCategory.VULN_SCAN,
         ToolCategory.INJECTION,
         ToolCategory.XSS,
@@ -216,9 +206,8 @@ CATEGORY_HIERARCHY: Dict[str, List[ToolCategory]] = {
         ToolCategory.IDOR,
         ToolCategory.UPLOAD,
     ],
-
     # API安全
-    'api_security': [
+    "api_security": [
         ToolCategory.API_SECURITY,
         ToolCategory.JWT,
         ToolCategory.CORS,
@@ -228,17 +217,15 @@ CATEGORY_HIERARCHY: Dict[str, List[ToolCategory]] = {
         ToolCategory.REST,
         ToolCategory.GRPC,
     ],
-
     # 供应链安全
-    'supply_chain': [
+    "supply_chain": [
         ToolCategory.SUPPLY_CHAIN,
         ToolCategory.SBOM,
         ToolCategory.DEPENDENCY,
         ToolCategory.CICD,
     ],
-
     # 云原生安全
-    'cloud_native': [
+    "cloud_native": [
         ToolCategory.CLOUD_NATIVE,
         ToolCategory.K8S,
         ToolCategory.DOCKER,
@@ -246,9 +233,8 @@ CATEGORY_HIERARCHY: Dict[str, List[ToolCategory]] = {
         ToolCategory.AZURE,
         ToolCategory.GCP,
     ],
-
     # 红队攻击
-    'red_team': [
+    "red_team": [
         ToolCategory.C2,
         ToolCategory.LATERAL,
         ToolCategory.PERSISTENCE,
@@ -259,22 +245,19 @@ CATEGORY_HIERARCHY: Dict[str, List[ToolCategory]] = {
         ToolCategory.POST_EXPLOIT,
         ToolCategory.PRIVILEGE_ESC,
     ],
-
     # 漏洞利用
-    'exploitation': [
+    "exploitation": [
         ToolCategory.CVE,
         ToolCategory.POC,
         ToolCategory.EXPLOIT,
     ],
-
     # 前端分析
-    'frontend_analysis': [
+    "frontend_analysis": [
         ToolCategory.JS_ANALYSIS,
         ToolCategory.FRONTEND,
     ],
-
     # 系统工具
-    'system': [
+    "system": [
         ToolCategory.REPORT,
         ToolCategory.TASK,
         ToolCategory.CONFIG,
@@ -282,9 +265,8 @@ CATEGORY_HIERARCHY: Dict[str, List[ToolCategory]] = {
         ToolCategory.AI,
         ToolCategory.PAYLOAD,
     ],
-
     # 综合
-    'general': [
+    "general": [
         ToolCategory.PENTEST,
         ToolCategory.EXTERNAL,
         ToolCategory.MISC,
@@ -294,7 +276,7 @@ CATEGORY_HIERARCHY: Dict[str, List[ToolCategory]] = {
 
 # ATT&CK映射 - 将工具分类映射到MITRE ATT&CK战术
 ATTCK_MAPPING: Dict[str, List[ToolCategory]] = {
-    'reconnaissance': [
+    "reconnaissance": [
         ToolCategory.RECON,
         ToolCategory.FINGERPRINT,
         ToolCategory.SUBDOMAIN,
@@ -303,51 +285,51 @@ ATTCK_MAPPING: Dict[str, List[ToolCategory]] = {
         ToolCategory.WHOIS,
         ToolCategory.OSINT,
     ],
-    'resource_development': [
+    "resource_development": [
         ToolCategory.PAYLOAD,
         ToolCategory.EVASION,
     ],
-    'initial_access': [
+    "initial_access": [
         ToolCategory.EXPLOIT,
         ToolCategory.POC,
     ],
-    'execution': [
+    "execution": [
         ToolCategory.C2,
         ToolCategory.POST_EXPLOIT,
     ],
-    'persistence': [
+    "persistence": [
         ToolCategory.PERSISTENCE,
     ],
-    'privilege_escalation': [
+    "privilege_escalation": [
         ToolCategory.PRIVILEGE_ESC,
     ],
-    'defense_evasion': [
+    "defense_evasion": [
         ToolCategory.EVASION,
         ToolCategory.STEALTH,
     ],
-    'credential_access': [
+    "credential_access": [
         ToolCategory.CREDENTIAL,
         ToolCategory.AUTH,
     ],
-    'discovery': [
+    "discovery": [
         ToolCategory.RECON,
         ToolCategory.AD,
     ],
-    'lateral_movement': [
+    "lateral_movement": [
         ToolCategory.LATERAL,
     ],
-    'collection': [
+    "collection": [
         ToolCategory.JS_ANALYSIS,
         ToolCategory.FRONTEND,
     ],
-    'command_and_control': [
+    "command_and_control": [
         ToolCategory.C2,
         ToolCategory.STEALTH,
     ],
-    'exfiltration': [
+    "exfiltration": [
         ToolCategory.C2,
     ],
-    'impact': [
+    "impact": [
         ToolCategory.EXPLOIT,
     ],
 }
@@ -389,7 +371,7 @@ def get_phase_for_category(category: ToolCategory) -> str:
     for phase, categories in CATEGORY_HIERARCHY.items():
         if category in categories:
             return phase
-    return 'general'
+    return "general"
 
 
 def get_attck_tactics(category: ToolCategory) -> List[str]:

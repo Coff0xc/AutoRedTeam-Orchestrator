@@ -5,11 +5,12 @@ JS 分析引擎 - 自动提取 API 端点、路由、敏感信息
 支持 Vue/React/Angular 等前端框架
 """
 
-import re
 import asyncio
-import aiohttp
-from typing import Set, List, Dict, Optional
+import re
+from typing import Dict, List, Optional, Set
 from urllib.parse import urljoin, urlparse
+
+import aiohttp
 from loguru import logger
 
 from utils.mcp_tooling import patch_mcp_tool
@@ -17,6 +18,7 @@ from utils.mcp_tooling import patch_mcp_tool
 # 统一 HTTP 客户端工厂
 try:
     from core.http import get_async_client
+
     HAS_HTTP_FACTORY = True
 except ImportError:
     HAS_HTTP_FACTORY = False
@@ -28,44 +30,44 @@ class JSAnalyzer:
     # API 端点正则 (fetch, axios, $.ajax, XMLHttpRequest)
     API_PATTERNS = [
         # fetch('/api/users', {})
-        r'''fetch\s*\(\s*['"`]([^'"`]+)['"`]''',
+        r"""fetch\s*\(\s*['"`]([^'"`]+)['"`]""",
         # axios.get('/api/users')
-        r'''axios\.\w+\s*\(\s*['"`]([^'"`]+)['"`]''',
+        r"""axios\.\w+\s*\(\s*['"`]([^'"`]+)['"`]""",
         # $.ajax({url: '/api/users'})
-        r'''['\"]url['\"]:\s*['"`]([^'"`]+)['"`]''',
+        r"""['\"]url['\"]:\s*['"`]([^'"`]+)['"`]""",
         # xhr.open('GET', '/api/users')
-        r'''\.open\s*\(\s*['"`]\w+['"`]\s*,\s*['"`]([^'"`]+)['"`]''',
+        r"""\.open\s*\(\s*['"`]\w+['"`]\s*,\s*['"`]([^'"`]+)['"`]""",
         # request('/api/users')
-        r'''(?:request|http)\.\w+\s*\(\s*['"`]([^'"`]+)['"`]''',
+        r"""(?:request|http)\.\w+\s*\(\s*['"`]([^'"`]+)['"`]""",
         # 通用路径匹配 (/api/xxx, /v1/xxx)
-        r'''['"`](/(?:api|v\d+|graphql|admin|auth|user|data)/[a-zA-Z0-9/_-]+)['"`]''',
+        r"""['"`](/(?:api|v\d+|graphql|admin|auth|user|data)/[a-zA-Z0-9/_-]+)['"`]""",
     ]
 
     # 前端路由正则 (Vue Router, React Router, Angular)
     ROUTE_PATTERNS = [
         # Vue Router: path: '/dashboard'
-        r'''path:\s*['"`]([/\w-]+)['"`]''',
+        r"""path:\s*['"`]([/\w-]+)['"`]""",
         # React Router: <Route path="/user/:id">
-        r'''<Route\s+path=["']([/\w:-]+)["']''',
+        r"""<Route\s+path=["']([/\w:-]+)["']""",
         # Angular Router: path: 'dashboard'
-        r'''{?\s*path:\s*['"`]([/\w-]+)['"`]''',
+        r"""{?\s*path:\s*['"`]([/\w-]+)['"`]""",
         # router.push('/settings')
-        r'''router\.(?:push|replace)\s*\(\s*['"`]([/\w-]+)['"`]''',
+        r"""router\.(?:push|replace)\s*\(\s*['"`]([/\w-]+)['"`]""",
         # location.href = '/xxx'
-        r'''location\.href\s*=\s*['"`]([/\w-]+)['"`]''',
+        r"""location\.href\s*=\s*['"`]([/\w-]+)['"`]""",
     ]
 
     # 敏感信息正则 (API Keys, Tokens, Passwords)
     SECRET_PATTERNS = {
-        'aws_key': r'AKIA[0-9A-Z]{16}',
-        'google_api': r'AIza[0-9A-Za-z\\-_]{35}',
-        'github_token': r'gh[pousr]_[A-Za-z0-9_]{36,}',
-        'slack_token': r'xox[baprs]-[0-9a-zA-Z]{10,48}',
-        'jwt': r'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}',
-        'api_key_generic': r'''['"`]?(?:api[_-]?key|apikey|access[_-]?token)['"`]?\s*[:=]\s*['"`]([A-Za-z0-9_\-]{20,})['"`]''',
-        'password': r'''['"`]password['"`]\s*[:=]\s*['"`]([^'"`]{6,})['"`]''',
-        'internal_ip': r'\b(?:10|172\.(?:1[6-9]|2[0-9]|3[01])|192\.168)\.\d{1,3}\.\d{1,3}\b',
-        'private_domain': r'https?://[a-zA-Z0-9-]+\.(?:local|internal|corp|intra)[/\w.-]*',
+        "aws_key": r"AKIA[0-9A-Z]{16}",
+        "google_api": r"AIza[0-9A-Za-z\\-_]{35}",
+        "github_token": r"gh[pousr]_[A-Za-z0-9_]{36,}",
+        "slack_token": r"xox[baprs]-[0-9a-zA-Z]{10,48}",
+        "jwt": r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}",
+        "api_key_generic": r"""['"`]?(?:api[_-]?key|apikey|access[_-]?token)['"`]?\s*[:=]\s*['"`]([A-Za-z0-9_\-]{20,})['"`]""",
+        "password": r"""['"`]password['"`]\s*[:=]\s*['"`]([^'"`]{6,})['"`]""",
+        "internal_ip": r"\b(?:10|172\.(?:1[6-9]|2[0-9]|3[01])|192\.168)\.\d{1,3}\.\d{1,3}\b",
+        "private_domain": r"https?://[a-zA-Z0-9-]+\.(?:local|internal|corp|intra)[/\w.-]*",
     }
 
     @classmethod
@@ -132,12 +134,14 @@ class JSAnalyzer:
                 secret_value = match.group(1) if match.lastindex else match.group(0)
                 # 过滤误报 (常见占位符)
                 if cls._is_real_secret(secret_value):
-                    secrets.append({
-                        "type": secret_type,
-                        "value": secret_value,
-                        "position": match.start(),
-                        "context": cls._get_context(js_content, match.start(), 40)
-                    })
+                    secrets.append(
+                        {
+                            "type": secret_type,
+                            "value": secret_value,
+                            "position": match.start(),
+                            "context": cls._get_context(js_content, match.start(), 40),
+                        }
+                    )
 
         return secrets
 
@@ -147,7 +151,7 @@ class JSAnalyzer:
         if not path or len(path) < 2:
             return False
         # 排除变量和模板字符串
-        invalid_chars = ['{', '}', '$', '+', '"', "'", '\\']
+        invalid_chars = ["{", "}", "$", "+", '"', "'", "\\"]
         return not any(char in path for char in invalid_chars)
 
     @classmethod
@@ -156,14 +160,23 @@ class JSAnalyzer:
         if not route or len(route) < 1:
             return False
         # 允许动态路由 (/user/:id)
-        return route.startswith('/') or route.replace(':', '').replace('/', '').isalnum()
+        return route.startswith("/") or route.replace(":", "").replace("/", "").isalnum()
 
     @classmethod
     def _is_real_secret(cls, value: str) -> bool:
         """过滤常见占位符"""
         if not value:
             return False
-        placeholders = ['example', 'test', 'demo', 'your', 'placeholder', '123456', 'password', 'xxxxxxx']
+        placeholders = [
+            "example",
+            "test",
+            "demo",
+            "your",
+            "placeholder",
+            "123456",
+            "password",
+            "xxxxxxx",
+        ]
         value_lower = value.lower()
         return not any(ph in value_lower for ph in placeholders)
 
@@ -172,7 +185,7 @@ class JSAnalyzer:
         """获取代码上下文"""
         start = max(0, position - length)
         end = min(len(content), position + length)
-        return content[start:end].replace('\n', ' ').strip()
+        return content[start:end].replace("\n", " ").strip()
 
     @classmethod
     async def analyze_url(cls, url: str, max_depth: int = 2, timeout: int = 15) -> Dict:
@@ -192,7 +205,7 @@ class JSAnalyzer:
             "js_files": [],
             "endpoints": set(),
             "routes": set(),
-            "secrets": []
+            "secrets": [],
         }
 
         try:
@@ -235,9 +248,11 @@ class JSAnalyzer:
     async def _fetch_content(cls, session: aiohttp.ClientSession, url: str, timeout: int) -> str:
         """异步下载内容"""
         try:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=timeout), ssl=False) as resp:
+            async with session.get(
+                url, timeout=aiohttp.ClientTimeout(total=timeout), ssl=False
+            ) as resp:
                 if resp.status == 200:
-                    return await resp.text(encoding='utf-8', errors='ignore')
+                    return await resp.text(encoding="utf-8", errors="ignore")
         except Exception as e:
             logger.warning(f"[JSAnalyzer] 下载失败 {url}: {e}")
         return ""
@@ -254,7 +269,7 @@ class JSAnalyzer:
         for match in matches:
             js_path = match.group(1)
             # 排除外部CDN (可选)
-            if not js_path.startswith(('http://', 'https://')):
+            if not js_path.startswith(("http://", "https://")):
                 js_url = urljoin(base_url, js_path)
             else:
                 # 只分析同域JS
@@ -268,26 +283,26 @@ class JSAnalyzer:
         return js_urls
 
     @classmethod
-    async def _analyze_js_file(cls, session: aiohttp.ClientSession, js_url: str, timeout: int) -> Dict:
+    async def _analyze_js_file(
+        cls, session: aiohttp.ClientSession, js_url: str, timeout: int
+    ) -> Dict:
         """分析单个 JS 文件"""
-        result = {
-            "url": js_url,
-            "endpoints": set(),
-            "routes": set(),
-            "secrets": []
-        }
+        result = {"url": js_url, "endpoints": set(), "routes": set(), "secrets": []}
 
         js_content = await cls._fetch_content(session, js_url, timeout)
         if js_content:
             result["endpoints"] = cls.extract_api_endpoints(js_content)
             result["routes"] = cls.extract_routes(js_content)
             result["secrets"] = cls.extract_secrets(js_content)
-            logger.info(f"[JSAnalyzer] {js_url} -> {len(result['endpoints'])} endpoints, {len(result['secrets'])} secrets")
+            logger.info(
+                f"[JSAnalyzer] {js_url} -> {len(result['endpoints'])} endpoints, {len(result['secrets'])} secrets"
+            )
 
         return result
 
 
 # =========================== MCP 工具注册 ===========================
+
 
 def register_js_tools(mcp):
     """注册 JS 分析工具到 MCP Server"""
@@ -342,6 +357,7 @@ def register_js_tools(mcp):
 
 
 # =========================== 独立测试 ===========================
+
 
 async def test_js_analyzer():
     """测试函数"""

@@ -16,9 +16,9 @@
     password = vault.retrieve("db_password", encrypted)
 """
 
-import os
 import base64
 import logging
+import os
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,7 @@ class CredentialVault:
         if self._key:
             try:
                 from cryptography.fernet import Fernet
+
                 self._cipher = Fernet(self._key)
                 logger.debug("凭证存储使用 Fernet 加密")
             except Exception as e:
@@ -109,6 +110,7 @@ class CredentialVault:
             Fernet 格式的密钥
         """
         from cryptography.fernet import Fernet
+
         return Fernet.generate_key()
 
     @property

@@ -43,22 +43,27 @@
         print(f"修复建议: {result.remediation}")
 """
 
+# 访问控制检测器
+from .access import (
+    IDORDetector,
+    OpenRedirectDetector,
+    PathTraversalDetector,
+    SSRFDetector,
+)
+
+# 认证检测器
+from .auth import (
+    AuthBypassDetector,
+    SessionDetector,
+    WeakPasswordDetector,
+)
+
 # 基础类
 from .base import (
     BaseDetector,
     CompositeDetector,
-    StreamingDetector,
     ContextAwareDetector,
-)
-
-# 检测结果
-from .result import (
-    DetectionResult,
-    DetectionSummary,
-    Severity,
-    DetectorType,
-    RequestInfo,
-    ResponseInfo,
+    StreamingDetector,
 )
 
 # 工厂
@@ -68,63 +73,59 @@ from .factory import (
     register_detector,
 )
 
-# Payload 管理
-from .payloads import (
-    PayloadManager,
-    PayloadCategory,
-    PayloadEncoder,
-    EncodingType,
-    Payload,
-    get_payloads,
-    get_payloads_with_variants,
-    get_payload_manager,
+# 文件类检测器
+from .file import (
+    FileUploadDetector,
+    LFIDetector,
 )
-
-# ==================== 导入所有检测器以触发注册 ====================
 
 # 注入类检测器
 from .injection import (
-    SQLiDetector,
-    XSSDetector,
-    RCEDetector,
-    SSTIDetector,
-    XXEDetector,
-    LDAPiDetector,
     DeserializeDetector,
     FastjsonDetector,
-)
-
-# 访问控制检测器
-from .access import (
-    IDORDetector,
-    PathTraversalDetector,
-    SSRFDetector,
-    OpenRedirectDetector,
-)
-
-# 文件类检测器
-from .file import (
-    LFIDetector,
-    FileUploadDetector,
-)
-
-# 认证检测器
-from .auth import (
-    WeakPasswordDetector,
-    AuthBypassDetector,
-    SessionDetector,
+    LDAPiDetector,
+    RCEDetector,
+    SQLiDetector,
+    SSTIDetector,
+    XSSDetector,
+    XXEDetector,
 )
 
 # 其他检测器
 from .misc import (
     CORSDetector,
     CSRFDetector,
-    SecurityHeadersDetector,
     InfoDisclosureDetector,
+    SecurityHeadersDetector,
 )
+
+# Payload 管理
+from .payloads import (
+    EncodingType,
+    Payload,
+    PayloadCategory,
+    PayloadEncoder,
+    PayloadManager,
+    get_payload_manager,
+    get_payloads,
+    get_payloads_with_variants,
+)
+
+# 检测结果
+from .result import (
+    DetectionResult,
+    DetectionSummary,
+    DetectorType,
+    RequestInfo,
+    ResponseInfo,
+    Severity,
+)
+
+# ==================== 导入所有检测器以触发注册 ====================
 
 
 # ==================== 便捷函数 ====================
+
 
 def create_detector(name: str, config: dict = None) -> BaseDetector:
     """创建检测器的便捷函数
@@ -164,100 +165,90 @@ def get_detector_info(name: str) -> dict:
 
 # 误报过滤器
 from .false_positive_filter import (
-    FalsePositiveFilter,
-    DynamicContentNormalizer,
-    SPADetector,
-    WAFBlockDetector,
-    RateLimitDetector,
     CaptchaDetector,
+    DynamicContentNormalizer,
+    FalsePositiveFilter,
     FilterReason,
     FilterResult,
+    RateLimitDetector,
     ResponseBaseline,
+    SPADetector,
+    WAFBlockDetector,
     is_false_positive,
     normalize_response,
 )
 
 __all__ = [
     # 基础类
-    'BaseDetector',
-    'CompositeDetector',
-    'StreamingDetector',
-    'ContextAwareDetector',
-
+    "BaseDetector",
+    "CompositeDetector",
+    "StreamingDetector",
+    "ContextAwareDetector",
     # 检测结果
-    'DetectionResult',
-    'DetectionSummary',
-    'Severity',
-    'DetectorType',
-    'RequestInfo',
-    'ResponseInfo',
-
+    "DetectionResult",
+    "DetectionSummary",
+    "Severity",
+    "DetectorType",
+    "RequestInfo",
+    "ResponseInfo",
     # 工厂
-    'DetectorFactory',
-    'DetectorPresets',
-    'register_detector',
-
+    "DetectorFactory",
+    "DetectorPresets",
+    "register_detector",
     # Payload
-    'PayloadManager',
-    'PayloadCategory',
-    'PayloadEncoder',
-    'EncodingType',
-    'Payload',
-    'get_payloads',
-    'get_payloads_with_variants',
-    'get_payload_manager',
-
+    "PayloadManager",
+    "PayloadCategory",
+    "PayloadEncoder",
+    "EncodingType",
+    "Payload",
+    "get_payloads",
+    "get_payloads_with_variants",
+    "get_payload_manager",
     # 注入类检测器
-    'SQLiDetector',
-    'XSSDetector',
-    'RCEDetector',
-    'SSTIDetector',
-    'XXEDetector',
-    'LDAPiDetector',
-    'DeserializeDetector',
-    'FastjsonDetector',
-
+    "SQLiDetector",
+    "XSSDetector",
+    "RCEDetector",
+    "SSTIDetector",
+    "XXEDetector",
+    "LDAPiDetector",
+    "DeserializeDetector",
+    "FastjsonDetector",
     # 访问控制检测器
-    'IDORDetector',
-    'PathTraversalDetector',
-    'SSRFDetector',
-    'OpenRedirectDetector',
-
+    "IDORDetector",
+    "PathTraversalDetector",
+    "SSRFDetector",
+    "OpenRedirectDetector",
     # 文件类检测器
-    'LFIDetector',
-    'FileUploadDetector',
-
+    "LFIDetector",
+    "FileUploadDetector",
     # 认证检测器
-    'WeakPasswordDetector',
-    'AuthBypassDetector',
-    'SessionDetector',
-
+    "WeakPasswordDetector",
+    "AuthBypassDetector",
+    "SessionDetector",
     # 其他检测器
-    'CORSDetector',
-    'CSRFDetector',
-    'SecurityHeadersDetector',
-    'InfoDisclosureDetector',
-    
+    "CORSDetector",
+    "CSRFDetector",
+    "SecurityHeadersDetector",
+    "InfoDisclosureDetector",
     # 误报过滤
-    'FalsePositiveFilter',
-    'DynamicContentNormalizer',
-    'SPADetector',
-    'WAFBlockDetector',
-    'RateLimitDetector',
-    'CaptchaDetector',
-    'FilterReason',
-    'FilterResult',
-    'ResponseBaseline',
-    'is_false_positive',
-    'normalize_response',
-
+    "FalsePositiveFilter",
+    "DynamicContentNormalizer",
+    "SPADetector",
+    "WAFBlockDetector",
+    "RateLimitDetector",
+    "CaptchaDetector",
+    "FilterReason",
+    "FilterResult",
+    "ResponseBaseline",
+    "is_false_positive",
+    "normalize_response",
     # 便捷函数
-    'create_detector',
-    'list_detectors',
-    'get_detector_info',
+    "create_detector",
+    "list_detectors",
+    "get_detector_info",
 ]
 
 
 # 版本信息
-__version__ = '2.0.0'
-__author__ = 'AutoRedTeam'
+__version__ = "2.0.0"
+__author__ = "AutoRedTeam"

@@ -4,14 +4,14 @@
 
 from typing import TYPE_CHECKING
 
-# TYPE_CHECKING imports removed (legacy)
-
 from modules.cloud.aws_tools import AWSEnumTool, S3ScannerTool
 from modules.cloud.azure_tools import AzureEnumTool
 from modules.cloud.k8s_tools import KubeHunterTool
 
+# TYPE_CHECKING imports removed (legacy)
 
-def register_cloud_tools(server: 'MCPServer'):
+
+def register_cloud_tools(server: "MCPServer"):
     """注册云安全工具"""
     tools = [
         AWSEnumTool(),
@@ -19,13 +19,9 @@ def register_cloud_tools(server: 'MCPServer'):
         AzureEnumTool(),
         KubeHunterTool(),
     ]
-    
+
     for tool in tools:
         server.register_tool(tool)
 
 
-__all__ = [
-    "register_cloud_tools",
-    "AWSEnumTool",
-    "S3ScannerTool"
-]
+__all__ = ["register_cloud_tools", "AWSEnumTool", "S3ScannerTool"]

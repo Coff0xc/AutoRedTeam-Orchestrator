@@ -4,34 +4,36 @@
 提供重试机制、断点续传、故障恢复等功能
 """
 
-import os
-import json
-import time
 import asyncio
-import threading
-import logging
 import hashlib
+import json
+import logging
+import os
 import tempfile
-from typing import Any, Dict, List, Optional, Callable, TypeVar, Union
-from dataclasses import dataclass, field, asdict
-from pathlib import Path
-from functools import wraps
-from enum import Enum
+import threading
+import time
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from enum import Enum
+from functools import wraps
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 # ============== 重试策略 ==============
 
+
 class RetryStrategy(Enum):
     """重试策略"""
-    FIXED = "fixed"              # 固定间隔
+
+    FIXED = "fixed"  # 固定间隔
     EXPONENTIAL = "exponential"  # 指数退避
-    LINEAR = "linear"            # 线性增长
-    FIBONACCI = "fibonacci"      # 斐波那契
+    LINEAR = "linear"  # 线性增长
+    FIBONACCI = "fibonacci"  # 斐波那契
 
 
 @dataclass
@@ -45,6 +47,7 @@ class RetryPolicy:
     - 支持异步
     - 详细统计
     """
+
     max_retries: int = 3
     base_delay: float = 1.0
     max_delay: float = 30.0
@@ -60,7 +63,7 @@ class RetryPolicy:
         if self.strategy == RetryStrategy.FIXED:
             delay = self.base_delay
         elif self.strategy == RetryStrategy.EXPONENTIAL:
-            delay = self.base_delay * (2 ** attempt)
+            delay = self.base_delay * (2**attempt)
         elif self.strategy == RetryStrategy.LINEAR:
             delay = self.base_delay * (attempt + 1)
         elif self.strategy == RetryStrategy.FIBONACCI:
@@ -96,7 +99,7 @@ class RetryExecutor:
             "total_calls": 0,
             "successful_calls": 0,
             "failed_calls": 0,
-            "total_retries": 0
+            "total_retries": 0,
         }
 
     def execute(self, func: Callable, *args, **kwargs) -> Any:
@@ -173,7 +176,7 @@ class RetryExecutor:
     def stats(self) -> Dict[str, Any]:
         return {
             **self._stats,
-            "retry_rate": self._stats["total_retries"] / max(self._stats["total_calls"], 1)
+            "retry_rate": self._stats["total_retries"] / max(self._stats["total_calls"], 1),
         }
 
 
@@ -181,15 +184,11 @@ def retry_with_policy(
     policy: Optional[RetryPolicy] = None,
     max_retries: int = 3,
     base_delay: float = 1.0,
-    strategy: RetryStrategy = RetryStrategy.EXPONENTIAL
+    strategy: RetryStrategy = RetryStrategy.EXPONENTIAL,
 ):
     """重试装饰器"""
     if policy is None:
-        policy = RetryPolicy(
-            max_retries=max_retries,
-            base_delay=base_delay,
-            strategy=strategy
-        )
+        policy = RetryPolicy(max_retries=max_retries, base_delay=base_delay, strategy=strategy)
     executor = RetryExecutor(policy)
 
     def decorator(func: Callable) -> Callable:
@@ -210,9 +209,11 @@ def retry_with_policy(
 
 # ============== 断点续传管理器 ==============
 
+
 @dataclass
 class Checkpoint:
     """检查点数据"""
+
     task_id: str
     task_type: str
     progress: int
@@ -241,7 +242,7 @@ class CheckpointManager:
         checkpoint_dir: Optional[str] = None,
         auto_save_interval: int = 100,
         max_checkpoints: int = 100,
-        ttl_hours: int = 24
+        ttl_hours: int = 24,
     ):
         self.checkpoint_dir = Path(checkpoint_dir or tempfile.gettempdir()) / "autored_checkpoints"
         self.auto_save_interval = auto_save_interval
@@ -267,7 +268,7 @@ class CheckpointManager:
         try:
             for file in self.checkpoint_dir.glob("*.json"):
                 try:
-                    with open(file, 'r', encoding='utf-8') as f:
+                    with open(file, "r", encoding="utf-8") as f:
                         data = json.load(f)
                         checkpoint = Checkpoint(**data)
                         self._checkpoints[checkpoint.task_id] = checkpoint
@@ -277,11 +278,7 @@ class CheckpointManager:
             logger.error(f"扫描检查点目录失败: {e}")
 
     def create(
-        self,
-        task_id: str,
-        task_type: str,
-        total: int,
-        metadata: Optional[Dict] = None
+        self, task_id: str, task_type: str, total: int, metadata: Optional[Dict] = None
     ) -> Checkpoint:
         """创建新检查点"""
         with self._lock:
@@ -294,7 +291,7 @@ class CheckpointManager:
                 state={},
                 created_at=now,
                 updated_at=now,
-                metadata=metadata or {}
+                metadata=metadata or {},
             )
             self._checkpoints[task_id] = checkpoint
             self._item_count[task_id] = 0
@@ -307,7 +304,7 @@ class CheckpointManager:
         progress: Optional[int] = None,
         state: Optional[Dict] = None,
         completed_item: Optional[str] = None,
-        failed_item: Optional[str] = None
+        failed_item: Optional[str] = None,
     ):
         """更新检查点"""
         with self._lock:
@@ -337,7 +334,7 @@ class CheckpointManager:
         """保存检查点到文件"""
         try:
             path = self._get_checkpoint_path(checkpoint.task_id)
-            with open(path, 'w', encoding='utf-8') as f:
+            with open(path, "w", encoding="utf-8") as f:
                 json.dump(asdict(checkpoint), f, indent=2, default=str)
         except Exception as e:
             logger.error(f"保存检查点失败: {e}")
@@ -376,6 +373,7 @@ class CheckpointManager:
     def cleanup_expired(self) -> int:
         """清理过期检查点"""
         import datetime as dt
+
         now = dt.datetime.now()
         expired = []
 
@@ -397,14 +395,16 @@ class CheckpointManager:
         return {
             "total_checkpoints": len(self._checkpoints),
             "by_type": {},
-            "resumable": len(self.get_resumable_tasks())
+            "resumable": len(self.get_resumable_tasks()),
         }
 
 
 # ============== 故障恢复 ==============
 
+
 class RecoveryAction(Enum):
     """恢复动作"""
+
     RETRY = "retry"
     SKIP = "skip"
     FALLBACK = "fallback"
@@ -414,6 +414,7 @@ class RecoveryAction(Enum):
 @dataclass
 class FailureRecord:
     """故障记录"""
+
     error_type: str
     error_message: str
     timestamp: float
@@ -437,7 +438,7 @@ class FaultRecovery:
         self,
         max_failures: int = 100,
         recovery_strategies: Optional[Dict[str, RecoveryAction]] = None,
-        fallback_handlers: Optional[Dict[str, Callable]] = None
+        fallback_handlers: Optional[Dict[str, Callable]] = None,
     ):
         self.max_failures = max_failures
         self.recovery_strategies = recovery_strategies or {}
@@ -455,24 +456,20 @@ class FaultRecovery:
             "PermissionError": RecoveryAction.ABORT,
         }
 
-    def record_failure(
-        self,
-        error: Exception,
-        context: Optional[Dict] = None
-    ) -> FailureRecord:
+    def record_failure(self, error: Exception, context: Optional[Dict] = None) -> FailureRecord:
         """记录故障"""
         with self._lock:
             record = FailureRecord(
                 error_type=type(error).__name__,
                 error_message=str(error),
                 timestamp=time.time(),
-                context=context or {}
+                context=context or {},
             )
             self._failures.append(record)
 
             # 限制记录数量
             if len(self._failures) > self.max_failures:
-                self._failures = self._failures[-self.max_failures:]
+                self._failures = self._failures[-self.max_failures :]
 
             return record
 
@@ -497,7 +494,7 @@ class FaultRecovery:
         *args,
         context: Optional[Dict] = None,
         fallback_value: Any = None,
-        **kwargs
+        **kwargs,
     ) -> Any:
         """带故障恢复的执行"""
         try:
@@ -540,7 +537,7 @@ class FaultRecovery:
         *args,
         context: Optional[Dict] = None,
         fallback_value: Any = None,
-        **kwargs
+        **kwargs,
     ) -> Any:
         """异步带故障恢复的执行"""
         try:
@@ -589,7 +586,7 @@ class FaultRecovery:
             "by_type": by_type,
             "by_action": by_action,
             "recovered": recovered_count,
-            "recovery_rate": recovered_count / max(len(self._failures), 1)
+            "recovery_rate": recovered_count / max(len(self._failures), 1),
         }
 
     def clear_failures(self):
@@ -606,13 +603,14 @@ class FaultRecovery:
                 "message": r.error_message,
                 "timestamp": r.timestamp,
                 "action": r.recovery_action.value if r.recovery_action else None,
-                "recovered": r.recovered
+                "recovered": r.recovered,
             }
             for r in self._failures[-10:]
         ]
 
 
 # ============== 任务恢复上下文 ==============
+
 
 class RecoverableTask:
     """
@@ -634,7 +632,7 @@ class RecoverableTask:
         task_type: str = "generic",
         total: int = 0,
         retry_policy: Optional[RetryPolicy] = None,
-        fault_recovery: Optional[FaultRecovery] = None
+        fault_recovery: Optional[FaultRecovery] = None,
     ):
         self.task_id = task_id
         self.checkpoint_manager = checkpoint_manager
@@ -669,9 +667,7 @@ class RecoverableTask:
             logger.info(f"恢复任务 {self.task_id}，进度: {existing.progress}/{existing.total}")
         else:
             self._checkpoint = self.checkpoint_manager.create(
-                self.task_id,
-                self.task_type,
-                self.total
+                self.task_id, self.task_type, self.total
             )
         return self
 
@@ -690,18 +686,13 @@ class RecoverableTask:
         """标记项目完成"""
         self._results[item_id] = result
         self.checkpoint_manager.update(
-            self.task_id,
-            progress=len(self._results),
-            completed_item=item_id
+            self.task_id, progress=len(self._results), completed_item=item_id
         )
 
     def mark_failed(self, item_id: str, error: Exception):
         """标记项目失败"""
         self.fault_recovery.record_failure(error, {"item_id": item_id})
-        self.checkpoint_manager.update(
-            self.task_id,
-            failed_item=item_id
-        )
+        self.checkpoint_manager.update(self.task_id, failed_item=item_id)
 
     def execute_item(self, func: Callable, item_id: str, *args, **kwargs) -> Any:
         """执行单个项目（带重试和恢复）"""
@@ -747,6 +738,8 @@ class RecoverableTask:
                 "completed": len(self._checkpoint.completed_items),
                 "failed": len(self._checkpoint.failed_items),
                 "total": self._checkpoint.total,
-                "percentage": len(self._checkpoint.completed_items) / max(self._checkpoint.total, 1) * 100
+                "percentage": len(self._checkpoint.completed_items)
+                / max(self._checkpoint.total, 1)
+                * 100,
             }
         return {"completed": 0, "failed": 0, "total": 0, "percentage": 0}

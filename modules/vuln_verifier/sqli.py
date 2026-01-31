@@ -8,6 +8,7 @@ SQL注入验证模块
   - verify_sqli_boolean: 布尔盲注验证
   - verify_sqli_error: 报错注入验证
 """
+
 import logging
 import re
 import time
@@ -253,9 +254,7 @@ class SQLiVerifierMixin:
 
             if true_body and false_body:
                 # 排除：true响应与错误响应相似
-                if error_lengths and any(
-                    abs(true_len - el) < 50 for el in error_lengths
-                ):
+                if error_lengths and any(abs(true_len - el) < 50 for el in error_lengths):
                     continue
 
                 len_diff = abs(true_len - false_len)
@@ -268,15 +267,11 @@ class SQLiVerifierMixin:
                 len_diff_ratio = (max_len - min_len) / max_len if max_len > 0 else 0
 
                 # 内容差异
-                diff_count = sum(
-                    1 for i in range(min_len) if true_body[i] != false_body[i]
-                )
+                diff_count = sum(1 for i in range(min_len) if true_body[i] != false_body[i])
                 content_diff_ratio = diff_count / min_len if min_len > 0 else 0
 
                 # True与原始响应相似度
-                true_vs_original_ratio = (
-                    true_vs_original / original_len if original_len > 0 else 1
-                )
+                true_vs_original_ratio = true_vs_original / original_len if original_len > 0 else 1
 
                 has_significant_diff = (
                     len_diff_ratio > 0.1 or code_diff or content_diff_ratio > 0.05

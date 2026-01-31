@@ -4,26 +4,27 @@
 提供请求追踪、性能统计和指标导出功能。
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Callable
-import time
-import threading
-import statistics
 import json
-from contextlib import contextmanager
-from collections import deque
-from enum import Enum
 import logging
+import statistics
+import threading
+import time
+from collections import deque
+from contextlib import contextmanager
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class MetricType(Enum):
     """指标类型"""
-    COUNTER = 'counter'       # 计数器
-    GAUGE = 'gauge'           # 仪表
-    HISTOGRAM = 'histogram'   # 直方图
-    TIMER = 'timer'           # 计时器
+
+    COUNTER = "counter"  # 计数器
+    GAUGE = "gauge"  # 仪表
+    HISTOGRAM = "histogram"  # 直方图
+    TIMER = "timer"  # 计时器
 
 
 @dataclass
@@ -33,6 +34,7 @@ class RequestMetrics:
 
     收集单个请求类型的性能数据
     """
+
     total_requests: int = 0
     successful_requests: int = 0
     failed_requests: int = 0
@@ -42,12 +44,7 @@ class RequestMetrics:
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     max_samples: int = field(default=10000, repr=False)
 
-    def record(
-        self,
-        success: bool,
-        response_time: float,
-        error_type: Optional[str] = None
-    ) -> None:
+    def record(self, success: bool, response_time: float, error_type: Optional[str] = None) -> None:
         """
         记录请求
 
@@ -65,14 +62,12 @@ class RequestMetrics:
             else:
                 self.failed_requests += 1
                 if error_type:
-                    self.error_counts[error_type] = (
-                        self.error_counts.get(error_type, 0) + 1
-                    )
+                    self.error_counts[error_type] = self.error_counts.get(error_type, 0) + 1
 
             # 限制样本数量
             if len(self.response_times) >= self.max_samples:
                 # 移除前 10% 的样本
-                del self.response_times[:self.max_samples // 10]
+                del self.response_times[: self.max_samples // 10]
 
             self.response_times.append(response_time)
 
@@ -190,22 +185,22 @@ class RequestMetrics:
         """转换为字典"""
         with self._lock:
             return {
-                'total_requests': self.total_requests,
-                'successful_requests': self.successful_requests,
-                'failed_requests': self.failed_requests,
-                'success_rate': self.success_rate,
-                'total_time': self.total_time,
-                'avg_response_time': self.avg_response_time,
-                'min_response_time': self.min_response_time,
-                'max_response_time': self.max_response_time,
-                'median_response_time': self.median_response_time,
-                'p50_response_time': self.p50_response_time,
-                'p90_response_time': self.p90_response_time,
-                'p95_response_time': self.p95_response_time,
-                'p99_response_time': self.p99_response_time,
-                'requests_per_second': self.requests_per_second,
-                'error_counts': dict(self.error_counts),
-                'sample_count': len(self.response_times)
+                "total_requests": self.total_requests,
+                "successful_requests": self.successful_requests,
+                "failed_requests": self.failed_requests,
+                "success_rate": self.success_rate,
+                "total_time": self.total_time,
+                "avg_response_time": self.avg_response_time,
+                "min_response_time": self.min_response_time,
+                "max_response_time": self.max_response_time,
+                "median_response_time": self.median_response_time,
+                "p50_response_time": self.p50_response_time,
+                "p90_response_time": self.p90_response_time,
+                "p95_response_time": self.p95_response_time,
+                "p99_response_time": self.p99_response_time,
+                "requests_per_second": self.requests_per_second,
+                "error_counts": dict(self.error_counts),
+                "sample_count": len(self.response_times),
             }
 
 
@@ -216,7 +211,7 @@ class Counter:
     用于统计事件发生次数
     """
 
-    def __init__(self, name: str, description: str = ''):
+    def __init__(self, name: str, description: str = ""):
         """
         初始化计数器
 
@@ -258,7 +253,7 @@ class Gauge:
     用于记录可变的数值
     """
 
-    def __init__(self, name: str, description: str = ''):
+    def __init__(self, name: str, description: str = ""):
         """
         初始化仪表
 
@@ -300,12 +295,7 @@ class Histogram:
     用于统计数值分布
     """
 
-    def __init__(
-        self,
-        name: str,
-        buckets: Optional[List[float]] = None,
-        description: str = ''
-    ):
+    def __init__(self, name: str, buckets: Optional[List[float]] = None, description: str = ""):
         """
         初始化直方图
 
@@ -319,7 +309,7 @@ class Histogram:
         self.buckets = buckets or [0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
         self._values: List[float] = []
         self._bucket_counts: Dict[float, int] = {b: 0 for b in self.buckets}
-        self._bucket_counts[float('inf')] = 0
+        self._bucket_counts[float("inf")] = 0
         self._sum = 0.0
         self._count = 0
         self._lock = threading.Lock()
@@ -342,7 +332,7 @@ class Histogram:
                     self._bucket_counts[bucket] += 1
                     break
             else:
-                self._bucket_counts[float('inf')] += 1
+                self._bucket_counts[float("inf")] += 1
 
     @property
     def sum(self) -> float:
@@ -368,11 +358,11 @@ class Histogram:
         """转换为字典"""
         with self._lock:
             return {
-                'name': self.name,
-                'sum': self._sum,
-                'count': self._count,
-                'mean': self.mean,
-                'buckets': {str(k): v for k, v in self._bucket_counts.items()}
+                "name": self.name,
+                "sum": self._sum,
+                "count": self._count,
+                "mean": self.mean,
+                "buckets": {str(k): v for k, v in self._bucket_counts.items()},
             }
 
 
@@ -399,11 +389,7 @@ class MetricsCollector:
         self._start_time = time.monotonic()
 
     def record(
-        self,
-        name: str,
-        success: bool,
-        response_time: float,
-        error_type: Optional[str] = None
+        self, name: str, success: bool, response_time: float, error_type: Optional[str] = None
     ) -> None:
         """
         记录请求指标
@@ -438,7 +424,7 @@ class MetricsCollector:
         with self._lock:
             return dict(self._metrics)
 
-    def get_counter(self, name: str, description: str = '') -> Counter:
+    def get_counter(self, name: str, description: str = "") -> Counter:
         """
         获取或创建计数器
 
@@ -454,7 +440,7 @@ class MetricsCollector:
                 self._counters[name] = Counter(name, description)
             return self._counters[name]
 
-    def get_gauge(self, name: str, description: str = '') -> Gauge:
+    def get_gauge(self, name: str, description: str = "") -> Gauge:
         """
         获取或创建仪表
 
@@ -471,10 +457,7 @@ class MetricsCollector:
             return self._gauges[name]
 
     def get_histogram(
-        self,
-        name: str,
-        buckets: Optional[List[float]] = None,
-        description: str = ''
+        self, name: str, buckets: Optional[List[float]] = None, description: str = ""
     ) -> Histogram:
         """
         获取或创建直方图
@@ -542,23 +525,13 @@ class MetricsCollector:
             uptime = time.monotonic() - self._start_time
 
             return {
-                'uptime_seconds': uptime,
-                'request_metrics': {
-                    name: metrics.to_dict()
-                    for name, metrics in self._metrics.items()
+                "uptime_seconds": uptime,
+                "request_metrics": {
+                    name: metrics.to_dict() for name, metrics in self._metrics.items()
                 },
-                'counters': {
-                    name: counter.value
-                    for name, counter in self._counters.items()
-                },
-                'gauges': {
-                    name: gauge.value
-                    for name, gauge in self._gauges.items()
-                },
-                'histograms': {
-                    name: hist.to_dict()
-                    for name, hist in self._histograms.items()
-                }
+                "counters": {name: counter.value for name, counter in self._counters.items()},
+                "gauges": {name: gauge.value for name, gauge in self._gauges.items()},
+                "histograms": {name: hist.to_dict() for name, hist in self._histograms.items()},
             }
 
     def to_json(self, indent: int = 2) -> str:
@@ -608,10 +581,7 @@ def get_collector() -> MetricsCollector:
 
 
 @contextmanager
-def track_request(
-    name: str,
-    collector: Optional[MetricsCollector] = None
-):
+def track_request(name: str, collector: Optional[MetricsCollector] = None):
     """
     请求追踪上下文管理器
 
@@ -661,9 +631,10 @@ def track(name: str) -> Callable:
         def my_function():
             ...
     """
+
     def decorator(fn: Callable) -> Callable:
-        import functools
         import asyncio
+        import functools
 
         @functools.wraps(fn)
         def sync_wrapper(*args, **kwargs):
@@ -689,11 +660,7 @@ class RollingMetrics:
     只保留最近一段时间内的指标数据
     """
 
-    def __init__(
-        self,
-        window_seconds: float = 60.0,
-        bucket_count: int = 60
-    ):
+    def __init__(self, window_seconds: float = 60.0, bucket_count: int = 60):
         """
         初始化滚动窗口指标
 
@@ -712,13 +679,7 @@ class RollingMetrics:
 
     def _new_bucket(self) -> Dict[str, Any]:
         """创建新桶"""
-        return {
-            'count': 0,
-            'success': 0,
-            'failure': 0,
-            'total_time': 0.0,
-            'times': []
-        }
+        return {"count": 0, "success": 0, "failure": 0, "total_time": 0.0, "times": []}
 
     def _rotate_if_needed(self) -> None:
         """必要时轮换桶"""
@@ -736,14 +697,14 @@ class RollingMetrics:
         with self._lock:
             self._rotate_if_needed()
 
-            self._current_bucket['count'] += 1
-            self._current_bucket['total_time'] += response_time
-            self._current_bucket['times'].append(response_time)
+            self._current_bucket["count"] += 1
+            self._current_bucket["total_time"] += response_time
+            self._current_bucket["times"].append(response_time)
 
             if success:
-                self._current_bucket['success'] += 1
+                self._current_bucket["success"] += 1
             else:
-                self._current_bucket['failure'] += 1
+                self._current_bucket["failure"] += 1
 
     def get_stats(self) -> Dict[str, Any]:
         """获取统计信息"""
@@ -758,26 +719,26 @@ class RollingMetrics:
 
             # 汇总所有桶
             for bucket in self._buckets:
-                total_count += bucket['count']
-                total_success += bucket['success']
-                total_failure += bucket['failure']
-                total_time += bucket['total_time']
-                all_times.extend(bucket['times'])
+                total_count += bucket["count"]
+                total_success += bucket["success"]
+                total_failure += bucket["failure"]
+                total_time += bucket["total_time"]
+                all_times.extend(bucket["times"])
 
             # 加上当前桶
-            total_count += self._current_bucket['count']
-            total_success += self._current_bucket['success']
-            total_failure += self._current_bucket['failure']
-            total_time += self._current_bucket['total_time']
-            all_times.extend(self._current_bucket['times'])
+            total_count += self._current_bucket["count"]
+            total_success += self._current_bucket["success"]
+            total_failure += self._current_bucket["failure"]
+            total_time += self._current_bucket["total_time"]
+            all_times.extend(self._current_bucket["times"])
 
             success_rate = total_success / total_count if total_count > 0 else 0.0
             avg_time = total_time / total_count if total_count > 0 else 0.0
 
             return {
-                'window_seconds': self.window_seconds,
-                'total_requests': total_count,
-                'success_rate': success_rate,
-                'avg_response_time': avg_time,
-                'requests_per_second': total_count / self.window_seconds
+                "window_seconds": self.window_seconds,
+                "total_requests": total_count,
+                "success_rate": success_rate,
+                "avg_response_time": avg_time,
+                "requests_per_second": total_count / self.window_seconds,
             }

@@ -20,14 +20,14 @@
     config = GlobalConfig.load(Path("config.yaml"))
 """
 
-import os
-import sys
 import json
 import logging
+import os
+import sys
 import tempfile
-from dataclasses import dataclass, field, asdict
-from typing import Optional, Dict, Any, List, Union
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +42,8 @@ class GlobalConfig:
 
     # 调试配置
     debug: bool = False
-    log_level: str = 'INFO'
-    log_dir: Path = field(default_factory=lambda: Path('logs'))
+    log_level: str = "INFO"
+    log_dir: Path = field(default_factory=lambda: Path("logs"))
 
     # 网络配置
     timeout: float = 30.0
@@ -51,7 +51,7 @@ class GlobalConfig:
     retry_delay: float = 1.0
     verify_ssl: bool = True
     proxy: Optional[str] = None
-    user_agent: str = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
     # 并发配置
     max_workers: int = 10
@@ -61,16 +61,16 @@ class GlobalConfig:
     # 缓存配置
     cache_enabled: bool = True
     cache_ttl: int = 3600  # 秒
-    cache_dir: Path = field(default_factory=lambda: Path(tempfile.gettempdir()) / 'autoredt_cache')
+    cache_dir: Path = field(default_factory=lambda: Path(tempfile.gettempdir()) / "autoredt_cache")
 
     # 输出配置
-    output_dir: Path = field(default_factory=lambda: Path('reports'))
-    output_format: str = 'json'  # json, html, markdown
+    output_dir: Path = field(default_factory=lambda: Path("reports"))
+    output_format: str = "json"  # json, html, markdown
 
     # 安全配置
     allowed_targets: List[str] = field(default_factory=list)
-    blocked_targets: List[str] = field(default_factory=lambda: ['127.0.0.1', 'localhost'])
-    dangerous_operations: List[str] = field(default_factory=lambda: ['exploit', 'brute_force'])
+    blocked_targets: List[str] = field(default_factory=lambda: ["127.0.0.1", "localhost"])
+    dangerous_operations: List[str] = field(default_factory=lambda: ["exploit", "brute_force"])
 
     # API配置
     api_keys: Dict[str, str] = field(default_factory=dict)
@@ -86,7 +86,7 @@ class GlobalConfig:
             self.output_dir = Path(self.output_dir)
 
     @classmethod
-    def load(cls, config_path: Optional[Path] = None) -> 'GlobalConfig':
+    def load(cls, config_path: Optional[Path] = None) -> "GlobalConfig":
         """
         从配置文件加载配置
 
@@ -116,7 +116,7 @@ class GlobalConfig:
         return cls._from_dict(config_data)
 
     @classmethod
-    def from_env(cls) -> 'GlobalConfig':
+    def from_env(cls) -> "GlobalConfig":
         """
         从环境变量加载配置
 
@@ -129,19 +129,22 @@ class GlobalConfig:
 
         # 环境变量映射
         env_mapping = {
-            'AUTOREDT_DEBUG': ('debug', lambda x: x.lower() in ('true', '1', 'yes')),
-            'AUTOREDT_LOG_LEVEL': ('log_level', str),
-            'AUTOREDT_LOG_DIR': ('log_dir', Path),
-            'AUTOREDT_TIMEOUT': ('timeout', float),
-            'AUTOREDT_MAX_RETRIES': ('max_retries', int),
-            'AUTOREDT_VERIFY_SSL': ('verify_ssl', lambda x: x.lower() in ('true', '1', 'yes')),
-            'AUTOREDT_PROXY': ('proxy', str),
-            'AUTOREDT_MAX_WORKERS': ('max_workers', int),
-            'AUTOREDT_RATE_LIMIT': ('rate_limit', float),
-            'AUTOREDT_CACHE_ENABLED': ('cache_enabled', lambda x: x.lower() in ('true', '1', 'yes')),
-            'AUTOREDT_CACHE_TTL': ('cache_ttl', int),
-            'AUTOREDT_OUTPUT_DIR': ('output_dir', Path),
-            'AUTOREDT_OUTPUT_FORMAT': ('output_format', str),
+            "AUTOREDT_DEBUG": ("debug", lambda x: x.lower() in ("true", "1", "yes")),
+            "AUTOREDT_LOG_LEVEL": ("log_level", str),
+            "AUTOREDT_LOG_DIR": ("log_dir", Path),
+            "AUTOREDT_TIMEOUT": ("timeout", float),
+            "AUTOREDT_MAX_RETRIES": ("max_retries", int),
+            "AUTOREDT_VERIFY_SSL": ("verify_ssl", lambda x: x.lower() in ("true", "1", "yes")),
+            "AUTOREDT_PROXY": ("proxy", str),
+            "AUTOREDT_MAX_WORKERS": ("max_workers", int),
+            "AUTOREDT_RATE_LIMIT": ("rate_limit", float),
+            "AUTOREDT_CACHE_ENABLED": (
+                "cache_enabled",
+                lambda x: x.lower() in ("true", "1", "yes"),
+            ),
+            "AUTOREDT_CACHE_TTL": ("cache_ttl", int),
+            "AUTOREDT_OUTPUT_DIR": ("output_dir", Path),
+            "AUTOREDT_OUTPUT_FORMAT": ("output_format", str),
         }
 
         for env_key, (config_key, converter) in env_mapping.items():
@@ -154,14 +157,14 @@ class GlobalConfig:
 
         # 加载API密钥
         api_keys = {}
-        api_key_prefixes = ['SHODAN', 'VIRUSTOTAL', 'CENSYS', 'OPENAI', 'ANTHROPIC']
+        api_key_prefixes = ["SHODAN", "VIRUSTOTAL", "CENSYS", "OPENAI", "ANTHROPIC"]
         for prefix in api_key_prefixes:
-            key = os.environ.get(f'{prefix}_API_KEY')
+            key = os.environ.get(f"{prefix}_API_KEY")
             if key:
                 api_keys[prefix.lower()] = key
 
         if api_keys:
-            config_data['api_keys'] = api_keys
+            config_data["api_keys"] = api_keys
 
         return cls(**config_data)
 
@@ -170,23 +173,23 @@ class GlobalConfig:
         """查找配置文件"""
         search_paths = [
             # 当前目录
-            Path.cwd() / 'config.yaml',
-            Path.cwd() / 'config.yml',
-            Path.cwd() / 'config.json',
+            Path.cwd() / "config.yaml",
+            Path.cwd() / "config.yml",
+            Path.cwd() / "config.json",
             # config目录
-            Path.cwd() / 'config' / 'config.yaml',
-            Path.cwd() / 'config' / 'config.yml',
-            Path.cwd() / 'config' / 'config.json',
+            Path.cwd() / "config" / "config.yaml",
+            Path.cwd() / "config" / "config.yml",
+            Path.cwd() / "config" / "config.json",
             # 项目根目录
-            Path(__file__).parent.parent / 'config.yaml',
-            Path(__file__).parent.parent / 'config' / 'config.yaml',
+            Path(__file__).parent.parent / "config.yaml",
+            Path(__file__).parent.parent / "config" / "config.yaml",
             # 用户目录
-            Path.home() / '.autoredt' / 'config.yaml',
-            Path.home() / '.config' / 'autoredt' / 'config.yaml',
+            Path.home() / ".autoredt" / "config.yaml",
+            Path.home() / ".config" / "autoredt" / "config.yaml",
         ]
 
         # 检查环境变量指定的路径
-        env_config = os.environ.get('AUTOREDT_CONFIG')
+        env_config = os.environ.get("AUTOREDT_CONFIG")
         if env_config:
             search_paths.insert(0, Path(env_config))
 
@@ -200,22 +203,24 @@ class GlobalConfig:
     def _load_file(cls, path: Path) -> Dict[str, Any]:
         """加载配置文件"""
         try:
-            content = path.read_text(encoding='utf-8')
+            content = path.read_text(encoding="utf-8")
 
-            if path.suffix in ('.yaml', '.yml'):
+            if path.suffix in (".yaml", ".yml"):
                 try:
                     import yaml
+
                     return yaml.safe_load(content) or {}
                 except ImportError:
                     raise ImportError("需要安装 pyyaml: pip install pyyaml")
 
-            elif path.suffix == '.json':
+            elif path.suffix == ".json":
                 return json.loads(content)
 
             else:
                 # 尝试作为YAML解析
                 try:
                     import yaml
+
                     return yaml.safe_load(content) or {}
                 except ImportError:
                     return json.loads(content)
@@ -234,14 +239,14 @@ class GlobalConfig:
         for key, value in env_dict.items():
             if key not in config_data:
                 config_data[key] = value
-            elif os.environ.get(f'AUTOREDT_{key.upper()}'):
+            elif os.environ.get(f"AUTOREDT_{key.upper()}"):
                 # 显式设置的环境变量优先
                 config_data[key] = value
 
         return config_data
 
     @classmethod
-    def _from_dict(cls, data: Dict[str, Any]) -> 'GlobalConfig':
+    def _from_dict(cls, data: Dict[str, Any]) -> "GlobalConfig":
         """从字典创建配置"""
         # 过滤未知字段
         valid_fields = {f.name for f in cls.__dataclass_fields__.values()}
@@ -267,18 +272,19 @@ class GlobalConfig:
         data = self.to_dict()
         content = None
 
-        if path.suffix in ('.yaml', '.yml'):
+        if path.suffix in (".yaml", ".yml"):
             try:
                 import yaml
+
                 content = yaml.dump(data, allow_unicode=True, default_flow_style=False)
             except ImportError:
-                path = path.with_suffix('.json')
+                path = path.with_suffix(".json")
 
         if content is None:
             content = json.dumps(data, indent=2, ensure_ascii=False)
 
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding='utf-8')
+        path.write_text(content, encoding="utf-8")
 
     def validate(self) -> List[str]:
         """
@@ -310,12 +316,12 @@ class GlobalConfig:
             errors.append("cache_ttl 不能为负数")
 
         # 验证日志级别
-        valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if self.log_level.upper() not in valid_levels:
             errors.append(f"log_level 必须是 {valid_levels} 之一")
 
         # 验证输出格式
-        valid_formats = ['json', 'html', 'markdown', 'xml']
+        valid_formats = ["json", "html", "markdown", "xml"]
         if self.output_format.lower() not in valid_formats:
             errors.append(f"output_format 必须是 {valid_formats} 之一")
 
@@ -399,7 +405,7 @@ def get_config_value(key: str, default: Any = None) -> Any:
     """
     config = get_config()
 
-    parts = key.split('.')
+    parts = key.split(".")
     value = config
 
     for part in parts:
@@ -414,9 +420,9 @@ def get_config_value(key: str, default: Any = None) -> Any:
 
 
 __all__ = [
-    'GlobalConfig',
-    'get_config',
-    'set_config',
-    'reload_config',
-    'get_config_value',
+    "GlobalConfig",
+    "get_config",
+    "set_config",
+    "reload_config",
+    "get_config_value",
 ]

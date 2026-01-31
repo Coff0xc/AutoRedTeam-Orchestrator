@@ -6,27 +6,29 @@ CVE 多源同步管理器
 作者: AutoRedTeam-Orchestrator
 """
 
-import os
-import sqlite3
-import json
 import asyncio
-import aiohttp
-import hashlib
-import tempfile
 import atexit
-import shutil
-from typing import List, Dict, Optional, Set, Tuple
-from datetime import datetime, timedelta
-from pathlib import Path
-from dataclasses import dataclass, asdict
-from enum import Enum
+import hashlib
+import json
 import logging
+import os
+import shutil
+import sqlite3
+import tempfile
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
+from enum import Enum
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
+
+import aiohttp
 
 from utils.logger import configure_root_logger
 
 # 统一 HTTP 客户端工厂
 try:
     from core.http import get_async_client
+
     HAS_HTTP_FACTORY = True
 except ImportError:
     HAS_HTTP_FACTORY = False
@@ -37,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 class Severity(Enum):
     """漏洞严重性等级"""
+
     CRITICAL = "CRITICAL"
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
@@ -47,6 +50,7 @@ class Severity(Enum):
 @dataclass
 class CVEEntry:
     """CVE条目数据模型"""
+
     cve_id: str
     description: str
     severity: str
@@ -110,7 +114,7 @@ class CVEUpdateManager:
     RATE_LIMITS = {
         "nvd": {"requests": 5, "per_seconds": 30},  # NVD: 5 req/30s (无API key)
         "github": {"requests": 60, "per_seconds": 3600},  # GitHub: 60 req/hour (未认证)
-        "exploit_db": {"requests": 1, "per_seconds": 60}
+        "exploit_db": {"requests": 1, "per_seconds": 60},
     }
 
     def __init__(self, db_path: Optional[str] = None, cache_dir: Optional[str] = None):
@@ -245,8 +249,9 @@ class CVEUpdateManager:
         # 记录本次请求
         limiter["requests"].append(now)
 
-    async def _fetch_json(self, session: aiohttp.ClientSession, url: str,
-                          source: str, headers: Optional[Dict] = None) -> Optional[Dict]:
+    async def _fetch_json(
+        self, session: aiohttp.ClientSession, url: str, source: str, headers: Optional[Dict] = None
+    ) -> Optional[Dict]:
         """异步HTTP请求(带速率限制)"""
         await self._rate_limit(source)
 
@@ -288,7 +293,7 @@ class CVEUpdateManager:
 
         params = {
             "pubStartDate": start_date.strftime("%Y-%m-%dT00:00:00.000"),
-            "pubEndDate": end_date.strftime("%Y-%m-%dT23:59:59.999")
+            "pubEndDate": end_date.strftime("%Y-%m-%dT23:59:59.999"),
         }
 
         headers = {}
@@ -332,7 +337,7 @@ class CVEUpdateManager:
                     descriptions = cve_data.get("descriptions", [])
                     description = next(
                         (d["value"] for d in descriptions if d.get("lang") == "en"),
-                        "No description"
+                        "No description",
                     )
 
                     # 提取CVSS分数
@@ -372,7 +377,7 @@ class CVEUpdateManager:
                         poc_available=False,
                         poc_path=None,
                         source="NVD",
-                        last_updated=datetime.now().isoformat()
+                        last_updated=datetime.now().isoformat(),
                     )
 
                     # 保存到数据库
@@ -428,7 +433,8 @@ class CVEUpdateManager:
 
             # 筛选CVE相关文件
             cve_files = [
-                item for item in tree_data["tree"]
+                item
+                for item in tree_data["tree"]
                 if item["path"].startswith("cves/") and item["path"].endswith(".yaml")
             ]
 
@@ -468,7 +474,7 @@ class CVEUpdateManager:
                             poc_available=True,
                             poc_path=f"nuclei-templates:{file_info['path']}",
                             source="Nuclei",
-                            last_updated=datetime.now().isoformat()
+                            last_updated=datetime.now().isoformat(),
                         )
 
                         self._insert_or_update_cve(entry)
@@ -524,7 +530,10 @@ class CVEUpdateManager:
 
                             # 提取CVE ID
                             import re
-                            cve_matches = re.findall(r'CVE-\d{4}-\d{4,7}', description, re.IGNORECASE)
+
+                            cve_matches = re.findall(
+                                r"CVE-\d{4}-\d{4,7}", description, re.IGNORECASE
+                            )
 
                             if not cve_matches:
                                 continue
@@ -555,7 +564,7 @@ class CVEUpdateManager:
                                         poc_available=True,
                                         poc_path=exploit_path,
                                         source="Exploit-DB",
-                                        last_updated=datetime.now().isoformat()
+                                        last_updated=datetime.now().isoformat(),
                                     )
 
                                     self._insert_or_update_cve(entry)
@@ -590,7 +599,8 @@ class CVEUpdateManager:
 
             if exists:
                 # 更新
-                cursor.execute("""
+                cursor.execute(
+                    """
                     UPDATE cve_index SET
                         description = ?,
                         severity = ?,
@@ -601,35 +611,40 @@ class CVEUpdateManager:
                         source = ?,
                         last_updated = ?
                     WHERE cve_id = ?
-                """, (
-                    entry.description,
-                    entry.severity,
-                    entry.cvss,
-                    entry.affected_products,
-                    entry.poc_available,
-                    entry.poc_path,
-                    entry.source,
-                    entry.last_updated,
-                    entry.cve_id
-                ))
+                """,
+                    (
+                        entry.description,
+                        entry.severity,
+                        entry.cvss,
+                        entry.affected_products,
+                        entry.poc_available,
+                        entry.poc_path,
+                        entry.source,
+                        entry.last_updated,
+                        entry.cve_id,
+                    ),
+                )
                 conn.commit()
                 conn.close()
                 return False
             else:
                 # 插入
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT INTO cve_index VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    entry.cve_id,
-                    entry.description,
-                    entry.severity,
-                    entry.cvss,
-                    entry.affected_products,
-                    entry.poc_available,
-                    entry.poc_path,
-                    entry.source,
-                    entry.last_updated
-                ))
+                """,
+                    (
+                        entry.cve_id,
+                        entry.description,
+                        entry.severity,
+                        entry.cvss,
+                        entry.affected_products,
+                        entry.poc_available,
+                        entry.poc_path,
+                        entry.source,
+                        entry.last_updated,
+                    ),
+                )
                 conn.commit()
                 conn.close()
                 return True
@@ -660,10 +675,13 @@ class CVEUpdateManager:
         try:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO sync_history (source, sync_time, new_cves, updated_cves, status)
                 VALUES (?, ?, ?, ?, ?)
-            """, (source, datetime.now().isoformat(), new_cves, updated_cves, status))
+            """,
+                (source, datetime.now().isoformat(), new_cves, updated_cves, status),
+            )
             conn.commit()
             conn.close()
         except Exception as e:
@@ -687,7 +705,7 @@ class CVEUpdateManager:
         tasks = [
             ("NVD", self.sync_nvd(days_back)),
             ("Nuclei", self.sync_nuclei_templates()),
-            ("Exploit-DB", self.sync_exploit_db())
+            ("Exploit-DB", self.sync_exploit_db()),
         ]
 
         for source, task in tasks:
@@ -700,8 +718,13 @@ class CVEUpdateManager:
         logger.info(f"全量同步完成: {results}")
         return results
 
-    def search(self, keyword: str = "", severity: Optional[str] = None,
-               min_cvss: float = 0.0, poc_only: bool = False) -> List[CVEEntry]:
+    def search(
+        self,
+        keyword: str = "",
+        severity: Optional[str] = None,
+        min_cvss: float = 0.0,
+        poc_only: bool = False,
+    ) -> List[CVEEntry]:
         """
         搜索CVE
 
@@ -788,7 +811,8 @@ class CVEUpdateManager:
 async def main():
     """CLI测试入口"""
     import sys
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     manager = CVEUpdateManager()
 
@@ -813,7 +837,7 @@ async def main():
             logger.info(f"  总CVE数: {stats.get('total_cves', 0)}")
             logger.info(f"  有PoC: {stats.get('poc_available', 0)}")
             logger.info("\n按严重性:")
-            for severity, count in stats.get('by_severity', {}).items():
+            for severity, count in stats.get("by_severity", {}).items():
                 logger.info(f"    {severity}: {count}")
     else:
         logger.info("用法:")

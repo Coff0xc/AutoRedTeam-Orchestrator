@@ -13,18 +13,14 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from core.cve.subscription_manager import (
-    SubscriptionManager,
-    FilterType,
-    NotifyMethod
-)
+from core.cve.subscription_manager import FilterType, NotifyMethod, SubscriptionManager
 
 
 async def demo_basic_usage():
     """演示基础用法"""
-    print("="*80)
+    print("=" * 80)
     print("示例1: 基础订阅管理")
-    print("="*80)
+    print("=" * 80)
 
     manager = SubscriptionManager()
 
@@ -35,7 +31,7 @@ async def demo_basic_usage():
         filter_type=FilterType.KEYWORD.value,
         filter_value="RCE",
         min_cvss=7.0,
-        notify_method=NotifyMethod.CONSOLE.value
+        notify_method=NotifyMethod.CONSOLE.value,
     )
     print(f"  订阅1 (关键词 'RCE'): ID={sub1}")
 
@@ -43,7 +39,7 @@ async def demo_basic_usage():
         filter_type=FilterType.SEVERITY.value,
         filter_value="CRITICAL",
         min_cvss=0.0,
-        notify_method=NotifyMethod.CONSOLE.value
+        notify_method=NotifyMethod.CONSOLE.value,
     )
     print(f"  订阅2 (严重性 CRITICAL): ID={sub2}")
 
@@ -52,14 +48,16 @@ async def demo_basic_usage():
     subs = manager.list_subscriptions()
     for sub in subs:
         status = "启用" if sub.enabled else "禁用"
-        print(f"  ID={sub.id} | {sub.filter_type}={sub.filter_value} | CVSS>={sub.min_cvss} | [{status}]")
+        print(
+            f"  ID={sub.id} | {sub.filter_type}={sub.filter_value} | CVSS>={sub.min_cvss} | [{status}]"
+        )
 
 
 async def demo_cve_check():
     """演示CVE检查"""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("示例2: CVE检查和通知")
-    print("="*80)
+    print("=" * 80)
 
     manager = SubscriptionManager()
 
@@ -91,9 +89,9 @@ async def demo_cve_check():
 
 async def demo_file_notification():
     """演示文件通知"""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("示例3: 文件通知")
-    print("="*80)
+    print("=" * 80)
 
     import tempfile
 
@@ -107,7 +105,7 @@ async def demo_file_notification():
         filter_value="Apache",
         min_cvss=5.0,
         notify_method=NotifyMethod.FILE.value,
-        notify_target=str(log_file)
+        notify_target=str(log_file),
     )
     print(f"  订阅ID: {sub_id}")
 
@@ -121,7 +119,7 @@ async def demo_file_notification():
 
         # 显示文件内容 (前20行)
         if log_file.exists():
-            with open(log_file, 'r', encoding='utf-8') as f:
+            with open(log_file, "r", encoding="utf-8") as f:
                 lines = f.readlines()[:20]
                 print("\n  文件内容预览:")
                 for line in lines:
@@ -132,9 +130,9 @@ async def demo_file_notification():
 
 async def demo_advanced_filters():
     """演示高级过滤"""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("示例4: 高级过滤")
-    print("="*80)
+    print("=" * 80)
 
     manager = SubscriptionManager()
 
@@ -144,7 +142,7 @@ async def demo_advanced_filters():
         filter_type=FilterType.PRODUCT.value,
         filter_value="nginx",
         min_cvss=6.0,
-        notify_method=NotifyMethod.CONSOLE.value
+        notify_method=NotifyMethod.CONSOLE.value,
     )
     print(f"  订阅ID: {sub1}")
 
@@ -154,7 +152,7 @@ async def demo_advanced_filters():
         filter_type=FilterType.CVSS_RANGE.value,
         filter_value="9.0-10.0",
         min_cvss=0.0,
-        notify_method=NotifyMethod.CONSOLE.value
+        notify_method=NotifyMethod.CONSOLE.value,
     )
     print(f"  订阅ID: {sub2}")
 
@@ -164,16 +162,16 @@ async def demo_advanced_filters():
         filter_type=FilterType.KEYWORD.value,
         filter_value="Apache",
         min_cvss=8.0,
-        notify_method=NotifyMethod.CONSOLE.value
+        notify_method=NotifyMethod.CONSOLE.value,
     )
     print(f"  订阅ID: {sub3}")
 
 
 async def demo_subscription_management():
     """演示订阅管理"""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("示例5: 订阅管理")
-    print("="*80)
+    print("=" * 80)
 
     manager = SubscriptionManager()
 
@@ -185,7 +183,7 @@ async def demo_subscription_management():
             filter_type=FilterType.KEYWORD.value,
             filter_value=keyword,
             min_cvss=5.0,
-            notify_method=NotifyMethod.CONSOLE.value
+            notify_method=NotifyMethod.CONSOLE.value,
         )
         subs.append(sub_id)
         print(f"  订阅{i} (关键词 '{keyword}'): ID={sub_id}")
@@ -218,9 +216,9 @@ async def demo_subscription_management():
 
 async def demo_error_handling():
     """演示错误处理"""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("示例6: 错误处理")
-    print("="*80)
+    print("=" * 80)
 
     manager = SubscriptionManager()
 
@@ -230,7 +228,7 @@ async def demo_error_handling():
         manager.add_subscription(
             filter_type="invalid_type",
             filter_value="test",
-            notify_method=NotifyMethod.CONSOLE.value
+            notify_method=NotifyMethod.CONSOLE.value,
         )
     except ValueError as e:
         print(f"  ✓ 正确捕获异常: {e}")
@@ -241,7 +239,7 @@ async def demo_error_handling():
         manager.add_subscription(
             filter_type=FilterType.SEVERITY.value,
             filter_value="INVALID",
-            notify_method=NotifyMethod.CONSOLE.value
+            notify_method=NotifyMethod.CONSOLE.value,
         )
     except ValueError as e:
         print(f"  ✓ 正确捕获异常: {e}")
@@ -252,7 +250,7 @@ async def demo_error_handling():
         manager.add_subscription(
             filter_type=FilterType.CVSS_RANGE.value,
             filter_value="invalid",
-            notify_method=NotifyMethod.CONSOLE.value
+            notify_method=NotifyMethod.CONSOLE.value,
         )
     except ValueError as e:
         print(f"  ✓ 正确捕获异常: {e}")
@@ -260,9 +258,9 @@ async def demo_error_handling():
 
 async def main():
     """主函数"""
-    print("\n" + "#"*80)
+    print("\n" + "#" * 80)
     print("# CVE订阅管理器 - 完整示例")
-    print("#"*80)
+    print("#" * 80)
 
     # 基础用法
     await demo_basic_usage()
@@ -282,14 +280,14 @@ async def main():
     # CVE检查 (需要网络)
     print("\n[注意] 以下示例需要网络连接,将尝试从NVD同步数据...")
     response = input("是否执行? (y/n): ")
-    if response.lower() == 'y':
+    if response.lower() == "y":
         await demo_cve_check()
     else:
         print("跳过CVE检查示例")
 
-    print("\n" + "#"*80)
+    print("\n" + "#" * 80)
     print("# 所有示例完成!")
-    print("#"*80)
+    print("#" * 80)
 
 
 if __name__ == "__main__":

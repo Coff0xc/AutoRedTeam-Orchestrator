@@ -26,18 +26,20 @@ logger = logging.getLogger(__name__)
 
 class WSVulnType(Enum):
     """WebSocket漏洞类型"""
-    ORIGIN_BYPASS = "origin_check_bypass"           # Origin检查绕过
-    CSWSH = "cross_site_websocket_hijacking"        # 跨站WebSocket劫持
-    AUTH_BYPASS = "auth_bypass"                     # 认证绕过
-    MESSAGE_INJECTION = "message_injection"         # 消息注入
-    COMPRESSION_ORACLE = "compression_oracle"       # CRIME压缩攻击
-    NO_TLS = "no_tls"                              # 未使用TLS
-    TOKEN_LEAK = "token_in_url"                    # URL中的Token泄露
+
+    ORIGIN_BYPASS = "origin_check_bypass"  # Origin检查绕过
+    CSWSH = "cross_site_websocket_hijacking"  # 跨站WebSocket劫持
+    AUTH_BYPASS = "auth_bypass"  # 认证绕过
+    MESSAGE_INJECTION = "message_injection"  # 消息注入
+    COMPRESSION_ORACLE = "compression_oracle"  # CRIME压缩攻击
+    NO_TLS = "no_tls"  # 未使用TLS
+    TOKEN_LEAK = "token_in_url"  # URL中的Token泄露
 
 
 @dataclass
 class WSTestResult:
     """WebSocket测试结果"""
+
     vuln_type: WSVulnType
     severity: str
     description: str
@@ -48,6 +50,7 @@ class WSTestResult:
 @dataclass
 class WSConnectionInfo:
     """WebSocket连接信息"""
+
     url: str
     connected: bool = False
     protocol: str = ""
@@ -75,18 +78,14 @@ class WebSocketSecurityTester:
         ('{"action":"admin","data":"test"}', "admin action"),
         ('{"type":"SUBSCRIBE","channel":"admin"}', "admin channel"),
         ('{"role":"admin"}', "role elevation"),
-
         # 原型污染
         ('{"__proto__":{"admin":true}}', "prototype pollution"),
         ('{"constructor":{"prototype":{"admin":true}}}', "constructor pollution"),
-
         # 命令注入
         ('{"cmd":"id"}', "command injection"),
         ('{"exec":"cat /etc/passwd"}', "exec injection"),
-
         # SQL注入
-        ('{"id":"1\' OR \'1\'=\'1"}', "SQL injection"),
-
+        ("{\"id\":\"1' OR '1'='1\"}", "SQL injection"),
         # XSS
         ('{"msg":"<script>alert(1)</script>"}', "XSS payload"),
     ]
@@ -133,9 +132,14 @@ class WebSocketSecurityTester:
         sha1 = hashlib.sha1(concat.encode()).digest()
         return base64.b64encode(sha1).decode()
 
-    def _create_upgrade_request(self, host: str, path: str, port: int,
-                                 origin: str = "",
-                                 extra_headers: Optional[Dict] = None) -> Tuple[str, str]:
+    def _create_upgrade_request(
+        self,
+        host: str,
+        path: str,
+        port: int,
+        origin: str = "",
+        extra_headers: Optional[Dict] = None,
+    ) -> Tuple[str, str]:
         """
         创建WebSocket升级请求
 
@@ -179,7 +183,7 @@ class WebSocketSecurityTester:
                 return 0, {}, data
 
             header_part = data[:header_end].decode("utf-8", errors="ignore")
-            body_part = data[header_end + 4:]
+            body_part = data[header_end + 4 :]
 
             lines = header_part.split("\r\n")
             status_line = lines[0]
@@ -201,8 +205,9 @@ class WebSocketSecurityTester:
             logger.error(f"解析响应失败: {e}")
             return 0, {}, data
 
-    def _try_ws_connect(self, url: str, origin: str = "",
-                        extra_headers: Optional[Dict] = None) -> WSConnectionInfo:
+    def _try_ws_connect(
+        self, url: str, origin: str = "", extra_headers: Optional[Dict] = None
+    ) -> WSConnectionInfo:
         """
         尝试WebSocket连接
 
@@ -227,9 +232,7 @@ class WebSocketSecurityTester:
             sock.connect((host, port))
 
             # 发送升级请求
-            request, key = self._create_upgrade_request(
-                host, path, port, origin, extra_headers
-            )
+            request, key = self._create_upgrade_request(host, path, port, origin, extra_headers)
             sock.sendall(request.encode())
 
             # 接收响应
@@ -280,9 +283,9 @@ class WebSocketSecurityTester:
 
         return result
 
-    def test_origin_bypass(self, url: str,
-                           target_origin: str = "",
-                           extra_headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_origin_bypass(
+        self, url: str, target_origin: str = "", extra_headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         测试Origin检查绕过
 
@@ -298,7 +301,7 @@ class WebSocketSecurityTester:
             "description": "WebSocket未正确验证Origin头",
             "tests": [],
             "accepted_origins": [],
-            "remediation": "在服务端严格验证Origin头,使用白名单机制"
+            "remediation": "在服务端严格验证Origin头,使用白名单机制",
         }
 
         # 添加目标相关的绕过尝试
@@ -308,11 +311,13 @@ class WebSocketSecurityTester:
             parsed = urlparse(target_origin)
             target_host = parsed.netloc
 
-            payloads.extend([
-                (f"http://{target_host}.evil.com", "子域名后缀绕过"),
-                (f"http://evil.{target_host}", "子域名前缀绕过"),
-                (f"http://{target_host}@evil.com", "用户信息绕过"),
-            ])
+            payloads.extend(
+                [
+                    (f"http://{target_host}.evil.com", "子域名后缀绕过"),
+                    (f"http://evil.{target_host}", "子域名前缀绕过"),
+                    (f"http://{target_host}@evil.com", "用户信息绕过"),
+                ]
+            )
 
         for origin, desc in payloads:
             conn = self._try_ws_connect(url, origin, extra_headers)
@@ -321,7 +326,7 @@ class WebSocketSecurityTester:
                 "origin": origin,
                 "description": desc,
                 "connected": conn.connected,
-                "error": conn.error
+                "error": conn.error,
             }
             result["tests"].append(test_result)
 
@@ -334,8 +339,9 @@ class WebSocketSecurityTester:
 
         return result
 
-    def test_cswsh(self, url: str, target_origin: str,
-                   extra_headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_cswsh(
+        self, url: str, target_origin: str, extra_headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         测试跨站WebSocket劫持 (CSWSH)
         """
@@ -345,7 +351,7 @@ class WebSocketSecurityTester:
             "severity": "high",
             "description": "WebSocket可能遭受跨站劫持攻击",
             "poc_html": "",
-            "remediation": "实施CSRF Token验证,严格检查Origin"
+            "remediation": "实施CSRF Token验证,严格检查Origin",
         }
 
         # 使用攻击者Origin尝试连接
@@ -363,7 +369,7 @@ class WebSocketSecurityTester:
 
     def _generate_cswsh_poc(self, ws_url: str, target_origin: str) -> str:
         """生成CSWSH PoC HTML"""
-        poc = f'''
+        poc = f"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -401,11 +407,12 @@ class WebSocketSecurityTester:
     </script>
 </body>
 </html>
-'''
+"""
         return poc.strip()
 
-    def test_compression_oracle(self, url: str,
-                                 extra_headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_compression_oracle(
+        self, url: str, extra_headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         测试CRIME压缩攻击 (permessage-deflate)
         """
@@ -416,7 +423,7 @@ class WebSocketSecurityTester:
             "description": "WebSocket启用压缩可能遭受CRIME类攻击",
             "compression_enabled": False,
             "extensions": [],
-            "remediation": "对于敏感数据传输,考虑禁用WebSocket压缩"
+            "remediation": "对于敏感数据传输,考虑禁用WebSocket压缩",
         }
 
         # 请求启用压缩
@@ -448,7 +455,7 @@ class WebSocketSecurityTester:
             "severity": "high",
             "description": "WebSocket未使用TLS加密",
             "scheme": "",
-            "remediation": "使用wss://协议替代ws://"
+            "remediation": "使用wss://协议替代ws://",
         }
 
         scheme, _, _, _, is_secure = self._parse_ws_url(url)
@@ -470,14 +477,22 @@ class WebSocketSecurityTester:
             "severity": "medium",
             "description": "敏感Token通过URL参数传递",
             "found_params": [],
-            "remediation": "使用WebSocket消息或HTTP头传递认证信息"
+            "remediation": "使用WebSocket消息或HTTP头传递认证信息",
         }
 
         # 敏感参数名模式
         sensitive_patterns = [
-            r"token", r"api_key", r"apikey", r"secret",
-            r"password", r"pwd", r"auth", r"jwt",
-            r"session", r"sid", r"access_token"
+            r"token",
+            r"api_key",
+            r"apikey",
+            r"secret",
+            r"password",
+            r"pwd",
+            r"auth",
+            r"jwt",
+            r"session",
+            r"sid",
+            r"access_token",
         ]
 
         parsed = urlparse(url)
@@ -485,11 +500,7 @@ class WebSocketSecurityTester:
 
         if query:
             for pattern in sensitive_patterns:
-                matches = re.findall(
-                    rf"({pattern}[=][^&]+)",
-                    query,
-                    re.IGNORECASE
-                )
+                matches = re.findall(rf"({pattern}[=][^&]+)", query, re.IGNORECASE)
                 if matches:
                     result["vulnerable"] = True
                     result["found_params"].extend(matches)
@@ -500,9 +511,9 @@ class WebSocketSecurityTester:
 
         return result
 
-    def test_auth_bypass(self, url: str,
-                         auth_token: str = "",
-                         extra_headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def test_auth_bypass(
+        self, url: str, auth_token: str = "", extra_headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         测试认证绕过
 
@@ -514,15 +525,12 @@ class WebSocketSecurityTester:
             "severity": "high",
             "description": "WebSocket未要求认证或认证可绕过",
             "tests": [],
-            "remediation": "实施强制认证,验证每个连接的凭证"
+            "remediation": "实施强制认证,验证每个连接的凭证",
         }
 
         # 测试1: 完全不带认证
         conn1 = self._try_ws_connect(url, "", None)
-        result["tests"].append({
-            "description": "无认证连接",
-            "connected": conn1.connected
-        })
+        result["tests"].append({"description": "无认证连接", "connected": conn1.connected})
 
         if conn1.connected:
             result["vulnerable"] = True
@@ -534,10 +542,7 @@ class WebSocketSecurityTester:
             invalid_headers["Authorization"] = "Bearer invalid_token_12345"
 
             conn2 = self._try_ws_connect(url, "", invalid_headers)
-            result["tests"].append({
-                "description": "无效Token连接",
-                "connected": conn2.connected
-            })
+            result["tests"].append({"description": "无效Token连接", "connected": conn2.connected})
 
             if conn2.connected:
                 result["vulnerable"] = True
@@ -545,8 +550,9 @@ class WebSocketSecurityTester:
 
         return result
 
-    def full_scan(self, url: str, target_origin: str = "",
-                  extra_headers: Optional[Dict] = None) -> Dict[str, Any]:
+    def full_scan(
+        self, url: str, target_origin: str = "", extra_headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
         """
         完整WebSocket安全扫描
         """
@@ -554,12 +560,8 @@ class WebSocketSecurityTester:
             "url": url,
             "vulnerabilities": [],
             "tests": {},
-            "summary": {
-                "total_tests": 0,
-                "vulnerable_count": 0,
-                "highest_severity": "none"
-            },
-            "recommendations": []
+            "summary": {"total_tests": 0, "vulnerable_count": 0, "highest_severity": "none"},
+            "recommendations": [],
         }
 
         severity_order = {"critical": 4, "high": 3, "medium": 2, "low": 1, "none": 0}
@@ -588,12 +590,14 @@ class WebSocketSecurityTester:
                     if severity_order.get(severity, 0) > severity_order.get(highest_severity, 0):
                         highest_severity = severity
 
-                    result["vulnerabilities"].append({
-                        "type": test_name,
-                        "severity": severity,
-                        "proof": test_result.get("proof", ""),
-                        "remediation": test_result.get("remediation", "")
-                    })
+                    result["vulnerabilities"].append(
+                        {
+                            "type": test_name,
+                            "severity": severity,
+                            "proof": test_result.get("proof", ""),
+                            "remediation": test_result.get("remediation", ""),
+                        }
+                    )
 
                     if test_result.get("remediation"):
                         result["recommendations"].append(test_result["remediation"])
@@ -616,7 +620,7 @@ def quick_websocket_scan(url: str) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     # 测试示例
     test_url = "wss://example.com/ws"
 

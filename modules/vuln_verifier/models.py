@@ -6,6 +6,7 @@
 - VerificationResult: 验证结果数据类
 - StatisticalVerification: 统计验证结果数据类
 """
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List
@@ -14,6 +15,7 @@ from typing import Dict, List
 @dataclass
 class VerificationResult:
     """验证结果"""
+
     vuln_type: str
     payload: str
     url: str
@@ -31,6 +33,7 @@ class VerificationResult:
 @dataclass
 class StatisticalVerification:
     """统计验证结果"""
+
     vuln_type: str
     url: str
     param: str

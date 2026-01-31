@@ -4,20 +4,20 @@ LDAP 注入检测器
 检测 LDAP 查询注入漏洞
 """
 
-from typing import List, Optional, Dict, Any
-import re
 import logging
-from urllib.parse import urlparse, parse_qs
+import re
+from typing import Any, Dict, List, Optional
+from urllib.parse import parse_qs, urlparse
 
 from ..base import BaseDetector
-from ..result import DetectionResult, Severity, DetectorType
 from ..factory import register_detector
-from ..payloads import get_payloads, PayloadCategory
+from ..payloads import PayloadCategory, get_payloads
+from ..result import DetectionResult, DetectorType, Severity
 
 logger = logging.getLogger(__name__)
 
 
-@register_detector('ldap')
+@register_detector("ldap")
 class LDAPiDetector(BaseDetector):
     """LDAP 注入检测器
 
@@ -28,40 +28,40 @@ class LDAPiDetector(BaseDetector):
         results = detector.detect("https://example.com/login", params={"user": "admin"})
     """
 
-    name = 'ldap'
-    description = 'LDAP 注入漏洞检测器'
-    vuln_type = 'ldap_injection'
+    name = "ldap"
+    description = "LDAP 注入漏洞检测器"
+    vuln_type = "ldap_injection"
     severity = Severity.HIGH
     detector_type = DetectorType.INJECTION
-    version = '1.0.0'
+    version = "1.0.0"
 
     # LDAP 错误模式
     ERROR_PATTERNS = [
-        r'ldap_search',
-        r'ldap_bind',
-        r'invalid DN syntax',
-        r'Bad search filter',
-        r'Invalid filter',
-        r'LDAP.*error',
-        r'LDAP.*exception',
-        r'javax\.naming\.directory',
-        r'javax\.naming\.ldap',
-        r'com\.sun\.jndi\.ldap',
-        r'LdapException',
-        r'Invalid LDAP filter',
-        r'filter error',
-        r'DSA is unwilling to perform',
+        r"ldap_search",
+        r"ldap_bind",
+        r"invalid DN syntax",
+        r"Bad search filter",
+        r"Invalid filter",
+        r"LDAP.*error",
+        r"LDAP.*exception",
+        r"javax\.naming\.directory",
+        r"javax\.naming\.ldap",
+        r"com\.sun\.jndi\.ldap",
+        r"LdapException",
+        r"Invalid LDAP filter",
+        r"filter error",
+        r"DSA is unwilling to perform",
     ]
 
     # 认证绕过成功的标志
     AUTH_BYPASS_PATTERNS = [
-        r'welcome',
-        r'dashboard',
-        r'logged in',
-        r'login successful',
-        r'authentication successful',
-        r'session_id',
-        r'authenticated',
+        r"welcome",
+        r"dashboard",
+        r"logged in",
+        r"login successful",
+        r"authentication successful",
+        r"session_id",
+        r"authenticated",
     ]
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -76,12 +76,8 @@ class LDAPiDetector(BaseDetector):
         self.payloads = get_payloads(PayloadCategory.LDAP)
 
         # 编译模式
-        self._error_patterns = [
-            re.compile(p, re.IGNORECASE) for p in self.ERROR_PATTERNS
-        ]
-        self._auth_patterns = [
-            re.compile(p, re.IGNORECASE) for p in self.AUTH_BYPASS_PATTERNS
-        ]
+        self._error_patterns = [re.compile(p, re.IGNORECASE) for p in self.ERROR_PATTERNS]
+        self._auth_patterns = [re.compile(p, re.IGNORECASE) for p in self.AUTH_BYPASS_PATTERNS]
 
     def detect(self, url: str, **kwargs) -> List[DetectionResult]:
         """检测 LDAP 注入漏洞
@@ -99,10 +95,10 @@ class LDAPiDetector(BaseDetector):
         self._log_detection_start(url)
         results: List[DetectionResult] = []
 
-        params = kwargs.get('params', {})
-        data = kwargs.get('data', {})
-        method = kwargs.get('method', 'GET').upper()
-        headers = kwargs.get('headers', {})
+        params = kwargs.get("params", {})
+        data = kwargs.get("data", {})
+        method = kwargs.get("method", "GET").upper()
+        headers = kwargs.get("headers", {})
 
         # 解析 URL 参数
         if not params:
@@ -110,7 +106,7 @@ class LDAPiDetector(BaseDetector):
             params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
 
         # 测试参数
-        test_params = params if method == 'GET' else data
+        test_params = params if method == "GET" else data
 
         for param_name, original_value in test_params.items():
             # 获取基线响应
@@ -122,7 +118,7 @@ class LDAPiDetector(BaseDetector):
                 test_data[param_name] = test_value
 
                 try:
-                    if method == 'GET':
+                    if method == "GET":
                         response = self.http_client.get(url, params=test_data, headers=headers)
                     else:
                         response = self.http_client.post(url, data=test_data, headers=headers)
@@ -130,35 +126,39 @@ class LDAPiDetector(BaseDetector):
                     # 检查错误信息
                     error_match = self._check_error_response(response.text)
                     if error_match:
-                        results.append(self._create_result(
-                            url=url,
-                            vulnerable=True,
-                            param=param_name,
-                            payload=payload,
-                            evidence=error_match,
-                            confidence=0.85,
-                            verified=True,
-                            remediation="对用户输入进行严格过滤，转义 LDAP 特殊字符",
-                            references=[
-                                "https://owasp.org/www-community/attacks/LDAP_Injection"
-                            ],
-                            extra={'injection_type': 'error-based'}
-                        ))
+                        results.append(
+                            self._create_result(
+                                url=url,
+                                vulnerable=True,
+                                param=param_name,
+                                payload=payload,
+                                evidence=error_match,
+                                confidence=0.85,
+                                verified=True,
+                                remediation="对用户输入进行严格过滤，转义 LDAP 特殊字符",
+                                references=[
+                                    "https://owasp.org/www-community/attacks/LDAP_Injection"
+                                ],
+                                extra={"injection_type": "error-based"},
+                            )
+                        )
                         break
 
                     # 检查认证绕过
                     if baseline and self._check_auth_bypass(baseline.text, response.text):
-                        results.append(self._create_result(
-                            url=url,
-                            vulnerable=True,
-                            param=param_name,
-                            payload=payload,
-                            evidence="检测到可能的认证绕过",
-                            confidence=0.75,
-                            verified=False,
-                            remediation="对用户输入进行严格过滤，转义 LDAP 特殊字符",
-                            extra={'injection_type': 'auth-bypass'}
-                        ))
+                        results.append(
+                            self._create_result(
+                                url=url,
+                                vulnerable=True,
+                                param=param_name,
+                                payload=payload,
+                                evidence="检测到可能的认证绕过",
+                                confidence=0.75,
+                                verified=False,
+                                remediation="对用户输入进行严格过滤，转义 LDAP 特殊字符",
+                                extra={"injection_type": "auth-bypass"},
+                            )
+                        )
                         break
 
                 except Exception as e:
@@ -168,15 +168,11 @@ class LDAPiDetector(BaseDetector):
         return results
 
     def _get_baseline(
-        self,
-        url: str,
-        params: Dict[str, str],
-        method: str,
-        headers: Dict[str, str]
+        self, url: str, params: Dict[str, str], method: str, headers: Dict[str, str]
     ) -> Optional[Any]:
         """获取基线响应"""
         try:
-            if method == 'GET':
+            if method == "GET":
                 return self.http_client.get(url, params=params, headers=headers)
             else:
                 return self.http_client.post(url, data=params, headers=headers)

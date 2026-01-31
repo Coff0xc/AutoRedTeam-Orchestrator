@@ -5,8 +5,9 @@
 
 import platform
 from typing import Any, Dict
+
+from .error_handling import ErrorCategory, extract_url, handle_errors, validate_inputs
 from .tooling import tool
-from .error_handling import handle_errors, ErrorCategory, extract_url, validate_inputs
 
 
 def register_misc_tools(mcp, counter, logger):
@@ -26,10 +27,10 @@ def register_misc_tools(mcp, counter, logger):
             工具统计
         """
         return {
-            'success': True,
-            'total': counter.total,
-            'by_category': counter.counts,
-            'version': '3.0.0'
+            "success": True,
+            "total": counter.total,
+            "by_category": counter.counts,
+            "version": "3.0.0",
         }
 
     @tool(mcp)
@@ -40,16 +41,16 @@ def register_misc_tools(mcp, counter, logger):
             服务器状态
         """
         return {
-            'success': True,
-            'status': 'healthy',
-            'version': '3.0.0',
-            'python_version': platform.python_version(),
-            'platform': platform.system(),
-            'tools_registered': counter.total
+            "success": True,
+            "status": "healthy",
+            "version": "3.0.0",
+            "python_version": platform.python_version(),
+            "platform": platform.system(),
+            "tools_registered": counter.total,
         }
 
     @tool(mcp)
-    @validate_inputs(url='url')
+    @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.MISC, context_extractor=extract_url)
     async def js_analyze(url: str) -> Dict[str, Any]:
         """JS代码分析 - 分析JavaScript代码中的敏感信息
@@ -67,11 +68,7 @@ def register_misc_tools(mcp, counter, logger):
         analyzer = JSAnalyzer()
         results = analyzer.analyze(url)
 
-        return {
-            'success': True,
-            'url': url,
-            'findings': results
-        }
+        return {"success": True, "url": url, "findings": results}
 
-    counter.add('misc', 3)
+    counter.add("misc", 3)
     logger.info("[Misc] 已注册 3 个杂项工具")

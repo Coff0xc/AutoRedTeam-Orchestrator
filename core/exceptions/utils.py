@@ -9,20 +9,20 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
-from typing import Optional, Any, Dict, Callable, TypeVar, Union, Type
+from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union
 
-from .base import AutoRedTeamError, ConfigError
-from .http import HTTPError, ConnectionError, TimeoutError, SSLError, ProxyError
 from .auth import PermissionDenied
+from .base import AutoRedTeamError, ConfigError
+from .http import ConnectionError, HTTPError, ProxyError, SSLError, TimeoutError
 from .scan import ValidationError
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def wrap_exception(
     exc: Exception,
     wrapper_class: Type[AutoRedTeamError] = AutoRedTeamError,
-    message: Optional[str] = None
+    message: Optional[str] = None,
 ) -> AutoRedTeamError:
     """
     将标准异常包装为自定义异常
@@ -48,18 +48,14 @@ def wrap_exception(
         return exc
 
     error_message = message or str(exc)
-    return wrapper_class(
-        error_message,
-        cause=exc,
-        details={'original_type': type(exc).__name__}
-    )
+    return wrapper_class(error_message, cause=exc, details={"original_type": type(exc).__name__})
 
 
 def handle_exceptions(
     logger: Optional[logging.Logger] = None,
     default_return: Any = None,
     reraise: bool = False,
-    error_mapping: Optional[Dict[Type[Exception], Type[AutoRedTeamError]]] = None
+    error_mapping: Optional[Dict[Type[Exception], Type[AutoRedTeamError]]] = None,
 ) -> Callable[[Callable[..., T]], Callable[..., Union[T, Any]]]:
     """
     统一异常处理装饰器
@@ -88,6 +84,7 @@ def handle_exceptions(
     # 延迟导入 requests 以避免在未安装时报错
     try:
         import requests
+
         default_mapping: Dict[Type[Exception], Type[AutoRedTeamError]] = {
             requests.exceptions.Timeout: TimeoutError,
             requests.exceptions.ConnectionError: ConnectionError,
@@ -99,12 +96,14 @@ def handle_exceptions(
         default_mapping = {}
 
     # 添加标准库异常映射
-    default_mapping.update({
-        OSError: ConnectionError,
-        ValueError: ValidationError,
-        PermissionError: PermissionDenied,
-        FileNotFoundError: ConfigError,
-    })
+    default_mapping.update(
+        {
+            OSError: ConnectionError,
+            ValueError: ValidationError,
+            PermissionError: PermissionDenied,
+            FileNotFoundError: ConfigError,
+        }
+    )
 
     if error_mapping:
         default_mapping.update(error_mapping)
@@ -174,6 +173,6 @@ def handle_exceptions(
 
 
 __all__ = [
-    'wrap_exception',
-    'handle_exceptions',
+    "wrap_exception",
+    "handle_exceptions",
 ]

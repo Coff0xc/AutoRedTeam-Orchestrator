@@ -6,14 +6,14 @@ AutoRedTeam-Orchestrator 任务和报告异常
 
 from __future__ import annotations
 
-from typing import Optional, Any
+from typing import Any, Optional
 
 from .base import AutoRedTeamError
-
 
 # ============================================================================
 # 任务错误
 # ============================================================================
+
 
 class TaskError(AutoRedTeamError):
     """
@@ -25,12 +25,7 @@ class TaskError(AutoRedTeamError):
         task_id: 任务ID
     """
 
-    def __init__(
-        self,
-        message: str,
-        task_id: Optional[str] = None,
-        **kwargs: Any
-    ):
+    def __init__(self, message: str, task_id: Optional[str] = None, **kwargs: Any):
         """
         初始化任务错误
 
@@ -42,7 +37,7 @@ class TaskError(AutoRedTeamError):
         super().__init__(message, **kwargs)
         self.task_id = task_id
         if task_id:
-            self.details['task_id'] = task_id
+            self.details["task_id"] = task_id
 
 
 class TaskNotFound(TaskError):
@@ -54,6 +49,7 @@ class TaskNotFound(TaskError):
     示例:
         >>> raise TaskNotFound("任务不存在", task_id="task-12345")
     """
+
     pass
 
 
@@ -66,6 +62,7 @@ class TaskCancelled(TaskError):
     示例:
         >>> raise TaskCancelled("任务已被用户取消", task_id="task-12345")
     """
+
     pass
 
 
@@ -85,7 +82,7 @@ class QueueFull(TaskError):
         message: str = "任务队列已满",
         queue_size: Optional[int] = None,
         max_size: Optional[int] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         """
         初始化队列满错误
@@ -100,14 +97,15 @@ class QueueFull(TaskError):
         self.queue_size = queue_size
         self.max_size = max_size
         if queue_size is not None:
-            self.details['queue_size'] = queue_size
+            self.details["queue_size"] = queue_size
         if max_size is not None:
-            self.details['max_size'] = max_size
+            self.details["max_size"] = max_size
 
 
 # ============================================================================
 # 报告错误
 # ============================================================================
+
 
 class ReportError(AutoRedTeamError):
     """
@@ -119,12 +117,7 @@ class ReportError(AutoRedTeamError):
         report_type: 报告类型
     """
 
-    def __init__(
-        self,
-        message: str,
-        report_type: Optional[str] = None,
-        **kwargs: Any
-    ):
+    def __init__(self, message: str, report_type: Optional[str] = None, **kwargs: Any):
         """
         初始化报告错误
 
@@ -136,7 +129,7 @@ class ReportError(AutoRedTeamError):
         super().__init__(message, **kwargs)
         self.report_type = report_type
         if report_type:
-            self.details['report_type'] = report_type
+            self.details["report_type"] = report_type
 
 
 class TemplateError(ReportError):
@@ -149,6 +142,7 @@ class TemplateError(ReportError):
         >>> raise TemplateError("模板文件不存在", details={"template": "report.html"})
         >>> raise TemplateError("模板语法错误", details={"line": 42})
     """
+
     pass
 
 
@@ -162,17 +156,18 @@ class ExportError(ReportError):
         >>> raise ExportError("PDF导出失败", report_type="PDF")
         >>> raise ExportError("无法写入文件", details={"path": "/reports/output.html"})
     """
+
     pass
 
 
 __all__ = [
     # 任务错误
-    'TaskError',
-    'TaskNotFound',
-    'TaskCancelled',
-    'QueueFull',
+    "TaskError",
+    "TaskNotFound",
+    "TaskCancelled",
+    "QueueFull",
     # 报告错误
-    'ReportError',
-    'TemplateError',
-    'ExportError',
+    "ReportError",
+    "TemplateError",
+    "ExportError",
 ]

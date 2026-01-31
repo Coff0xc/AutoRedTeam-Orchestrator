@@ -14,32 +14,32 @@
 
 使用示例:
     from modules.vuln_verifier import VulnerabilityVerifier, VerificationResult
-    
+
     verifier = VulnerabilityVerifier(timeout=10)
     result = verifier.verify("http://example.com?id=1", "id", "sqli")
-    
+
     # 或直接使用特定验证
     from modules.vuln_verifier import StatisticalVerifier
     stat_verifier = StatisticalVerifier(sample_size=10)
 """
 
+# 基础类和主验证器
+from .base import BaseVerifier, VulnerabilityVerifier, get_vulnerability_verifier_class
+from .lfi_rce import LFIRCEVerifierMixin
+
 # 数据模型
 from .models import StatisticalVerification, VerificationResult
 
-# 基础类和主验证器
-from .base import BaseVerifier, VulnerabilityVerifier, get_vulnerability_verifier_class
+# OOB 验证
+from .oob import OOBIntegratedVerifier, verify_with_oob
 
 # 验证 Mixin（高级用户）
 from .sqli import SQLiVerifierMixin
-from .xss import XSSVerifierMixin
-from .lfi_rce import LFIRCEVerifierMixin
 from .ssrf import SSRFVerifierMixin
 
 # 统计验证
 from .statistical import StatisticalVerifier, verify_vuln_statistically
-
-# OOB 验证
-from .oob import OOBIntegratedVerifier, verify_with_oob
+from .xss import XSSVerifierMixin
 
 __all__ = [
     # 数据模型

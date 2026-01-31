@@ -7,17 +7,17 @@ WebSocket 隧道 - WebSocket Tunnel
 """
 
 import asyncio
-import json
 import base64
 import hashlib
-import time
+import json
 import logging
-import secrets
 import os
-from typing import Dict, List, Optional, Any, Callable
+import secrets
+import time
 from dataclasses import dataclass, field
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,7 @@ try:
     import websockets
     from websockets.client import WebSocketClientProtocol
     from websockets.server import WebSocketServerProtocol, serve
+
     HAS_WEBSOCKETS = True
 except ImportError:
     HAS_WEBSOCKETS = False
@@ -33,6 +34,7 @@ except ImportError:
 
 try:
     import ssl
+
     HAS_SSL = True
 except ImportError:
     HAS_SSL = False
@@ -40,6 +42,7 @@ except ImportError:
 
 class EncryptionType(Enum):
     """加密类型"""
+
     NONE = "none"
     XOR = "xor"
     AES = "aes"
@@ -47,6 +50,7 @@ class EncryptionType(Enum):
 
 class MessageType(Enum):
     """消息类型"""
+
     DATA = "data"
     HEARTBEAT = "heartbeat"
     ACK = "ack"
@@ -57,15 +61,19 @@ class MessageType(Enum):
 @dataclass
 class WebSocketMessage:
     """WebSocket 消息"""
+
     msg_type: MessageType
     payload: str
-    msg_id: str = field(default_factory=lambda: hashlib.md5(str(time.time()).encode()).hexdigest()[:8])
+    msg_id: str = field(
+        default_factory=lambda: hashlib.md5(str(time.time()).encode()).hexdigest()[:8]
+    )
     timestamp: float = field(default_factory=time.time)
 
 
 @dataclass
 class WebSocketConfig:
     """WebSocket 配置"""
+
     # 连接参数
     url: str = "ws://127.0.0.1:8765"
     encryption_type: EncryptionType = EncryptionType.XOR
@@ -146,20 +154,26 @@ class WebSocketTunnel:
         }
 
         if self.config.disguise_as == "chat":
-            headers.update({
-                "Origin": "https://chat.example.com",
-                "Referer": "https://chat.example.com/room/general",
-            })
+            headers.update(
+                {
+                    "Origin": "https://chat.example.com",
+                    "Referer": "https://chat.example.com/room/general",
+                }
+            )
         elif self.config.disguise_as == "notifications":
-            headers.update({
-                "Origin": "https://notifications.example.com",
-                "X-Notification-Client": "web",
-            })
+            headers.update(
+                {
+                    "Origin": "https://notifications.example.com",
+                    "X-Notification-Client": "web",
+                }
+            )
         elif self.config.disguise_as == "metrics":
-            headers.update({
-                "Origin": "https://metrics.example.com",
-                "X-Metrics-Version": "2.0",
-            })
+            headers.update(
+                {
+                    "Origin": "https://metrics.example.com",
+                    "X-Metrics-Version": "2.0",
+                }
+            )
 
         return headers
 
@@ -173,10 +187,7 @@ class WebSocketTunnel:
                 return data
 
             key = self.config.encryption_key.encode()
-            encrypted = bytes([
-                data[i] ^ key[i % len(key)]
-                for i in range(len(data))
-            ])
+            encrypted = bytes([data[i] ^ key[i % len(key)] for i in range(len(data))])
             return encrypted
 
         elif self.config.encryption_type == EncryptionType.AES:
@@ -306,10 +317,7 @@ class WebSocketTunnel:
         while self._running and self._connected:
             try:
                 # 发送心跳
-                heartbeat_msg = WebSocketMessage(
-                    msg_type=MessageType.HEARTBEAT,
-                    payload="ping"
-                )
+                heartbeat_msg = WebSocketMessage(msg_type=MessageType.HEARTBEAT, payload="ping")
                 await self._websocket.send(self._encode_message(heartbeat_msg))
                 self._last_heartbeat = time.time()
 
@@ -360,7 +368,7 @@ class WebSocketTunnel:
         try:
             # 分块发送大数据
             chunks = [
-                data[i:i + self.config.chunk_size]
+                data[i : i + self.config.chunk_size]
                 for i in range(0, len(data), self.config.chunk_size)
             ]
 
@@ -369,7 +377,7 @@ class WebSocketTunnel:
             for i, chunk in enumerate(chunks):
                 msg = WebSocketMessage(
                     msg_type=MessageType.DATA,
-                    payload=f"{i}/{total_chunks}:" + base64.b64encode(chunk).decode()
+                    payload=f"{i}/{total_chunks}:" + base64.b64encode(chunk).decode(),
                 )
 
                 await self._websocket.send(self._encode_message(msg))
@@ -411,7 +419,7 @@ class WebSocketTunnel:
                 try:
                     raw_data = await asyncio.wait_for(
                         self._websocket.recv(),
-                        timeout=min(5.0, timeout - (time.time() - start_time))
+                        timeout=min(5.0, timeout - (time.time() - start_time)),
                     )
 
                     msg = self._decode_message(raw_data)
@@ -436,10 +444,10 @@ class WebSocketTunnel:
                             # 检查是否接收完所有分块
                             if len(chunks_dict) == total_chunks:
                                 # 重组数据
-                                full_data = b"".join([
-                                    chunks_dict[i] for i in range(total_chunks)
-                                ])
-                                logger.debug(f"Received {len(full_data)} bytes in {total_chunks} chunks")
+                                full_data = b"".join([chunks_dict[i] for i in range(total_chunks)])
+                                logger.debug(
+                                    f"Received {len(full_data)} bytes in {total_chunks} chunks"
+                                )
                                 return full_data
 
                 except asyncio.TimeoutError:
@@ -468,10 +476,7 @@ class WebSocketTunnel:
             return None
 
         try:
-            msg = WebSocketMessage(
-                msg_type=MessageType.COMMAND,
-                payload=command
-            )
+            msg = WebSocketMessage(msg_type=MessageType.COMMAND, payload=command)
 
             await self._websocket.send(self._encode_message(msg))
 
@@ -522,9 +527,7 @@ class WebSocketTunnel:
 
 # 便捷函数
 async def create_websocket_tunnel(
-    url: str,
-    encryption_key: Optional[str] = None,
-    disguise_as: str = "chat"
+    url: str, encryption_key: Optional[str] = None, disguise_as: str = "chat"
 ) -> WebSocketTunnel:
     """
     创建并连接 WebSocket 隧道
@@ -537,11 +540,7 @@ async def create_websocket_tunnel(
     Returns:
         WebSocketTunnel: 已连接的隧道实例
     """
-    config = WebSocketConfig(
-        url=url,
-        encryption_key=encryption_key,
-        disguise_as=disguise_as
-    )
+    config = WebSocketConfig(url=url, encryption_key=encryption_key, disguise_as=disguise_as)
 
     tunnel = WebSocketTunnel(config)
     await tunnel.connect()
@@ -572,7 +571,7 @@ async def example_client():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("WebSocket Tunnel Module")
     logger.info("=" * 50)
     logger.info(f"websockets available: {HAS_WEBSOCKETS}")

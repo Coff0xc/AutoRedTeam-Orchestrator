@@ -12,22 +12,24 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
-from .models import CVEEntry, CVSS, Reference, Severity
+from .models import CVSS, CVEEntry, Reference, Severity
 
 logger = logging.getLogger(__name__)
 
 # HTTP 客户端
 try:
-    from core.http import get_client, HTTPConfig
+    from core.http import HTTPConfig, get_client
+
     HAS_HTTP_FACTORY = True
 except ImportError:
     HAS_HTTP_FACTORY = False
 
 try:
     import aiohttp
+
     HAS_AIOHTTP = True
 except ImportError:
     HAS_AIOHTTP = False
@@ -70,7 +72,7 @@ class RateLimiter:
 class CVESource(ABC):
     """CVE 数据源基类"""
 
-    name: str = 'base'
+    name: str = "base"
 
     def __init__(self):
         self._session = None
@@ -115,8 +117,9 @@ class CVESource(ABC):
         """
         ...
 
-    async def _fetch_json(self, url: str, headers: Optional[Dict] = None,
-                          timeout: int = 30) -> Optional[Dict[str, Any]]:
+    async def _fetch_json(
+        self, url: str, headers: Optional[Dict] = None, timeout: int = 30
+    ) -> Optional[Dict[str, Any]]:
         """
         异步获取 JSON 数据
 
@@ -132,8 +135,7 @@ class CVESource(ABC):
             try:
                 client = get_client()
                 response = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    lambda: client.get(url, headers=headers, timeout=timeout)
+                    None, lambda: client.get(url, headers=headers, timeout=timeout)
                 )
                 if response.status_code == 200:
                     return response.json()
@@ -147,7 +149,12 @@ class CVESource(ABC):
         elif HAS_AIOHTTP:
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout), ssl=False) as resp:
+                    async with session.get(
+                        url,
+                        headers=headers,
+                        timeout=aiohttp.ClientTimeout(total=timeout),
+                        ssl=False,
+                    ) as resp:
                         if resp.status == 200:
                             return await resp.json()
                         else:
@@ -161,8 +168,9 @@ class CVESource(ABC):
             logger.error("没有可用的 HTTP 库")
             return None
 
-    async def _fetch_text(self, url: str, headers: Optional[Dict] = None,
-                          timeout: int = 60) -> Optional[str]:
+    async def _fetch_text(
+        self, url: str, headers: Optional[Dict] = None, timeout: int = 60
+    ) -> Optional[str]:
         """
         异步获取文本数据
 
@@ -178,8 +186,7 @@ class CVESource(ABC):
             try:
                 client = get_client()
                 response = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    lambda: client.get(url, headers=headers, timeout=timeout)
+                    None, lambda: client.get(url, headers=headers, timeout=timeout)
                 )
                 if response.status_code == 200:
                     return response.text
@@ -193,7 +200,12 @@ class CVESource(ABC):
         elif HAS_AIOHTTP:
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout), ssl=False) as resp:
+                    async with session.get(
+                        url,
+                        headers=headers,
+                        timeout=aiohttp.ClientTimeout(total=timeout),
+                        ssl=False,
+                    ) as resp:
                         if resp.status == 200:
                             return await resp.text()
                         else:
@@ -216,8 +228,8 @@ class CVESource(ABC):
 class NVDSource(CVESource):
     """NVD 数据源 (National Vulnerability Database)"""
 
-    name = 'nvd'
-    BASE_URL = 'https://services.nvd.nist.gov/rest/json/cves/2.0'
+    name = "nvd"
+    BASE_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 
     # 速率限制: 无 API Key 5次/30秒, 有 API Key 50次/30秒
     RATE_LIMIT_NO_KEY = (5, 30)
@@ -249,8 +261,8 @@ class NVDSource(CVESource):
 
         # 构建请求参数
         params = {
-            'pubStartDate': start_date.strftime('%Y-%m-%dT00:00:00.000'),
-            'pubEndDate': end_date.strftime('%Y-%m-%dT23:59:59.999'),
+            "pubStartDate": start_date.strftime("%Y-%m-%dT00:00:00.000"),
+            "pubEndDate": end_date.strftime("%Y-%m-%dT23:59:59.999"),
         }
 
         # 分页获取
@@ -266,13 +278,13 @@ class NVDSource(CVESource):
 
             headers = {}
             if self.api_key:
-                headers['apiKey'] = self.api_key
+                headers["apiKey"] = self.api_key
 
             data = await self._fetch_json(url, headers)
-            if not data or 'vulnerabilities' not in data:
+            if not data or "vulnerabilities" not in data:
                 break
 
-            vulns = data.get('vulnerabilities', [])
+            vulns = data.get("vulnerabilities", [])
             if not vulns:
                 break
 
@@ -283,7 +295,7 @@ class NVDSource(CVESource):
                     entries.append(entry)
 
             # 检查分页
-            total_results = data.get('totalResults', 0)
+            total_results = data.get("totalResults", 0)
             if start_index + results_per_page >= total_results:
                 break
 
@@ -304,11 +316,11 @@ class NVDSource(CVESource):
 
         headers = {}
         if self.api_key:
-            headers['apiKey'] = self.api_key
+            headers["apiKey"] = self.api_key
 
         data = await self._fetch_json(url, headers)
-        if data and 'vulnerabilities' in data:
-            for vuln in data['vulnerabilities'][:limit]:
+        if data and "vulnerabilities" in data:
+            for vuln in data["vulnerabilities"][:limit]:
                 entry = self._parse_nvd_entry(vuln)
                 if entry:
                     entries.append(entry)
@@ -326,11 +338,11 @@ class NVDSource(CVESource):
 
         headers = {}
         if self.api_key:
-            headers['apiKey'] = self.api_key
+            headers["apiKey"] = self.api_key
 
         data = await self._fetch_json(url, headers)
-        if data and 'vulnerabilities' in data and data['vulnerabilities']:
-            return self._parse_nvd_entry(data['vulnerabilities'][0])
+        if data and "vulnerabilities" in data and data["vulnerabilities"]:
+            return self._parse_nvd_entry(data["vulnerabilities"][0])
 
         return None
 
@@ -345,122 +357,122 @@ class NVDSource(CVESource):
             CVEEntry 或 None
         """
         try:
-            cve_data = data.get('cve', {})
-            cve_id = cve_data.get('id', '')
+            cve_data = data.get("cve", {})
+            cve_id = cve_data.get("id", "")
 
             if not cve_id:
                 return None
 
             # 提取描述
-            descriptions = cve_data.get('descriptions', [])
+            descriptions = cve_data.get("descriptions", [])
             description = next(
-                (d['value'] for d in descriptions if d.get('lang') == 'en'),
-                'No description available'
+                (d["value"] for d in descriptions if d.get("lang") == "en"),
+                "No description available",
             )
 
             # 提取 CVSS
-            metrics = cve_data.get('metrics', {})
+            metrics = cve_data.get("metrics", {})
             cvss = None
             severity = Severity.UNKNOWN
 
             # 优先使用 CVSS 3.1
-            cvss_v31 = metrics.get('cvssMetricV31', [])
+            cvss_v31 = metrics.get("cvssMetricV31", [])
             if cvss_v31:
-                cvss_data = cvss_v31[0].get('cvssData', {})
+                cvss_data = cvss_v31[0].get("cvssData", {})
                 cvss = CVSS(
-                    version='3.1',
-                    score=cvss_data.get('baseScore', 0.0),
-                    vector=cvss_data.get('vectorString', ''),
-                    severity=Severity.from_string(cvss_data.get('baseSeverity', ''))
+                    version="3.1",
+                    score=cvss_data.get("baseScore", 0.0),
+                    vector=cvss_data.get("vectorString", ""),
+                    severity=Severity.from_string(cvss_data.get("baseSeverity", "")),
                 )
                 severity = cvss.severity
             else:
                 # 回退到 CVSS 3.0
-                cvss_v30 = metrics.get('cvssMetricV30', [])
+                cvss_v30 = metrics.get("cvssMetricV30", [])
                 if cvss_v30:
-                    cvss_data = cvss_v30[0].get('cvssData', {})
+                    cvss_data = cvss_v30[0].get("cvssData", {})
                     cvss = CVSS(
-                        version='3.0',
-                        score=cvss_data.get('baseScore', 0.0),
-                        vector=cvss_data.get('vectorString', ''),
-                        severity=Severity.from_string(cvss_data.get('baseSeverity', ''))
+                        version="3.0",
+                        score=cvss_data.get("baseScore", 0.0),
+                        vector=cvss_data.get("vectorString", ""),
+                        severity=Severity.from_string(cvss_data.get("baseSeverity", "")),
                     )
                     severity = cvss.severity
                 else:
                     # 回退到 CVSS 2.0
-                    cvss_v2 = metrics.get('cvssMetricV2', [])
+                    cvss_v2 = metrics.get("cvssMetricV2", [])
                     if cvss_v2:
-                        cvss_data = cvss_v2[0].get('cvssData', {})
+                        cvss_data = cvss_v2[0].get("cvssData", {})
                         cvss = CVSS(
-                            version='2.0',
-                            score=cvss_data.get('baseScore', 0.0),
-                            vector=cvss_data.get('vectorString', ''),
-                            severity=Severity.from_cvss(cvss_data.get('baseScore', 0.0))
+                            version="2.0",
+                            score=cvss_data.get("baseScore", 0.0),
+                            vector=cvss_data.get("vectorString", ""),
+                            severity=Severity.from_cvss(cvss_data.get("baseScore", 0.0)),
                         )
                         severity = cvss.severity
 
             # 提取受影响产品
             affected_products = []
             affected_versions = []
-            configurations = cve_data.get('configurations', [])
+            configurations = cve_data.get("configurations", [])
             for config in configurations:
-                for node in config.get('nodes', []):
-                    for cpe_match in node.get('cpeMatch', []):
-                        cpe = cpe_match.get('criteria', '')
+                for node in config.get("nodes", []):
+                    for cpe_match in node.get("cpeMatch", []):
+                        cpe = cpe_match.get("criteria", "")
                         if cpe:
                             # 解析 CPE: cpe:2.3:a:vendor:product:version:*:*:*:*:*:*:*
-                            parts = cpe.split(':')
+                            parts = cpe.split(":")
                             if len(parts) >= 5:
                                 vendor = parts[3]
                                 product = parts[4]
-                                version = parts[5] if len(parts) > 5 and parts[5] != '*' else ''
+                                version = parts[5] if len(parts) > 5 and parts[5] != "*" else ""
                                 affected_products.append(f"{vendor}:{product}")
                                 if version:
                                     affected_versions.append(version)
 
             # 提取 CWE
-            weaknesses = cve_data.get('weaknesses', [])
+            weaknesses = cve_data.get("weaknesses", [])
             cwe_ids = []
             for weakness in weaknesses:
-                for desc in weakness.get('description', []):
-                    cwe_value = desc.get('value', '')
-                    if cwe_value.startswith('CWE-'):
+                for desc in weakness.get("description", []):
+                    cwe_value = desc.get("value", "")
+                    if cwe_value.startswith("CWE-"):
                         cwe_ids.append(cwe_value)
 
             # 提取参考链接
-            refs_data = cve_data.get('references', [])
+            refs_data = cve_data.get("references", [])
             references = []
             poc_urls = []
             has_poc = False
 
             for ref in refs_data:
-                url = ref.get('url', '')
-                source = ref.get('source', '')
-                tags = ref.get('tags', [])
+                url = ref.get("url", "")
+                source = ref.get("source", "")
+                tags = ref.get("tags", [])
 
                 references.append(Reference(url=url, source=source, tags=tags))
 
                 # 检查是否有 PoC/Exploit
-                if any(tag in ['Exploit', 'Third Party Advisory'] for tag in tags):
+                if any(tag in ["Exploit", "Third Party Advisory"] for tag in tags):
                     has_poc = True
                     poc_urls.append(url)
 
             # 解析时间
-            published = cve_data.get('published', '')
-            modified = cve_data.get('lastModified', '')
+            published = cve_data.get("published", "")
+            modified = cve_data.get("lastModified", "")
 
             published_date = None
             modified_date = None
 
             if published:
                 try:
-                    published_date = datetime.fromisoformat(published.replace('Z', '+00:00'))
+                    published_date = datetime.fromisoformat(published.replace("Z", "+00:00"))
                 except (ValueError, TypeError):
                     pass
 
             if modified:
                 try:
-                    modified_date = datetime.fromisoformat(modified.replace('Z', '+00:00'))
+                    modified_date = datetime.fromisoformat(modified.replace("Z", "+00:00"))
                 except (ValueError, TypeError):
                     pass
 
@@ -479,7 +491,7 @@ class NVDSource(CVESource):
                 has_poc=has_poc,
                 poc_urls=poc_urls,
                 exploit_available=has_poc,
-                source='nvd',
+                source="nvd",
                 tags=[],
             )
 
@@ -491,8 +503,8 @@ class NVDSource(CVESource):
 class NucleiSource(CVESource):
     """Nuclei Templates 数据源"""
 
-    name = 'nuclei'
-    GITHUB_API = 'https://api.github.com/repos/projectdiscovery/nuclei-templates'
+    name = "nuclei"
+    GITHUB_API = "https://api.github.com/repos/projectdiscovery/nuclei-templates"
 
     # GitHub API 速率限制: 未认证 60次/小时, 认证 5000次/小时
     RATE_LIMIT_NO_TOKEN = (60, 3600)
@@ -523,30 +535,32 @@ class NucleiSource(CVESource):
         # 获取 CVE 目录下的文件树
         url = f"{self.GITHUB_API}/git/trees/main?recursive=1"
 
-        headers = {'Accept': 'application/vnd.github+json'}
+        headers = {"Accept": "application/vnd.github+json"}
         if self.github_token:
-            headers['Authorization'] = f'Bearer {self.github_token}'
+            headers["Authorization"] = f"Bearer {self.github_token}"
 
         data = await self._fetch_json(url, headers)
-        if not data or 'tree' not in data:
+        if not data or "tree" not in data:
             logger.warning("[Nuclei] 无法获取文件树")
             return entries
 
         # 筛选 CVE 相关文件
         cve_files = [
-            item for item in data['tree']
-            if item.get('path', '').startswith('http/cves/') and item.get('path', '').endswith('.yaml')
+            item
+            for item in data["tree"]
+            if item.get("path", "").startswith("http/cves/")
+            and item.get("path", "").endswith(".yaml")
         ]
 
         logger.info(f"[Nuclei] 发现 {len(cve_files)} 个 CVE 模板")
 
         # 解析 CVE ID 和基本信息
         for file_info in cve_files:
-            path = file_info.get('path', '')
-            filename = path.split('/')[-1].replace('.yaml', '')
+            path = file_info.get("path", "")
+            filename = path.split("/")[-1].replace(".yaml", "")
 
             # 提取 CVE ID
-            cve_match = re.match(r'(CVE-\d{4}-\d+)', filename, re.IGNORECASE)
+            cve_match = re.match(r"(CVE-\d{4}-\d+)", filename, re.IGNORECASE)
             if cve_match:
                 cve_id = cve_match.group(1).upper()
 
@@ -555,10 +569,12 @@ class NucleiSource(CVESource):
                     title=f"{cve_id} - Nuclei Template",
                     description=f"Nuclei PoC template available for {cve_id}",
                     has_poc=True,
-                    poc_urls=[f"https://github.com/projectdiscovery/nuclei-templates/blob/main/{path}"],
+                    poc_urls=[
+                        f"https://github.com/projectdiscovery/nuclei-templates/blob/main/{path}"
+                    ],
                     exploit_available=True,
-                    source='nuclei',
-                    tags=['nuclei', 'poc'],
+                    source="nuclei",
+                    tags=["nuclei", "poc"],
                 )
                 entries.append(entry)
 
@@ -575,17 +591,17 @@ class NucleiSource(CVESource):
         # 使用 GitHub Search API
         url = f"https://api.github.com/search/code?q={keyword}+repo:projectdiscovery/nuclei-templates+path:http/cves&per_page={min(limit, 100)}"
 
-        headers = {'Accept': 'application/vnd.github+json'}
+        headers = {"Accept": "application/vnd.github+json"}
         if self.github_token:
-            headers['Authorization'] = f'Bearer {self.github_token}'
+            headers["Authorization"] = f"Bearer {self.github_token}"
 
         data = await self._fetch_json(url, headers)
-        if data and 'items' in data:
-            for item in data['items'][:limit]:
-                path = item.get('path', '')
-                filename = path.split('/')[-1].replace('.yaml', '')
+        if data and "items" in data:
+            for item in data["items"][:limit]:
+                path = item.get("path", "")
+                filename = path.split("/")[-1].replace(".yaml", "")
 
-                cve_match = re.match(r'(CVE-\d{4}-\d+)', filename, re.IGNORECASE)
+                cve_match = re.match(r"(CVE-\d{4}-\d+)", filename, re.IGNORECASE)
                 if cve_match:
                     cve_id = cve_match.group(1).upper()
 
@@ -594,10 +610,10 @@ class NucleiSource(CVESource):
                         title=f"{cve_id} - Nuclei Template",
                         description=f"Nuclei PoC template available for {cve_id}",
                         has_poc=True,
-                        poc_urls=[item.get('html_url', '')],
+                        poc_urls=[item.get("html_url", "")],
                         exploit_available=True,
-                        source='nuclei',
-                        tags=['nuclei', 'poc'],
+                        source="nuclei",
+                        tags=["nuclei", "poc"],
                     )
                     entries.append(entry)
 
@@ -614,8 +630,8 @@ class NucleiSource(CVESource):
 class ExploitDBSource(CVESource):
     """Exploit-DB 数据源"""
 
-    name = 'exploitdb'
-    CSV_URL = 'https://gitlab.com/exploit-database/exploitdb/-/raw/main/files_exploits.csv'
+    name = "exploitdb"
+    CSV_URL = "https://gitlab.com/exploit-database/exploitdb/-/raw/main/files_exploits.csv"
 
     def __init__(self):
         super().__init__()
@@ -637,12 +653,12 @@ class ExploitDBSource(CVESource):
             return
 
         # 解析 CSV
-        lines = csv_content.strip().split('\n')[1:]  # 跳过表头
+        lines = csv_content.strip().split("\n")[1:]  # 跳过表头
 
         for line in lines:
             try:
                 # CSV 格式: id,file,description,date_published,author,type,platform,port,codes
-                parts = line.split(',')
+                parts = line.split(",")
                 if len(parts) < 9:
                     continue
 
@@ -653,10 +669,10 @@ class ExploitDBSource(CVESource):
                 author = parts[4]
                 exploit_type = parts[5]
                 platform = parts[6]
-                codes = parts[8] if len(parts) > 8 else ''
+                codes = parts[8] if len(parts) > 8 else ""
 
                 # 提取 CVE ID
-                cve_matches = re.findall(r'CVE-\d{4}-\d+', description + ' ' + codes, re.IGNORECASE)
+                cve_matches = re.findall(r"CVE-\d{4}-\d+", description + " " + codes, re.IGNORECASE)
 
                 for cve_id in set(cve_matches):
                     cve_id = cve_id.upper()
@@ -664,7 +680,9 @@ class ExploitDBSource(CVESource):
                     if cve_id in self._cache:
                         # 更新已存在的条目
                         existing = self._cache[cve_id]
-                        existing.poc_urls.append(f"https://www.exploit-db.com/exploits/{exploit_id}")
+                        existing.poc_urls.append(
+                            f"https://www.exploit-db.com/exploits/{exploit_id}"
+                        )
                     else:
                         # 创建新条目
                         entry = CVEEntry(
@@ -674,8 +692,8 @@ class ExploitDBSource(CVESource):
                             has_poc=True,
                             poc_urls=[f"https://www.exploit-db.com/exploits/{exploit_id}"],
                             exploit_available=True,
-                            source='exploitdb',
-                            tags=['exploit-db', exploit_type.lower(), platform.lower()],
+                            source="exploitdb",
+                            tags=["exploit-db", exploit_type.lower(), platform.lower()],
                         )
                         self._cache[cve_id] = entry
 
@@ -700,9 +718,11 @@ class ExploitDBSource(CVESource):
         results = []
 
         for cve_id, entry in self._cache.items():
-            if (keyword_lower in cve_id.lower() or
-                keyword_lower in entry.description.lower() or
-                keyword_lower in entry.title.lower()):
+            if (
+                keyword_lower in cve_id.lower()
+                or keyword_lower in entry.description.lower()
+                or keyword_lower in entry.title.lower()
+            ):
                 results.append(entry)
                 if len(results) >= limit:
                     break
@@ -718,8 +738,8 @@ class ExploitDBSource(CVESource):
 class GitHubPoCSource(CVESource):
     """GitHub PoC-in-GitHub 数据源"""
 
-    name = 'github-poc'
-    SEARCH_URL = 'https://api.github.com/search/repositories'
+    name = "github-poc"
+    SEARCH_URL = "https://api.github.com/search/repositories"
 
     def __init__(self, github_token: Optional[str] = None):
         super().__init__()
@@ -738,21 +758,23 @@ class GitHubPoCSource(CVESource):
         await self._rate_limiter.acquire()
 
         # 搜索最近创建的 CVE 相关仓库
-        since_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+        since_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
         url = f"{self.SEARCH_URL}?q=CVE+in:name+created:>{since_date}&sort=updated&order=desc&per_page=100"
 
-        headers = {'Accept': 'application/vnd.github+json'}
+        headers = {"Accept": "application/vnd.github+json"}
         if self.github_token:
-            headers['Authorization'] = f'Bearer {self.github_token}'
+            headers["Authorization"] = f"Bearer {self.github_token}"
 
         data = await self._fetch_json(url, headers)
-        if data and 'items' in data:
-            for item in data['items']:
-                repo_name = item.get('name', '')
-                description = item.get('description', '') or ''
+        if data and "items" in data:
+            for item in data["items"]:
+                repo_name = item.get("name", "")
+                description = item.get("description", "") or ""
 
                 # 提取 CVE ID
-                cve_match = re.search(r'CVE-\d{4}-\d+', repo_name + ' ' + description, re.IGNORECASE)
+                cve_match = re.search(
+                    r"CVE-\d{4}-\d+", repo_name + " " + description, re.IGNORECASE
+                )
                 if cve_match:
                     cve_id = cve_match.group(0).upper()
 
@@ -761,10 +783,10 @@ class GitHubPoCSource(CVESource):
                         title=f"{cve_id} - {repo_name}",
                         description=description[:500] or f"GitHub PoC for {cve_id}",
                         has_poc=True,
-                        poc_urls=[item.get('html_url', '')],
+                        poc_urls=[item.get("html_url", "")],
                         exploit_available=True,
-                        source='github-poc',
-                        tags=['github', 'poc'],
+                        source="github-poc",
+                        tags=["github", "poc"],
                     )
                     entries.append(entry)
 
@@ -780,17 +802,19 @@ class GitHubPoCSource(CVESource):
 
         url = f"{self.SEARCH_URL}?q={keyword}+CVE&sort=stars&order=desc&per_page={min(limit, 100)}"
 
-        headers = {'Accept': 'application/vnd.github+json'}
+        headers = {"Accept": "application/vnd.github+json"}
         if self.github_token:
-            headers['Authorization'] = f'Bearer {self.github_token}'
+            headers["Authorization"] = f"Bearer {self.github_token}"
 
         data = await self._fetch_json(url, headers)
-        if data and 'items' in data:
-            for item in data['items'][:limit]:
-                repo_name = item.get('name', '')
-                description = item.get('description', '') or ''
+        if data and "items" in data:
+            for item in data["items"][:limit]:
+                repo_name = item.get("name", "")
+                description = item.get("description", "") or ""
 
-                cve_match = re.search(r'CVE-\d{4}-\d+', repo_name + ' ' + description, re.IGNORECASE)
+                cve_match = re.search(
+                    r"CVE-\d{4}-\d+", repo_name + " " + description, re.IGNORECASE
+                )
                 if cve_match:
                     cve_id = cve_match.group(0).upper()
 
@@ -799,10 +823,10 @@ class GitHubPoCSource(CVESource):
                         title=f"{cve_id} - {repo_name}",
                         description=description[:500] or f"GitHub PoC for {cve_id}",
                         has_poc=True,
-                        poc_urls=[item.get('html_url', '')],
+                        poc_urls=[item.get("html_url", "")],
                         exploit_available=True,
-                        source='github-poc',
-                        tags=['github', 'poc'],
+                        source="github-poc",
+                        tags=["github", "poc"],
                     )
                     entries.append(entry)
 
@@ -818,7 +842,7 @@ class GitHubPoCSource(CVESource):
 class AggregatedSource(CVESource):
     """聚合数据源 - 合并多个数据源的结果"""
 
-    name = 'aggregated'
+    name = "aggregated"
 
     def __init__(self, sources: List[CVESource]):
         """
@@ -898,10 +922,7 @@ class AggregatedSource(CVESource):
 
         # 按发布时间排序 (最新的在前)
         entries = list(cve_map.values())
-        entries.sort(
-            key=lambda x: x.published_date or datetime.min,
-            reverse=True
-        )
+        entries.sort(key=lambda x: x.published_date or datetime.min, reverse=True)
 
         logger.info(f"[Aggregated] 合并完成: {len(entries)} 条 (去重后)")
         return entries
@@ -911,14 +932,16 @@ class AggregatedSource(CVESource):
 def create_nvd_source(api_key: Optional[str] = None) -> NVDSource:
     """创建 NVD 数据源"""
     import os
-    api_key = api_key or os.environ.get('NVD_API_KEY')
+
+    api_key = api_key or os.environ.get("NVD_API_KEY")
     return NVDSource(api_key=api_key)
 
 
 def create_nuclei_source(github_token: Optional[str] = None) -> NucleiSource:
     """创建 Nuclei 数据源"""
     import os
-    github_token = github_token or os.environ.get('GITHUB_TOKEN')
+
+    github_token = github_token or os.environ.get("GITHUB_TOKEN")
     return NucleiSource(github_token=github_token)
 
 
@@ -930,7 +953,8 @@ def create_exploitdb_source() -> ExploitDBSource:
 def create_github_poc_source(github_token: Optional[str] = None) -> GitHubPoCSource:
     """创建 GitHub PoC 数据源"""
     import os
-    github_token = github_token or os.environ.get('GITHUB_TOKEN')
+
+    github_token = github_token or os.environ.get("GITHUB_TOKEN")
     return GitHubPoCSource(github_token=github_token)
 
 

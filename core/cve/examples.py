@@ -116,11 +116,11 @@ async def example_full_workflow():
 
     print(f"\n  总计: {stats.get('total_cves', 0)} CVE")
     print(f"\n  按严重性:")
-    for severity, count in stats.get('by_severity', {}).items():
+    for severity, count in stats.get("by_severity", {}).items():
         print(f"    {severity}: {count}")
 
     print(f"\n  按来源:")
-    for source, count in stats.get('by_source', {}).items():
+    for source, count in stats.get("by_source", {}).items():
         print(f"    {source}: {count}")
 
 
@@ -166,13 +166,9 @@ async def example_export_json():
     data = {
         "metadata": {
             "total": len(results),
-            "filter": {
-                "severity": "HIGH",
-                "min_cvss": 8.0,
-                "poc_only": True
-            }
+            "filter": {"severity": "HIGH", "min_cvss": 8.0, "poc_only": True},
         },
-        "cves": [cve.to_dict() for cve in results[:100]]
+        "cves": [cve.to_dict() for cve in results[:100]],
     }
 
     with open(output_file, "w", encoding="utf-8") as f:

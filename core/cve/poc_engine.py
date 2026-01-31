@@ -7,25 +7,26 @@ PoC 执行引擎
 作者: AutoRedTeam-Orchestrator
 """
 
-import re
+import logging
 import random
+import re
 import secrets
 import string
-import logging
-import time
 import threading
+import time
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Any, Tuple
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
-from .models import PoCTemplate, PoCMatcher, PoCExtractor, Severity
+from .models import PoCExtractor, PoCMatcher, PoCTemplate, Severity
 
 logger = logging.getLogger(__name__)
 
 # YAML 支持
 try:
     import yaml
+
     HAS_YAML = True
 except ImportError:
     HAS_YAML = False
@@ -34,12 +35,14 @@ except ImportError:
 # HTTP 客户端
 try:
     from core.http import get_client
+
     HAS_HTTP_FACTORY = True
 except ImportError:
     HAS_HTTP_FACTORY = False
 
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -48,38 +51,39 @@ except ImportError:
 @dataclass
 class PoCResult:
     """PoC 执行结果"""
-    success: bool                              # 执行是否成功
-    vulnerable: bool                           # 是否存在漏洞
-    template_id: str                           # 模板 ID
-    template_name: str = ''                    # 模板名称
-    target: str = ''                           # 目标地址
-    matched: bool = False                      # 是否匹配成功
-    matcher_name: str = ''                     # 匹配的 Matcher 名称
+
+    success: bool  # 执行是否成功
+    vulnerable: bool  # 是否存在漏洞
+    template_id: str  # 模板 ID
+    template_name: str = ""  # 模板名称
+    target: str = ""  # 目标地址
+    matched: bool = False  # 是否匹配成功
+    matcher_name: str = ""  # 匹配的 Matcher 名称
     extracted: Dict[str, Any] = field(default_factory=dict)  # 提取的数据
-    evidence: str = ''                         # 证据
-    request: Optional[Dict[str, Any]] = None   # 请求详情
+    evidence: str = ""  # 证据
+    request: Optional[Dict[str, Any]] = None  # 请求详情
     response: Optional[Dict[str, Any]] = None  # 响应详情
-    error: Optional[str] = None                # 错误信息
-    execution_time_ms: float = 0               # 执行时间 (毫秒)
-    timestamp: str = ''                        # 时间戳
+    error: Optional[str] = None  # 错误信息
+    execution_time_ms: float = 0  # 执行时间 (毫秒)
+    timestamp: str = ""  # 时间戳
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
-            'success': self.success,
-            'vulnerable': self.vulnerable,
-            'template_id': self.template_id,
-            'template_name': self.template_name,
-            'target': self.target,
-            'matched': self.matched,
-            'matcher_name': self.matcher_name,
-            'extracted': self.extracted,
-            'evidence': self.evidence,
-            'request': self.request,
-            'response': self.response,
-            'error': self.error,
-            'execution_time_ms': self.execution_time_ms,
-            'timestamp': self.timestamp,
+            "success": self.success,
+            "vulnerable": self.vulnerable,
+            "template_id": self.template_id,
+            "template_name": self.template_name,
+            "target": self.target,
+            "matched": self.matched,
+            "matcher_name": self.matcher_name,
+            "extracted": self.extracted,
+            "evidence": self.evidence,
+            "request": self.request,
+            "response": self.response,
+            "error": self.error,
+            "execution_time_ms": self.execution_time_ms,
+            "timestamp": self.timestamp,
         }
 
 
@@ -87,13 +91,13 @@ class VariableReplacer:
     """变量替换器"""
 
     # 内置变量模式
-    VARIABLE_PATTERN = re.compile(r'\{\{([^}]+)\}\}')
+    VARIABLE_PATTERN = re.compile(r"\{\{([^}]+)\}\}")
 
     @staticmethod
     def generate_random_string(length: int = 8) -> str:
         """生成密码学安全的随机字符串（用于漏洞探测标识符）"""
         charset = string.ascii_lowercase + string.digits
-        return ''.join(secrets.choice(charset) for _ in range(length))
+        return "".join(secrets.choice(charset) for _ in range(length))
 
     @staticmethod
     def generate_random_int(min_val: int = 1, max_val: int = 999999) -> int:
@@ -107,12 +111,7 @@ class VariableReplacer:
         return f"{random_id}.oast.fun"
 
     @classmethod
-    def replace(
-        cls,
-        text: str,
-        base_url: str,
-        custom_vars: Optional[Dict[str, str]] = None
-    ) -> str:
+    def replace(cls, text: str, base_url: str, custom_vars: Optional[Dict[str, str]] = None) -> str:
         """
         替换文本中的变量
 
@@ -143,24 +142,24 @@ class VariableReplacer:
 
         # 解析 URL
         parsed = urlparse(base_url)
-        hostname = parsed.hostname or ''
-        host = parsed.netloc or ''
-        port = str(parsed.port) if parsed.port else ('443' if parsed.scheme == 'https' else '80')
-        path = parsed.path or '/'
-        scheme = parsed.scheme or 'http'
+        hostname = parsed.hostname or ""
+        host = parsed.netloc or ""
+        port = str(parsed.port) if parsed.port else ("443" if parsed.scheme == "https" else "80")
+        path = parsed.path or "/"
+        scheme = parsed.scheme or "http"
         root_url = f"{scheme}://{host}"
 
         # 内置变量映射
         builtin_vars = {
-            'BaseURL': base_url.rstrip('/'),
-            'RootURL': root_url,
-            'Hostname': hostname,
-            'Host': host,
-            'Port': port,
-            'Path': path,
-            'Scheme': scheme,
-            'randstr': cls.generate_random_string(),
-            'interactsh-url': cls.generate_interactsh_url(),
+            "BaseURL": base_url.rstrip("/"),
+            "RootURL": root_url,
+            "Hostname": hostname,
+            "Host": host,
+            "Port": port,
+            "Path": path,
+            "Scheme": scheme,
+            "randstr": cls.generate_random_string(),
+            "interactsh-url": cls.generate_interactsh_url(),
         }
 
         # 合并自定义变量 (优先级更高)
@@ -173,7 +172,7 @@ class VariableReplacer:
             var_name = match.group(1).strip()
 
             # 处理 rand_int 函数
-            rand_int_match = re.match(r'rand_int\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)', var_name)
+            rand_int_match = re.match(r"rand_int\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)", var_name)
             if rand_int_match:
                 min_val = int(rand_int_match.group(1))
                 max_val = int(rand_int_match.group(2))
@@ -204,7 +203,7 @@ class PoCEngine:
         timeout: int = 10,
         verify_ssl: bool = False,
         proxy: Optional[str] = None,
-        max_redirects: int = 10
+        max_redirects: int = 10,
     ):
         """
         初始化 PoC 引擎
@@ -236,13 +235,11 @@ class PoCEngine:
                 self._session = get_client()
             elif HAS_REQUESTS:
                 import requests
+
                 self._session = requests.Session()
                 self._session.verify = self.verify_ssl
                 if self.proxy:
-                    self._session.proxies = {
-                        'http': self.proxy,
-                        'https': self.proxy
-                    }
+                    self._session.proxies = {"http": self.proxy, "https": self.proxy}
 
         return self._session
 
@@ -261,7 +258,7 @@ class PoCEngine:
             return None
 
         try:
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
             template = PoCTemplate.from_dict(data)
@@ -332,10 +329,7 @@ class PoCEngine:
             return list(self._templates.keys())
 
     def execute(
-        self,
-        target: str,
-        template: PoCTemplate,
-        variables: Optional[Dict[str, str]] = None
+        self, target: str, template: PoCTemplate, variables: Optional[Dict[str, str]] = None
     ) -> PoCResult:
         """
         执行 PoC
@@ -349,7 +343,7 @@ class PoCEngine:
             执行结果
         """
         start_time = time.time()
-        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
 
         try:
             # 获取要测试的路径
@@ -360,10 +354,10 @@ class PoCEngine:
                 replaced_path = VariableReplacer.replace(path, target, variables)
 
                 # 构建完整 URL
-                if replaced_path.startswith('http'):
+                if replaced_path.startswith("http"):
                     url = replaced_path
                 else:
-                    url = urljoin(target.rstrip('/') + '/', replaced_path.lstrip('/'))
+                    url = urljoin(target.rstrip("/") + "/", replaced_path.lstrip("/"))
 
                 # 替换请求头中的变量
                 headers = {}
@@ -381,7 +375,7 @@ class PoCEngine:
                     url=url,
                     headers=headers,
                     body=body,
-                    redirect=template.redirect
+                    redirect=template.redirect,
                 )
 
                 if response is None:
@@ -395,16 +389,12 @@ class PoCEngine:
                     template.matchers_condition,
                     status_code,
                     resp_body,
-                    resp_headers
+                    resp_headers,
                 )
 
                 if matched:
                     # 运行 Extractors
-                    extracted = self._run_extractors(
-                        template.extractors,
-                        resp_body,
-                        resp_headers
-                    )
+                    extracted = self._run_extractors(template.extractors, resp_body, resp_headers)
 
                     execution_time = (time.time() - start_time) * 1000
 
@@ -419,18 +409,18 @@ class PoCEngine:
                         extracted=extracted,
                         evidence=evidence[:500],  # 限制长度
                         request={
-                            'method': template.method,
-                            'url': url,
-                            'headers': headers,
-                            'body': body
+                            "method": template.method,
+                            "url": url,
+                            "headers": headers,
+                            "body": body,
                         },
                         response={
-                            'status_code': status_code,
-                            'headers': dict(resp_headers),
-                            'body_length': len(resp_body)
+                            "status_code": status_code,
+                            "headers": dict(resp_headers),
+                            "body_length": len(resp_body),
                         },
                         execution_time_ms=execution_time,
-                        timestamp=timestamp
+                        timestamp=timestamp,
                     )
 
                 # 如果设置了 stop_at_first_match，继续检查其他路径
@@ -448,7 +438,7 @@ class PoCEngine:
                 target=target,
                 matched=False,
                 execution_time_ms=execution_time,
-                timestamp=timestamp
+                timestamp=timestamp,
             )
 
         except Exception as e:
@@ -463,7 +453,7 @@ class PoCEngine:
                 target=target,
                 error=str(e),
                 execution_time_ms=execution_time,
-                timestamp=timestamp
+                timestamp=timestamp,
             )
 
     def execute_batch(
@@ -471,7 +461,7 @@ class PoCEngine:
         targets: List[str],
         template: PoCTemplate,
         variables: Optional[Dict[str, str]] = None,
-        concurrency: int = 10
+        concurrency: int = 10,
     ) -> List[PoCResult]:
         """
         批量执行 PoC
@@ -501,15 +491,17 @@ class PoCEngine:
                     results.append(result)
                 except Exception as e:
                     target = futures[future]
-                    results.append(PoCResult(
-                        success=False,
-                        vulnerable=False,
-                        template_id=template.id,
-                        template_name=template.name,
-                        target=target,
-                        error=str(e),
-                        timestamp=time.strftime('%Y-%m-%d %H:%M:%S')
-                    ))
+                    results.append(
+                        PoCResult(
+                            success=False,
+                            vulnerable=False,
+                            template_id=template.id,
+                            template_name=template.name,
+                            target=target,
+                            error=str(e),
+                            timestamp=time.strftime("%Y-%m-%d %H:%M:%S"),
+                        )
+                    )
 
         return results
 
@@ -519,7 +511,7 @@ class PoCEngine:
         url: str,
         headers: Dict[str, str],
         body: Optional[str],
-        redirect: bool = True
+        redirect: bool = True,
     ) -> Optional[Tuple[int, str, Dict[str, str]]]:
         """
         发送 HTTP 请求
@@ -550,13 +542,9 @@ class PoCEngine:
                     headers=headers,
                     data=body,
                     timeout=self.timeout,
-                    allow_redirects=redirect
+                    allow_redirects=redirect,
                 )
-                return (
-                    response.status_code,
-                    response.text,
-                    dict(response.headers)
-                )
+                return (response.status_code, response.text, dict(response.headers))
 
             elif HAS_REQUESTS:
                 # 使用 requests
@@ -566,13 +554,9 @@ class PoCEngine:
                     headers=headers,
                     data=body,
                     timeout=self.timeout,
-                    allow_redirects=redirect
+                    allow_redirects=redirect,
                 )
-                return (
-                    response.status_code,
-                    response.text,
-                    dict(response.headers)
-                )
+                return (response.status_code, response.text, dict(response.headers))
 
         except Exception as e:
             logger.debug(f"[PoCEngine] 请求失败 {url}: {e}")
@@ -584,7 +568,7 @@ class PoCEngine:
         condition: str,
         status_code: int,
         body: str,
-        headers: Dict[str, str]
+        headers: Dict[str, str],
     ) -> Tuple[bool, str, str]:
         """
         检查 Matchers
@@ -600,16 +584,14 @@ class PoCEngine:
             (是否匹配, Matcher 名称, 证据)
         """
         if not matchers:
-            return (False, '', '')
+            return (False, "", "")
 
         results = []
-        matched_name = ''
-        evidence = ''
+        matched_name = ""
+        evidence = ""
 
         for matcher in matchers:
-            matched, ev = self._check_single_matcher(
-                matcher, status_code, body, headers
-            )
+            matched, ev = self._check_single_matcher(matcher, status_code, body, headers)
 
             if matcher.negative:
                 matched = not matched
@@ -621,7 +603,7 @@ class PoCEngine:
                 evidence = ev
 
         # 条件判断
-        if condition.lower() == 'and':
+        if condition.lower() == "and":
             final_matched = all(results) if results else False
         else:  # or
             final_matched = any(results) if results else False
@@ -629,11 +611,7 @@ class PoCEngine:
         return (final_matched, matched_name, evidence)
 
     def _check_single_matcher(
-        self,
-        matcher: PoCMatcher,
-        status_code: int,
-        body: str,
-        headers: Dict[str, str]
+        self, matcher: PoCMatcher, status_code: int, body: str, headers: Dict[str, str]
     ) -> Tuple[bool, str]:
         """
         检查单个 Matcher
@@ -648,12 +626,12 @@ class PoCEngine:
             (是否匹配, 证据)
         """
         # 确定检查的内容
-        if matcher.part == 'header':
-            content = '\n'.join(f'{k}: {v}' for k, v in headers.items())
-        elif matcher.part == 'status':
+        if matcher.part == "header":
+            content = "\n".join(f"{k}: {v}" for k, v in headers.items())
+        elif matcher.part == "status":
             content = str(status_code)
-        elif matcher.part == 'all':
-            header_str = '\n'.join(f'{k}: {v}' for k, v in headers.items())
+        elif matcher.part == "all":
+            header_str = "\n".join(f"{k}: {v}" for k, v in headers.items())
             content = f"Status: {status_code}\n{header_str}\n\n{body}"
         else:  # body
             content = body
@@ -665,12 +643,12 @@ class PoCEngine:
         matcher_type = matcher.type.lower() if isinstance(matcher.type, str) else matcher.type
 
         # Word 匹配
-        if matcher_type == 'word':
+        if matcher_type == "word":
             words = matcher.words
             if matcher.case_insensitive:
                 words = [w.lower() for w in words]
 
-            if matcher.condition.lower() == 'and':
+            if matcher.condition.lower() == "and":
                 matched = all(w in content for w in words)
             else:
                 matched = any(w in content for w in words)
@@ -680,7 +658,7 @@ class PoCEngine:
                 return (True, f"Matched words: {', '.join(matched_words[:3])}")
 
         # Regex 匹配
-        elif matcher_type == 'regex':
+        elif matcher_type == "regex":
             for pattern in matcher.regex:
                 flags = re.IGNORECASE if matcher.case_insensitive else 0
                 match = re.search(pattern, content, flags)
@@ -688,17 +666,14 @@ class PoCEngine:
                     return (True, f"Regex matched: {match.group(0)[:100]}")
 
         # Status 匹配
-        elif matcher_type == 'status':
+        elif matcher_type == "status":
             if status_code in matcher.status:
                 return (True, f"Status code: {status_code}")
 
-        return (False, '')
+        return (False, "")
 
     def _run_extractors(
-        self,
-        extractors: List[PoCExtractor],
-        body: str,
-        headers: Dict[str, str]
+        self, extractors: List[PoCExtractor], body: str, headers: Dict[str, str]
     ) -> Dict[str, Any]:
         """
         运行 Extractors
@@ -720,28 +695,35 @@ class PoCEngine:
             name = extractor.name or f"extractor_{len(extracted)}"
 
             # 确定内容
-            if extractor.part == 'header':
-                content = '\n'.join(f'{k}: {v}' for k, v in headers.items())
+            if extractor.part == "header":
+                content = "\n".join(f"{k}: {v}" for k, v in headers.items())
             else:
                 content = body
 
-            extractor_type = extractor.type.lower() if isinstance(extractor.type, str) else extractor.type
+            extractor_type = (
+                extractor.type.lower() if isinstance(extractor.type, str) else extractor.type
+            )
 
             # Regex 提取
-            if extractor_type == 'regex':
+            if extractor_type == "regex":
                 for pattern in extractor.regex:
                     match = re.search(pattern, content)
                     if match:
                         if match.groups():
-                            extracted[name] = match.group(extractor.group) if len(match.groups()) >= extractor.group else match.group(0)
+                            extracted[name] = (
+                                match.group(extractor.group)
+                                if len(match.groups()) >= extractor.group
+                                else match.group(0)
+                            )
                         else:
                             extracted[name] = match.group(0)
                         break
 
             # JSON 提取
-            elif extractor_type == 'json':
+            elif extractor_type == "json":
                 try:
                     import json
+
                     data = json.loads(body)
                     for json_path in extractor.json_path:
                         value = self._extract_json_path(data, json_path)
@@ -767,7 +749,7 @@ class PoCEngine:
         if not path or not data:
             return None
 
-        parts = path.lstrip('.').split('.')
+        parts = path.lstrip(".").split(".")
         current = data
 
         for part in parts:
@@ -775,7 +757,7 @@ class PoCEngine:
                 continue
 
             # 数组索引
-            array_match = re.match(r'(\w+)\[(\d+)\]', part)
+            array_match = re.match(r"(\w+)\[(\d+)\]", part)
             if array_match:
                 key = array_match.group(1)
                 index = int(array_match.group(2))
@@ -797,7 +779,7 @@ class PoCEngine:
 
     def close(self):
         """关闭引擎"""
-        if self._session and HAS_REQUESTS and hasattr(self._session, 'close'):
+        if self._session and HAS_REQUESTS and hasattr(self._session, "close"):
             self._session.close()
             self._session = None
 
@@ -810,9 +792,7 @@ _engine_lock = threading.Lock()
 
 
 def get_poc_engine(
-    timeout: int = 10,
-    verify_ssl: bool = False,
-    proxy: Optional[str] = None
+    timeout: int = 10, verify_ssl: bool = False, proxy: Optional[str] = None
 ) -> PoCEngine:
     """
     获取全局 PoC 引擎
@@ -829,11 +809,7 @@ def get_poc_engine(
 
     with _engine_lock:
         if _engine is None:
-            _engine = PoCEngine(
-                timeout=timeout,
-                verify_ssl=verify_ssl,
-                proxy=proxy
-            )
+            _engine = PoCEngine(timeout=timeout, verify_ssl=verify_ssl, proxy=proxy)
 
     return _engine
 
@@ -856,9 +832,7 @@ def load_poc(path: str) -> Optional[PoCTemplate]:
 
 
 def execute_poc(
-    target: str,
-    template: PoCTemplate,
-    variables: Optional[Dict[str, str]] = None
+    target: str, template: PoCTemplate, variables: Optional[Dict[str, str]] = None
 ) -> PoCResult:
     """执行 PoC"""
     engine = get_poc_engine()
@@ -869,7 +843,7 @@ def execute_poc_batch(
     targets: List[str],
     template: PoCTemplate,
     variables: Optional[Dict[str, str]] = None,
-    concurrency: int = 10
+    concurrency: int = 10,
 ) -> List[PoCResult]:
     """批量执行 PoC"""
     engine = get_poc_engine()
@@ -877,30 +851,26 @@ def execute_poc_batch(
 
 
 # CLI 入口
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     logger.info("PoC Engine Test")
     logger.info("=" * 50)
 
     # 示例模板
     sample_template_data = {
-        'id': 'test-poc',
-        'info': {
-            'name': 'Test PoC Template',
-            'author': 'test',
-            'severity': 'medium',
-            'description': 'A test PoC template',
+        "id": "test-poc",
+        "info": {
+            "name": "Test PoC Template",
+            "author": "test",
+            "severity": "medium",
+            "description": "A test PoC template",
         },
-        'method': 'GET',
-        'path': '/',
-        'matchers': [
-            {
-                'type': 'status',
-                'status': [200, 301, 302]
-            }
-        ]
+        "method": "GET",
+        "path": "/",
+        "matchers": [{"type": "status", "status": [200, 301, 302]}],
     }
 
     engine = PoCEngine()

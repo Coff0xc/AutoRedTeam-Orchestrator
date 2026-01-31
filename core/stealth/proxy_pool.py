@@ -5,37 +5,40 @@
 """
 
 import asyncio
-import random
-import time
+import json
 import logging
+import os
+import random
 import re
-from typing import Dict, List, Optional, Tuple, Any, Set
+import threading
+import time
+from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from collections import defaultdict
-from urllib.parse import urlparse
-import threading
-import json
-import os
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
 # 尝试导入请求库
 try:
     import httpx
+
     HAS_HTTPX = True
 except ImportError:
     HAS_HTTPX = False
 
 try:
     import aiohttp
+
     HAS_AIOHTTP = True
 except ImportError:
     HAS_AIOHTTP = False
 
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -43,6 +46,7 @@ except ImportError:
 
 class ProxyType(Enum):
     """代理类型"""
+
     HTTP = "http"
     HTTPS = "https"
     SOCKS4 = "socks4"
@@ -51,6 +55,7 @@ class ProxyType(Enum):
 
 class ProxyAnonymity(Enum):
     """代理匿名级别"""
+
     TRANSPARENT = "transparent"  # 透明代理 (暴露真实IP)
     ANONYMOUS = "anonymous"  # 匿名代理 (隐藏IP但显示代理)
     ELITE = "elite"  # 高匿代理 (完全隐藏)
@@ -59,6 +64,7 @@ class ProxyAnonymity(Enum):
 @dataclass
 class Proxy:
     """代理实体"""
+
     host: str
     port: int
     proxy_type: ProxyType = ProxyType.HTTP
@@ -148,7 +154,7 @@ class ProxyValidator:
                 check_url,
                 proxies=proxy.dict_format,
                 timeout=self.timeout,
-                verify=False  # 某些代理有SSL问题
+                verify=False,  # 某些代理有SSL问题
             )
             response_time = time.time() - start_time
 
@@ -170,9 +176,7 @@ class ProxyValidator:
 
         try:
             async with httpx.AsyncClient(
-                proxies=proxy.dict_format,
-                timeout=self.timeout,
-                verify=False
+                proxies=proxy.dict_format, timeout=self.timeout, verify=False
             ) as client:
                 resp = await client.get(check_url)
                 response_time = time.time() - start_time
@@ -197,7 +201,7 @@ class ProxyValidator:
                 "http://httpbin.org/headers",
                 proxies=proxy.dict_format,
                 timeout=self.timeout,
-                verify=False
+                verify=False,
             )
 
             if resp.status_code != 200:
@@ -248,10 +252,9 @@ class ProxyPool:
             pass
     """
 
-    def __init__(self,
-                 max_fail_count: int = 3,
-                 check_interval: float = 300.0,
-                 auto_validate: bool = True):
+    def __init__(
+        self, max_fail_count: int = 3, check_interval: float = 300.0, auto_validate: bool = True
+    ):
         """
         Args:
             max_fail_count: 最大失败次数后移除
@@ -422,7 +425,7 @@ class ProxyPool:
             logger.error(f"Proxy file not found: {filepath}")
             return 0
 
-        content = path.read_text(encoding='utf-8')
+        content = path.read_text(encoding="utf-8")
 
         # 尝试JSON格式
         try:
@@ -445,7 +448,7 @@ class ProxyPool:
         added = 0
         for line in content.splitlines():
             line = line.strip()
-            if line and not line.startswith('#'):
+            if line and not line.startswith("#"):
                 if self.add_proxy(line, validate=False):
                     added += 1
 
@@ -457,7 +460,7 @@ class ProxyPool:
             proxies = [p.url for p in self._proxies if p.is_valid]
 
         path = Path(filepath)
-        path.write_text('\n'.join(proxies), encoding='utf-8')
+        path.write_text("\n".join(proxies), encoding="utf-8")
         logger.info(f"Saved {len(proxies)} proxies to {filepath}")
 
     async def validate_all_async(self, concurrency: int = 10) -> int:
@@ -518,8 +521,9 @@ class ProxyPool:
             "blacklisted": len(self._blacklist),
             "success_rate": (
                 self._stats["requests_success"] / self._stats["requests_made"]
-                if self._stats["requests_made"] > 0 else 0.0
-            )
+                if self._stats["requests_made"] > 0
+                else 0.0
+            ),
         }
 
     @property
@@ -549,12 +553,10 @@ class ProxyPool:
                 )
 
             # 简单格式: host:port
-            match = re.match(r'^([^:]+):(\d+)$', proxy_str)
+            match = re.match(r"^([^:]+):(\d+)$", proxy_str)
             if match:
                 return Proxy(
-                    host=match.group(1),
-                    port=int(match.group(2)),
-                    proxy_type=ProxyType.HTTP
+                    host=match.group(1), port=int(match.group(2)), proxy_type=ProxyType.HTTP
                 )
 
         except Exception as e:
@@ -609,7 +611,7 @@ class ProxyChain:
                     "password": p.password,
                 }
                 for p in self.proxies
-            ]
+            ],
         }
 
     def to_proxychains_config(self) -> str:
@@ -636,7 +638,7 @@ class ProxyChain:
             else:
                 lines.append(f"{proxy_type} {proxy.host} {proxy.port}")
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
 
 # 便捷函数
@@ -658,7 +660,7 @@ def get_free_proxy_sources() -> List[str]:
 
 if __name__ == "__main__":
     # 测试
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     pool = ProxyPool(auto_validate=False)
 
     # 添加测试代理

@@ -22,21 +22,16 @@
     # 解析目标
     host, port, protocol = parse_target("https://example.com:443")
 """
-import logging
 
-import socket
 import ipaddress
+import logging
 import re
-from typing import Optional, List, Tuple, Iterator, Union
+import socket
+from typing import Iterator, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 
 
-def is_port_open(
-    host: str,
-    port: int,
-    timeout: float = 3.0,
-    use_udp: bool = False
-) -> bool:
+def is_port_open(host: str, port: int, timeout: float = 3.0, use_udp: bool = False) -> bool:
     """
     检查端口是否开放
 
@@ -56,7 +51,7 @@ def is_port_open(
 
         if use_udp:
             # UDP端口检测：发送空包，检查是否收到ICMP端口不可达
-            sock.sendto(b'', (host, port))
+            sock.sendto(b"", (host, port))
             try:
                 sock.recvfrom(1024)
                 return True
@@ -76,11 +71,8 @@ def is_port_open(
         except Exception as exc:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
-def scan_ports(
-    host: str,
-    ports: Union[List[int], range, str],
-    timeout: float = 1.0
-) -> List[int]:
+
+def scan_ports(host: str, ports: Union[List[int], range, str], timeout: float = 1.0) -> List[int]:
     """
     扫描开放端口
 
@@ -165,12 +157,12 @@ def get_local_ip() -> str:
     try:
         # 创建一个UDP socket连接到外部地址（不实际发送数据）
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.connect(('8.8.8.8', 80))
+        sock.connect(("8.8.8.8", 80))
         ip = sock.getsockname()[0]
         sock.close()
         return ip
     except Exception:
-        return '127.0.0.1'
+        return "127.0.0.1"
 
 
 def get_all_local_ips() -> List[str]:
@@ -186,7 +178,7 @@ def get_all_local_ips() -> List[str]:
         ips = socket.gethostbyname_ex(hostname)[2]
 
         # 过滤回环地址
-        return [ip for ip in ips if not ip.startswith('127.')]
+        return [ip for ip in ips if not ip.startswith("127.")]
 
     except Exception:
         return [get_local_ip()]
@@ -232,24 +224,24 @@ def parse_target(target: str) -> Tuple[str, int, str]:
     """
     host = target
     port = 0
-    protocol = ''
+    protocol = ""
 
     # 检查是否是URL
-    if '://' in target:
+    if "://" in target:
         parsed = urlparse(target)
         protocol = parsed.scheme.lower()
-        host = parsed.hostname or ''
+        host = parsed.hostname or ""
         port = parsed.port or 0
 
         # 默认端口
         if port == 0:
-            default_ports = {'http': 80, 'https': 443, 'ftp': 21, 'ssh': 22}
+            default_ports = {"http": 80, "https": 443, "ftp": 21, "ssh": 22}
             port = default_ports.get(protocol, 0)
 
     # 检查是否带端口（非URL格式）
-    elif ':' in target and not target.startswith('['):  # 排除IPv6
+    elif ":" in target and not target.startswith("["):  # 排除IPv6
         # 可能是 host:port 格式
-        parts = target.rsplit(':', 1)
+        parts = target.rsplit(":", 1)
         if len(parts) == 2:
             try:
                 port = int(parts[1])
@@ -258,9 +250,9 @@ def parse_target(target: str) -> Tuple[str, int, str]:
                 pass
 
     # 处理IPv6地址
-    elif target.startswith('['):
+    elif target.startswith("["):
         # [IPv6]:port 格式
-        match = re.match(r'\[([^\]]+)\]:?(\d+)?', target)
+        match = re.match(r"\[([^\]]+)\]:?(\d+)?", target)
         if match:
             host = match.group(1)
             if match.group(2):
@@ -384,9 +376,9 @@ def parse_port_range(port_range: str) -> Iterator[int]:
     Yields:
         端口号
     """
-    for part in port_range.replace(' ', '').split(','):
-        if '-' in part:
-            start, end = part.split('-', 1)
+    for part in port_range.replace(" ", "").split(","):
+        if "-" in part:
+            start, end = part.split("-", 1)
             for port in range(int(start), int(end) + 1):
                 if 1 <= port <= 65535:
                     yield port
@@ -396,7 +388,7 @@ def parse_port_range(port_range: str) -> Iterator[int]:
                 yield port
 
 
-def normalize_url(url: str, default_scheme: str = 'https') -> str:
+def normalize_url(url: str, default_scheme: str = "https") -> str:
     """
     规范化URL
 
@@ -410,34 +402,30 @@ def normalize_url(url: str, default_scheme: str = 'https') -> str:
     url = url.strip()
 
     # 添加协议
-    if not url.startswith(('http://', 'https://')):
-        url = f'{default_scheme}://{url}'
+    if not url.startswith(("http://", "https://")):
+        url = f"{default_scheme}://{url}"
 
     # 解析并重建
     parsed = urlparse(url)
 
     # 移除默认端口
     netloc = parsed.netloc
-    if parsed.scheme == 'http' and netloc.endswith(':80'):
+    if parsed.scheme == "http" and netloc.endswith(":80"):
         netloc = netloc[:-3]
-    elif parsed.scheme == 'https' and netloc.endswith(':443'):
+    elif parsed.scheme == "https" and netloc.endswith(":443"):
         netloc = netloc[:-4]
 
     # 规范化路径
-    path = parsed.path or '/'
-    if not path.startswith('/'):
-        path = '/' + path
+    path = parsed.path or "/"
+    if not path.startswith("/"):
+        path = "/" + path
 
     # 重建URL
     from urllib.parse import urlunparse
-    return urlunparse((
-        parsed.scheme,
-        netloc,
-        path,
-        parsed.params,
-        parsed.query,
-        ''  # 移除fragment
-    ))
+
+    return urlunparse(
+        (parsed.scheme, netloc, path, parsed.params, parsed.query, "")  # 移除fragment
+    )
 
 
 def extract_domain(url: str) -> str:
@@ -450,11 +438,11 @@ def extract_domain(url: str) -> str:
     Returns:
         域名
     """
-    if '://' not in url:
-        url = 'https://' + url
+    if "://" not in url:
+        url = "https://" + url
 
     parsed = urlparse(url)
-    return parsed.hostname or ''
+    return parsed.hostname or ""
 
 
 def extract_root_domain(domain: str) -> str:
@@ -470,26 +458,45 @@ def extract_root_domain(domain: str) -> str:
     # 常见的公共后缀
     # 注意：完整实现应使用公共后缀列表（PSL）
     common_tlds = [
-        '.com', '.org', '.net', '.edu', '.gov', '.io', '.co', '.me',
-        '.cn', '.jp', '.uk', '.de', '.fr', '.ru', '.au', '.in',
-        '.com.cn', '.net.cn', '.org.cn', '.gov.cn', '.co.uk', '.co.jp'
+        ".com",
+        ".org",
+        ".net",
+        ".edu",
+        ".gov",
+        ".io",
+        ".co",
+        ".me",
+        ".cn",
+        ".jp",
+        ".uk",
+        ".de",
+        ".fr",
+        ".ru",
+        ".au",
+        ".in",
+        ".com.cn",
+        ".net.cn",
+        ".org.cn",
+        ".gov.cn",
+        ".co.uk",
+        ".co.jp",
     ]
 
-    domain = domain.lower().strip('.')
+    domain = domain.lower().strip(".")
 
     # 检查多级TLD
     for tld in common_tlds:
         if domain.endswith(tld):
             # 提取根域名
-            remaining = domain[:-len(tld)]
-            parts = remaining.rsplit('.', 1)
+            remaining = domain[: -len(tld)]
+            parts = remaining.rsplit(".", 1)
             root = parts[-1] if parts else remaining
             return root + tld
 
     # 默认取最后两个部分
-    parts = domain.split('.')
+    parts = domain.split(".")
     if len(parts) >= 2:
-        return '.'.join(parts[-2:])
+        return ".".join(parts[-2:])
 
     return domain
 
@@ -512,13 +519,13 @@ def get_service_banner(host: str, port: int, timeout: float = 5.0) -> Optional[s
         sock.connect((host, port))
 
         # 发送空请求触发响应
-        sock.send(b'\r\n')
+        sock.send(b"\r\n")
 
         # 接收响应
         banner = sock.recv(1024)
         sock.close()
 
-        return banner.decode('utf-8', errors='ignore').strip()
+        return banner.decode("utf-8", errors="ignore").strip()
 
     except Exception:
         return None
@@ -536,9 +543,9 @@ def is_valid_mac(mac: str) -> bool:
     """
     # 支持多种格式：AA:BB:CC:DD:EE:FF, AA-BB-CC-DD-EE-FF, AABBCCDDEEFF
     patterns = [
-        r'^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$',
-        r'^([0-9A-Fa-f]{2}-){5}[0-9A-Fa-f]{2}$',
-        r'^[0-9A-Fa-f]{12}$'
+        r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$",
+        r"^([0-9A-Fa-f]{2}-){5}[0-9A-Fa-f]{2}$",
+        r"^[0-9A-Fa-f]{12}$",
     ]
 
     for pattern in patterns:
@@ -549,24 +556,24 @@ def is_valid_mac(mac: str) -> bool:
 
 
 __all__ = [
-    'is_port_open',
-    'scan_ports',
-    'resolve_hostname',
-    'reverse_dns',
-    'get_local_ip',
-    'get_all_local_ips',
-    'get_hostname',
-    'get_fqdn',
-    'parse_target',
-    'cidr_to_hosts',
-    'ip_in_network',
-    'is_private_ip',
-    'is_reserved_ip',
-    'is_loopback_ip',
-    'parse_port_range',
-    'normalize_url',
-    'extract_domain',
-    'extract_root_domain',
-    'get_service_banner',
-    'is_valid_mac',
+    "is_port_open",
+    "scan_ports",
+    "resolve_hostname",
+    "reverse_dns",
+    "get_local_ip",
+    "get_all_local_ips",
+    "get_hostname",
+    "get_fqdn",
+    "parse_target",
+    "cidr_to_hosts",
+    "ip_in_network",
+    "is_private_ip",
+    "is_reserved_ip",
+    "is_loopback_ip",
+    "parse_port_range",
+    "normalize_url",
+    "extract_domain",
+    "extract_root_domain",
+    "get_service_banner",
+    "is_valid_mac",
 ]

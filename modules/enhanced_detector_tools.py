@@ -50,8 +50,7 @@ def register_enhanced_detector_tools(mcp):
     registered_tools.append("jwt_none_algorithm_test")
 
     @mcp.tool()
-    def jwt_algorithm_confusion_test(token: str, url: str = "",
-                                      public_key: str = "") -> dict:
+    def jwt_algorithm_confusion_test(token: str, url: str = "", public_key: str = "") -> dict:
         """JWT算法混淆攻击测试 - RS256->HS256绕过
 
         将RS256签名的Token改为HS256,使用公钥作为HMAC密钥
@@ -119,8 +118,7 @@ def register_enhanced_detector_tools(mcp):
     registered_tools.append("jwt_kid_injection_test")
 
     @mcp.tool()
-    def jwt_full_scan(token: str, url: str = "",
-                      public_key: str = "") -> dict:
+    def jwt_full_scan(token: str, url: str = "", public_key: str = "") -> dict:
         """JWT完整安全扫描 - 执行所有JWT安全测试
 
         Args:
@@ -187,8 +185,9 @@ def register_enhanced_detector_tools(mcp):
     registered_tools.append("cors_bypass_test")
 
     @mcp.tool()
-    def cors_preflight_test(url: str, origin: str = "https://evil.com",
-                            method: str = "PUT") -> dict:
+    def cors_preflight_test(
+        url: str, origin: str = "https://evil.com", method: str = "PUT"
+    ) -> dict:
         """CORS预检请求测试 - 测试OPTIONS请求处理
 
         Args:

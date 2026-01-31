@@ -5,11 +5,11 @@ result.py - 扫描结果定义模块
 定义漏洞信息和扫描结果的数据结构。
 """
 
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any
-from enum import Enum
-from datetime import datetime
 import json
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class Severity(Enum):
@@ -18,21 +18,22 @@ class Severity(Enum):
 
     遵循 CVSS v3.0 标准的严重性等级划分
     """
-    CRITICAL = 'critical'   # 严重 (CVSS 9.0-10.0)
-    HIGH = 'high'           # 高危 (CVSS 7.0-8.9)
-    MEDIUM = 'medium'       # 中危 (CVSS 4.0-6.9)
-    LOW = 'low'             # 低危 (CVSS 0.1-3.9)
-    INFO = 'info'           # 信息 (CVSS 0.0)
+
+    CRITICAL = "critical"  # 严重 (CVSS 9.0-10.0)
+    HIGH = "high"  # 高危 (CVSS 7.0-8.9)
+    MEDIUM = "medium"  # 中危 (CVSS 4.0-6.9)
+    LOW = "low"  # 低危 (CVSS 0.1-3.9)
+    INFO = "info"  # 信息 (CVSS 0.0)
 
     @property
     def score_range(self) -> tuple:
         """获取对应的CVSS分数范围"""
         ranges = {
-            'critical': (9.0, 10.0),
-            'high': (7.0, 8.9),
-            'medium': (4.0, 6.9),
-            'low': (0.1, 3.9),
-            'info': (0.0, 0.0),
+            "critical": (9.0, 10.0),
+            "high": (7.0, 8.9),
+            "medium": (4.0, 6.9),
+            "low": (0.1, 3.9),
+            "info": (0.0, 0.0),
         }
         return ranges.get(self.value, (0.0, 0.0))
 
@@ -40,11 +41,11 @@ class Severity(Enum):
     def priority(self) -> int:
         """获取优先级（数值越小优先级越高）"""
         priorities = {
-            'critical': 1,
-            'high': 2,
-            'medium': 3,
-            'low': 4,
-            'info': 5,
+            "critical": 1,
+            "high": 2,
+            "medium": 3,
+            "low": 4,
+            "info": 5,
         }
         return priorities.get(self.value, 5)
 
@@ -55,100 +56,101 @@ class VulnType(Enum):
 
     覆盖 OWASP Top 10 及常见漏洞类型
     """
+
     # 注入类
-    SQLI = 'sqli'                       # SQL注入
-    XSS = 'xss'                         # 跨站脚本
-    XXE = 'xxe'                         # XML外部实体注入
-    SSTI = 'ssti'                       # 模板注入
-    CMD_INJECTION = 'cmd_injection'     # 命令注入
-    LDAP_INJECTION = 'ldap_injection'   # LDAP注入
-    XPATH_INJECTION = 'xpath_injection' # XPath注入
+    SQLI = "sqli"  # SQL注入
+    XSS = "xss"  # 跨站脚本
+    XXE = "xxe"  # XML外部实体注入
+    SSTI = "ssti"  # 模板注入
+    CMD_INJECTION = "cmd_injection"  # 命令注入
+    LDAP_INJECTION = "ldap_injection"  # LDAP注入
+    XPATH_INJECTION = "xpath_injection"  # XPath注入
 
     # 服务端请求类
-    SSRF = 'ssrf'                       # 服务端请求伪造
-    LFI = 'lfi'                         # 本地文件包含
-    RFI = 'rfi'                         # 远程文件包含
-    PATH_TRAVERSAL = 'path_traversal'   # 目录穿越
+    SSRF = "ssrf"  # 服务端请求伪造
+    LFI = "lfi"  # 本地文件包含
+    RFI = "rfi"  # 远程文件包含
+    PATH_TRAVERSAL = "path_traversal"  # 目录穿越
 
     # 认证授权类
-    AUTH_BYPASS = 'auth_bypass'         # 认证绕过
-    WEAK_PASSWORD = 'weak_password'     # 弱密码
-    IDOR = 'idor'                       # 不安全的直接对象引用
-    BROKEN_ACCESS = 'broken_access'     # 失效的访问控制
-    SESSION_FIXATION = 'session_fixation'  # 会话固定
+    AUTH_BYPASS = "auth_bypass"  # 认证绕过
+    WEAK_PASSWORD = "weak_password"  # 弱密码
+    IDOR = "idor"  # 不安全的直接对象引用
+    BROKEN_ACCESS = "broken_access"  # 失效的访问控制
+    SESSION_FIXATION = "session_fixation"  # 会话固定
 
     # 跨站请求类
-    CSRF = 'csrf'                       # 跨站请求伪造
-    CORS = 'cors'                       # CORS配置错误
-    CLICKJACKING = 'clickjacking'       # 点击劫持
+    CSRF = "csrf"  # 跨站请求伪造
+    CORS = "cors"  # CORS配置错误
+    CLICKJACKING = "clickjacking"  # 点击劫持
 
     # 代码执行类
-    RCE = 'rce'                         # 远程代码执行
-    DESERIALIZATION = 'deserialization' # 不安全的反序列化
-    FILE_UPLOAD = 'file_upload'         # 任意文件上传
+    RCE = "rce"  # 远程代码执行
+    DESERIALIZATION = "deserialization"  # 不安全的反序列化
+    FILE_UPLOAD = "file_upload"  # 任意文件上传
 
     # 信息泄露类
-    INFO_DISCLOSURE = 'info_disclosure' # 信息泄露
-    SENSITIVE_DATA = 'sensitive_data'   # 敏感数据暴露
-    SOURCE_CODE_LEAK = 'source_code_leak'  # 源代码泄露
+    INFO_DISCLOSURE = "info_disclosure"  # 信息泄露
+    SENSITIVE_DATA = "sensitive_data"  # 敏感数据暴露
+    SOURCE_CODE_LEAK = "source_code_leak"  # 源代码泄露
 
     # 配置类
-    MISCONFIG = 'misconfig'             # 安全配置错误
-    DEFAULT_CREDS = 'default_creds'     # 默认凭证
-    DEBUG_ENABLED = 'debug_enabled'     # 调试功能开启
+    MISCONFIG = "misconfig"  # 安全配置错误
+    DEFAULT_CREDS = "default_creds"  # 默认凭证
+    DEBUG_ENABLED = "debug_enabled"  # 调试功能开启
 
     # API安全
-    JWT_VULN = 'jwt_vuln'               # JWT漏洞
-    API_ABUSE = 'api_abuse'             # API滥用
-    RATE_LIMIT = 'rate_limit'           # 缺乏速率限制
+    JWT_VULN = "jwt_vuln"  # JWT漏洞
+    API_ABUSE = "api_abuse"  # API滥用
+    RATE_LIMIT = "rate_limit"  # 缺乏速率限制
 
     # 其他
-    OPEN_REDIRECT = 'open_redirect'     # 开放重定向
-    DOS = 'dos'                         # 拒绝服务
-    PROTOTYPE_POLLUTION = 'prototype_pollution'  # 原型链污染
-    OTHER = 'other'                     # 其他漏洞
+    OPEN_REDIRECT = "open_redirect"  # 开放重定向
+    DOS = "dos"  # 拒绝服务
+    PROTOTYPE_POLLUTION = "prototype_pollution"  # 原型链污染
+    OTHER = "other"  # 其他漏洞
 
     @property
     def category(self) -> str:
         """获取漏洞分类"""
         categories = {
-            'sqli': 'injection',
-            'xss': 'injection',
-            'xxe': 'injection',
-            'ssti': 'injection',
-            'cmd_injection': 'injection',
-            'ldap_injection': 'injection',
-            'xpath_injection': 'injection',
-            'ssrf': 'server_side_request',
-            'lfi': 'server_side_request',
-            'rfi': 'server_side_request',
-            'path_traversal': 'server_side_request',
-            'auth_bypass': 'authentication',
-            'weak_password': 'authentication',
-            'idor': 'authorization',
-            'broken_access': 'authorization',
-            'session_fixation': 'authentication',
-            'csrf': 'cross_site',
-            'cors': 'cross_site',
-            'clickjacking': 'cross_site',
-            'rce': 'code_execution',
-            'deserialization': 'code_execution',
-            'file_upload': 'code_execution',
-            'info_disclosure': 'information',
-            'sensitive_data': 'information',
-            'source_code_leak': 'information',
-            'misconfig': 'configuration',
-            'default_creds': 'configuration',
-            'debug_enabled': 'configuration',
-            'jwt_vuln': 'api_security',
-            'api_abuse': 'api_security',
-            'rate_limit': 'api_security',
-            'open_redirect': 'other',
-            'dos': 'other',
-            'prototype_pollution': 'other',
-            'other': 'other',
+            "sqli": "injection",
+            "xss": "injection",
+            "xxe": "injection",
+            "ssti": "injection",
+            "cmd_injection": "injection",
+            "ldap_injection": "injection",
+            "xpath_injection": "injection",
+            "ssrf": "server_side_request",
+            "lfi": "server_side_request",
+            "rfi": "server_side_request",
+            "path_traversal": "server_side_request",
+            "auth_bypass": "authentication",
+            "weak_password": "authentication",
+            "idor": "authorization",
+            "broken_access": "authorization",
+            "session_fixation": "authentication",
+            "csrf": "cross_site",
+            "cors": "cross_site",
+            "clickjacking": "cross_site",
+            "rce": "code_execution",
+            "deserialization": "code_execution",
+            "file_upload": "code_execution",
+            "info_disclosure": "information",
+            "sensitive_data": "information",
+            "source_code_leak": "information",
+            "misconfig": "configuration",
+            "default_creds": "configuration",
+            "debug_enabled": "configuration",
+            "jwt_vuln": "api_security",
+            "api_abuse": "api_security",
+            "rate_limit": "api_security",
+            "open_redirect": "other",
+            "dos": "other",
+            "prototype_pollution": "other",
+            "other": "other",
         }
-        return categories.get(self.value, 'other')
+        return categories.get(self.value, "other")
 
 
 @dataclass
@@ -174,28 +176,29 @@ class Vulnerability:
         remediation: 修复建议
         references: 参考链接
     """
-    type: VulnType                          # 漏洞类型
-    severity: Severity                       # 严重程度
-    title: str                               # 漏洞标题
-    url: str                                 # 漏洞URL
+
+    type: VulnType  # 漏洞类型
+    severity: Severity  # 严重程度
+    title: str  # 漏洞标题
+    url: str  # 漏洞URL
 
     # 详情
-    param: Optional[str] = None              # 漏洞参数
-    payload: Optional[str] = None            # 使用的payload
-    evidence: Optional[str] = None           # 证据
-    request: Optional[str] = None            # 原始请求
-    response: Optional[str] = None           # 原始响应
+    param: Optional[str] = None  # 漏洞参数
+    payload: Optional[str] = None  # 使用的payload
+    evidence: Optional[str] = None  # 证据
+    request: Optional[str] = None  # 原始请求
+    response: Optional[str] = None  # 原始响应
 
     # 验证信息
-    verified: bool = False                   # 是否验证
-    confidence: float = 0.0                  # 置信度 0-1
+    verified: bool = False  # 是否验证
+    confidence: float = 0.0  # 置信度 0-1
 
     # 元数据
     detected_at: datetime = field(default_factory=datetime.now)
-    detector: Optional[str] = None           # 检测器名称
-    cve_id: Optional[str] = None             # CVE编号
-    cwe_id: Optional[str] = None             # CWE编号
-    cvss_score: Optional[float] = None       # CVSS分数
+    detector: Optional[str] = None  # 检测器名称
+    cve_id: Optional[str] = None  # CVE编号
+    cwe_id: Optional[str] = None  # CWE编号
+    cvss_score: Optional[float] = None  # CVSS分数
 
     # 修复建议
     remediation: Optional[str] = None
@@ -261,29 +264,29 @@ class Vulnerability:
             Dict[str, Any]: 字典表示
         """
         return {
-            'type': self.type.value,
-            'severity': self.severity.value,
-            'title': self.title,
-            'url': self.url,
-            'param': self.param,
-            'payload': self.payload,
-            'evidence': self.evidence,
-            'request': self.request,
-            'response': self.response,
-            'verified': self.verified,
-            'confidence': self.confidence,
-            'detected_at': self.detected_at.isoformat(),
-            'detector': self.detector,
-            'cve_id': self.cve_id,
-            'cwe_id': self.cwe_id,
-            'cvss_score': self.cvss_score,
-            'remediation': self.remediation,
-            'references': self.references,
-            'metadata': self.metadata,
+            "type": self.type.value,
+            "severity": self.severity.value,
+            "title": self.title,
+            "url": self.url,
+            "param": self.param,
+            "payload": self.payload,
+            "evidence": self.evidence,
+            "request": self.request,
+            "response": self.response,
+            "verified": self.verified,
+            "confidence": self.confidence,
+            "detected_at": self.detected_at.isoformat(),
+            "detector": self.detector,
+            "cve_id": self.cve_id,
+            "cwe_id": self.cwe_id,
+            "cvss_score": self.cvss_score,
+            "remediation": self.remediation,
+            "references": self.references,
+            "metadata": self.metadata,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Vulnerability':
+    def from_dict(cls, data: Dict[str, Any]) -> "Vulnerability":
         """
         从字典创建漏洞对象
 
@@ -294,25 +297,29 @@ class Vulnerability:
             Vulnerability: 漏洞对象
         """
         return cls(
-            type=VulnType(data['type']),
-            severity=Severity(data['severity']),
-            title=data['title'],
-            url=data['url'],
-            param=data.get('param'),
-            payload=data.get('payload'),
-            evidence=data.get('evidence'),
-            request=data.get('request'),
-            response=data.get('response'),
-            verified=data.get('verified', False),
-            confidence=data.get('confidence', 0.0),
-            detected_at=datetime.fromisoformat(data['detected_at']) if data.get('detected_at') else datetime.now(),
-            detector=data.get('detector'),
-            cve_id=data.get('cve_id'),
-            cwe_id=data.get('cwe_id'),
-            cvss_score=data.get('cvss_score'),
-            remediation=data.get('remediation'),
-            references=data.get('references', []),
-            metadata=data.get('metadata', {}),
+            type=VulnType(data["type"]),
+            severity=Severity(data["severity"]),
+            title=data["title"],
+            url=data["url"],
+            param=data.get("param"),
+            payload=data.get("payload"),
+            evidence=data.get("evidence"),
+            request=data.get("request"),
+            response=data.get("response"),
+            verified=data.get("verified", False),
+            confidence=data.get("confidence", 0.0),
+            detected_at=(
+                datetime.fromisoformat(data["detected_at"])
+                if data.get("detected_at")
+                else datetime.now()
+            ),
+            detector=data.get("detector"),
+            cve_id=data.get("cve_id"),
+            cwe_id=data.get("cwe_id"),
+            cvss_score=data.get("cvss_score"),
+            remediation=data.get("remediation"),
+            references=data.get("references", []),
+            metadata=data.get("metadata", {}),
         )
 
     def __str__(self) -> str:
@@ -351,14 +358,15 @@ class ScanResult:
         low_count: 低危漏洞数
         info_count: 信息级别数
     """
-    session_id: str                          # 会话ID
-    target: str                              # 目标
-    status: str                              # 扫描状态
+
+    session_id: str  # 会话ID
+    target: str  # 目标
+    status: str  # 扫描状态
 
     # 时间
-    started_at: datetime                     # 开始时间
-    ended_at: Optional[datetime] = None      # 结束时间
-    duration: Optional[float] = None         # 持续时间（秒）
+    started_at: datetime  # 开始时间
+    ended_at: Optional[datetime] = None  # 结束时间
+    duration: Optional[float] = None  # 持续时间（秒）
 
     # 结果
     vulnerabilities: List[Vulnerability] = field(default_factory=list)
@@ -457,7 +465,7 @@ class ScanResult:
         设置结束时间并计算统计
         """
         self.ended_at = datetime.now()
-        self.status = 'completed'
+        self.status = "completed"
         self.calculate_stats()
 
     def fail(self, error: str = None) -> None:
@@ -468,9 +476,9 @@ class ScanResult:
             error: 错误信息
         """
         self.ended_at = datetime.now()
-        self.status = 'failed'
+        self.status = "failed"
         if error:
-            self.metadata['error'] = error
+            self.metadata["error"] = error
         self.calculate_stats()
 
     def get_vulns_by_severity(self, severity: Severity) -> List[Vulnerability]:
@@ -516,24 +524,24 @@ class ScanResult:
         self.calculate_stats()
 
         return {
-            'session_id': self.session_id,
-            'target': self.target,
-            'status': self.status,
-            'started_at': self.started_at.isoformat(),
-            'ended_at': self.ended_at.isoformat() if self.ended_at else None,
-            'duration': self.duration,
-            'total_vulns': self.total_vulns,
-            'by_severity': {
-                'critical': self.critical_count,
-                'high': self.high_count,
-                'medium': self.medium_count,
-                'low': self.low_count,
-                'info': self.info_count,
+            "session_id": self.session_id,
+            "target": self.target,
+            "status": self.status,
+            "started_at": self.started_at.isoformat(),
+            "ended_at": self.ended_at.isoformat() if self.ended_at else None,
+            "duration": self.duration,
+            "total_vulns": self.total_vulns,
+            "by_severity": {
+                "critical": self.critical_count,
+                "high": self.high_count,
+                "medium": self.medium_count,
+                "low": self.low_count,
+                "info": self.info_count,
             },
-            'total_requests': self.total_requests,
-            'errors_count': self.errors_count,
-            'technologies_count': len(self.technologies),
-            'subdomains_count': len(self.subdomains),
+            "total_requests": self.total_requests,
+            "errors_count": self.errors_count,
+            "technologies_count": len(self.technologies),
+            "subdomains_count": len(self.subdomains),
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -546,33 +554,33 @@ class ScanResult:
         self.calculate_stats()
 
         return {
-            'session_id': self.session_id,
-            'target': self.target,
-            'status': self.status,
-            'started_at': self.started_at.isoformat(),
-            'ended_at': self.ended_at.isoformat() if self.ended_at else None,
-            'duration': self.duration,
-            'vulnerabilities': [v.to_dict() for v in self.vulnerabilities],
-            'fingerprints': self.fingerprints,
-            'technologies': self.technologies,
-            'ports': self.ports,
-            'subdomains': self.subdomains,
-            'stats': {
-                'total_requests': self.total_requests,
-                'total_vulns': self.total_vulns,
-                'critical_count': self.critical_count,
-                'high_count': self.high_count,
-                'medium_count': self.medium_count,
-                'low_count': self.low_count,
-                'info_count': self.info_count,
-                'errors_count': self.errors_count,
+            "session_id": self.session_id,
+            "target": self.target,
+            "status": self.status,
+            "started_at": self.started_at.isoformat(),
+            "ended_at": self.ended_at.isoformat() if self.ended_at else None,
+            "duration": self.duration,
+            "vulnerabilities": [v.to_dict() for v in self.vulnerabilities],
+            "fingerprints": self.fingerprints,
+            "technologies": self.technologies,
+            "ports": self.ports,
+            "subdomains": self.subdomains,
+            "stats": {
+                "total_requests": self.total_requests,
+                "total_vulns": self.total_vulns,
+                "critical_count": self.critical_count,
+                "high_count": self.high_count,
+                "medium_count": self.medium_count,
+                "low_count": self.low_count,
+                "info_count": self.info_count,
+                "errors_count": self.errors_count,
             },
-            'scan_config': self.scan_config,
-            'metadata': self.metadata,
+            "scan_config": self.scan_config,
+            "metadata": self.metadata,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ScanResult':
+    def from_dict(cls, data: Dict[str, Any]) -> "ScanResult":
         """
         从字典创建结果对象
 
@@ -584,34 +592,34 @@ class ScanResult:
         """
         # 解析漏洞列表
         vulns = []
-        for v_data in data.get('vulnerabilities', []):
+        for v_data in data.get("vulnerabilities", []):
             vulns.append(Vulnerability.from_dict(v_data))
 
         # 解析统计数据
-        stats = data.get('stats', {})
+        stats = data.get("stats", {})
 
         result = cls(
-            session_id=data['session_id'],
-            target=data['target'],
-            status=data['status'],
-            started_at=datetime.fromisoformat(data['started_at']),
-            ended_at=datetime.fromisoformat(data['ended_at']) if data.get('ended_at') else None,
-            duration=data.get('duration'),
+            session_id=data["session_id"],
+            target=data["target"],
+            status=data["status"],
+            started_at=datetime.fromisoformat(data["started_at"]),
+            ended_at=datetime.fromisoformat(data["ended_at"]) if data.get("ended_at") else None,
+            duration=data.get("duration"),
             vulnerabilities=vulns,
-            fingerprints=data.get('fingerprints', {}),
-            technologies=data.get('technologies', []),
-            ports=data.get('ports', []),
-            subdomains=data.get('subdomains', []),
-            total_requests=stats.get('total_requests', 0),
-            total_vulns=stats.get('total_vulns', 0),
-            critical_count=stats.get('critical_count', 0),
-            high_count=stats.get('high_count', 0),
-            medium_count=stats.get('medium_count', 0),
-            low_count=stats.get('low_count', 0),
-            info_count=stats.get('info_count', 0),
-            errors_count=stats.get('errors_count', 0),
-            scan_config=data.get('scan_config', {}),
-            metadata=data.get('metadata', {}),
+            fingerprints=data.get("fingerprints", {}),
+            technologies=data.get("technologies", []),
+            ports=data.get("ports", []),
+            subdomains=data.get("subdomains", []),
+            total_requests=stats.get("total_requests", 0),
+            total_vulns=stats.get("total_vulns", 0),
+            critical_count=stats.get("critical_count", 0),
+            high_count=stats.get("high_count", 0),
+            medium_count=stats.get("medium_count", 0),
+            low_count=stats.get("low_count", 0),
+            info_count=stats.get("info_count", 0),
+            errors_count=stats.get("errors_count", 0),
+            scan_config=data.get("scan_config", {}),
+            metadata=data.get("metadata", {}),
         )
 
         return result

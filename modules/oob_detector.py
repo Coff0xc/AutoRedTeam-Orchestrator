@@ -3,21 +3,22 @@
 OOB带外检测模块 - 支持盲SSRF/XXE/SQLi检测
 集成 Interactsh 和 DNSLog 平台
 """
-import logging
 
-import os
-import re
-import time
-import uuid
 import base64
 import hashlib
+import logging
+import os
+import re
 import threading
-from typing import Dict, List, Optional, Tuple
+import time
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -25,6 +26,7 @@ except ImportError:
 # 统一 HTTP 客户端工厂
 try:
     from core.http import get_sync_client
+
     HAS_HTTP_FACTORY = True
 except ImportError:
     HAS_HTTP_FACTORY = False
@@ -33,6 +35,7 @@ except ImportError:
 @dataclass
 class OOBInteraction:
     """OOB交互记录"""
+
     timestamp: str
     protocol: str  # dns, http, smtp
     remote_address: str
@@ -43,6 +46,7 @@ class OOBInteraction:
 @dataclass
 class OOBResult:
     """OOB检测结果"""
+
     success: bool
     vuln_type: str
     interactions: List[OOBInteraction] = field(default_factory=list)
@@ -110,13 +114,15 @@ class InteractshClient:
             if resp.status_code == 200:
                 data = resp.json()
                 for item in data.get("data", []):
-                    interactions.append(OOBInteraction(
-                        timestamp=item.get("timestamp", datetime.now().isoformat()),
-                        protocol=item.get("protocol", "unknown"),
-                        remote_address=item.get("remote-address", ""),
-                        raw_request=item.get("raw-request", ""),
-                        identifier=item.get("unique-id", "")
-                    ))
+                    interactions.append(
+                        OOBInteraction(
+                            timestamp=item.get("timestamp", datetime.now().isoformat()),
+                            protocol=item.get("protocol", "unknown"),
+                            remote_address=item.get("remote-address", ""),
+                            raw_request=item.get("raw-request", ""),
+                            identifier=item.get("unique-id", ""),
+                        )
+                    )
         except Exception as exc:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
@@ -137,7 +143,7 @@ class DNSLogClient:
         "ceye": {
             "domain": "{identifier}.ceye.io",
             "api": "http://api.ceye.io/v1/records?token={token}&type={type}",
-        }
+        },
     }
 
     def __init__(self, platform: str = "dnslog", token: str = None):
@@ -182,12 +188,14 @@ class DNSLogClient:
                 if resp.status_code == 200:
                     records = resp.json() if resp.text.startswith("[") else []
                     for record in records:
-                        interactions.append(OOBInteraction(
-                            timestamp=datetime.now().isoformat(),
-                            protocol="dns",
-                            remote_address=record.get("ip", ""),
-                            identifier=record.get("subdomain", "")
-                        ))
+                        interactions.append(
+                            OOBInteraction(
+                                timestamp=datetime.now().isoformat(),
+                                protocol="dns",
+                                remote_address=record.get("ip", ""),
+                                identifier=record.get("subdomain", ""),
+                            )
+                        )
             except Exception as exc:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
@@ -307,15 +315,15 @@ class OOBDetector:
 
         for template in templates:
             payload = template.format(
-                callback=callback_url.replace("http://", ""),
-                callback_dns=callback_dns
+                callback=callback_url.replace("http://", ""), callback_dns=callback_dns
             )
             payloads.append(payload)
 
         return payloads
 
-    def inject_and_wait(self, url: str, param: str, vuln_type: str,
-                        timeout: int = 30, method: str = "GET") -> OOBResult:
+    def inject_and_wait(
+        self, url: str, param: str, vuln_type: str, timeout: int = 30, method: str = "GET"
+    ) -> OOBResult:
         """
         注入Payload并等待回调
 
@@ -334,13 +342,19 @@ class OOBDetector:
 
         payloads = self.get_payloads(vuln_type)
         if not payloads:
-            return OOBResult(success=False, vuln_type=vuln_type, error=f"无{vuln_type}类型的Payload")
+            return OOBResult(
+                success=False, vuln_type=vuln_type, error=f"无{vuln_type}类型的Payload"
+            )
 
         # 发送所有Payload
         for payload in payloads:
             try:
                 if method.upper() == "GET":
-                    test_url = f"{url}?{param}={requests.utils.quote(payload)}" if "?" not in url else f"{url}&{param}={requests.utils.quote(payload)}"
+                    test_url = (
+                        f"{url}?{param}={requests.utils.quote(payload)}"
+                        if "?" not in url
+                        else f"{url}&{param}={requests.utils.quote(payload)}"
+                    )
                     requests.get(test_url, timeout=10, verify=False)
                 else:
                     requests.post(url, data={param: payload}, timeout=10, verify=False)
@@ -363,7 +377,7 @@ class OOBDetector:
             vuln_type=vuln_type,
             interactions=interactions,
             callback_url=self.callback_domain,
-            payload_used=payloads[0] if payloads else ""
+            payload_used=payloads[0] if payloads else "",
         )
 
     def check_interactions(self) -> List[OOBInteraction]:
@@ -377,8 +391,7 @@ def create_oob_detector(platform: str = "interactsh") -> OOBDetector:
     return OOBDetector(platform=platform)
 
 
-def quick_oob_test(url: str, param: str, vuln_type: str = "ssrf",
-                   timeout: int = 30) -> Dict:
+def quick_oob_test(url: str, param: str, vuln_type: str = "ssrf", timeout: int = 30) -> Dict:
     """
     快速OOB测试
 

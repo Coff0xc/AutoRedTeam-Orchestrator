@@ -16,18 +16,18 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from .mutator import PayloadMutator, mutate_for_waf, mutate_payload
+from .selector import SmartPayloadSelector, get_selector
+from .signatures import WAF_BYPASS_STRATEGIES, TargetProfile
 from .types import (
-    PayloadStats,
+    PayloadCategory,
     PayloadResult,
+    PayloadStats,
     ScoredPayload,
     VulnType,
-    PayloadCategory,
-    get_payload_key,
     get_payload_hash,
+    get_payload_key,
 )
-from .signatures import TargetProfile, WAF_BYPASS_STRATEGIES
-from .mutator import PayloadMutator, mutate_payload, mutate_for_waf
-from .selector import SmartPayloadSelector, get_selector
 
 logger = logging.getLogger(__name__)
 
@@ -198,8 +198,7 @@ class AdaptivePayloadEngine:
         if vuln_type:
             # 过滤特定类型
             relevant_stats = {
-                k: v for k, v in self.selector.stats.items()
-                if k.startswith(vuln_type)
+                k: v for k, v in self.selector.stats.items() if k.startswith(vuln_type)
             }
             filtered_success = sum(s.success_count for s in relevant_stats.values())
             filtered_total = sum(s.total_uses for s in relevant_stats.values())
@@ -309,10 +308,7 @@ class AdaptivePayloadEngine:
         if not keywords:
             return payloads
 
-        filtered = [
-            p for p in payloads
-            if any(kw in p.lower() for kw in keywords)
-        ]
+        filtered = [p for p in payloads if any(kw in p.lower() for kw in keywords)]
 
         return filtered if filtered else payloads
 

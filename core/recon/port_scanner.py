@@ -18,14 +18,13 @@ port_scanner.py - 纯Python端口扫描器
     results = scanner.scan_top_ports("192.168.1.1", top=100)
 """
 
-import socket
 import asyncio
 import logging
+import socket
 import threading
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any, Set, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +42,7 @@ class PortInfo:
         version: 版本信息
         metadata: 额外元数据
     """
+
     port: int
     state: str = "unknown"  # open, closed, filtered, unknown
     service: Optional[str] = None
@@ -198,16 +198,103 @@ class PortScanner:
 
     # Top 100 常用端口
     TOP_100_PORTS: List[int] = [
-        21, 22, 23, 25, 53, 80, 110, 111, 135, 139,
-        143, 443, 445, 993, 995, 1433, 1521, 1723, 3306, 3389,
-        5432, 5900, 6379, 8080, 8443, 8888, 27017,
-        20, 69, 123, 137, 138, 161, 389, 464, 500, 514,
-        548, 587, 631, 636, 873, 902, 989, 990, 1080, 1194,
-        1434, 1883, 2049, 2082, 2083, 2181, 2375, 2376, 2379, 3000,
-        3128, 3268, 3690, 4369, 5000, 5601, 5672, 5984, 6000, 6443,
-        6666, 7001, 7002, 8000, 8008, 8009, 8081, 8088, 8500, 8834,
-        9000, 9042, 9090, 9092, 9200, 9300, 9418, 10000, 10250, 11211,
-        15672, 27018, 50000, 50070, 50075, 179, 119, 162, 543, 544,
+        21,
+        22,
+        23,
+        25,
+        53,
+        80,
+        110,
+        111,
+        135,
+        139,
+        143,
+        443,
+        445,
+        993,
+        995,
+        1433,
+        1521,
+        1723,
+        3306,
+        3389,
+        5432,
+        5900,
+        6379,
+        8080,
+        8443,
+        8888,
+        27017,
+        20,
+        69,
+        123,
+        137,
+        138,
+        161,
+        389,
+        464,
+        500,
+        514,
+        548,
+        587,
+        631,
+        636,
+        873,
+        902,
+        989,
+        990,
+        1080,
+        1194,
+        1434,
+        1883,
+        2049,
+        2082,
+        2083,
+        2181,
+        2375,
+        2376,
+        2379,
+        3000,
+        3128,
+        3268,
+        3690,
+        4369,
+        5000,
+        5601,
+        5672,
+        5984,
+        6000,
+        6443,
+        6666,
+        7001,
+        7002,
+        8000,
+        8008,
+        8009,
+        8081,
+        8088,
+        8500,
+        8834,
+        9000,
+        9042,
+        9090,
+        9092,
+        9200,
+        9300,
+        9418,
+        10000,
+        10250,
+        11211,
+        15672,
+        27018,
+        50000,
+        50070,
+        50075,
+        179,
+        119,
+        162,
+        543,
+        544,
     ]
 
     def __init__(
@@ -215,7 +302,7 @@ class PortScanner:
         timeout: float = 3.0,
         max_threads: int = 100,
         grab_banner: bool = True,
-        resolve_service: bool = True
+        resolve_service: bool = True,
     ):
         """初始化端口扫描器
 
@@ -237,10 +324,7 @@ class PortScanner:
         self._logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     def scan(
-        self,
-        host: str,
-        ports: str = "1-1000",
-        threads: Optional[int] = None
+        self, host: str, ports: str = "1-1000", threads: Optional[int] = None
     ) -> List[PortInfo]:
         """同步扫描端口
 
@@ -259,10 +343,7 @@ class PortScanner:
         self._logger.info(f"Scanning {host} ports: {len(port_list)} ports with {threads} threads")
 
         with ThreadPoolExecutor(max_workers=threads) as executor:
-            futures = {
-                executor.submit(self._scan_port, host, port): port
-                for port in port_list
-            }
+            futures = {executor.submit(self._scan_port, host, port): port for port in port_list}
 
             for future in as_completed(futures):
                 if self._stop_flag.is_set():
@@ -279,10 +360,7 @@ class PortScanner:
         return sorted(results, key=lambda x: x.port)
 
     async def async_scan(
-        self,
-        host: str,
-        ports: str = "1-1000",
-        concurrency: int = 100
+        self, host: str, ports: str = "1-1000", concurrency: int = 100
     ) -> List[PortInfo]:
         """异步扫描端口
 
@@ -316,10 +394,7 @@ class PortScanner:
         return sorted(results, key=lambda x: x.port)
 
     def scan_top_ports(
-        self,
-        host: str,
-        top: int = 100,
-        threads: Optional[int] = None
+        self, host: str, top: int = 100, threads: Optional[int] = None
     ) -> List[PortInfo]:
         """扫描Top常用端口
 
@@ -336,10 +411,7 @@ class PortScanner:
         return self.scan(host, ports, threads)
 
     async def async_scan_top_ports(
-        self,
-        host: str,
-        top: int = 100,
-        concurrency: int = 100
+        self, host: str, top: int = 100, concurrency: int = 100
     ) -> List[PortInfo]:
         """异步扫描Top常用端口"""
         top = min(top, len(self.TOP_100_PORTS))
@@ -390,11 +462,7 @@ class PortScanner:
                 sock.close()
 
                 return PortInfo(
-                    port=port,
-                    state="open",
-                    service=service,
-                    banner=banner,
-                    protocol="tcp"
+                    port=port, state="open", service=service, banner=banner, protocol="tcp"
                 )
             else:
                 sock.close()
@@ -429,10 +497,7 @@ class PortScanner:
             if self.grab_banner:
                 try:
                     # 尝试读取Banner
-                    data = await asyncio.wait_for(
-                        reader.read(1024),
-                        timeout=min(2.0, self.timeout)
-                    )
+                    data = await asyncio.wait_for(reader.read(1024), timeout=min(2.0, self.timeout))
                     if data:
                         banner = data.decode("utf-8", errors="replace").strip()
                 except asyncio.TimeoutError:
@@ -441,13 +506,7 @@ class PortScanner:
             writer.close()
             await writer.wait_closed()
 
-            return PortInfo(
-                port=port,
-                state="open",
-                service=service,
-                banner=banner,
-                protocol="tcp"
-            )
+            return PortInfo(port=port, state="open", service=service, banner=banner, protocol="tcp")
 
         except asyncio.TimeoutError:
             return PortInfo(port=port, state="filtered")
@@ -504,8 +563,8 @@ class PortScanner:
             25: b"EHLO test\r\n",
             110: b"",  # POP3 会主动发送Banner
             143: b"",  # IMAP 会主动发送Banner
-            21: b"",   # FTP 会主动发送Banner
-            22: b"",   # SSH 会主动发送Banner
+            21: b"",  # FTP 会主动发送Banner
+            22: b"",  # SSH 会主动发送Banner
         }
         return probes.get(port)
 
@@ -593,15 +652,12 @@ class PortScanner:
     @classmethod
     def get_top_ports(cls, top: int = 100) -> List[int]:
         """获取Top N常用端口列表"""
-        return cls.TOP_100_PORTS[:min(top, len(cls.TOP_100_PORTS))]
+        return cls.TOP_100_PORTS[: min(top, len(cls.TOP_100_PORTS))]
 
 
 # 便捷函数
 def scan_ports(
-    host: str,
-    ports: str = "1-1000",
-    timeout: float = 3.0,
-    threads: int = 100
+    host: str, ports: str = "1-1000", timeout: float = 3.0, threads: int = 100
 ) -> List[PortInfo]:
     """便捷函数：扫描端口
 
@@ -619,10 +675,7 @@ def scan_ports(
 
 
 async def async_scan_ports(
-    host: str,
-    ports: str = "1-1000",
-    timeout: float = 3.0,
-    concurrency: int = 100
+    host: str, ports: str = "1-1000", timeout: float = 3.0, concurrency: int = 100
 ) -> List[PortInfo]:
     """便捷函数：异步扫描端口"""
     scanner = PortScanner(timeout=timeout)

@@ -6,14 +6,14 @@ AutoRedTeam-Orchestrator 扫描异常
 
 from __future__ import annotations
 
-from typing import Optional, Any
+from typing import Any, Optional
 
 from .base import AutoRedTeamError
-
 
 # ============================================================================
 # 扫描错误
 # ============================================================================
+
 
 class ScanError(AutoRedTeamError):
     """
@@ -25,12 +25,7 @@ class ScanError(AutoRedTeamError):
         target: 扫描目标
     """
 
-    def __init__(
-        self,
-        message: str,
-        target: Optional[str] = None,
-        **kwargs: Any
-    ):
+    def __init__(self, message: str, target: Optional[str] = None, **kwargs: Any):
         """
         初始化扫描错误
 
@@ -42,7 +37,7 @@ class ScanError(AutoRedTeamError):
         super().__init__(message, **kwargs)
         self.target = target
         if target:
-            self.details['target'] = target
+            self.details["target"] = target
 
 
 class TargetUnreachable(ScanError):
@@ -55,6 +50,7 @@ class TargetUnreachable(ScanError):
         >>> raise TargetUnreachable("目标主机离线", target="192.168.1.100")
         >>> raise TargetUnreachable("端口未开放", target="192.168.1.100:8080")
     """
+
     pass
 
 
@@ -74,7 +70,7 @@ class ScanTimeout(ScanError):
         message: str,
         elapsed: Optional[float] = None,
         limit: Optional[float] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         """
         初始化扫描超时错误
@@ -89,9 +85,9 @@ class ScanTimeout(ScanError):
         self.elapsed = elapsed
         self.limit = limit
         if elapsed is not None:
-            self.details['elapsed'] = elapsed
+            self.details["elapsed"] = elapsed
         if limit is not None:
-            self.details['limit'] = limit
+            self.details["limit"] = limit
 
 
 class RateLimited(ScanError):
@@ -105,10 +101,7 @@ class RateLimited(ScanError):
     """
 
     def __init__(
-        self,
-        message: str = "请求被限流",
-        retry_after: Optional[int] = None,
-        **kwargs: Any
+        self, message: str = "请求被限流", retry_after: Optional[int] = None, **kwargs: Any
     ):
         """
         初始化限流错误
@@ -121,12 +114,13 @@ class RateLimited(ScanError):
         super().__init__(message, **kwargs)
         self.retry_after = retry_after
         if retry_after is not None:
-            self.details['retry_after'] = retry_after
+            self.details["retry_after"] = retry_after
 
 
 # ============================================================================
 # 检测器错误
 # ============================================================================
+
 
 class DetectorError(AutoRedTeamError):
     """
@@ -138,12 +132,7 @@ class DetectorError(AutoRedTeamError):
         detector_name: 检测器名称
     """
 
-    def __init__(
-        self,
-        message: str,
-        detector_name: Optional[str] = None,
-        **kwargs: Any
-    ):
+    def __init__(self, message: str, detector_name: Optional[str] = None, **kwargs: Any):
         """
         初始化检测器错误
 
@@ -155,7 +144,7 @@ class DetectorError(AutoRedTeamError):
         super().__init__(message, **kwargs)
         self.detector_name = detector_name
         if detector_name:
-            self.details['detector'] = detector_name
+            self.details["detector"] = detector_name
 
 
 class PayloadError(DetectorError):
@@ -167,6 +156,7 @@ class PayloadError(DetectorError):
     示例:
         >>> raise PayloadError("Payload编码失败", details={"encoding": "base64", "reason": "invalid characters"})
     """
+
     pass
 
 
@@ -180,6 +170,7 @@ class ValidationError(DetectorError):
         >>> raise ValidationError("URL格式无效", details={"url": "not-a-valid-url"})
         >>> raise ValidationError("必填参数缺失", details={"missing": ["target", "port"]})
     """
+
     pass
 
 
@@ -192,18 +183,19 @@ class DetectionTimeout(DetectorError):
     示例:
         >>> raise DetectionTimeout("SQL注入检测超时", detector_name="sqli_detector")
     """
+
     pass
 
 
 __all__ = [
     # 扫描错误
-    'ScanError',
-    'TargetUnreachable',
-    'ScanTimeout',
-    'RateLimited',
+    "ScanError",
+    "TargetUnreachable",
+    "ScanTimeout",
+    "RateLimited",
     # 检测器错误
-    'DetectorError',
-    'PayloadError',
-    'ValidationError',
-    'DetectionTimeout',
+    "DetectorError",
+    "PayloadError",
+    "ValidationError",
+    "DetectionTimeout",
 ]
