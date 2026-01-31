@@ -158,6 +158,10 @@ class DirectoryScanner:
         ".DS_Store", "Thumbs.db",
     ]
 
+    # 词表缓存（类级别，所有实例共享）
+    _WORDLIST_CACHE: Dict[str, List[str]] = {}
+    _CACHE_LOCK = threading.Lock()
+
     def __init__(
         self,
         timeout: float = 10.0,
@@ -452,7 +456,7 @@ class DirectoryScanner:
         custom_wordlist: Optional[List[str]] = None,
         include_sensitive: bool = True
     ) -> List[str]:
-        """加载字典
+        """加载字典（带缓存）
 
         Args:
             custom_wordlist: 自定义字典列表
@@ -461,27 +465,38 @@ class DirectoryScanner:
         Returns:
             路径列表
         """
-        paths: Set[str] = set()
+        # 计算缓存键（基于 wordlist 路径）
+        cache_key = self.wordlist or "__builtin__"
+
+        with self._CACHE_LOCK:
+            if cache_key not in self._WORDLIST_CACHE:
+                # 缓存未命中，从磁盘加载
+                base_words: Set[str] = set()
+
+                # 从文件加载字典
+                if self.wordlist:
+                    wordlist_path = Path(self.wordlist)
+                    if wordlist_path.exists():
+                        try:
+                            with open(wordlist_path, "r", encoding="utf-8") as f:
+                                for line in f:
+                                    path = line.strip()
+                                    if path and not path.startswith("#"):
+                                        base_words.add(path)
+                        except Exception as e:
+                            self._logger.warning(f"Failed to load wordlist: {e}")
+
+                # 添加内置字典
+                base_words.update(self.COMMON_DIRECTORIES)
+
+                self._WORDLIST_CACHE[cache_key] = list(base_words)
+
+        # 返回缓存副本并合并运行时参数
+        paths: Set[str] = set(self._WORDLIST_CACHE[cache_key])
 
         # 添加自定义字典
         if custom_wordlist:
             paths.update(custom_wordlist)
-
-        # 从文件加载字典
-        if self.wordlist:
-            wordlist_path = Path(self.wordlist)
-            if wordlist_path.exists():
-                try:
-                    with open(wordlist_path, "r", encoding="utf-8") as f:
-                        for line in f:
-                            path = line.strip()
-                            if path and not path.startswith("#"):
-                                paths.add(path)
-                except Exception as e:
-                    self._logger.warning(f"Failed to load wordlist: {e}")
-
-        # 添加内置字典
-        paths.update(self.COMMON_DIRECTORIES)
 
         # 添加敏感文件
         if include_sensitive:

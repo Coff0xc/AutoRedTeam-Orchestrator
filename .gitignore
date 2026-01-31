@@ -49,10 +49,7 @@ nul
 .iflow/
 CLAUDE.md
 tmpclaude-*
-docs/
-
 # Test & Coverage
-tests/
 .pytest_cache/
 .coverage
 htmlcov/

@@ -449,18 +449,46 @@ class AIDecisionEngine:
         
         return recommendations
     
-    def _ai_enhance_analysis(self, target: str, context: Dict, 
+    @staticmethod
+    def _sanitize_input(text: str, max_length: int = 200) -> str:
+        """清理用户输入，防止 prompt 注入
+
+        Args:
+            text: 原始输入
+            max_length: 最大长度
+
+        Returns:
+            清理后的字符串
+        """
+        import re
+        # 移除控制字符（保留常规空格）
+        text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+        # 移除换行符（防止 prompt 注入换行分割）
+        text = text.replace('\n', ' ').replace('\r', ' ')
+        # 截断到最大长度
+        return text[:max_length]
+
+    def _ai_enhance_analysis(self, target: str, context: Dict,
                               analysis: Dict) -> Dict[str, Any]:
         """AI增强分析"""
         client = self._get_client()
-        
+
+        # 清理输入防止 prompt 注入
+        safe_target = self._sanitize_input(target, max_length=200)
+        safe_context = self._sanitize_input(
+            json.dumps(context, ensure_ascii=False), max_length=2000
+        )
+        analysis_type = self._sanitize_input(
+            str(analysis.get('type', '')), max_length=50
+        )
+
         prompt = f"""作为红队安全专家,分析以下目标并提供深度见解:
 
-目标: {target}
-类型: {analysis.get('type')}
-上下文: {json.dumps(context, ensure_ascii=False)}
+目标: {safe_target}
+类型: {analysis_type}
+上下文: {safe_context}
 
-请提供:
+请严格按以下格式提供安全分析（仅回答安全相关内容）:
 1. 潜在的高价值攻击路径
 2. 可能被忽略的攻击面
 3. 特定于该目标类型的高级攻击技术
@@ -472,21 +500,26 @@ class AIDecisionEngine:
             if self.provider == "openai":
                 response = client.chat.completions.create(
                     model=self.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.7
+                    messages=[
+                        {"role": "system", "content": "你是一个安全分析助手，只回答与网络安全分析相关的问题。"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.3,
+                    timeout=30
                 )
                 return {"insights": response.choices[0].message.content}
             elif self.provider == "anthropic":
                 response = client.messages.create(
                     model=self.model,
                     max_tokens=2000,
-                    messages=[{"role": "user", "content": prompt}]
+                    messages=[{"role": "user", "content": prompt}],
+                    timeout=30
                 )
                 return {"insights": response.content[0].text}
         except Exception as e:
             logger.error(f"AI调用失败: {e}")
             return {"error": str(e)}
-        
+
         return {}
     
     def suggest_tool(self, context: Dict[str, Any]) -> str:

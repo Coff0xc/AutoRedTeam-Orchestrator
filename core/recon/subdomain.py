@@ -128,6 +128,10 @@ class SubdomainEnumerator:
         "oa", "erp", "crm", "hr", "finance",
     ]
 
+    # 词表缓存（类级别，所有实例共享）
+    _WORDLIST_CACHE: Dict[str, List[str]] = {}
+    _CACHE_LOCK = threading.Lock()
+
     def __init__(
         self,
         timeout: float = 5.0,
@@ -157,6 +161,9 @@ class SubdomainEnumerator:
 
         # 进度回调
         self._progress_callback: Optional[Callable[[int, int, str], None]] = None
+
+        # 实例级自定义词表（避免污染类变量）
+        self._custom_words: List[str] = []
 
         self._logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
@@ -340,7 +347,7 @@ class SubdomainEnumerator:
         return set()
 
     def _load_wordlist(self, custom_wordlist: Optional[List[str]] = None) -> List[str]:
-        """加载字典
+        """加载字典（带缓存）
 
         Args:
             custom_wordlist: 自定义字典列表
@@ -348,29 +355,42 @@ class SubdomainEnumerator:
         Returns:
             字典单词列表
         """
-        words: Set[str] = set()
+        # 计算缓存键（基于 wordlist 路径）
+        cache_key = self.wordlist or "__builtin__"
 
-        # 添加自定义字典
+        with self._CACHE_LOCK:
+            if cache_key not in self._WORDLIST_CACHE:
+                # 缓存未命中，从磁盘加载
+                words: Set[str] = set()
+
+                # 从文件加载字典
+                if self.wordlist:
+                    wordlist_path = Path(self.wordlist)
+                    if wordlist_path.exists():
+                        try:
+                            with open(wordlist_path, "r", encoding="utf-8") as f:
+                                for line in f:
+                                    word = line.strip().lower()
+                                    if word and not word.startswith("#"):
+                                        words.add(word)
+                        except Exception as e:
+                            self._logger.warning(f"Failed to load wordlist: {e}")
+
+                # 添加内置字典
+                words.update(self.COMMON_SUBDOMAINS)
+
+                self._WORDLIST_CACHE[cache_key] = list(words)
+
+        # 返回缓存副本，合并自定义词表和实例级词表
+        result: Set[str] = set(self._WORDLIST_CACHE[cache_key])
+
         if custom_wordlist:
-            words.update(custom_wordlist)
+            result.update(custom_wordlist)
 
-        # 从文件加载字典
-        if self.wordlist:
-            wordlist_path = Path(self.wordlist)
-            if wordlist_path.exists():
-                try:
-                    with open(wordlist_path, "r", encoding="utf-8") as f:
-                        for line in f:
-                            word = line.strip().lower()
-                            if word and not word.startswith("#"):
-                                words.add(word)
-                except Exception as e:
-                    self._logger.warning(f"Failed to load wordlist: {e}")
+        if self._custom_words:
+            result.update(self._custom_words)
 
-        # 添加内置字典
-        words.update(self.COMMON_SUBDOMAINS)
-
-        return list(words)
+        return list(result)
 
     def set_progress_callback(
         self,
@@ -392,12 +412,12 @@ class SubdomainEnumerator:
         self._stop_flag.clear()
 
     def add_words(self, words: List[str]) -> None:
-        """添加自定义单词到内置字典
+        """添加自定义单词到实例级字典
 
         Args:
             words: 单词列表
         """
-        self.COMMON_SUBDOMAINS.extend(words)
+        self._custom_words.extend(words)
 
     @classmethod
     def get_common_subdomains(cls) -> List[str]:
