@@ -58,7 +58,8 @@ class BasePhaseExecutor(ABC):
     phase: "PentestPhase"
     name: str = "base"
     description: str = "基础阶段执行器"
-    required_phases: List["PentestPhase"] = []
+    # 注意: 子类必须重写此属性，不要直接修改基类的列表
+    required_phases: tuple = ()
 
     def __init__(self, state: "PentestState", config: Optional[Dict[str, Any]] = None):
         self.state = state

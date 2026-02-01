@@ -21,7 +21,7 @@ class ReportPhaseExecutor(BasePhaseExecutor):
 
     name = "report"
     description = "报告生成"
-    required_phases: List["PentestPhase"] = []
+    required_phases: tuple = ()
 
     @property
     def phase(self):

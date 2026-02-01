@@ -101,6 +101,10 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
             fp_filter = FalsePositiveFilter() if enable_fp_filter else None
             verifier = StatisticalVerifier() if enable_verifier else None
 
+            def _baseline_request(url: str):
+                resp = http_client.get(url)
+                return resp.text, resp.status_code, resp.elapsed, resp.headers
+
             for idx, target_url in enumerate(targets):
                 self.state.add_checkpoint(step=idx, data={"current_target": target_url})
 
@@ -108,11 +112,6 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
                     baseline = None
                     if fp_filter:
                         try:
-
-                            def _baseline_request(url: str):
-                                resp = http_client.get(url)
-                                return resp.text, resp.status_code, resp.elapsed, resp.headers
-
                             baseline = fp_filter.establish_baseline(
                                 target_url, _baseline_request, num_requests=baseline_requests
                             )

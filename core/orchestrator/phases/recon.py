@@ -22,7 +22,7 @@ class ReconPhaseExecutor(BasePhaseExecutor):
 
     name = "recon"
     description = "信息收集与资产发现"
-    required_phases: List["PentestPhase"] = []
+    required_phases: tuple = ()
 
     @property
     def phase(self):
