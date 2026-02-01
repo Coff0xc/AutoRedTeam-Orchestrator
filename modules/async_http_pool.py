@@ -7,6 +7,7 @@
 import asyncio
 import logging
 import socket
+import threading
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -373,14 +374,23 @@ class AsyncDNSResolver:
 
 # 全局连接池实例
 _pool_instance: Optional[AsyncHTTPPool] = None
+_pool_lock = threading.Lock()
 
 
 def get_http_pool(config: Optional[PoolConfig] = None) -> AsyncHTTPPool:
-    """获取HTTP连接池单例"""
+    """获取HTTP连接池单例（线程安全）"""
     global _pool_instance
-    if _pool_instance is None:
-        _pool_instance = AsyncHTTPPool(config)
-    return _pool_instance
+    with _pool_lock:
+        if _pool_instance is None:
+            _pool_instance = AsyncHTTPPool(config)
+        return _pool_instance
+
+
+def reset_http_pool() -> None:
+    """重置HTTP连接池（仅用于测试）"""
+    global _pool_instance
+    with _pool_lock:
+        _pool_instance = None
 
 
 async def async_request(method: str, url: str, **kwargs) -> Dict[str, Any]:
