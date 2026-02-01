@@ -358,7 +358,7 @@ class OOBDetector:
                     requests.get(test_url, timeout=10, verify=False)
                 else:
                     requests.post(url, data={param: payload}, timeout=10, verify=False)
-            except Exception:
+            except (requests.RequestException, OSError):
                 continue
 
         # 等待回调

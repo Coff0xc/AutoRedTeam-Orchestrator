@@ -139,7 +139,7 @@ class KubernetesSecurityTester:
         except ImportError:
             # 简单解析
             return self._simple_yaml_parse(content)
-        except Exception:
+        except yaml.YAMLError:
             return []
 
     def _simple_yaml_parse(self, content: str) -> List[Dict]:

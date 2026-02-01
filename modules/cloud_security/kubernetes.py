@@ -155,7 +155,7 @@ class KubernetesTester(BaseCloudTester):
                 timeout=5,
             )
             return result.returncode == 0
-        except Exception:
+        except (subprocess.SubprocessError, OSError, FileNotFoundError):
             return False
 
     def _run_kubectl(self, args: List[str], timeout: int = 30) -> Tuple[bool, str]:

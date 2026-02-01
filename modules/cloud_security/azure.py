@@ -355,7 +355,7 @@ class AzureTester(BaseCloudTester):
                                 compliance=["CIS-Azure-1.23"],
                             )
 
-                except Exception:
+                except (KeyError, TypeError, ValueError):
                     continue
 
         except Exception as e:

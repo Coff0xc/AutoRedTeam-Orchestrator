@@ -354,7 +354,7 @@ class PayloadMutator:
                             "description": MUTATION_DESCRIPTIONS.get(method, method),
                         }
                     )
-            except Exception:
+            except (TypeError, ValueError, UnicodeError):
                 continue
 
         # 组合变异（如果单一变异数量不足）
@@ -376,7 +376,7 @@ class PayloadMutator:
                                     "description": f"{MUTATION_DESCRIPTIONS.get(m1, m1)} + {MUTATION_DESCRIPTIONS.get(m2, m2)}",
                                 }
                             )
-                    except Exception:
+                    except (TypeError, ValueError, UnicodeError):
                         continue
                 if len(variants) >= count:
                     break

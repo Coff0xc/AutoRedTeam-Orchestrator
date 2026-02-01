@@ -474,7 +474,7 @@ class ToolManager:
                             config["performance"].update(yaml_config["performance"])
 
                 logger.info(f"已加载配置: {self.config_path}")
-            except Exception as e:
+            except (yaml.YAMLError, IOError, OSError) as e:
                 logger.warning(f"加载配置失败，使用默认配置: {e}")
 
         return config
@@ -497,9 +497,15 @@ class ToolManager:
 
             # 查找工具路径
             custom_path = tool_config.get("path")
-            if custom_path and Path(custom_path).exists():
-                info.path = str(custom_path)
-                info.status = ToolStatus.AVAILABLE
+            if custom_path:
+                # 安全检查：规范化路径并验证
+                resolved_path = self._validate_tool_path(custom_path, name)
+                if resolved_path:
+                    info.path = resolved_path
+                    info.status = ToolStatus.AVAILABLE
+                else:
+                    info.status = ToolStatus.NOT_FOUND
+                    logger.warning(f"工具 {name} 路径验证失败: {custom_path}")
             else:
                 # 尝试系统 PATH
                 which_result = shutil.which(name)
@@ -514,6 +520,66 @@ class ToolManager:
                 info.version = self._get_tool_version(info)
 
             self.tools[name] = info
+
+    def _validate_tool_path(self, path: str, tool_name: str) -> Optional[str]:
+        """验证工具路径的安全性
+
+        Args:
+            path: 配置的工具路径
+            tool_name: 工具名称
+
+        Returns:
+            验证后的绝对路径，如果验证失败返回 None
+
+        安全检查:
+        1. 路径规范化（解析符号链接）
+        2. 验证文件存在且可执行
+        3. 防止路径遍历攻击
+        4. 验证不在敏感目录
+        """
+        try:
+            # 规范化路径（解析符号链接和相对路径）
+            resolved = Path(path).resolve()
+
+            # 检查文件是否存在
+            if not resolved.exists():
+                logger.debug(f"工具路径不存在: {resolved}")
+                return None
+
+            # 检查是否是文件（不是目录）
+            if not resolved.is_file():
+                logger.warning(f"工具路径不是文件: {resolved}")
+                return None
+
+            # 防止访问敏感系统目录
+            sensitive_dirs = [
+                Path("/etc"),
+                Path("/var/log"),
+                Path("/root"),
+                Path("C:/Windows/System32"),
+                Path("C:/Windows/SysWOW64"),
+            ]
+
+            for sensitive_dir in sensitive_dirs:
+                try:
+                    if sensitive_dir.exists() and resolved.is_relative_to(sensitive_dir):
+                        logger.warning(f"工具 {tool_name} 路径在敏感目录中被拒绝: {resolved}")
+                        return None
+                except (ValueError, TypeError):
+                    # is_relative_to 在不相关路径时抛出 ValueError
+                    pass
+
+            # 验证路径中不包含路径遍历序列
+            path_str = str(resolved)
+            if ".." in path_str:
+                logger.warning(f"工具路径包含路径遍历序列: {path}")
+                return None
+
+            return str(resolved)
+
+        except (OSError, ValueError) as e:
+            logger.warning(f"工具路径验证失败 {path}: {e}")
+            return None
 
     def _get_tool_version(self, info: ToolInfo) -> Optional[str]:
         """获取工具版本"""
@@ -530,7 +596,7 @@ class ToolManager:
             match = re.search(r"(\d+\.\d+(?:\.\d+)?)", output)
             if match:
                 return match.group(1)
-        except Exception as e:
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError, OSError) as e:
             logger.debug(f"获取 {info.name} 版本失败: {e}")
 
         return None
@@ -660,7 +726,7 @@ class ToolManager:
                     await process.wait()  # 等待进程完全终止
                 except ProcessLookupError:
                     pass  # 进程已经结束
-                except Exception as e:
+                except OSError as e:
                     logger.warning(f"终止超时进程失败: {e}")
             return ToolResult(
                 tool=tool,
@@ -669,14 +735,14 @@ class ToolManager:
                 error=f"执行超时 ({timeout}s)",
                 execution_time=timeout,
             )
-        except Exception as e:
+        except (OSError, ValueError, asyncio.CancelledError) as e:
             # 异常时也要清理进程
             if process is not None:
                 try:
                     process.kill()
                     await process.wait()
-                except Exception:
-                    pass
+                except (ProcessLookupError, OSError):
+                    pass  # 进程已终止或无法访问
             return ToolResult(
                 tool=tool,
                 success=False,
@@ -689,7 +755,7 @@ class ToolManager:
             if nmap_xml and Path(nmap_xml).exists():
                 try:
                     os.unlink(nmap_xml)
-                except Exception as e:
+                except (OSError, PermissionError) as e:
                     logger.debug(f"清理临时文件失败: {e}")
 
     def _build_command(
@@ -761,7 +827,7 @@ class ToolManager:
                         xml_content = f.read()
                     # 注意: 临时文件在 run() 的 finally 块中清理
                     return ResultParser.parse_nmap_xml(xml_content)
-                except Exception as e:
+                except (IOError, OSError, ValueError, ET.ParseError) as e:
                     logger.warning(f"解析 Nmap XML 失败: {e}")
             return {"raw": output}
 

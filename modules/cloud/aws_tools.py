@@ -91,7 +91,7 @@ class AWSEnumTool(BaseTool):
                     )
                     info["acl"] = acl.get("Grants", [])
                     info["public"] = self._check_public_acl(acl)
-                except Exception:
+                except (subprocess.SubprocessError, KeyError, json.JSONDecodeError):
                     info["acl"] = "无法获取"
 
                 bucket_info.append(info)

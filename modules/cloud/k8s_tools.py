@@ -3,6 +3,8 @@
 Kubernetes安全工具
 """
 
+import base64
+import binascii
 import json
 import logging
 import subprocess
@@ -227,7 +229,7 @@ class KubeSecretsTool(BaseTool):
                             secret_info["data"][key] = (
                                 decoded[:100] + "..." if len(decoded) > 100 else decoded
                             )
-                        except Exception:
+                        except (binascii.Error, UnicodeDecodeError):
                             secret_info["data"][key] = "[无法解码]"
                     else:
                         secret_info["data"][key] = value[:50] + "..." if len(value) > 50 else value

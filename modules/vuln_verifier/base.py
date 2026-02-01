@@ -10,6 +10,7 @@
 import json
 import logging
 import re
+import socket
 import ssl
 import time
 import urllib.error
@@ -66,10 +67,10 @@ class BaseVerifier:
             elapsed = time.time() - start
             try:
                 body = e.read().decode("utf-8", errors="ignore")
-            except Exception:
+            except (IOError, AttributeError):
                 body = ""
             return body, e.code, elapsed, len(body)
-        except Exception:
+        except (urllib.error.URLError, OSError, socket.error):
             logger.warning("HTTP request failed", exc_info=True)
             return None, 0, time.time() - start, 0
 

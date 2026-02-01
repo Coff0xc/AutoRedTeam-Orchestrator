@@ -97,14 +97,14 @@ class NucleiScanTool(BaseTool):
                                 if isinstance(data, list):
                                     for vuln in data:
                                         vulnerabilities.append(self._parse_vuln_item(vuln))
-                            except Exception:
+                            except json.JSONDecodeError:
                                 # 尝试逐行解析
                                 for line in content.split("\n"):
                                     if line.strip():
                                         try:
                                             vuln = json.loads(line)
                                             vulnerabilities.append(self._parse_vuln_item(vuln))
-                                        except Exception as exc:
+                                        except json.JSONDecodeError as exc:
                                             logging.getLogger(__name__).warning(
                                                 "Suppressed exception", exc_info=True
                                             )
