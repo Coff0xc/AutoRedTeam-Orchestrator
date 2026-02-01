@@ -712,9 +712,7 @@ class SubscriptionManager:
             if HAS_HTTP_FACTORY:
                 client_ctx = get_async_client(verify_ssl=False)
             else:
-                client_ctx = aiohttp.ClientSession(
-                    timeout=aiohttp.ClientTimeout(total=30)
-                )
+                client_ctx = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30))
 
             async with client_ctx as session:
                 async with session.post(url, json=payload, timeout=10, ssl=False) as resp:

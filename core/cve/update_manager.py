@@ -304,9 +304,7 @@ class CVEUpdateManager:
         if HAS_HTTP_FACTORY:
             client_ctx = get_async_client()
         else:
-            client_ctx = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=60)
-            )
+            client_ctx = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60))
 
         async with client_ctx as session:
             # NVD API 2.0 使用分页
@@ -423,9 +421,7 @@ class CVEUpdateManager:
         if HAS_HTTP_FACTORY:
             client_ctx = get_async_client()
         else:
-            client_ctx = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=60)
-            )
+            client_ctx = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60))
 
         async with client_ctx as session:
             # 获取文件树
@@ -508,9 +504,7 @@ class CVEUpdateManager:
         if HAS_HTTP_FACTORY:
             client_ctx = get_async_client()
         else:
-            client_ctx = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=60)
-            )
+            client_ctx = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60))
 
         async with client_ctx as session:
             await self._rate_limit("exploit_db")
