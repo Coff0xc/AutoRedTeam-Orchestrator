@@ -7,7 +7,6 @@ Red Team 高级工具 MCP 集成
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
 
 from utils.mcp_tooling import patch_mcp_tool
 

@@ -21,8 +21,6 @@ class AuthError(AutoRedTeamError):
         >>> raise AuthError("认证失败")
     """
 
-    pass
-
 
 class InvalidCredentials(AuthError):
     """
@@ -34,8 +32,6 @@ class InvalidCredentials(AuthError):
         >>> raise InvalidCredentials("用户名或密码错误")
         >>> raise InvalidCredentials("API密钥无效", details={"key_prefix": "sk-xxx..."})
     """
-
-    pass
 
 
 class TokenExpired(AuthError):
@@ -75,8 +71,6 @@ class PermissionDenied(AuthError):
         >>> raise PermissionDenied("需要管理员权限")
         >>> raise PermissionDenied("无权访问该资源", details={"resource": "/admin/users", "required_role": "admin"})
     """
-
-    pass
 
 
 # 向后兼容别名

@@ -11,7 +11,7 @@ import tempfile
 import threading
 import time
 from datetime import datetime
-from typing import Callable, Dict, List, Optional
+from typing import Dict, List, Optional
 
 # 日志文件路径
 LOG_FILE = os.path.join(tempfile.gettempdir(), "mcp_redteam_live.log")
@@ -61,7 +61,7 @@ class TerminalLogger:
         """上下文管理器入口"""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, _exc_val, _exc_tb):
         """上下文管理器出口 - 确保资源释放"""
         self.close()
         return False  # 不抑制异常

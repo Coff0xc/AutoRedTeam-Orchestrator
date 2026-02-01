@@ -8,16 +8,13 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import threading
 from collections import defaultdict
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 
-from .base import BaseTool, FunctionTool, ParamType, ToolMetadata, ToolParameter, ToolResult
+from .base import BaseTool, FunctionTool, ToolParameter, ToolResult
 from .categories import (
-    CATEGORY_DESCRIPTIONS,
-    CATEGORY_HIERARCHY,
     ToolCategory,
     get_category_description,
     get_phase_for_category,
@@ -29,19 +26,13 @@ logger = logging.getLogger(__name__)
 class ToolNotFoundError(Exception):
     """工具不存在异常"""
 
-    pass
-
 
 class ToolAlreadyExistsError(Exception):
     """工具已存在异常"""
 
-    pass
-
 
 class ToolValidationError(Exception):
     """参数验证异常"""
-
-    pass
 
 
 class ToolRegistry:

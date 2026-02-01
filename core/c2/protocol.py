@@ -23,7 +23,7 @@ import struct
 import time
 import uuid
 import zlib
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Dict, List, Optional, Tuple, Union
 

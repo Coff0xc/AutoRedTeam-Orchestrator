@@ -9,13 +9,12 @@ import logging
 import threading
 import uuid
 from datetime import datetime
-from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
 from .context import ContextStatus, ScanContext, ScanPhase
 from .result import ScanResult, Severity, Vulnerability, VulnType
 from .storage import SessionStorage
-from .target import Target, TargetStatus
+from .target import Target
 
 logger = logging.getLogger(__name__)
 

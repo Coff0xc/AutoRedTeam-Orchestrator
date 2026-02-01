@@ -10,29 +10,34 @@
 - 统一的参数遍历
 - 二次验证机制
 """
-import logging
 
+import logging
+import os
+import sys
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Callable
-import re
-import time
-import sys
-import os
+from typing import Any, Dict, List, Optional
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from tools._common import (
-    get_verify_ssl, get_proxies, make_request, get_user_agent,
-    GLOBAL_CONFIG, rate_limited, safe_json_response,
-    record_failure, reset_failure_counter, should_abort_scan
+    GLOBAL_CONFIG,
+    get_proxies,
+    get_user_agent,
+    get_verify_ssl,
+    make_request,
+    rate_limited,
+    record_failure,
+    reset_failure_counter,
+    should_abort_scan,
 )
 
 # 尝试导入 requests
 try:
-    import requests
     from core.http.client_factory import HTTPClientFactory
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -41,14 +46,15 @@ except ImportError:
 @dataclass
 class Vulnerability:
     """漏洞数据类 - 统一的漏洞信息结构"""
-    type: str                           # 漏洞类型 (如 "Error-based SQLi")
-    severity: str                       # 严重程度 (CRITICAL/HIGH/MEDIUM/LOW/INFO)
-    param: Optional[str] = None         # 漏洞参数
-    payload: Optional[str] = None       # 触发漏洞的 Payload
-    evidence: Optional[str] = None      # 漏洞证据
-    url: Optional[str] = None           # 漏洞 URL
-    verified: bool = False              # 是否经过二次验证
-    confidence: float = 0.0             # 置信度 (0.0-1.0)
+
+    type: str  # 漏洞类型 (如 "Error-based SQLi")
+    severity: str  # 严重程度 (CRITICAL/HIGH/MEDIUM/LOW/INFO)
+    param: Optional[str] = None  # 漏洞参数
+    payload: Optional[str] = None  # 触发漏洞的 Payload
+    evidence: Optional[str] = None  # 漏洞证据
+    url: Optional[str] = None  # 漏洞 URL
+    verified: bool = False  # 是否经过二次验证
+    confidence: float = 0.0  # 置信度 (0.0-1.0)
     details: Dict[str, Any] = field(default_factory=dict)  # 额外详情
 
     def to_dict(self) -> Dict[str, Any]:
@@ -62,7 +68,7 @@ class Vulnerability:
             "url": self.url,
             "verified": self.verified,
             "confidence": self.confidence,
-            "details": self.details
+            "details": self.details,
         }
 
 
@@ -77,9 +83,23 @@ class BaseDetector(ABC):
 
     # 默认测试参数列表
     DEFAULT_PARAMS = [
-        "id", "page", "cat", "search", "q", "query",
-        "user", "name", "item", "product", "file", "path",
-        "url", "redirect", "next", "return", "callback"
+        "id",
+        "page",
+        "cat",
+        "search",
+        "q",
+        "query",
+        "user",
+        "name",
+        "item",
+        "product",
+        "file",
+        "path",
+        "url",
+        "redirect",
+        "next",
+        "return",
+        "callback",
     ]
 
     def __init__(
@@ -87,7 +107,7 @@ class BaseDetector(ABC):
         timeout: int = None,
         verify_ssl: bool = None,
         max_retries: int = 2,
-        user_agent: str = None
+        user_agent: str = None,
     ):
         """
         初始化检测器
@@ -109,7 +129,7 @@ class BaseDetector(ABC):
                 verify_ssl=self.verify_ssl,
                 headers={"User-Agent": self.user_agent},
                 max_retries=max_retries,
-                force_new=True
+                force_new=True,
             )
         else:
             self.session = None
@@ -126,14 +146,10 @@ class BaseDetector(ABC):
             字典，键为 payload 类型，值为 payload 列表
             例如: {"error_based": ["'", "\""], "time_based": [...]}
         """
-        pass
 
     @abstractmethod
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """
         验证响应是否表明存在漏洞
@@ -146,7 +162,6 @@ class BaseDetector(ABC):
         Returns:
             True 表示可能存在漏洞
         """
-        pass
 
     def get_test_params(self, param: Optional[str] = None) -> List[str]:
         """获取测试参数列表"""
@@ -162,7 +177,7 @@ class BaseDetector(ABC):
         param: str = None,
         method: str = "GET",
         data: str = None,
-        headers: dict = None
+        headers: dict = None,
     ) -> Optional[Dict[str, Any]]:
         """
         发送 HTTP 请求 - 统一的请求处理
@@ -200,7 +215,7 @@ class BaseDetector(ABC):
                         timeout=self.timeout,
                         verify=self.verify_ssl,
                         proxies=proxies,
-                        headers=req_headers
+                        headers=req_headers,
                     )
                 elif method.upper() == "POST":
                     resp = self.session.post(
@@ -209,7 +224,7 @@ class BaseDetector(ABC):
                         timeout=self.timeout,
                         verify=self.verify_ssl,
                         proxies=proxies,
-                        headers=req_headers
+                        headers=req_headers,
                     )
                 else:
                     resp = self.session.request(
@@ -219,7 +234,7 @@ class BaseDetector(ABC):
                         timeout=self.timeout,
                         verify=self.verify_ssl,
                         proxies=proxies,
-                        headers=req_headers
+                        headers=req_headers,
                     )
 
                 elapsed = time.time() - start_time
@@ -229,9 +244,9 @@ class BaseDetector(ABC):
                     "status_code": resp.status_code,
                     "response_length": len(resp.text),
                     "response_time": elapsed,
-                    "response_text": resp.text[:GLOBAL_CONFIG.get("max_response_size", 100000)],
+                    "response_text": resp.text[: GLOBAL_CONFIG.get("max_response_size", 100000)],
                     "headers": dict(resp.headers),
-                    "success": True
+                    "success": True,
                 }
             else:
                 # 降级到 make_request
@@ -265,11 +280,7 @@ class BaseDetector(ABC):
         return baseline or {}
 
     def test_payload(
-        self,
-        url: str,
-        payload: str,
-        param: str,
-        baseline: Dict[str, Any] = None
+        self, url: str, payload: str, param: str, baseline: Dict[str, Any] = None
     ) -> Optional[Vulnerability]:
         """
         测试单个 Payload
@@ -305,7 +316,7 @@ class BaseDetector(ABC):
                 url=response.get("url", url),
                 evidence=self._extract_evidence(response),
                 verified=False,
-                confidence=0.6
+                confidence=0.6,
             )
         return None
 
@@ -321,10 +332,7 @@ class BaseDetector(ABC):
         return " | ".join(evidence_parts) if evidence_parts else "N/A"
 
     def test_payloads(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        stop_on_first: bool = True
+        self, url: str, param: Optional[str] = None, stop_on_first: bool = True
     ) -> List[Vulnerability]:
         """
         批量测试所有 Payloads
@@ -361,10 +369,7 @@ class BaseDetector(ABC):
         return vulnerabilities
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = False
+        self, url: str, param: Optional[str] = None, deep_scan: bool = False
     ) -> Dict[str, Any]:
         """
         检测入口 - 执行漏洞检测
@@ -397,7 +402,7 @@ class BaseDetector(ABC):
                 "detector": self.__class__.__name__,
                 "vulnerabilities": [v.to_dict() for v in verified_vulns],
                 "total": len(verified_vulns),
-                "verified_count": sum(1 for v in verified_vulns if v.verified)
+                "verified_count": sum(1 for v in verified_vulns if v.verified),
             }
 
         except Exception as e:
@@ -407,7 +412,7 @@ class BaseDetector(ABC):
                 "detector": self.__class__.__name__,
                 "error": str(e),
                 "vulnerabilities": [],
-                "total": 0
+                "total": 0,
             }
 
     def verify_vulnerability(self, vuln: Vulnerability) -> bool:
@@ -430,9 +435,7 @@ class BaseDetector(ABC):
 
         # 使用相同 payload 再次测试
         test_response = self.send_request(
-            vuln.url.split("?")[0],  # 基础 URL
-            vuln.payload,
-            vuln.param
+            vuln.url.split("?")[0], vuln.payload, vuln.param  # 基础 URL
         )
 
         if not test_response or not test_response.get("success"):
@@ -456,7 +459,7 @@ class BaseDetector(ABC):
         """上下文管理器入口"""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, _exc_val, _exc_tb):
         """上下文管理器出口"""
         self.cleanup()
         return False

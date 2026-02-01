@@ -50,8 +50,6 @@ class TaskNotFound(TaskError):
         >>> raise TaskNotFound("任务不存在", task_id="task-12345")
     """
 
-    pass
-
 
 class TaskCancelled(TaskError):
     """
@@ -62,8 +60,6 @@ class TaskCancelled(TaskError):
     示例:
         >>> raise TaskCancelled("任务已被用户取消", task_id="task-12345")
     """
-
-    pass
 
 
 class QueueFull(TaskError):
@@ -143,8 +139,6 @@ class TemplateError(ReportError):
         >>> raise TemplateError("模板语法错误", details={"line": 42})
     """
 
-    pass
-
 
 class ExportError(ReportError):
     """
@@ -156,8 +150,6 @@ class ExportError(ReportError):
         >>> raise ExportError("PDF导出失败", report_type="PDF")
         >>> raise ExportError("无法写入文件", details={"path": "/reports/output.html"})
     """
-
-    pass
 
 
 __all__ = [

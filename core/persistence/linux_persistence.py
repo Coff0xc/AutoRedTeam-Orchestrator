@@ -5,15 +5,12 @@ Linux 持久化模块 - Linux Persistence
 仅用于授权渗透测试
 """
 
-import base64
 import logging
-import os
 import secrets
 import string
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 

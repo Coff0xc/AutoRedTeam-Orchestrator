@@ -8,16 +8,14 @@
 """
 
 import requests
+
 from ._common import GLOBAL_CONFIG, PROXY_CONFIG, get_verify_ssl
 
 
 def get_proxies():
     """获取当前代理配置"""
     if PROXY_CONFIG["enabled"] and PROXY_CONFIG["http"]:
-        return {
-            "http": PROXY_CONFIG["http"],
-            "https": PROXY_CONFIG["https"]
-        }
+        return {"http": PROXY_CONFIG["http"], "https": PROXY_CONFIG["https"]}
     return None
 
 
@@ -25,8 +23,12 @@ def register_config_tools(mcp):
     """注册配置管理工具到MCP服务器"""
 
     @mcp.tool()
-    def set_config(verify_ssl: bool = None, rate_limit_delay: float = None,
-                   max_threads: int = None, request_timeout: int = None) -> dict:
+    def set_config(
+        verify_ssl: bool = None,
+        rate_limit_delay: float = None,
+        max_threads: int = None,
+        request_timeout: int = None,
+    ) -> dict:
         """配置管理 - 动态调整全局配置
 
         Args:
@@ -56,7 +58,7 @@ def register_config_tools(mcp):
         return {
             "success": True,
             "changes": changes if changes else ["无更改"],
-            "current_config": GLOBAL_CONFIG.copy()
+            "current_config": GLOBAL_CONFIG.copy(),
         }
 
     @mcp.tool()
@@ -74,20 +76,22 @@ def register_config_tools(mcp):
             return {
                 "success": True,
                 "message": f"代理已{'启用' if enabled else '禁用'}",
-                "proxy": proxy_url
+                "proxy": proxy_url,
             }
         else:
             PROXY_CONFIG["enabled"] = False
             PROXY_CONFIG["http"] = None
             PROXY_CONFIG["https"] = None
-            return {
-                "success": True,
-                "message": "代理已清除"
-            }
+            return {"success": True, "message": "代理已清除"}
 
     @mcp.tool()
-    def http_request(url: str, method: str = "GET", headers: dict = None,
-                     data: str = None, use_proxy: bool = True) -> dict:
+    def http_request(
+        url: str,
+        method: str = "GET",
+        headers: dict = None,
+        data: str = None,
+        use_proxy: bool = True,
+    ) -> dict:
         """通用HTTP请求 - 支持代理、自定义头、POST数据
 
         Args:
@@ -102,17 +106,31 @@ def register_config_tools(mcp):
             req_headers = headers or {}
 
             if method.upper() == "GET":
-                resp = requests.get(url, headers=req_headers, proxies=proxies,
-                                   timeout=30, verify=get_verify_ssl())
+                resp = requests.get(
+                    url, headers=req_headers, proxies=proxies, timeout=30, verify=get_verify_ssl()
+                )
             elif method.upper() == "POST":
-                resp = requests.post(url, headers=req_headers, data=data,
-                                    proxies=proxies, timeout=30, verify=get_verify_ssl())
+                resp = requests.post(
+                    url,
+                    headers=req_headers,
+                    data=data,
+                    proxies=proxies,
+                    timeout=30,
+                    verify=get_verify_ssl(),
+                )
             elif method.upper() == "PUT":
-                resp = requests.put(url, headers=req_headers, data=data,
-                                   proxies=proxies, timeout=30, verify=get_verify_ssl())
+                resp = requests.put(
+                    url,
+                    headers=req_headers,
+                    data=data,
+                    proxies=proxies,
+                    timeout=30,
+                    verify=get_verify_ssl(),
+                )
             elif method.upper() == "DELETE":
-                resp = requests.delete(url, headers=req_headers, proxies=proxies,
-                                      timeout=30, verify=get_verify_ssl())
+                resp = requests.delete(
+                    url, headers=req_headers, proxies=proxies, timeout=30, verify=get_verify_ssl()
+                )
             else:
                 return {"success": False, "error": f"不支持的方法: {method}"}
 
@@ -122,7 +140,7 @@ def register_config_tools(mcp):
                 "headers": dict(resp.headers),
                 "body": resp.text[:5000],
                 "cookies": resp.cookies.get_dict(),
-                "elapsed": resp.elapsed.total_seconds()
+                "elapsed": resp.elapsed.total_seconds(),
             }
 
         except Exception as e:

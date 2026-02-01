@@ -5,7 +5,6 @@ API安全MCP工具注册模块
 """
 
 import logging
-from typing import Optional
 
 from utils.mcp_tooling import patch_mcp_tool
 

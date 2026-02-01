@@ -8,9 +8,9 @@ HTTP 会话管理
 import base64
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 from urllib.parse import urljoin, urlparse
 
 logger = logging.getLogger(__name__)

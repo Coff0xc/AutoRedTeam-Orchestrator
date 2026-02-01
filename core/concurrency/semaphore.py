@@ -7,7 +7,6 @@
 import asyncio
 import logging
 import threading
-import time
 from contextlib import asynccontextmanager, contextmanager
 from typing import Any, Dict, Optional
 
@@ -140,7 +139,7 @@ class BoundedSemaphore:
         self.acquire()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type, _exc_val, _exc_tb) -> None:
         self.release()
 
 
@@ -265,7 +264,7 @@ class AsyncSemaphore:
         await self.acquire()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type, _exc_val, _exc_tb) -> None:
         self.release()
 
 

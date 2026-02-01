@@ -8,10 +8,10 @@ XXE (XML External Entity) 检测器
 - 参数实体注入
 - 盲 XXE (OOB)
 """
-import logging
 
-from typing import Dict, List, Any, Optional
+import logging
 import re
+from typing import Any, Dict, List, Optional
 
 from ..base import BaseDetector, Vulnerability
 
@@ -25,8 +25,16 @@ class XXEDetector(BaseDetector):
 
     # XXE 专用测试参数
     DEFAULT_PARAMS = [
-        "xml", "data", "input", "content", "body", "payload",
-        "xmldata", "xmlinput", "request", "soap"
+        "xml",
+        "data",
+        "input",
+        "content",
+        "body",
+        "payload",
+        "xmldata",
+        "xmlinput",
+        "request",
+        "soap",
     ]
 
     # 文件读取成功指示符
@@ -84,10 +92,7 @@ class XXEDetector(BaseDetector):
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在 XXE 漏洞"""
         if not response.get("success"):
@@ -103,8 +108,15 @@ class XXEDetector(BaseDetector):
 
         # 检查 SSRF 成功指示符
         ssrf_indicators = [
-            "ssh-", "openssh", "ami-id", "instance-id", "meta-data",
-            "redis_version", "connected_clients", "127.0.0.1", "localhost"
+            "ssh-",
+            "openssh",
+            "ami-id",
+            "instance-id",
+            "meta-data",
+            "redis_version",
+            "connected_clients",
+            "127.0.0.1",
+            "localhost",
         ]
         for indicator in ssrf_indicators:
             if indicator.lower() in text:
@@ -126,10 +138,7 @@ class XXEDetector(BaseDetector):
         return False
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = False
+        self, url: str, param: Optional[str] = None, deep_scan: bool = False
     ) -> Dict[str, Any]:
         """
         执行 XXE 检测
@@ -137,6 +146,7 @@ class XXEDetector(BaseDetector):
         XXE 检测主要通过 POST 请求发送 XML 数据
         """
         from tools._common import reset_failure_counter
+
         reset_failure_counter()
 
         vulnerabilities = []
@@ -151,12 +161,7 @@ class XXEDetector(BaseDetector):
         for payload_type, payload_list in payloads.items():
             for payload in payload_list:
                 try:
-                    response = self.send_request(
-                        url,
-                        method="POST",
-                        data=payload,
-                        headers=headers
-                    )
+                    response = self.send_request(url, method="POST", data=payload, headers=headers)
 
                     if response and response.get("success"):
                         if self.validate_response(response, payload, baseline):
@@ -169,7 +174,7 @@ class XXEDetector(BaseDetector):
                                 evidence=self._extract_xxe_evidence(response),
                                 verified=False,
                                 confidence=0.7,
-                                details={"payload_type": payload_type}
+                                details={"payload_type": payload_type},
                             )
                             vulnerabilities.append(vuln)
 
@@ -196,7 +201,7 @@ class XXEDetector(BaseDetector):
             "vulnerabilities": [v.to_dict() for v in verified_vulns],
             "total": len(verified_vulns),
             "verified_count": sum(1 for v in verified_vulns if v.verified),
-            "recommendations": self._get_recommendations() if verified_vulns else []
+            "recommendations": self._get_recommendations() if verified_vulns else [],
         }
 
     def _get_severity(self, payload_type: str) -> str:
@@ -249,7 +254,7 @@ class XXEDetector(BaseDetector):
                 url,
                 method="POST",
                 data=modified_payload,
-                headers={"Content-Type": "application/xml"}
+                headers={"Content-Type": "application/xml"},
             )
 
             if response and response.get("success"):
@@ -268,5 +273,5 @@ class XXEDetector(BaseDetector):
             "对于 PHP: 使用 libxml_disable_entity_loader(true)",
             "对于 Python: 使用 defusedxml 库替代标准 xml 库",
             "实施输入验证，拒绝包含 DOCTYPE 的 XML",
-            "使用 JSON 等更安全的数据格式替代 XML"
+            "使用 JSON 等更安全的数据格式替代 XML",
         ]

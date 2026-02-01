@@ -9,14 +9,14 @@ SSRF 检测器 - 基于 BaseDetector 重构
 - 盲 SSRF (基于时间差异)
 """
 
-import re
-import time
-from typing import Dict, List, Any, Optional
-from urllib.parse import quote, urlparse
-
-import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+import sys
+from typing import Any, Dict, List, Optional
+from urllib.parse import quote
+
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+)
 
 from tools.detectors.base import BaseDetector, Vulnerability
 
@@ -26,9 +26,26 @@ class SSRFDetector(BaseDetector):
 
     # 覆盖默认测试参数
     DEFAULT_PARAMS = [
-        "url", "uri", "path", "src", "source", "link", "redirect",
-        "target", "dest", "fetch", "proxy", "callback", "next",
-        "data", "load", "file", "page", "ref", "site", "host"
+        "url",
+        "uri",
+        "path",
+        "src",
+        "source",
+        "link",
+        "redirect",
+        "target",
+        "dest",
+        "fetch",
+        "proxy",
+        "callback",
+        "next",
+        "data",
+        "load",
+        "file",
+        "page",
+        "ref",
+        "site",
+        "host",
     ]
 
     # 内网 IP Payload
@@ -97,41 +114,70 @@ class SSRFDetector(BaseDetector):
     # SSRF 成功指示器
     INTERNAL_INDICATORS = [
         # Linux 系统文件
-        "root:", "daemon:", "bin:", "nobody:",
-        "/bin/bash", "/bin/sh",
+        "root:",
+        "daemon:",
+        "bin:",
+        "nobody:",
+        "/bin/bash",
+        "/bin/sh",
         # Windows 系统文件
-        "extensions", "for 16-bit app support", "[fonts]",
+        "extensions",
+        "for 16-bit app support",
+        "[fonts]",
         # 服务指示器
-        "localhost", "127.0.0.1", "internal",
+        "localhost",
+        "127.0.0.1",
+        "internal",
         # SSH Banner
-        "SSH-", "OpenSSH",
+        "SSH-",
+        "OpenSSH",
         # Redis
-        "redis_version", "connected_clients", "used_memory",
+        "redis_version",
+        "connected_clients",
+        "used_memory",
         # MongoDB
-        "mongodb", "ismaster",
+        "mongodb",
+        "ismaster",
         # Elasticsearch
-        "cluster_name", "cluster_uuid",
+        "cluster_name",
+        "cluster_uuid",
     ]
 
     # 云元数据指示器
     CLOUD_INDICATORS = [
         # AWS
-        "ami-id", "instance-id", "instance-type", "local-ipv4",
-        "security-credentials", "iam", "AccessKeyId", "SecretAccessKey",
+        "ami-id",
+        "instance-id",
+        "instance-type",
+        "local-ipv4",
+        "security-credentials",
+        "iam",
+        "AccessKeyId",
+        "SecretAccessKey",
         # GCP
-        "computeMetadata", "project-id", "service-accounts",
+        "computeMetadata",
+        "project-id",
+        "service-accounts",
         # Azure
-        "vmId", "subscriptionId", "resourceGroupName",
+        "vmId",
+        "subscriptionId",
+        "resourceGroupName",
         # 通用
-        "meta-data", "metadata", "instance",
+        "meta-data",
+        "metadata",
+        "instance",
     ]
 
     # 错误指示器 (可能表明存在 SSRF)
     ERROR_INDICATORS = [
-        "connection refused", "connection timed out",
-        "could not connect", "failed to connect",
-        "no route to host", "network unreachable",
-        "name or service not known", "getaddrinfo failed",
+        "connection refused",
+        "connection timed out",
+        "could not connect",
+        "failed to connect",
+        "no route to host",
+        "network unreachable",
+        "name or service not known",
+        "getaddrinfo failed",
     ]
 
     def get_payloads(self) -> Dict[str, List[str]]:
@@ -143,10 +189,7 @@ class SSRFDetector(BaseDetector):
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在 SSRF"""
         if not response or not response.get("success"):
@@ -166,18 +209,14 @@ class SSRFDetector(BaseDetector):
 
         return False
 
-    def detect_internal(
-        self,
-        url: str,
-        param: Optional[str] = None
-    ) -> List[Vulnerability]:
+    def detect_internal(self, url: str, param: Optional[str] = None) -> List[Vulnerability]:
         """检测内网 SSRF"""
         vulnerabilities = []
         test_params = self.get_test_params(param)
 
         for test_param in test_params:
             for payload in self.INTERNAL_PAYLOADS:
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
                 response = self.send_request(url, encoded_payload, test_param)
 
                 if not response or not response.get("success"):
@@ -193,37 +232,35 @@ class SSRFDetector(BaseDetector):
                         break
 
                 if found_indicator:
-                    vulnerabilities.append(Vulnerability(
-                        type="Internal SSRF",
-                        severity="CRITICAL",
-                        param=test_param,
-                        payload=payload,
-                        url=response.get("url", url),
-                        evidence=f"检测到内网访问指示器: {found_indicator}",
-                        verified=False,
-                        confidence=0.85,
-                        details={
-                            "indicator": found_indicator,
-                            "target": payload,
-                            "response_length": len(resp_text)
-                        }
-                    ))
+                    vulnerabilities.append(
+                        Vulnerability(
+                            type="Internal SSRF",
+                            severity="CRITICAL",
+                            param=test_param,
+                            payload=payload,
+                            url=response.get("url", url),
+                            evidence=f"检测到内网访问指示器: {found_indicator}",
+                            verified=False,
+                            confidence=0.85,
+                            details={
+                                "indicator": found_indicator,
+                                "target": payload,
+                                "response_length": len(resp_text),
+                            },
+                        )
+                    )
                     break  # 找到一个就停止该参数的测试
 
         return vulnerabilities
 
-    def detect_cloud_metadata(
-        self,
-        url: str,
-        param: Optional[str] = None
-    ) -> List[Vulnerability]:
+    def detect_cloud_metadata(self, url: str, param: Optional[str] = None) -> List[Vulnerability]:
         """检测云元数据 SSRF"""
         vulnerabilities = []
         test_params = self.get_test_params(param)
 
         for test_param in test_params:
             for payload in self.CLOUD_METADATA_PAYLOADS:
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
                 response = self.send_request(url, encoded_payload, test_param)
 
                 if not response or not response.get("success"):
@@ -250,38 +287,36 @@ class SSRFDetector(BaseDetector):
                         break
 
                 if found_indicator:
-                    vulnerabilities.append(Vulnerability(
-                        type="Cloud Metadata SSRF",
-                        severity="CRITICAL",
-                        param=test_param,
-                        payload=payload,
-                        url=response.get("url", url),
-                        evidence=f"检测到 {cloud_type} 云元数据访问: {found_indicator}",
-                        verified=False,
-                        confidence=0.95,
-                        details={
-                            "cloud_type": cloud_type,
-                            "indicator": found_indicator,
-                            "target": payload,
-                            "response_length": len(resp_text)
-                        }
-                    ))
+                    vulnerabilities.append(
+                        Vulnerability(
+                            type="Cloud Metadata SSRF",
+                            severity="CRITICAL",
+                            param=test_param,
+                            payload=payload,
+                            url=response.get("url", url),
+                            evidence=f"检测到 {cloud_type} 云元数据访问: {found_indicator}",
+                            verified=False,
+                            confidence=0.95,
+                            details={
+                                "cloud_type": cloud_type,
+                                "indicator": found_indicator,
+                                "target": payload,
+                                "response_length": len(resp_text),
+                            },
+                        )
+                    )
                     break
 
         return vulnerabilities
 
-    def detect_protocol_abuse(
-        self,
-        url: str,
-        param: Optional[str] = None
-    ) -> List[Vulnerability]:
+    def detect_protocol_abuse(self, url: str, param: Optional[str] = None) -> List[Vulnerability]:
         """检测协议滥用 SSRF"""
         vulnerabilities = []
         test_params = self.get_test_params(param)
 
         for test_param in test_params:
             for payload in self.PROTOCOL_PAYLOADS:
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
                 response = self.send_request(url, encoded_payload, test_param)
 
                 if not response or not response.get("success"):
@@ -299,31 +334,29 @@ class SSRFDetector(BaseDetector):
                         break
 
                 if found_indicator:
-                    vulnerabilities.append(Vulnerability(
-                        type=f"Protocol Abuse SSRF ({protocol}://)",
-                        severity="CRITICAL",
-                        param=test_param,
-                        payload=payload,
-                        url=response.get("url", url),
-                        evidence=f"通过 {protocol}:// 协议访问成功: {found_indicator}",
-                        verified=False,
-                        confidence=0.9,
-                        details={
-                            "protocol": protocol,
-                            "indicator": found_indicator,
-                            "target": payload,
-                            "response_length": len(resp_text)
-                        }
-                    ))
+                    vulnerabilities.append(
+                        Vulnerability(
+                            type=f"Protocol Abuse SSRF ({protocol}://)",
+                            severity="CRITICAL",
+                            param=test_param,
+                            payload=payload,
+                            url=response.get("url", url),
+                            evidence=f"通过 {protocol}:// 协议访问成功: {found_indicator}",
+                            verified=False,
+                            confidence=0.9,
+                            details={
+                                "protocol": protocol,
+                                "indicator": found_indicator,
+                                "target": payload,
+                                "response_length": len(resp_text),
+                            },
+                        )
+                    )
                     break
 
         return vulnerabilities
 
-    def detect_blind(
-        self,
-        url: str,
-        param: Optional[str] = None
-    ) -> List[Vulnerability]:
+    def detect_blind(self, url: str, param: Optional[str] = None) -> List[Vulnerability]:
         """检测盲 SSRF (基于错误信息和时间差异)"""
         vulnerabilities = []
         test_params = self.get_test_params(param)
@@ -341,7 +374,7 @@ class SSRFDetector(BaseDetector):
 
         for test_param in test_params:
             for payload, expected_delay in blind_payloads:
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
                 response = self.send_request(url, encoded_payload, test_param)
 
                 if not response:
@@ -358,7 +391,9 @@ class SSRFDetector(BaseDetector):
                         break
 
                 # 检查时间延迟
-                has_delay = response_time >= expected_delay * 0.7 and response_time >= baseline_time + 3
+                has_delay = (
+                    response_time >= expected_delay * 0.7 and response_time >= baseline_time + 3
+                )
 
                 if found_error or has_delay:
                     evidence = []
@@ -367,31 +402,30 @@ class SSRFDetector(BaseDetector):
                     if has_delay:
                         evidence.append(f"响应延迟: {response_time:.2f}s")
 
-                    vulnerabilities.append(Vulnerability(
-                        type="Blind SSRF",
-                        severity="HIGH",
-                        param=test_param,
-                        payload=payload,
-                        url=response.get("url", url),
-                        evidence="; ".join(evidence),
-                        verified=False,
-                        confidence=0.6 if found_error else 0.5,
-                        details={
-                            "error_indicator": found_error,
-                            "response_time": response_time,
-                            "baseline_time": baseline_time,
-                            "has_delay": has_delay
-                        }
-                    ))
+                    vulnerabilities.append(
+                        Vulnerability(
+                            type="Blind SSRF",
+                            severity="HIGH",
+                            param=test_param,
+                            payload=payload,
+                            url=response.get("url", url),
+                            evidence="; ".join(evidence),
+                            verified=False,
+                            confidence=0.6 if found_error else 0.5,
+                            details={
+                                "error_indicator": found_error,
+                                "response_time": response_time,
+                                "baseline_time": baseline_time,
+                                "has_delay": has_delay,
+                            },
+                        )
+                    )
                     break
 
         return vulnerabilities
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = True
+        self, url: str, param: Optional[str] = None, deep_scan: bool = True
     ) -> Dict[str, Any]:
         """
         SSRF 检测入口
@@ -445,7 +479,7 @@ class SSRFDetector(BaseDetector):
                 "cloud_metadata": sum(1 for v in verified_vulns if "Cloud" in v.type),
                 "protocol_abuse": sum(1 for v in verified_vulns if "Protocol" in v.type),
                 "blind": sum(1 for v in verified_vulns if "Blind" in v.type),
-            }
+            },
         }
 
 

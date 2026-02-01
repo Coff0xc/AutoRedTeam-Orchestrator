@@ -12,7 +12,7 @@ import logging
 import os
 import threading
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from .models import CVEEntry, CVEStats, Severity, SyncStatus
 from .search import CVESearchEngine, SearchFilter, SearchOptions, SearchResult
@@ -20,12 +20,10 @@ from .sources import (
     AggregatedSource,
     CVESource,
     ExploitDBSource,
-    GitHubPoCSource,
     NucleiSource,
     NVDSource,
-    create_aggregated_source,
 )
-from .storage import CVEStorage, get_storage
+from .storage import get_storage
 
 logger = logging.getLogger(__name__)
 

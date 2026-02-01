@@ -9,9 +9,9 @@ import logging
 import random
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import parse_qs, quote, urlencode, urlparse
+from urllib.parse import quote, urlparse
 
 logger = logging.getLogger(__name__)
 

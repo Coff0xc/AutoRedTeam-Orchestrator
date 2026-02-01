@@ -17,7 +17,7 @@
     return tool_not_found("nmap")
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 
 def success(

@@ -10,22 +10,17 @@ Payload 引擎模块 - 统一的自适应 Payload 引擎
 提供统一的 Payload 生成、选择、变异和学习接口
 """
 
-import json
 import logging
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from .mutator import PayloadMutator, mutate_for_waf, mutate_payload
-from .selector import SmartPayloadSelector, get_selector
+from .mutator import PayloadMutator, mutate_payload
+from .selector import SmartPayloadSelector
 from .signatures import WAF_BYPASS_STRATEGIES, TargetProfile
 from .types import (
-    PayloadCategory,
     PayloadResult,
-    PayloadStats,
     ScoredPayload,
-    VulnType,
-    get_payload_hash,
     get_payload_key,
 )
 

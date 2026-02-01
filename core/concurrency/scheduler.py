@@ -369,7 +369,7 @@ class TaskScheduler:
         self.start()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type, _exc_val, _exc_tb) -> None:
         self.stop(wait=True)
 
     def __del__(self) -> None:

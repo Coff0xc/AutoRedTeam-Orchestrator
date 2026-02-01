@@ -8,7 +8,6 @@
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 
 def get_temp_dir() -> Path:

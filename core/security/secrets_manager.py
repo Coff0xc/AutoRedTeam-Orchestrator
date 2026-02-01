@@ -11,7 +11,7 @@ import logging
 import os
 import secrets
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend

@@ -12,13 +12,11 @@ Warning: 仅限授权渗透测试使用！
 import logging
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 from ..base import (
     BaseExfiltration,
     ExfilChannel,
     ExfilConfig,
-    ExfilStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -234,7 +232,6 @@ class SMBExfiltrationNative(BaseExfiltration):
 
     def disconnect(self) -> None:
         """清理连接"""
-        pass
 
     def send_chunk(self, data: bytes) -> bool:
         """通过系统命令发送数据"""

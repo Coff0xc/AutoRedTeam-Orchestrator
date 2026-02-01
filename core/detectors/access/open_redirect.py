@@ -7,11 +7,10 @@
 import logging
 import re
 from typing import Any, Dict, List, Optional
-from urllib.parse import parse_qs, urljoin, urlparse
+from urllib.parse import parse_qs, urlparse
 
 from ..base import BaseDetector
 from ..factory import register_detector
-from ..payloads import PayloadCategory, get_payloads
 from ..result import DetectionResult, DetectorType, Severity
 
 logger = logging.getLogger(__name__)

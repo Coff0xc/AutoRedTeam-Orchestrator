@@ -6,13 +6,11 @@
 
 import logging
 import os
-import shlex
 import shutil
 import subprocess
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -355,8 +353,6 @@ class SafeExecutor:
 
 class SecurityError(Exception):
     """安全错误异常"""
-
-    pass
 
 
 # ========== 沙箱执行器 ==========

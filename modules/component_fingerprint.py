@@ -4,7 +4,7 @@
 """
 
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 # 组件指纹数据库
 FINGERPRINTS = {

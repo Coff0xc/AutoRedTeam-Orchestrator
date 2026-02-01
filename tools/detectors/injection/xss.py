@@ -8,14 +8,16 @@ XSS 检测器 - 基于 BaseDetector 重构
 - DOM 型 XSS (DOM-based XSS) - 基础检测
 """
 
-import re
 import html
-from typing import Dict, List, Any, Optional
+import os
+import re
+import sys
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+)
 
 from tools.detectors.base import BaseDetector, Vulnerability
 
@@ -25,9 +27,23 @@ class XSSDetector(BaseDetector):
 
     # 覆盖默认测试参数
     DEFAULT_PARAMS = [
-        "search", "q", "query", "keyword", "name", "input",
-        "text", "msg", "message", "content", "title", "comment",
-        "value", "data", "body", "description", "callback"
+        "search",
+        "q",
+        "query",
+        "keyword",
+        "name",
+        "input",
+        "text",
+        "msg",
+        "message",
+        "content",
+        "title",
+        "comment",
+        "value",
+        "data",
+        "body",
+        "description",
+        "callback",
     ]
 
     # 反射型 XSS Payload
@@ -47,7 +63,7 @@ class XSSDetector(BaseDetector):
         # 闭合标签
         "'\"><script>alert(1)</script>",
         "'><script>alert(1)</script>",
-        "\"><script>alert(1)</script>",
+        '"><script>alert(1)</script>',
         "</title><script>alert(1)</script>",
         "</textarea><script>alert(1)</script>",
         # JavaScript 协议
@@ -75,14 +91,33 @@ class XSSDetector(BaseDetector):
 
     # 危险 HTML 标签和属性
     DANGEROUS_TAGS = [
-        "script", "iframe", "object", "embed", "applet",
-        "form", "input", "button", "select", "textarea"
+        "script",
+        "iframe",
+        "object",
+        "embed",
+        "applet",
+        "form",
+        "input",
+        "button",
+        "select",
+        "textarea",
     ]
 
     DANGEROUS_ATTRS = [
-        "onerror", "onload", "onclick", "onmouseover", "onfocus",
-        "onblur", "onchange", "onsubmit", "onkeydown", "onkeyup",
-        "onmouseenter", "onmouseleave", "ondblclick", "oncontextmenu"
+        "onerror",
+        "onload",
+        "onclick",
+        "onmouseover",
+        "onfocus",
+        "onblur",
+        "onchange",
+        "onsubmit",
+        "onkeydown",
+        "onkeyup",
+        "onmouseenter",
+        "onmouseleave",
+        "ondblclick",
+        "oncontextmenu",
     ]
 
     def get_payloads(self) -> Dict[str, List[str]]:
@@ -93,10 +128,7 @@ class XSSDetector(BaseDetector):
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在 XSS"""
         if not response or not response.get("success"):
@@ -121,23 +153,19 @@ class XSSDetector(BaseDetector):
         if encoded_payload in response_text:
             # 如果只是被编码了，可能不是漏洞
             # 但如果关键字符没被编码，仍可能有风险
-            if payload.replace('"', '&quot;') in response_text:
+            if payload.replace('"', "&quot;") in response_text:
                 return True
 
         # 部分编码匹配
-        partial_encoded = payload.replace('<', '&lt;').replace('>', '&gt;')
+        partial_encoded = payload.replace("<", "&lt;").replace(">", "&gt;")
         if partial_encoded != payload and partial_encoded not in response_text:
             # 如果 < > 被编码了，检查其他危险字符
-            if 'onerror' in payload.lower() and 'onerror' in response_text.lower():
+            if "onerror" in payload.lower() and "onerror" in response_text.lower():
                 return True
 
         return False
 
-    def _analyze_context(
-        self,
-        response_text: str,
-        payload: str
-    ) -> Optional[str]:
+    def _analyze_context(self, response_text: str, payload: str) -> Optional[str]:
         """分析 payload 在响应中的上下文"""
         for context_name, pattern in self.CONTEXT_PATTERNS.items():
             regex = pattern.replace("{payload}", re.escape(payload))
@@ -145,11 +173,7 @@ class XSSDetector(BaseDetector):
                 return context_name
         return None
 
-    def detect_reflected(
-        self,
-        url: str,
-        param: Optional[str] = None
-    ) -> List[Vulnerability]:
+    def detect_reflected(self, url: str, param: Optional[str] = None) -> List[Vulnerability]:
         """检测反射型 XSS"""
         vulnerabilities = []
         test_params = self.get_test_params(param)
@@ -157,7 +181,7 @@ class XSSDetector(BaseDetector):
         for test_param in test_params:
             for payload in self.REFLECTED_PAYLOADS:
                 # URL 编码 payload
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
 
                 response = self.send_request(url, encoded_payload, test_param)
 
@@ -171,29 +195,24 @@ class XSSDetector(BaseDetector):
                     # 分析上下文
                     context = self._analyze_context(resp_text, payload)
 
-                    vulnerabilities.append(Vulnerability(
-                        type="Reflected XSS",
-                        severity="HIGH",
-                        param=test_param,
-                        payload=payload,
-                        url=response.get("url", url),
-                        evidence=f"Payload 在响应中反射, 上下文: {context or 'unknown'}",
-                        verified=False,
-                        confidence=0.75 if context else 0.6,
-                        details={
-                            "context": context,
-                            "response_length": len(resp_text)
-                        }
-                    ))
+                    vulnerabilities.append(
+                        Vulnerability(
+                            type="Reflected XSS",
+                            severity="HIGH",
+                            param=test_param,
+                            payload=payload,
+                            url=response.get("url", url),
+                            evidence=f"Payload 在响应中反射, 上下文: {context or 'unknown'}",
+                            verified=False,
+                            confidence=0.75 if context else 0.6,
+                            details={"context": context, "response_length": len(resp_text)},
+                        )
+                    )
                     break  # 找到一个就停止该参数的测试
 
         return vulnerabilities
 
-    def detect_dom_based(
-        self,
-        url: str,
-        param: Optional[str] = None
-    ) -> List[Vulnerability]:
+    def detect_dom_based(self, url: str, param: Optional[str] = None) -> List[Vulnerability]:
         """检测 DOM 型 XSS (基础检测)"""
         vulnerabilities = []
         test_params = self.get_test_params(param)
@@ -223,7 +242,7 @@ class XSSDetector(BaseDetector):
 
         for test_param in test_params:
             for payload in self.DOM_PAYLOADS:
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
                 response = self.send_request(url, encoded_payload, test_param)
 
                 if not response or not response.get("success"):
@@ -237,30 +256,29 @@ class XSSDetector(BaseDetector):
 
                 # 检查 payload 是否反射
                 if self._check_reflection(resp_text, payload):
-                    vulnerabilities.append(Vulnerability(
-                        type="DOM-based XSS",
-                        severity="HIGH",
-                        param=test_param,
-                        payload=payload,
-                        url=response.get("url", url),
-                        evidence=f"DOM sink: {has_sink}, DOM source: {has_source}",
-                        verified=False,
-                        confidence=0.7 if (has_sink and has_source) else 0.5,
-                        details={
-                            "has_dom_sink": has_sink,
-                            "has_dom_source": has_source,
-                            "response_length": len(resp_text)
-                        }
-                    ))
+                    vulnerabilities.append(
+                        Vulnerability(
+                            type="DOM-based XSS",
+                            severity="HIGH",
+                            param=test_param,
+                            payload=payload,
+                            url=response.get("url", url),
+                            evidence=f"DOM sink: {has_sink}, DOM source: {has_source}",
+                            verified=False,
+                            confidence=0.7 if (has_sink and has_source) else 0.5,
+                            details={
+                                "has_dom_sink": has_sink,
+                                "has_dom_source": has_source,
+                                "response_length": len(resp_text),
+                            },
+                        )
+                    )
                     break
 
         return vulnerabilities
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = True
+        self, url: str, param: Optional[str] = None, deep_scan: bool = True
     ) -> Dict[str, Any]:
         """
         XSS 检测入口
@@ -303,7 +321,7 @@ class XSSDetector(BaseDetector):
             "by_type": {
                 "reflected": sum(1 for v in verified_vulns if "Reflected" in v.type),
                 "dom_based": sum(1 for v in verified_vulns if "DOM" in v.type),
-            }
+            },
         }
 
 

@@ -19,63 +19,50 @@
 - 新代码应直接从 tools.vuln 导入
 - 旧代码继续工作，无需修改
 """
+
 import logging
 import warnings
 
 # 从新的模块化结构导入
-from .vuln import (
-    # 主注册函数
-    register_vuln_tools,
-    # 注入类
-    sqli_detect,
-    xss_detect,
-    ssti_detect,
-    nosql_detect,
-    cmd_inject_detect,
-    # 访问控制类
-    ssrf_detect,
-    lfi_detect,
-    redirect_detect,
-    idor_detect,
-    crlf_detect,
-    # 认证类
-    auth_bypass_detect,
-    weak_password_detect,
-    jwt_vuln_detect,
-    # Web安全类
-    csrf_detect,
-    cors_deep_check,
-    security_headers_check,
-    cache_poisoning_detect,
-    # 序列化类
-    xxe_detect,
-    deserialize_detect,
-    # 高级检测
-    request_smuggling_detect,
-    prototype_pollution_detect,
-    browser_scan,
-    waf_detect,
+from .vuln import (  # 主注册函数; 注入类; 访问控制类; 认证类; Web安全类; 序列化类; 高级检测; 工具函数
     access_control_test,
-    logic_vuln_check,
+    auth_bypass_detect,
+    browser_scan,
+    cache_poisoning_detect,
+    cmd_inject_detect,
+    cors_deep_check,
+    crlf_detect,
+    csrf_detect,
+    deserialize_detect,
     file_upload_detect,
-    # 工具函数
+    idor_detect,
+    jwt_vuln_detect,
+    lfi_detect,
+    logic_vuln_check,
+    nosql_detect,
+    prototype_pollution_detect,
+    redirect_detect,
+    register_vuln_tools,
+    request_smuggling_detect,
+    security_headers_check,
+    sqli_detect,
+    ssrf_detect,
+    ssti_detect,
     vuln_check,
+    waf_detect,
+    weak_password_detect,
+    xss_detect,
+    xxe_detect,
 )
 
 # 可选：导入旧的检测器类（用于渐进式迁移）
 try:
-    from .detectors import (
-        SQLiDetector, XSSDetector, RCEDetector,
-        SSRFDetector, CSRFDetector, CORSDetector,
-        LFIDetector, FileUploadDetector,
-        AuthBypassDetector, WeakPasswordDetector,
-        get_detector, list_detectors
-    )
     HAS_DETECTORS = True
 except ImportError:
     HAS_DETECTORS = False
 
 logger = logging.getLogger(__name__)
+
 
 # 发出弃用警告（仅在直接导入此模块时）
 def _emit_deprecation_warning():
@@ -84,8 +71,9 @@ def _emit_deprecation_warning():
         "tools.vuln_tools 已重构为模块化架构。"
         "建议直接从 tools.vuln 导入: from tools.vuln import sqli_detect",
         DeprecationWarning,
-        stacklevel=3
+        stacklevel=3,
     )
+
 
 # 导出所有公开符号
 __all__ = [
@@ -129,12 +117,21 @@ __all__ = [
 
 # 如果有检测器类，也导出
 if HAS_DETECTORS:
-    __all__.extend([
-        "SQLiDetector", "XSSDetector", "RCEDetector",
-        "SSRFDetector", "CSRFDetector", "CORSDetector",
-        "LFIDetector", "FileUploadDetector",
-        "AuthBypassDetector", "WeakPasswordDetector",
-        "get_detector", "list_detectors",
-    ])
+    __all__.extend(
+        [
+            "SQLiDetector",
+            "XSSDetector",
+            "RCEDetector",
+            "SSRFDetector",
+            "CSRFDetector",
+            "CORSDetector",
+            "LFIDetector",
+            "FileUploadDetector",
+            "AuthBypassDetector",
+            "WeakPasswordDetector",
+            "get_detector",
+            "list_detectors",
+        ]
+    )
 
 logger.debug("vuln_tools 兼容层已加载，实际实现在 tools.vuln 子模块")

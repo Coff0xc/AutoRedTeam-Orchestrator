@@ -6,13 +6,10 @@
 
 import asyncio
 import logging
-import socket
 import threading
 import time
-from collections import defaultdict
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -105,7 +102,7 @@ class AsyncHTTPPool:
         """异步上下文管理器入口"""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, _exc_val, _exc_tb):
         """异步上下文管理器退出"""
         await self.close()
         return False

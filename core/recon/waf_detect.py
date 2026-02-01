@@ -16,13 +16,12 @@ waf_detect.py - WAF检测模块
 
 import logging
 import re
-import socket
 import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Pattern, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

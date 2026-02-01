@@ -21,7 +21,6 @@ from .base import (
     ExecutionResult,
     FileTransferResult,
     LateralConfig,
-    LateralModuleError,
     LateralStatus,
 )
 

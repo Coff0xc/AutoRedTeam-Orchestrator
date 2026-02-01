@@ -5,7 +5,6 @@ AWS云安全工具
 
 import json
 import logging
-import re
 import subprocess
 from dataclasses import dataclass, field
 from typing import Any, Dict, List

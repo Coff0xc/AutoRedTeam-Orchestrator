@@ -3,37 +3,31 @@
 公共配置和辅助函数 - 所有工具模块共享
 """
 
-import sys
+import json
 import os
+import platform
 import shutil
 import socket
 import ssl
-import json
 import subprocess
-import platform
-import re
-import time
 import threading
-from typing import Optional
-from urllib.parse import urlparse
+import time
 from functools import wraps
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 尝试导入可选依赖
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
 
 try:
-    import dns.resolver
     HAS_DNS = True
 except ImportError:
     HAS_DNS = False
 
 try:
-    import nmap
     HAS_NMAP = True
 except ImportError:
     HAS_NMAP = False
@@ -67,6 +61,7 @@ _last_request_time = 0
 
 def rate_limited(func):
     """速率限制装饰器 - 防止触发WAF/被封IP"""
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         global _last_request_time
@@ -77,6 +72,7 @@ def rate_limited(func):
                 time.sleep(delay - elapsed)
             _last_request_time = time.time()
         return func(*args, **kwargs)
+
     return wrapper
 
 
@@ -98,22 +94,28 @@ def get_proxies():
 def safe_execute(func, *args, timeout_sec: int = 30, default=None, **kwargs):
     """安全执行函数 - 带超时保护"""
     import concurrent.futures
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(func, *args, **kwargs)
         try:
             return future.result(timeout=timeout_sec)
         except concurrent.futures.TimeoutError:
-            return default if default is not None else {"success": False, "error": f"操作超时 ({timeout_sec}s)"}
+            return (
+                default
+                if default is not None
+                else {"success": False, "error": f"操作超时 ({timeout_sec}s)"}
+            )
         except Exception as e:
             return default if default is not None else {"success": False, "error": str(e)}
 
 
 # ========== 网络可达性与快速失败机制 ==========
 
+
 def check_target_reachable(target: str, timeout: int = 5) -> dict:
     """快速检查目标是否可达"""
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     if target.startswith("http"):
         url = target
@@ -121,8 +123,8 @@ def check_target_reachable(target: str, timeout: int = 5) -> dict:
         url = f"https://{target}"
 
     try:
-        req = urllib.request.Request(url, method='HEAD')
-        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+        req = urllib.request.Request(url, method="HEAD")
+        req.add_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
@@ -133,11 +135,19 @@ def check_target_reachable(target: str, timeout: int = 5) -> dict:
     except urllib.error.HTTPError as e:
         return {"reachable": True, "status": e.code, "error": None, "suggestions": []}
     except urllib.error.URLError as e:
-        return {"reachable": False, "status": 0, "error": str(e.reason),
-                "suggestions": get_network_error_suggestions(str(e.reason))}
+        return {
+            "reachable": False,
+            "status": 0,
+            "error": str(e.reason),
+            "suggestions": get_network_error_suggestions(str(e.reason)),
+        }
     except Exception as e:
-        return {"reachable": False, "status": 0, "error": str(e),
-                "suggestions": get_network_error_suggestions(str(e))}
+        return {
+            "reachable": False,
+            "status": 0,
+            "error": str(e),
+            "suggestions": get_network_error_suggestions(str(e)),
+        }
 
 
 def get_network_error_suggestions(error_msg: str) -> list:
@@ -206,14 +216,14 @@ def safe_json_response(data: dict, max_size: int = None) -> dict:
             return obj
         elif isinstance(obj, bytes):
             try:
-                return obj.decode('utf-8', errors='replace')
+                return obj.decode("utf-8", errors="replace")
             except Exception:
                 return str(obj)
         elif isinstance(obj, dict):
             return {str(k): _sanitize(v, depth + 1) for k, v in obj.items()}
         elif isinstance(obj, (list, tuple)):
             return [_sanitize(item, depth + 1) for item in obj]
-        elif hasattr(obj, '__dict__'):
+        elif hasattr(obj, "__dict__"):
             return _sanitize(obj.__dict__, depth + 1)
         else:
             return str(obj)
@@ -227,11 +237,15 @@ def safe_json_response(data: dict, max_size: int = None) -> dict:
                 "truncated": True,
                 "original_size": len(json_str),
                 "message": f"响应过大({len(json_str)}字符)，已截断",
-                "summary": _extract_summary(sanitized)
+                "summary": _extract_summary(sanitized),
             }
         return sanitized
     except Exception as e:
-        return {"success": False, "error": f"JSON序列化失败: {str(e)}", "raw_type": type(data).__name__}
+        return {
+            "success": False,
+            "error": f"JSON序列化失败: {str(e)}",
+            "raw_type": type(data).__name__,
+        }
 
 
 def _extract_summary(data: dict) -> dict:
@@ -257,82 +271,348 @@ PENTEST_PHASES = {
     "recon": {
         "name": "信息收集",
         "checks": ["dns", "http", "tech", "subdomain", "port"],
-        "timeout": 60
+        "timeout": 60,
     },
     "vuln_basic": {
         "name": "基础漏洞扫描",
         "checks": ["dir", "sensitive", "vuln", "sqli", "xss"],
-        "timeout": 90
+        "timeout": 90,
     },
     "vuln_advanced": {
         "name": "高级漏洞检测",
-        "checks": ["csrf", "ssrf", "cmd_inject", "xxe", "idor", "auth_bypass", "logic", "file_upload", "ssti", "lfi", "waf"],
-        "timeout": 120
-    }
+        "checks": [
+            "csrf",
+            "ssrf",
+            "cmd_inject",
+            "xxe",
+            "idor",
+            "auth_bypass",
+            "logic",
+            "file_upload",
+            "ssti",
+            "lfi",
+            "waf",
+        ],
+        "timeout": 120,
+    },
 }
 
 # ========== 内置字典 ==========
 COMMON_DIRS = [
-    "admin", "administrator", "login", "wp-admin", "wp-login.php", "phpmyadmin",
-    "backup", "backups", "bak", "old", "test", "dev", "api", "v1", "v2",
-    ".git", ".svn", ".env", ".htaccess", "robots.txt", "sitemap.xml",
-    "config", "conf", "configuration", "settings", "setup", "install",
-    "upload", "uploads", "files", "images", "img", "static", "assets",
-    "js", "css", "scripts", "includes", "inc", "lib", "libs",
-    "admin.php", "config.php", "database.php", "db.php", "conn.php",
-    "phpinfo.php", "info.php", "test.php", "shell.php", "cmd.php",
-    "console", "dashboard", "panel", "manage", "manager", "management",
-    "user", "users", "member", "members", "account", "accounts",
-    "data", "database", "db", "sql", "mysql", "dump", "export",
-    "log", "logs", "debug", "error", "errors", "tmp", "temp", "cache",
-    "private", "secret", "hidden", "internal", "secure",
-    "wp-content", "wp-includes", "xmlrpc.php", "readme.html",
-    "server-status", "server-info", ".well-known", "actuator", "swagger",
-    "api-docs", "graphql", "graphiql", "metrics", "health", "status"
+    "admin",
+    "administrator",
+    "login",
+    "wp-admin",
+    "wp-login.php",
+    "phpmyadmin",
+    "backup",
+    "backups",
+    "bak",
+    "old",
+    "test",
+    "dev",
+    "api",
+    "v1",
+    "v2",
+    ".git",
+    ".svn",
+    ".env",
+    ".htaccess",
+    "robots.txt",
+    "sitemap.xml",
+    "config",
+    "conf",
+    "configuration",
+    "settings",
+    "setup",
+    "install",
+    "upload",
+    "uploads",
+    "files",
+    "images",
+    "img",
+    "static",
+    "assets",
+    "js",
+    "css",
+    "scripts",
+    "includes",
+    "inc",
+    "lib",
+    "libs",
+    "admin.php",
+    "config.php",
+    "database.php",
+    "db.php",
+    "conn.php",
+    "phpinfo.php",
+    "info.php",
+    "test.php",
+    "shell.php",
+    "cmd.php",
+    "console",
+    "dashboard",
+    "panel",
+    "manage",
+    "manager",
+    "management",
+    "user",
+    "users",
+    "member",
+    "members",
+    "account",
+    "accounts",
+    "data",
+    "database",
+    "db",
+    "sql",
+    "mysql",
+    "dump",
+    "export",
+    "log",
+    "logs",
+    "debug",
+    "error",
+    "errors",
+    "tmp",
+    "temp",
+    "cache",
+    "private",
+    "secret",
+    "hidden",
+    "internal",
+    "secure",
+    "wp-content",
+    "wp-includes",
+    "xmlrpc.php",
+    "readme.html",
+    "server-status",
+    "server-info",
+    ".well-known",
+    "actuator",
+    "swagger",
+    "api-docs",
+    "graphql",
+    "graphiql",
+    "metrics",
+    "health",
+    "status",
 ]
 
 COMMON_SUBDOMAINS = [
-    "www", "mail", "ftp", "localhost", "webmail", "smtp", "pop", "ns1", "ns2",
-    "dns", "dns1", "dns2", "mx", "mx1", "mx2", "blog", "dev", "test", "staging",
-    "api", "app", "admin", "portal", "vpn", "remote", "secure", "shop", "store",
-    "m", "mobile", "wap", "static", "cdn", "img", "images", "assets", "media",
-    "video", "download", "downloads", "upload", "uploads", "files", "docs",
-    "support", "help", "forum", "community", "wiki", "kb", "status", "monitor",
-    "git", "gitlab", "github", "svn", "jenkins", "ci", "build", "deploy",
-    "db", "database", "mysql", "postgres", "redis", "mongo", "elastic", "es",
-    "auth", "login", "sso", "oauth", "id", "identity", "accounts", "account",
-    "pay", "payment", "billing", "invoice", "order", "orders", "cart", "checkout",
-    "crm", "erp", "hr", "internal", "intranet", "extranet", "partner", "partners",
-    "demo", "sandbox", "beta", "alpha", "preview", "new", "old", "legacy", "v2"
+    "www",
+    "mail",
+    "ftp",
+    "localhost",
+    "webmail",
+    "smtp",
+    "pop",
+    "ns1",
+    "ns2",
+    "dns",
+    "dns1",
+    "dns2",
+    "mx",
+    "mx1",
+    "mx2",
+    "blog",
+    "dev",
+    "test",
+    "staging",
+    "api",
+    "app",
+    "admin",
+    "portal",
+    "vpn",
+    "remote",
+    "secure",
+    "shop",
+    "store",
+    "m",
+    "mobile",
+    "wap",
+    "static",
+    "cdn",
+    "img",
+    "images",
+    "assets",
+    "media",
+    "video",
+    "download",
+    "downloads",
+    "upload",
+    "uploads",
+    "files",
+    "docs",
+    "support",
+    "help",
+    "forum",
+    "community",
+    "wiki",
+    "kb",
+    "status",
+    "monitor",
+    "git",
+    "gitlab",
+    "github",
+    "svn",
+    "jenkins",
+    "ci",
+    "build",
+    "deploy",
+    "db",
+    "database",
+    "mysql",
+    "postgres",
+    "redis",
+    "mongo",
+    "elastic",
+    "es",
+    "auth",
+    "login",
+    "sso",
+    "oauth",
+    "id",
+    "identity",
+    "accounts",
+    "account",
+    "pay",
+    "payment",
+    "billing",
+    "invoice",
+    "order",
+    "orders",
+    "cart",
+    "checkout",
+    "crm",
+    "erp",
+    "hr",
+    "internal",
+    "intranet",
+    "extranet",
+    "partner",
+    "partners",
+    "demo",
+    "sandbox",
+    "beta",
+    "alpha",
+    "preview",
+    "new",
+    "old",
+    "legacy",
+    "v2",
 ]
 
 SENSITIVE_FILES = [
-    ".git/config", ".git/HEAD", ".svn/entries", ".env", ".env.local", ".env.prod",
-    "wp-config.php", "configuration.php", "config.php", "settings.php", "database.php",
-    "web.config", "applicationHost.config", ".htaccess", ".htpasswd",
-    "robots.txt", "sitemap.xml", "crossdomain.xml", "clientaccesspolicy.xml",
-    "phpinfo.php", "info.php", "test.php", "debug.php",
-    "backup.sql", "dump.sql", "database.sql", "db.sql", "data.sql",
-    "backup.zip", "backup.tar.gz", "backup.rar", "site.zip", "www.zip",
-    "id_rsa", "id_dsa", ".ssh/id_rsa", ".ssh/authorized_keys",
-    "server.key", "server.crt", "ssl.key", "private.key", "certificate.crt",
-    "composer.json", "package.json", "Gemfile", "requirements.txt", "pom.xml",
-    "Dockerfile", "docker-compose.yml", ".dockerignore", "Vagrantfile",
-    "README.md", "CHANGELOG.md", "LICENSE", "VERSION", "INSTALL",
-    "error_log", "error.log", "access.log", "debug.log", "app.log",
-    "adminer.php", "phpmyadmin/", "pma/", "mysql/", "myadmin/",
-    "elmah.axd", "trace.axd", "Elmah.axd",
-    "actuator/env", "actuator/health", "actuator/info", "actuator/mappings",
-    "swagger.json", "swagger-ui.html", "api-docs", "v2/api-docs",
-    ".DS_Store", "Thumbs.db", "desktop.ini",
-    "main.js.map", "bundle.js.map", "app.js.map", "vendor.js.map",
-    "runtime.js.map", "webpack.js.map", "polyfills.js.map", "chunk.js.map",
-    "static/js/main.js.map", "assets/js/app.js.map", "_next/static/chunks/main.js.map",
-    "dist/main.js.map", "build/static/js/main.js.map",
-    "webpack.config.js", "webpack.mix.js", "vue.config.js", "vite.config.js",
-    "next.config.js", "nuxt.config.js", ".babelrc", "tsconfig.json",
-    "openapi.json", "openapi.yaml", "api/swagger.json", "docs/api.json",
-    "graphql", "graphiql", "playground", "altair"
+    ".git/config",
+    ".git/HEAD",
+    ".svn/entries",
+    ".env",
+    ".env.local",
+    ".env.prod",
+    "wp-config.php",
+    "configuration.php",
+    "config.php",
+    "settings.php",
+    "database.php",
+    "web.config",
+    "applicationHost.config",
+    ".htaccess",
+    ".htpasswd",
+    "robots.txt",
+    "sitemap.xml",
+    "crossdomain.xml",
+    "clientaccesspolicy.xml",
+    "phpinfo.php",
+    "info.php",
+    "test.php",
+    "debug.php",
+    "backup.sql",
+    "dump.sql",
+    "database.sql",
+    "db.sql",
+    "data.sql",
+    "backup.zip",
+    "backup.tar.gz",
+    "backup.rar",
+    "site.zip",
+    "www.zip",
+    "id_rsa",
+    "id_dsa",
+    ".ssh/id_rsa",
+    ".ssh/authorized_keys",
+    "server.key",
+    "server.crt",
+    "ssl.key",
+    "private.key",
+    "certificate.crt",
+    "composer.json",
+    "package.json",
+    "Gemfile",
+    "requirements.txt",
+    "pom.xml",
+    "Dockerfile",
+    "docker-compose.yml",
+    ".dockerignore",
+    "Vagrantfile",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "VERSION",
+    "INSTALL",
+    "error_log",
+    "error.log",
+    "access.log",
+    "debug.log",
+    "app.log",
+    "adminer.php",
+    "phpmyadmin/",
+    "pma/",
+    "mysql/",
+    "myadmin/",
+    "elmah.axd",
+    "trace.axd",
+    "Elmah.axd",
+    "actuator/env",
+    "actuator/health",
+    "actuator/info",
+    "actuator/mappings",
+    "swagger.json",
+    "swagger-ui.html",
+    "api-docs",
+    "v2/api-docs",
+    ".DS_Store",
+    "Thumbs.db",
+    "desktop.ini",
+    "main.js.map",
+    "bundle.js.map",
+    "app.js.map",
+    "vendor.js.map",
+    "runtime.js.map",
+    "webpack.js.map",
+    "polyfills.js.map",
+    "chunk.js.map",
+    "static/js/main.js.map",
+    "assets/js/app.js.map",
+    "_next/static/chunks/main.js.map",
+    "dist/main.js.map",
+    "build/static/js/main.js.map",
+    "webpack.config.js",
+    "webpack.mix.js",
+    "vue.config.js",
+    "vite.config.js",
+    "next.config.js",
+    "nuxt.config.js",
+    ".babelrc",
+    "tsconfig.json",
+    "openapi.json",
+    "openapi.yaml",
+    "api/swagger.json",
+    "docs/api.json",
+    "graphql",
+    "graphiql",
+    "playground",
+    "altair",
 ]
 
 
@@ -345,9 +625,9 @@ def validate_cli_target(target: str) -> tuple:
     """验证CLI目标参数，防止选项注入"""
     if not target:
         return False, "目标不能为空"
-    if target.startswith('-'):
+    if target.startswith("-"):
         return False, f"目标不能以'-'开头 (防止CLI选项注入): {target}"
-    dangerous = [';', '|', '&', '`', '$', '>', '<', '\n', '\r', '\x00']
+    dangerous = [";", "|", "&", "`", "$", ">", "<", "\n", "\r", "\x00"]
     if any(c in target for c in dangerous):
         return False, f"目标包含危险字符: {target}"
     return True, None
@@ -363,17 +643,18 @@ def is_private_ip(ip_str: str) -> bool:
         True 如果是私有/保留地址，False 否则
     """
     import ipaddress
+
     try:
         ip = ipaddress.ip_address(ip_str)
         # 检查各种私有/保留地址范围
         return (
-            ip.is_private or           # 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
-            ip.is_loopback or          # 127.0.0.0/8, ::1
-            ip.is_link_local or        # 169.254.0.0/16, fe80::/10
-            ip.is_multicast or         # 224.0.0.0/4, ff00::/8
-            ip.is_reserved or          # 保留地址
-            ip.is_unspecified or       # 0.0.0.0, ::
-            str(ip).startswith('0.')   # 0.x.x.x
+            ip.is_private  # 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+            or ip.is_loopback  # 127.0.0.0/8, ::1
+            or ip.is_link_local  # 169.254.0.0/16, fe80::/10
+            or ip.is_multicast  # 224.0.0.0/4, ff00::/8
+            or ip.is_reserved  # 保留地址
+            or ip.is_unspecified  # 0.0.0.0, ::
+            or str(ip).startswith("0.")  # 0.x.x.x
         )
     except ValueError:
         return True  # 无效 IP 视为不安全
@@ -399,10 +680,11 @@ def validate_target_host(hostname: str, port: int = 80, allow_private: bool = Fa
 
     # 危险主机名黑名单
     dangerous_hosts = [
-        'localhost', 'localhost.localdomain',
-        'metadata.google.internal',  # GCP 元数据
-        '169.254.169.254',           # AWS/Azure 元数据
-        'metadata.internal',
+        "localhost",
+        "localhost.localdomain",
+        "metadata.google.internal",  # GCP 元数据
+        "169.254.169.254",  # AWS/Azure 元数据
+        "metadata.internal",
     ]
     if hostname.lower() in dangerous_hosts:
         return False, f"禁止访问的主机: {hostname}"
@@ -436,14 +718,19 @@ def run_cmd(cmd: list, timeout: int = 300) -> dict:
     if not check_tool(tool):
         return {"success": False, "error": f"工具 {tool} 未安装"}
 
-    dangerous_chars = [';', '|', '&', '`', '$', '>', '<', '\n', '\r', '\x00', '\t', '\x0b', '\x0c']
+    dangerous_chars = [";", "|", "&", "`", "$", ">", "<", "\n", "\r", "\x00", "\t", "\x0b", "\x0c"]
     for arg in cmd:
         if any(c in str(arg) for c in dangerous_chars):
             return {"success": False, "error": f"检测到危险字符，拒绝执行: {arg}"}
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, shell=False)
-        return {"success": True, "stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode}
+        return {
+            "success": True,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode,
+        }
     except subprocess.TimeoutExpired:
         return {"success": False, "error": f"命令超时 ({timeout}s)"}
     except FileNotFoundError:
@@ -461,11 +748,18 @@ def get_user_agent():
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     ]
     import random
+
     return random.choice(agents)
 
 
-def make_request(url: str, method: str = "GET", headers: dict = None, data: str = None,
-                 timeout: int = None, verify: bool = None) -> dict:
+def make_request(
+    url: str,
+    method: str = "GET",
+    headers: dict = None,
+    data: str = None,
+    timeout: int = None,
+    verify: bool = None,
+) -> dict:
     """统一的 HTTP 请求函数"""
     if not HAS_REQUESTS:
         return {"success": False, "error": "requests 库未安装"}
@@ -483,15 +777,35 @@ def make_request(url: str, method: str = "GET", headers: dict = None, data: str 
 
     try:
         if method.upper() == "GET":
-            resp = requests.get(url, headers=default_headers, timeout=timeout, verify=verify, proxies=proxies)
+            resp = requests.get(
+                url, headers=default_headers, timeout=timeout, verify=verify, proxies=proxies
+            )
         elif method.upper() == "POST":
-            resp = requests.post(url, headers=default_headers, data=data, timeout=timeout, verify=verify, proxies=proxies)
+            resp = requests.post(
+                url,
+                headers=default_headers,
+                data=data,
+                timeout=timeout,
+                verify=verify,
+                proxies=proxies,
+            )
         elif method.upper() == "PUT":
-            resp = requests.put(url, headers=default_headers, data=data, timeout=timeout, verify=verify, proxies=proxies)
+            resp = requests.put(
+                url,
+                headers=default_headers,
+                data=data,
+                timeout=timeout,
+                verify=verify,
+                proxies=proxies,
+            )
         elif method.upper() == "DELETE":
-            resp = requests.delete(url, headers=default_headers, timeout=timeout, verify=verify, proxies=proxies)
+            resp = requests.delete(
+                url, headers=default_headers, timeout=timeout, verify=verify, proxies=proxies
+            )
         elif method.upper() == "HEAD":
-            resp = requests.head(url, headers=default_headers, timeout=timeout, verify=verify, proxies=proxies)
+            resp = requests.head(
+                url, headers=default_headers, timeout=timeout, verify=verify, proxies=proxies
+            )
         else:
             return {"success": False, "error": f"不支持的方法: {method}"}
 
@@ -499,7 +813,7 @@ def make_request(url: str, method: str = "GET", headers: dict = None, data: str 
             "success": True,
             "status_code": resp.status_code,
             "headers": dict(resp.headers),
-            "text": resp.text[:GLOBAL_CONFIG["max_response_size"]],
+            "text": resp.text[: GLOBAL_CONFIG["max_response_size"]],
             "url": resp.url,
         }
     except requests.exceptions.Timeout:

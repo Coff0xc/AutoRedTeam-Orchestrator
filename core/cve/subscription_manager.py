@@ -9,13 +9,12 @@ CVE情报订阅管理系统
 import asyncio
 import json
 import logging
-import os
 import sqlite3
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional
 
 import aiohttp
 

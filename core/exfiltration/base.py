@@ -11,9 +11,9 @@ import hashlib
 import logging
 import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -268,12 +268,10 @@ class BaseExfiltration(ABC):
         Returns:
             是否成功
         """
-        pass
 
     @abstractmethod
     def disconnect(self) -> None:
         """断开连接"""
-        pass
 
     @abstractmethod
     def send_chunk(self, data: bytes) -> bool:
@@ -286,7 +284,6 @@ class BaseExfiltration(ABC):
         Returns:
             是否成功
         """
-        pass
 
     def exfiltrate(self, data: bytes) -> ExfilResult:
         """
@@ -731,7 +728,7 @@ class BaseExfiltration(ABC):
         """上下文管理器入口"""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type, _exc_val, _exc_tb) -> None:
         """上下文管理器出口"""
         self.disconnect()
 

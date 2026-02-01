@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
 from .decision import DecisionEngine
-from .phases import PHASE_EXECUTORS, BasePhaseExecutor, PhaseResult
+from .phases import PHASE_EXECUTORS, PhaseResult
 from .state import PentestPhase, PentestState, PhaseStatus
 
 logger = logging.getLogger(__name__)

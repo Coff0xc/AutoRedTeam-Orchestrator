@@ -8,8 +8,8 @@
 - CORSDetector: 跨域资源共享配置检测
 """
 
+from .cors import CORSDetector
 from .csrf import CSRFDetector
 from .ssrf import SSRFDetector
-from .cors import CORSDetector
 
 __all__ = ["CSRFDetector", "SSRFDetector", "CORSDetector"]

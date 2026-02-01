@@ -28,6 +28,7 @@ def register_task_tools(mcp):
             task_id: 任务ID，用于查询状态
         """
         import json
+
         from utils.task_queue import get_task_queue
 
         # 延迟导入需要的工具函数
@@ -36,10 +37,13 @@ def register_task_tools(mcp):
         try:
             # 从当前注册的工具中获取函数
             from tools.recon_tools import (
-                _port_scan_impl, _full_recon_impl, _subdomain_bruteforce_impl,
-                _dir_bruteforce_impl, _sensitive_scan_impl
+                _dir_bruteforce_impl,
+                _full_recon_impl,
+                _port_scan_impl,
+                _sensitive_scan_impl,
+                _subdomain_bruteforce_impl,
             )
-            from tools.vuln_tools import _vuln_check_impl, _sqli_detect_impl, _xss_detect_impl
+            from tools.vuln_tools import _sqli_detect_impl, _vuln_check_impl, _xss_detect_impl
         except ImportError:
             # 如果模块拆分未完成，尝试从原始位置导入
             pass
@@ -50,48 +54,56 @@ def register_task_tools(mcp):
         # 尝试获取工具实现
         try:
             from tools.recon_tools import _port_scan_impl
+
             tool_map["port_scan"] = _port_scan_impl
         except (ImportError, AttributeError):
             pass
 
         try:
             from tools.recon_tools import _full_recon_impl
+
             tool_map["full_recon"] = _full_recon_impl
         except (ImportError, AttributeError):
             pass
 
         try:
             from tools.recon_tools import _subdomain_bruteforce_impl
+
             tool_map["subdomain_bruteforce"] = _subdomain_bruteforce_impl
         except (ImportError, AttributeError):
             pass
 
         try:
             from tools.recon_tools import _dir_bruteforce_impl
+
             tool_map["dir_bruteforce"] = _dir_bruteforce_impl
         except (ImportError, AttributeError):
             pass
 
         try:
             from tools.recon_tools import _sensitive_scan_impl
+
             tool_map["sensitive_scan"] = _sensitive_scan_impl
         except (ImportError, AttributeError):
             pass
 
         try:
             from tools.vuln_tools import _vuln_check_impl
+
             tool_map["vuln_check"] = _vuln_check_impl
         except (ImportError, AttributeError):
             pass
 
         try:
             from tools.vuln_tools import _sqli_detect_impl
+
             tool_map["sqli_detect"] = _sqli_detect_impl
         except (ImportError, AttributeError):
             pass
 
         try:
             from tools.vuln_tools import _xss_detect_impl
+
             tool_map["xss_detect"] = _xss_detect_impl
         except (ImportError, AttributeError):
             pass
@@ -100,7 +112,7 @@ def register_task_tools(mcp):
             return {
                 "success": False,
                 "error": f"不支持的工具: {tool_name}",
-                "available": list(tool_map.keys())
+                "available": list(tool_map.keys()),
             }
 
         # 解析额外参数
@@ -117,7 +129,7 @@ def register_task_tools(mcp):
             "task_id": task_id,
             "tool": tool_name,
             "target": target,
-            "message": f"任务已提交，使用 task_status('{task_id}') 查询状态"
+            "message": f"任务已提交，使用 task_status('{task_id}') 查询状态",
         }
 
     @mcp.tool()
@@ -131,6 +143,7 @@ def register_task_tools(mcp):
             任务状态和结果
         """
         from utils.task_queue import get_task_queue
+
         return get_task_queue().get_status(task_id)
 
     @mcp.tool()
@@ -144,6 +157,7 @@ def register_task_tools(mcp):
             操作结果
         """
         from utils.task_queue import get_task_queue
+
         return get_task_queue().cancel(task_id)
 
     @mcp.tool()
@@ -157,6 +171,7 @@ def register_task_tools(mcp):
             任务列表和统计信息
         """
         from utils.task_queue import get_task_queue
+
         return get_task_queue().list_tasks(limit)
 
     return ["task_submit", "task_status", "task_cancel", "task_list"]

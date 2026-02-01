@@ -14,14 +14,9 @@ from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
 from typing import (
     Any,
-    AsyncIterator,
-    Callable,
     Dict,
-    Iterator,
     List,
     Optional,
-    Tuple,
-    TypeVar,
     Union,
 )
 
@@ -56,14 +51,12 @@ except ImportError:
     aiohttp = None  # type: ignore
 
 
-from .config import HTTPConfig, RetryStrategy
+from .config import HTTPConfig
 from .exceptions import (
     ConnectionError,
     HTTPError,
     ProxyError,
-    RateLimitError,
     RequestError,
-    ResponseError,
     SSLError,
     TimeoutError,
     exception_from_status_code,

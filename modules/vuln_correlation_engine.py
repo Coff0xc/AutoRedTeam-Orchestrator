@@ -4,12 +4,10 @@
 分析漏洞间的关联关系，自动推荐利用链
 """
 
-import json
 import logging
-from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 

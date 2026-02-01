@@ -14,20 +14,17 @@ import socket
 import struct
 import threading
 import time
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 from .base import (
-    AuthenticationError,
     AuthMethod,
     BaseLateralModule,
-    ConnectionError,
     Credentials,
     ExecutionMethod,
     ExecutionResult,
     FileTransferResult,
     LateralConfig,
-    LateralModuleError,
     LateralStatus,
 )
 

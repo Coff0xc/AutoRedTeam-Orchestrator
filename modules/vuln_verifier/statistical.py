@@ -12,7 +12,7 @@
 
 import logging
 import math
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Tuple
 
 from .models import StatisticalVerification
 

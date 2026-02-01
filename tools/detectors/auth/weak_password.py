@@ -9,21 +9,21 @@
 - 弱密码测试
 """
 
-import re
-from typing import Dict, List, Any, Optional, Tuple
-from urllib.parse import urljoin
-
-import sys
 import os
+import sys
+from typing import Any, Dict, List, Optional, Tuple
 
 # 导入 requests 用于异常处理
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+)
 
 from tools.detectors.base import BaseDetector, Vulnerability
 
@@ -52,10 +52,17 @@ class WeakPasswordDetector(BaseDetector):
 
     # 常见登录端点
     LOGIN_ENDPOINTS = [
-        "/login", "/admin/login", "/user/login",
-        "/signin", "/auth/login", "/account/login",
-        "/wp-login.php", "/administrator",
-        "/admin", "/manage", "/backend",
+        "/login",
+        "/admin/login",
+        "/user/login",
+        "/signin",
+        "/auth/login",
+        "/account/login",
+        "/wp-login.php",
+        "/administrator",
+        "/admin",
+        "/manage",
+        "/backend",
     ]
 
     # 管理面板及其默认凭证
@@ -74,15 +81,31 @@ class WeakPasswordDetector(BaseDetector):
 
     # 登录成功指示器
     SUCCESS_INDICATORS = [
-        "logout", "dashboard", "welcome", "profile",
-        "注销", "退出", "控制台", "欢迎", "个人中心",
-        "my account", "settings", "admin panel",
+        "logout",
+        "dashboard",
+        "welcome",
+        "profile",
+        "注销",
+        "退出",
+        "控制台",
+        "欢迎",
+        "个人中心",
+        "my account",
+        "settings",
+        "admin panel",
     ]
 
     # 登录失败指示器
     FAILURE_INDICATORS = [
-        "invalid", "incorrect", "wrong", "failed", "error",
-        "密码错误", "用户名或密码", "登录失败", "认证失败",
+        "invalid",
+        "incorrect",
+        "wrong",
+        "failed",
+        "error",
+        "密码错误",
+        "用户名或密码",
+        "登录失败",
+        "认证失败",
     ]
 
     def get_payloads(self) -> Dict[str, List]:
@@ -94,10 +117,7 @@ class WeakPasswordDetector(BaseDetector):
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明登录成功"""
         if not response or not response.get("success"):
@@ -120,7 +140,7 @@ class WeakPasswordDetector(BaseDetector):
     def _find_login_pages(self, url: str) -> List[Dict[str, Any]]:
         """查找登录页面"""
         login_pages = []
-        base_url = url.rstrip('/')
+        base_url = url.rstrip("/")
 
         for endpoint in self.LOGIN_ENDPOINTS:
             test_url = base_url + endpoint
@@ -138,18 +158,19 @@ class WeakPasswordDetector(BaseDetector):
 
                 # 检查是否是登录页面
                 has_password_field = any(
-                    f'type="password"' in html or f"type='password'" in html
-                    for _ in [1]
+                    f'type="password"' in html or f"type='password'" in html for _ in [1]
                 )
                 has_login_form = "login" in html or "登录" in html or "signin" in html
 
                 if has_password_field or has_login_form:
-                    login_pages.append({
-                        "url": test_url,
-                        "endpoint": endpoint,
-                        "has_password_field": has_password_field,
-                        "has_login_form": has_login_form
-                    })
+                    login_pages.append(
+                        {
+                            "url": test_url,
+                            "endpoint": endpoint,
+                            "has_password_field": has_password_field,
+                            "has_login_form": has_login_form,
+                        }
+                    )
 
             except (requests.RequestException, OSError) if HAS_REQUESTS else OSError:
                 continue
@@ -160,7 +181,7 @@ class WeakPasswordDetector(BaseDetector):
         self,
         login_url: str,
         credentials: List[Tuple[str, str]],
-        username_override: Optional[str] = None
+        username_override: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """测试凭证"""
         successful = []
@@ -181,7 +202,7 @@ class WeakPasswordDetector(BaseDetector):
                             data=data,
                             timeout=self.timeout,
                             verify=self.verify_ssl,
-                            allow_redirects=False
+                            allow_redirects=False,
                         )
 
                         # 检查登录成功
@@ -201,13 +222,15 @@ class WeakPasswordDetector(BaseDetector):
                             is_success = False
 
                         if is_success:
-                            successful.append({
-                                "username": username,
-                                "password": password,
-                                "user_field": user_field,
-                                "pass_field": pass_field,
-                                "status_code": resp.status_code
-                            })
+                            successful.append(
+                                {
+                                    "username": username,
+                                    "password": password,
+                                    "user_field": user_field,
+                                    "pass_field": pass_field,
+                                    "status_code": resp.status_code,
+                                }
+                            )
                             return successful  # 找到一个就返回
 
                     except (requests.RequestException, OSError) if HAS_REQUESTS else OSError:
@@ -218,7 +241,7 @@ class WeakPasswordDetector(BaseDetector):
     def detect_admin_panels(self, url: str) -> List[Vulnerability]:
         """检测管理面板及其默认凭证"""
         vulnerabilities = []
-        base_url = url.rstrip('/')
+        base_url = url.rstrip("/")
 
         for panel_path, credentials in self.ADMIN_PANELS.items():
             panel_url = base_url + panel_path
@@ -235,10 +258,12 @@ class WeakPasswordDetector(BaseDetector):
                 html = response.get("response_text", "").lower()
 
                 # 检查是否是管理面板
-                is_admin_panel = (
-                    status_code == 200 and
-                    ('type="password"' in html or "type='password'" in html or
-                     "login" in html or "登录" in html or "authentication" in html)
+                is_admin_panel = status_code == 200 and (
+                    'type="password"' in html
+                    or "type='password'" in html
+                    or "login" in html
+                    or "登录" in html
+                    or "authentication" in html
                 )
 
                 # 需要认证的面板
@@ -246,43 +271,47 @@ class WeakPasswordDetector(BaseDetector):
 
                 if is_admin_panel or needs_auth:
                     # 记录发现的面板
-                    vulnerabilities.append(Vulnerability(
-                        type="Admin Panel Found",
-                        severity="INFO",
-                        url=panel_url,
-                        evidence=f"发现管理面板: {panel_path}",
-                        verified=True,
-                        confidence=0.9,
-                        details={
-                            "panel_path": panel_path,
-                            "status_code": status_code,
-                            "needs_auth": needs_auth,
-                            "default_credentials": [f"{u}:{p}" for u, p in credentials]
-                        }
-                    ))
+                    vulnerabilities.append(
+                        Vulnerability(
+                            type="Admin Panel Found",
+                            severity="INFO",
+                            url=panel_url,
+                            evidence=f"发现管理面板: {panel_path}",
+                            verified=True,
+                            confidence=0.9,
+                            details={
+                                "panel_path": panel_path,
+                                "status_code": status_code,
+                                "needs_auth": needs_auth,
+                                "default_credentials": [f"{u}:{p}" for u, p in credentials],
+                            },
+                        )
+                    )
 
                     # 如果是 200 状态，尝试测试默认凭证
                     if is_admin_panel:
                         successful = self._test_credentials(panel_url, credentials)
                         if successful:
                             for cred in successful:
-                                vulnerabilities.append(Vulnerability(
-                                    type="Default Credentials",
-                                    severity="CRITICAL",
-                                    url=panel_url,
-                                    payload=f"{cred['username']}:{cred['password']}",
-                                    evidence=f"默认凭证有效: {cred['username']}:{cred['password']}",
-                                    verified=True,
-                                    confidence=0.95,
-                                    details={
-                                        "panel_path": panel_path,
-                                        "username": cred["username"],
-                                        "password": cred["password"],
-                                        "user_field": cred.get("user_field"),
-                                        "pass_field": cred.get("pass_field"),
-                                        "status_code": cred.get("status_code")
-                                    }
-                                ))
+                                vulnerabilities.append(
+                                    Vulnerability(
+                                        type="Default Credentials",
+                                        severity="CRITICAL",
+                                        url=panel_url,
+                                        payload=f"{cred['username']}:{cred['password']}",
+                                        evidence=f"默认凭证有效: {cred['username']}:{cred['password']}",
+                                        verified=True,
+                                        confidence=0.95,
+                                        details={
+                                            "panel_path": panel_path,
+                                            "username": cred["username"],
+                                            "password": cred["password"],
+                                            "user_field": cred.get("user_field"),
+                                            "pass_field": cred.get("pass_field"),
+                                            "status_code": cred.get("status_code"),
+                                        },
+                                    )
+                                )
 
             except (requests.RequestException, OSError) if HAS_REQUESTS else OSError:
                 continue
@@ -295,26 +324,26 @@ class WeakPasswordDetector(BaseDetector):
         login_pages = self._find_login_pages(url)
 
         for page in login_pages:
-            vulnerabilities.append(Vulnerability(
-                type="Login Page Found",
-                severity="INFO",
-                url=page["url"],
-                evidence=f"发现登录页面: {page['endpoint']}",
-                verified=True,
-                confidence=0.85,
-                details={
-                    "endpoint": page["endpoint"],
-                    "has_password_field": page["has_password_field"],
-                    "has_login_form": page["has_login_form"]
-                }
-            ))
+            vulnerabilities.append(
+                Vulnerability(
+                    type="Login Page Found",
+                    severity="INFO",
+                    url=page["url"],
+                    evidence=f"发现登录页面: {page['endpoint']}",
+                    verified=True,
+                    confidence=0.85,
+                    details={
+                        "endpoint": page["endpoint"],
+                        "has_password_field": page["has_password_field"],
+                        "has_login_form": page["has_login_form"],
+                    },
+                )
+            )
 
         return vulnerabilities
 
     def detect_weak_credentials(
-        self,
-        url: str,
-        username: Optional[str] = None
+        self, url: str, username: Optional[str] = None
     ) -> List[Vulnerability]:
         """检测弱密码"""
         vulnerabilities = []
@@ -322,37 +351,34 @@ class WeakPasswordDetector(BaseDetector):
 
         for page in login_pages:
             successful = self._test_credentials(
-                page["url"],
-                self.DEFAULT_CREDENTIALS,
-                username_override=username
+                page["url"], self.DEFAULT_CREDENTIALS, username_override=username
             )
 
             for cred in successful:
-                vulnerabilities.append(Vulnerability(
-                    type="Weak Password",
-                    severity="CRITICAL",
-                    url=page["url"],
-                    payload=f"{cred['username']}:{cred['password']}",
-                    evidence=f"弱密码: {cred['username']}:{cred['password']}",
-                    verified=True,
-                    confidence=0.9,
-                    details={
-                        "login_url": page["url"],
-                        "username": cred["username"],
-                        "password": cred["password"],
-                        "user_field": cred.get("user_field"),
-                        "pass_field": cred.get("pass_field"),
-                        "status_code": cred.get("status_code")
-                    }
-                ))
+                vulnerabilities.append(
+                    Vulnerability(
+                        type="Weak Password",
+                        severity="CRITICAL",
+                        url=page["url"],
+                        payload=f"{cred['username']}:{cred['password']}",
+                        evidence=f"弱密码: {cred['username']}:{cred['password']}",
+                        verified=True,
+                        confidence=0.9,
+                        details={
+                            "login_url": page["url"],
+                            "username": cred["username"],
+                            "password": cred["password"],
+                            "user_field": cred.get("user_field"),
+                            "pass_field": cred.get("pass_field"),
+                            "status_code": cred.get("status_code"),
+                        },
+                    )
+                )
 
         return vulnerabilities
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = True
+        self, url: str, param: Optional[str] = None, deep_scan: bool = True
     ) -> Dict[str, Any]:
         """
         弱密码检测入口
@@ -383,7 +409,11 @@ class WeakPasswordDetector(BaseDetector):
         # 统计结果
         login_pages_found = sum(1 for v in all_vulnerabilities if "Login Page" in v.type)
         admin_panels_found = sum(1 for v in all_vulnerabilities if "Admin Panel" in v.type)
-        weak_passwords_found = sum(1 for v in all_vulnerabilities if "Weak Password" in v.type or "Default Credentials" in v.type)
+        weak_passwords_found = sum(
+            1
+            for v in all_vulnerabilities
+            if "Weak Password" in v.type or "Default Credentials" in v.type
+        )
 
         return {
             "success": True,
@@ -403,7 +433,7 @@ class WeakPasswordDetector(BaseDetector):
                 "medium": sum(1 for v in all_vulnerabilities if v.severity == "MEDIUM"),
                 "info": sum(1 for v in all_vulnerabilities if v.severity == "INFO"),
             },
-            "note": "弱密码检测可能触发账户锁定，请谨慎使用"
+            "note": "弱密码检测可能触发账户锁定，请谨慎使用",
         }
 
 

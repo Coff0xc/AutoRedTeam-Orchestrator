@@ -6,12 +6,9 @@ phases/report.py - 报告生成阶段执行器
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Dict, List
 
 from .base import BasePhaseExecutor, PhaseResult
-
-if TYPE_CHECKING:
-    from ..state import PentestPhase, PentestState
 
 logger = logging.getLogger(__name__)
 

@@ -4,8 +4,8 @@
 应用工厂模式，消除硬编码的检测器创建逻辑
 """
 
-from typing import Dict, Type, Optional, List
 import logging
+from typing import Dict, List, Type
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +63,7 @@ class DetectorFactory:
         detector_class = cls._registry.get(actual_name)
         if not detector_class:
             raise ValueError(
-                f"未知的检测器: {name}. "
-                f"可用检测器: {', '.join(cls.list_detectors())}"
+                f"未知的检测器: {name}. " f"可用检测器: {', '.join(cls.list_detectors())}"
             )
 
         try:
@@ -104,7 +103,7 @@ class DetectorFactory:
             "name": actual_name,
             "class": detector_class.__name__,
             "module": detector_class.__module__,
-            "doc": detector_class.__doc__ or "无描述"
+            "doc": detector_class.__doc__ or "无描述",
         }
 
     @classmethod
@@ -133,52 +132,69 @@ def auto_register_detectors():
     try:
         # 注入类检测器
         from tools.detectors.injection.sqli import SQLiDetector
+
         DetectorFactory.register("sqli", SQLiDetector, aliases=["sql", "sql_injection"])
 
         from tools.detectors.injection.xss import XSSDetector
+
         DetectorFactory.register("xss", XSSDetector, aliases=["cross_site_scripting"])
 
         from tools.detectors.injection.rce import RCEDetector
+
         DetectorFactory.register("rce", RCEDetector, aliases=["command_injection", "cmd_inject"])
 
         from tools.detectors.injection.ssti import SSTIDetector
+
         DetectorFactory.register("ssti", SSTIDetector, aliases=["template_injection"])
 
         from tools.detectors.injection.xxe import XXEDetector
+
         DetectorFactory.register("xxe", XXEDetector, aliases=["xml_injection"])
 
         from tools.detectors.injection.deserialize import DeserializeDetector
+
         DetectorFactory.register("deserialize", DeserializeDetector, aliases=["deserialization"])
 
         # 请求类检测器
         from tools.detectors.request.ssrf import SSRFDetector
+
         DetectorFactory.register("ssrf", SSRFDetector, aliases=["server_side_request_forgery"])
 
         from tools.detectors.request.csrf import CSRFDetector
+
         DetectorFactory.register("csrf", CSRFDetector, aliases=["cross_site_request_forgery"])
 
         from tools.detectors.request.cors import CORSDetector
+
         DetectorFactory.register("cors", CORSDetector, aliases=["cors_misconfiguration"])
 
         # 文件类检测器
         from tools.detectors.file.lfi import LFIDetector
+
         DetectorFactory.register("lfi", LFIDetector, aliases=["local_file_inclusion"])
 
         from tools.detectors.file.upload import FileUploadDetector
+
         DetectorFactory.register("file_upload", FileUploadDetector, aliases=["upload"])
 
         # 认证类检测器
         from tools.detectors.auth.weak_password import WeakPasswordDetector
-        DetectorFactory.register("weak_password", WeakPasswordDetector, aliases=["weak_pass", "brute_force"])
+
+        DetectorFactory.register(
+            "weak_password", WeakPasswordDetector, aliases=["weak_pass", "brute_force"]
+        )
 
         from tools.detectors.auth.auth_bypass import AuthBypassDetector
+
         DetectorFactory.register("auth_bypass", AuthBypassDetector, aliases=["auth_vuln"])
 
         # 访问控制类检测器
         from tools.detectors.access.idor import IDORDetector
+
         DetectorFactory.register("idor", IDORDetector, aliases=["insecure_direct_object_reference"])
 
         from tools.detectors.access.open_redirect import OpenRedirectDetector
+
         DetectorFactory.register("open_redirect", OpenRedirectDetector, aliases=["redirect"])
 
         logger.info(f"已注册 {len(DetectorFactory.list_detectors())} 个检测器")

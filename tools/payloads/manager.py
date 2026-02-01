@@ -4,10 +4,10 @@ Payload 管理器 - 统一管理所有攻击 Payload
 消除 Payload 定义分散的问题
 """
 
-from typing import Dict, List, Optional, Set
-from pathlib import Path
 import json
 import logging
+from pathlib import Path
+from typing import Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,9 @@ class PayloadManager:
                 payloads = self._load_module(file)
                 if payloads:
                     self._cache[vuln_type] = payloads
-                    logger.info(f"已加载 {vuln_type} Payload: {sum(len(v) for v in payloads.values())} 条")
+                    logger.info(
+                        f"已加载 {vuln_type} Payload: {sum(len(v) for v in payloads.values())} 条"
+                    )
             except Exception as e:
                 logger.error(f"加载 Payload 文件失败 {file}: {e}")
 
@@ -62,6 +64,7 @@ class PayloadManager:
             Payload 字典
         """
         import importlib.util
+
         spec = importlib.util.spec_from_file_location("payloads", file_path)
         if not spec or not spec.loader:
             return {}
@@ -78,11 +81,7 @@ class PayloadManager:
         return payloads
 
     def get_payloads(
-        self,
-        vuln_type: str,
-        category: str = None,
-        tags: List[str] = None,
-        limit: int = None
+        self, vuln_type: str, category: str = None, tags: List[str] = None, limit: int = None
     ) -> List[str]:
         """
         获取指定类型的 Payload
@@ -131,11 +130,7 @@ class PayloadManager:
         return any(tag in payload_tags for tag in tags)
 
     def add_custom_payload(
-        self,
-        vuln_type: str,
-        category: str,
-        payload: str,
-        tags: List[str] = None
+        self, vuln_type: str, category: str, payload: str, tags: List[str] = None
     ):
         """
         添加自定义 Payload
@@ -181,17 +176,14 @@ class PayloadManager:
 
     def export_to_json(self, output_file: str):
         """导出 Payload 到 JSON 文件"""
-        data = {
-            "builtin": self._cache,
-            "custom": self._custom_payloads
-        }
-        with open(output_file, 'w', encoding='utf-8') as f:
+        data = {"builtin": self._cache, "custom": self._custom_payloads}
+        with open(output_file, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         logger.info(f"Payload 已导出到: {output_file}")
 
     def import_from_json(self, input_file: str):
         """从 JSON 文件导入 Payload"""
-        with open(input_file, 'r', encoding='utf-8') as f:
+        with open(input_file, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         if "custom" in data:
@@ -220,12 +212,7 @@ if __name__ == "__main__":
     print(f"SQLi Error-based Payloads: {len(sqli_payloads)}")
 
     # 添加自定义 Payload
-    manager.add_custom_payload(
-        "sqli",
-        "custom",
-        "' AND 1=1--",
-        tags=["mysql", "simple"]
-    )
+    manager.add_custom_payload("sqli", "custom", "' AND 1=1--", tags=["mysql", "simple"])
 
     # 统计信息
     stats = manager.get_stats()

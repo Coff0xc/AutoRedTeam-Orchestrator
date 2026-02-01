@@ -20,74 +20,76 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 # 延迟导入各子模块的注册函数
 def register_vuln_tools(mcp: "FastMCP") -> None:
     """注册所有漏洞检测工具到 MCP 服务器"""
-    from .injection import register_injection_tools
     from .access import register_access_tools
-    from .auth import register_auth_tools
-    from .web_security import register_web_security_tools
-    from .serialization import register_serialization_tools
     from .advanced import register_advanced_tools
-    
+    from .auth import register_auth_tools
+    from .injection import register_injection_tools
+    from .serialization import register_serialization_tools
+    from .web_security import register_web_security_tools
+
     register_injection_tools(mcp)
     register_access_tools(mcp)
     register_auth_tools(mcp)
     register_web_security_tools(mcp)
     register_serialization_tools(mcp)
     register_advanced_tools(mcp)
-    
+
     logger.info("已注册所有漏洞检测工具")
 
 
-# 导出独立函数供外部调用
-from .injection import (
-    sqli_detect,
-    xss_detect,
-    ssti_detect,
-    nosql_detect,
-    cmd_inject_detect,
-)
 from .access import (
-    ssrf_detect,
+    crlf_detect,
+    idor_detect,
     lfi_detect,
     redirect_detect,
-    idor_detect,
-    crlf_detect,
+    ssrf_detect,
+)
+from .advanced import (
+    access_control_test,
+    browser_scan,
+    file_upload_detect,
+    logic_vuln_check,
+    prototype_pollution_detect,
+    request_smuggling_detect,
+    waf_detect,
 )
 from .auth import (
     auth_bypass_detect,
-    weak_password_detect,
     jwt_vuln_detect,
+    weak_password_detect,
 )
-from .web_security import (
-    csrf_detect,
-    cors_deep_check,
-    security_headers_check,
-    cache_poisoning_detect,
+
+# 导出独立函数供外部调用
+from .injection import (
+    cmd_inject_detect,
+    nosql_detect,
+    sqli_detect,
+    ssti_detect,
+    xss_detect,
 )
 from .serialization import (
-    xxe_detect,
     deserialize_detect,
-)
-from .advanced import (
-    request_smuggling_detect,
-    prototype_pollution_detect,
-    browser_scan,
-    waf_detect,
-    access_control_test,
-    logic_vuln_check,
-    file_upload_detect,
+    xxe_detect,
 )
 
 # 兼容层 - 保持旧 API
 from .utils import vuln_check
+from .web_security import (
+    cache_poisoning_detect,
+    cors_deep_check,
+    csrf_detect,
+    security_headers_check,
+)
 
 __all__ = [
     "register_vuln_tools",
     # Injection
     "sqli_detect",
-    "xss_detect", 
+    "xss_detect",
     "ssti_detect",
     "nosql_detect",
     "cmd_inject_detect",

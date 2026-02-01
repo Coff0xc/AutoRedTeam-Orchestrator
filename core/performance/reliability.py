@@ -5,10 +5,8 @@
 """
 
 import asyncio
-import hashlib
 import json
 import logging
-import os
 import tempfile
 import threading
 import time
@@ -17,7 +15,7 @@ from datetime import datetime
 from enum import Enum
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -647,14 +645,14 @@ class RecoverableTask:
     def __enter__(self):
         return self._setup()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, _exc_val, _exc_tb):
         self._cleanup(exc_type is None)
         return False
 
     async def __aenter__(self):
         return self._setup()
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, _exc_val, _exc_tb):
         self._cleanup(exc_type is None)
         return False
 

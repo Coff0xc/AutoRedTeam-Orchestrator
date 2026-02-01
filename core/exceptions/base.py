@@ -107,8 +107,6 @@ class ConfigError(AutoRedTeamError):
         >>> raise ConfigError("无效的配置项", code="INVALID_CONFIG", details={"key": "timeout", "value": -1})
     """
 
-    pass
-
 
 __all__ = [
     "AutoRedTeamError",

@@ -16,7 +16,6 @@ AWS安全测试模块
 
 import json
 import logging
-import re
 from typing import Any, Dict, List, Optional
 
 from .base import (

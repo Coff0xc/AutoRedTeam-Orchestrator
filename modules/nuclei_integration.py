@@ -9,7 +9,7 @@ import logging
 import os
 import subprocess
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 # 模块 logger
 logger = logging.getLogger(__name__)

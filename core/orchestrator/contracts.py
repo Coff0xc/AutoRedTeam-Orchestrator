@@ -481,17 +481,14 @@ class PhaseDataAdapter(ABC):
     @abstractmethod
     def extract_credentials(self, raw_data: Dict[str, Any]) -> List[Credential]:
         """从原始数据中提取凭证"""
-        pass
 
     @abstractmethod
     def extract_vulns(self, raw_data: Dict[str, Any]) -> List[VulnFinding]:
         """从原始数据中提取漏洞发现"""
-        pass
 
     @abstractmethod
     def extract_accesses(self, raw_data: Dict[str, Any]) -> List[AccessGrant]:
         """从原始数据中提取访问权限"""
-        pass
 
 
 class ReconDataAdapter(PhaseDataAdapter):

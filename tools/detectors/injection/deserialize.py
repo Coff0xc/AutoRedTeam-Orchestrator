@@ -8,11 +8,10 @@ Deserialize (反序列化漏洞) 检测器
 - Python (pickle)
 - .NET (BinaryFormatter, ObjectStateFormatter)
 """
-import logging
 
-from typing import Dict, List, Any, Optional
+import logging
 import re
-import base64
+from typing import Any, Dict, List, Optional
 
 from ..base import BaseDetector, Vulnerability
 
@@ -26,8 +25,16 @@ class DeserializeDetector(BaseDetector):
 
     # 反序列化专用测试参数
     DEFAULT_PARAMS = [
-        "data", "object", "payload", "session", "state",
-        "viewstate", "token", "serialized", "obj", "input"
+        "data",
+        "object",
+        "payload",
+        "session",
+        "state",
+        "viewstate",
+        "token",
+        "serialized",
+        "obj",
+        "input",
     ]
 
     # Java 序列化特征
@@ -56,7 +63,7 @@ class DeserializeDetector(BaseDetector):
             "/actuator",
             "/actuator/env",
             "/actuator/heapdump",
-        ]
+        ],
     }
 
     # PHP 序列化特征
@@ -73,7 +80,7 @@ class DeserializeDetector(BaseDetector):
             r"__destruct",
             r"allowed_classes",
             r"PHP\s*Fatal\s*error.*unserialize",
-        ]
+        ],
     }
 
     # Python 序列化特征
@@ -90,7 +97,7 @@ class DeserializeDetector(BaseDetector):
             r"_pickle\.UnpicklingError",
             r"cPickle",
             r"marshal\.loads",
-        ]
+        ],
     }
 
     # .NET 序列化特征
@@ -106,7 +113,7 @@ class DeserializeDetector(BaseDetector):
             r"ObjectStateFormatter",
             r"LosFormatter",
             r"SoapFormatter",
-        ]
+        ],
     }
 
     def get_payloads(self) -> Dict[str, List[str]]:
@@ -132,10 +139,7 @@ class DeserializeDetector(BaseDetector):
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在反序列化漏洞"""
         if not response.get("success"):
@@ -178,13 +182,11 @@ class DeserializeDetector(BaseDetector):
         return False
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = False
+        self, url: str, param: Optional[str] = None, deep_scan: bool = False
     ) -> Dict[str, Any]:
         """执行反序列化漏洞检测"""
         from tools._common import reset_failure_counter
+
         reset_failure_counter()
 
         vulnerabilities = []
@@ -201,7 +203,7 @@ class DeserializeDetector(BaseDetector):
                 ("Java", self.JAVA_SIGNATURES),
                 ("PHP", self.PHP_SIGNATURES),
                 ("Python", self.PYTHON_SIGNATURES),
-                (".NET", self.DOTNET_SIGNATURES)
+                (".NET", self.DOTNET_SIGNATURES),
             ]:
                 patterns = sigs.get("magic_bytes", sigs.get("patterns", []))
                 for pattern_data in patterns:
@@ -215,7 +217,7 @@ class DeserializeDetector(BaseDetector):
                             evidence=f"Response contains: {desc}",
                             verified=False,
                             confidence=0.6,
-                            details={"language": lang, "location": "response"}
+                            details={"language": lang, "location": "response"},
                         )
                         vulnerabilities.append(vuln)
 
@@ -225,11 +227,13 @@ class DeserializeDetector(BaseDetector):
                     ("Java", self.JAVA_SIGNATURES),
                     ("PHP", self.PHP_SIGNATURES),
                     ("Python", self.PYTHON_SIGNATURES),
-                    (".NET", self.DOTNET_SIGNATURES)
+                    (".NET", self.DOTNET_SIGNATURES),
                 ]:
                     patterns = sigs.get("magic_bytes", sigs.get("patterns", []))
                     for pattern_data in patterns:
-                        pattern = pattern_data[0] if isinstance(pattern_data, tuple) else pattern_data
+                        pattern = (
+                            pattern_data[0] if isinstance(pattern_data, tuple) else pattern_data
+                        )
                         if pattern in value:
                             vuln = Vulnerability(
                                 type=f"Deserialization in Cookie ({lang})",
@@ -238,12 +242,12 @@ class DeserializeDetector(BaseDetector):
                                 evidence=f"Cookie '{name}' contains serialized data",
                                 verified=False,
                                 confidence=0.8,
-                                details={"language": lang, "cookie_name": name}
+                                details={"language": lang, "cookie_name": name},
                             )
                             vulnerabilities.append(vuln)
 
         # 2. 检测危险端点
-        base_url = url.rstrip('/')
+        base_url = url.rstrip("/")
         for endpoint in self.JAVA_SIGNATURES["dangerous_endpoints"]:
             try:
                 response = self.send_request(f"{base_url}{endpoint}")
@@ -258,7 +262,7 @@ class DeserializeDetector(BaseDetector):
                             evidence=f"Endpoint accessible (HTTP {status})",
                             verified=False,
                             confidence=0.7,
-                            details={"endpoint": endpoint, "status_code": status}
+                            details={"endpoint": endpoint, "status_code": status},
                         )
                         vulnerabilities.append(vuln)
             except Exception as exc:
@@ -286,7 +290,7 @@ class DeserializeDetector(BaseDetector):
                                 evidence="Deserialization error triggered",
                                 verified=False,
                                 confidence=0.7,
-                                details={"language": lang_name}
+                                details={"language": lang_name},
                             )
                             vulnerabilities.append(vuln)
 
@@ -315,7 +319,7 @@ class DeserializeDetector(BaseDetector):
             "vulnerabilities": [v.to_dict() for v in verified_vulns],
             "total": len(verified_vulns),
             "verified_count": sum(1 for v in verified_vulns if v.verified),
-            "recommendations": self._get_recommendations() if verified_vulns else []
+            "recommendations": self._get_recommendations() if verified_vulns else [],
         }
 
     def _verify_deserialize(self, url: str, vuln: Vulnerability) -> bool:
@@ -362,5 +366,5 @@ class DeserializeDetector(BaseDetector):
             "对于 Java: 使用 SerialKiller 或 NotSoSerial",
             "对于 PHP: 使用 allowed_classes 参数",
             "对于 Python: 避免使用 pickle，改用 json",
-            "对于 .NET: 避免使用 BinaryFormatter"
+            "对于 .NET: 避免使用 BinaryFormatter",
         ]

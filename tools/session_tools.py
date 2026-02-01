@@ -11,9 +11,9 @@
 - verify_vuln: 统计学漏洞验证
 """
 
+import ipaddress
 import json
 import socket
-import ipaddress
 from urllib.parse import urlparse
 
 
@@ -34,6 +34,7 @@ def register_session_tools(mcp):
             OOB检测结果
         """
         from modules.oob_detector import quick_oob_test
+
         return quick_oob_test(url, param, vuln_type, timeout)
 
     @mcp.tool()
@@ -47,17 +48,24 @@ def register_session_tools(mcp):
             会话ID和信息
         """
         from core.session import get_http_session_manager
+
         mgr = get_http_session_manager()
         session_id = mgr.create_session(name)
         return {
             "success": True,
             "session_id": session_id,
-            "message": f"HTTP会话已创建: {session_id}"
+            "message": f"HTTP会话已创建: {session_id}",
         }
 
     @mcp.tool()
-    def session_login(session_id: str, login_url: str, username: str, password: str,
-                      username_field: str = "username", password_field: str = "password") -> dict:
+    def session_login(
+        session_id: str,
+        login_url: str,
+        username: str,
+        password: str,
+        username_field: str = "username",
+        password_field: str = "password",
+    ) -> dict:
         """会话登录 - 执行登录获取认证态
 
         Args:
@@ -72,6 +80,7 @@ def register_session_tools(mcp):
             登录结果
         """
         from core.session import get_http_session_manager
+
         mgr = get_http_session_manager()
         return mgr.login(session_id, login_url, username, password, username_field, password_field)
 
@@ -111,6 +120,7 @@ def register_session_tools(mcp):
             return {"success": False, "error": "URL解析失败"}
 
         from core.session import get_http_session_manager
+
         mgr = get_http_session_manager()
         data_dict = json.loads(data) if data else None
         return mgr.request(session_id, url, method, data_dict)
@@ -126,10 +136,13 @@ def register_session_tools(mcp):
             会话上下文信息
         """
         from core.session import get_http_session_manager
+
         return get_http_session_manager().get_context(session_id)
 
     @mcp.tool()
-    def verify_vuln(url: str, param: str, vuln_type: str, payload: str = "", rounds: int = 5) -> dict:
+    def verify_vuln(
+        url: str, param: str, vuln_type: str, payload: str = "", rounds: int = 5
+    ) -> dict:
         """统计学漏洞验证 - 多轮测试降低误报
 
         Args:
@@ -143,7 +156,14 @@ def register_session_tools(mcp):
             统计验证结果，包含置信度和建议
         """
         from modules.vuln_verifier import verify_vuln_statistically
+
         return verify_vuln_statistically(url, param, vuln_type, payload, rounds)
 
-    return ["oob_detect", "session_create", "session_login", "session_request",
-            "session_context", "verify_vuln"]
+    return [
+        "oob_detect",
+        "session_create",
+        "session_login",
+        "session_request",
+        "session_context",
+        "verify_vuln",
+    ]

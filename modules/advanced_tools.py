@@ -13,14 +13,7 @@ logger = logging.getLogger(__name__)
 
 # 导入新模块
 try:
-    from core.stealth import (
-        BrowserType,
-        FingerprintSpoofer,
-        ProxyPool,
-        ProxyValidator,
-        RequestHumanizer,
-        TrafficMutator,
-    )
+    pass
 
     HAS_STEALTH = True
 except ImportError as e:
@@ -28,16 +21,7 @@ except ImportError as e:
     HAS_STEALTH = False
 
 try:
-    from core.exploit import (
-        PurePortScanner,
-        PureSQLiEngine,
-        SQLiType,
-        detect_sqli,
-        exploit_sqli,
-        quick_scan,
-        scan_network,
-        scan_ports,
-    )
+    pass
 
     HAS_EXPLOIT = True
 except ImportError as e:

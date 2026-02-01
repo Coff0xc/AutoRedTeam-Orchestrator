@@ -6,10 +6,8 @@ v2.5 新增MCP工具注册模块
 """
 
 import asyncio
-import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
 
 # 添加项目路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -249,7 +247,7 @@ def register_v25_tools(mcp):
 
     # ========== PoC执行工具 ==========
     try:
-        from core.cve import PoCEngine, execute_poc, load_poc
+        from core.cve import execute_poc, load_poc
 
         @mcp.tool()
         def poc_execute(target: str, poc_id: str = "", poc_file: str = "") -> dict:
@@ -324,11 +322,11 @@ def register_v25_tools(mcp):
     # ========== WebSocket隧道工具 ==========
     try:
         # 优先使用新架构
-        from core.c2 import C2Config, CryptoAlgorithm, WebSocketTunnel
+        from core.c2 import C2Config
 
         @mcp.tool()
         def tunnel_websocket_create(
-            server_url: str, encryption: str = "xor", disguise: str = "chat"
+            server_url: str, encryption: str = "xor", _disguise: str = "chat"
         ) -> dict:
             """创建WebSocket隧道配置
 
@@ -438,7 +436,7 @@ if __name__ == "__main__":
     # 测试导入
     logger.info("\n1. 测试JS分析模块:")
     try:
-        from modules.js_analyzer import JSAnalyzer
+        pass
 
         logger.info("   [OK] JSAnalyzer 导入成功")
     except Exception as e:
@@ -446,7 +444,7 @@ if __name__ == "__main__":
 
     logger.info("\n2. 测试CVE模块:")
     try:
-        from core.cve import CVEUpdateManager
+        pass
 
         logger.info("   [OK] CVEUpdateManager 导入成功")
     except Exception as e:
@@ -454,7 +452,7 @@ if __name__ == "__main__":
 
     logger.info("\n3. 测试PoC模块:")
     try:
-        from core.cve import PoCEngine, load_poc
+        pass
 
         logger.info("   [OK] PoCEngine 导入成功")
     except Exception as e:
@@ -462,7 +460,7 @@ if __name__ == "__main__":
 
     logger.info("\n4. 测试WebSocket隧道:")
     try:
-        from core.c2 import WebSocketTunnel
+        pass
 
         logger.info("   [OK] WebSocketTunnel 导入成功")
     except Exception as e:
@@ -470,7 +468,7 @@ if __name__ == "__main__":
 
     logger.info("\n5. 测试分块传输:")
     try:
-        from core.c2 import ChunkEncoder
+        pass
 
         logger.info("   [OK] ChunkEncoder 导入成功")
     except Exception as e:

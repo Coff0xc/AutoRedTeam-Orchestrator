@@ -3,7 +3,6 @@
 密码暴力破解工具集
 """
 
-import json
 import logging
 import re
 import subprocess

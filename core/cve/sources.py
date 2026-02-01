@@ -12,8 +12,7 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urljoin
+from typing import Any, Dict, List, Optional
 
 from .models import CVSS, CVEEntry, Reference, Severity
 
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # HTTP 客户端
 try:
-    from core.http import HTTPConfig, get_client
+    from core.http import get_client
 
     HAS_HTTP_FACTORY = True
 except ImportError:

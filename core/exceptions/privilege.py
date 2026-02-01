@@ -68,8 +68,6 @@ class EscalationVectorNotFound(PrivilegeEscalationError):
         >>> raise EscalationVectorNotFound("UAC绕过技术不适用", method="fodhelper")
     """
 
-    pass
-
 
 class InsufficientPrivilege(PrivilegeEscalationError):
     """
@@ -81,8 +79,6 @@ class InsufficientPrivilege(PrivilegeEscalationError):
         >>> raise InsufficientPrivilege("需要管理员权限", current_level="user", target_level="admin")
         >>> raise InsufficientPrivilege("无法创建原始套接字", method="icmp_exfil")
     """
-
-    pass
 
 
 class UACBypassFailed(PrivilegeEscalationError):
@@ -96,8 +92,6 @@ class UACBypassFailed(PrivilegeEscalationError):
         >>> raise UACBypassFailed("注册表写入被拒绝", details={"key": "HKCU\\...\\shell\\open\\command"})
     """
 
-    pass
-
 
 class TokenManipulationError(PrivilegeEscalationError):
     """
@@ -109,8 +103,6 @@ class TokenManipulationError(PrivilegeEscalationError):
         >>> raise TokenManipulationError("无法打开目标进程", details={"pid": 4})
         >>> raise TokenManipulationError("Token复制失败", method="token_impersonation")
     """
-
-    pass
 
 
 # ============================================================================
@@ -165,8 +157,6 @@ class ChannelBlocked(ExfiltrationError):
         >>> raise ChannelBlocked("HTTPS出站被拦截", channel="https", destination="c2.example.com")
     """
 
-    pass
-
 
 class DataTooLarge(ExfiltrationError):
     """
@@ -215,8 +205,6 @@ class ChannelConnectionError(ExfiltrationError):
         >>> raise ChannelConnectionError("DNS解析器不可用", channel="dns")
     """
 
-    pass
-
 
 class EncryptionRequired(ExfiltrationError):
     """
@@ -227,8 +215,6 @@ class EncryptionRequired(ExfiltrationError):
     示例:
         >>> raise EncryptionRequired("该通道要求数据加密", channel="https")
     """
-
-    pass
 
 
 __all__ = [

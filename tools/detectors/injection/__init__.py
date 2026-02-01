@@ -11,12 +11,12 @@
 - DeserializeDetector: 反序列化漏洞检测
 """
 
-from .sqli import SQLiDetector
-from .xss import XSSDetector
-from .rce import RCEDetector
-from .xxe import XXEDetector
-from .ssti import SSTIDetector
 from .deserialize import DeserializeDetector
+from .rce import RCEDetector
+from .sqli import SQLiDetector
+from .ssti import SSTIDetector
+from .xss import XSSDetector
+from .xxe import XXEDetector
 
 __all__ = [
     "SQLiDetector",
@@ -24,5 +24,5 @@ __all__ = [
     "RCEDetector",
     "XXEDetector",
     "SSTIDetector",
-    "DeserializeDetector"
+    "DeserializeDetector",
 ]

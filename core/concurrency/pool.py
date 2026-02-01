@@ -6,7 +6,6 @@
 
 import asyncio
 import logging
-import queue
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
@@ -23,7 +22,6 @@ from typing import (
     Optional,
     Tuple,
     TypeVar,
-    Union,
 )
 
 logger = logging.getLogger(__name__)
@@ -470,7 +468,7 @@ class DynamicThreadPool:
     def __enter__(self) -> "DynamicThreadPool":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type, _exc_val, _exc_tb) -> None:
         self.shutdown(wait=True)
 
     def __del__(self) -> None:

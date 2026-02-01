@@ -111,7 +111,7 @@ def register_ai_tools(mcp, counter, logger):
         Returns:
             推荐的payloads
         """
-        from modules.payload import get_payload_engine, smart_select_payloads
+        from modules.payload import smart_select_payloads
 
         # 使用统一的 Payload 引擎
         waf = context.get("waf") if context else None

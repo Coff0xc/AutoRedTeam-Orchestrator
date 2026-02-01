@@ -19,17 +19,16 @@
 所有导入都会重定向到 core.detectors。
 """
 
-import warnings
 import logging
+import warnings
 
 logger = logging.getLogger(__name__)
 
 # 发出弃用警告
 warnings.warn(
-    "tools.detectors 模块已弃用，请使用 core.detectors 模块。"
-    "此模块将在 v4.0 中移除。",
+    "tools.detectors 模块已弃用，请使用 core.detectors 模块。" "此模块将在 v4.0 中移除。",
     DeprecationWarning,
-    stacklevel=2
+    stacklevel=2,
 )
 
 
@@ -37,55 +36,37 @@ warnings.warn(
 
 try:
     # 基类和数据类
-    from core.detectors import (
-        BaseDetector,
-        CompositeDetector,
-        DetectionResult,
-        Severity,
-    )
-
+    # 工厂
+    # 其他检测器
+    # 认证检测器
+    # 文件类检测器
+    # 访问控制检测器
     # 注入类检测器
     from core.detectors import (
-        SQLiDetector,
-        XSSDetector,
-        RCEDetector,
-        XXEDetector,
-        SSTIDetector,
-        DeserializeDetector,
-    )
-
-    # 访问控制检测器
-    from core.detectors import (
-        SSRFDetector,
-        IDORDetector,
-        OpenRedirectDetector,
-        PathTraversalDetector,
-    )
-
-    # 文件类检测器
-    from core.detectors import (
-        LFIDetector,
-        FileUploadDetector,
-    )
-
-    # 认证检测器
-    from core.detectors import (
         AuthBypassDetector,
-        WeakPasswordDetector,
-    )
-
-    # 其他检测器
-    from core.detectors import (
+        BaseDetector,
+        CompositeDetector,
         CORSDetector,
         CSRFDetector,
-    )
-
-    # 工厂
-    from core.detectors import (
+        DeserializeDetector,
+        DetectionResult,
         DetectorFactory,
+        FileUploadDetector,
+        IDORDetector,
+        LFIDetector,
+        OpenRedirectDetector,
+        PathTraversalDetector,
+        RCEDetector,
+        Severity,
+        SQLiDetector,
+        SSRFDetector,
+        SSTIDetector,
+        WeakPasswordDetector,
+        XSSDetector,
+        XXEDetector,
         create_detector,
-        list_detectors as _list_detectors,
     )
+    from core.detectors import list_detectors as _list_detectors
 
     # 向后兼容: Vulnerability 别名
     class Vulnerability:
@@ -94,11 +75,12 @@ try:
 
         ⚠️ 请使用 core.detectors.DetectionResult
         """
+
         def __init__(self, **kwargs):
             warnings.warn(
                 "Vulnerability 类已弃用，请使用 core.detectors.DetectionResult",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
             self.__dict__.update(kwargs)
 
@@ -107,31 +89,27 @@ try:
     def sqli_detect(url: str, param: str = None, **kwargs) -> dict:
         """SQL 注入检测 - 已弃用"""
         warnings.warn(
-            "sqli_detect() 已弃用，请使用 SQLiDetector().detect()",
-            DeprecationWarning,
-            stacklevel=2
+            "sqli_detect() 已弃用，请使用 SQLiDetector().detect()", DeprecationWarning, stacklevel=2
         )
         detector = SQLiDetector()
-        params = {param: "1"} if param else kwargs.get('params', {})
+        params = {param: "1"} if param else kwargs.get("params", {})
         results = detector.detect(url, params=params)
         return {
-            'vulnerable': len(results) > 0,
-            'results': [r.to_dict() if hasattr(r, 'to_dict') else r for r in results]
+            "vulnerable": len(results) > 0,
+            "results": [r.to_dict() if hasattr(r, "to_dict") else r for r in results],
         }
 
     def xss_detect(url: str, param: str = None, **kwargs) -> dict:
         """XSS 检测 - 已弃用"""
         warnings.warn(
-            "xss_detect() 已弃用，请使用 XSSDetector().detect()",
-            DeprecationWarning,
-            stacklevel=2
+            "xss_detect() 已弃用，请使用 XSSDetector().detect()", DeprecationWarning, stacklevel=2
         )
         detector = XSSDetector()
-        params = {param: "test"} if param else kwargs.get('params', {})
+        params = {param: "test"} if param else kwargs.get("params", {})
         results = detector.detect(url, params=params)
         return {
-            'vulnerable': len(results) > 0,
-            'results': [r.to_dict() if hasattr(r, 'to_dict') else r for r in results]
+            "vulnerable": len(results) > 0,
+            "results": [r.to_dict() if hasattr(r, "to_dict") else r for r in results],
         }
 
     def cmd_inject_detect(url: str, param: str = None, **kwargs) -> dict:
@@ -139,43 +117,39 @@ try:
         warnings.warn(
             "cmd_inject_detect() 已弃用，请使用 RCEDetector().detect()",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         detector = RCEDetector()
-        params = {param: "test"} if param else kwargs.get('params', {})
+        params = {param: "test"} if param else kwargs.get("params", {})
         results = detector.detect(url, params=params)
         return {
-            'vulnerable': len(results) > 0,
-            'results': [r.to_dict() if hasattr(r, 'to_dict') else r for r in results]
+            "vulnerable": len(results) > 0,
+            "results": [r.to_dict() if hasattr(r, "to_dict") else r for r in results],
         }
 
     def ssrf_detect(url: str, param: str = None, **kwargs) -> dict:
         """SSRF 检测 - 已弃用"""
         warnings.warn(
-            "ssrf_detect() 已弃用，请使用 SSRFDetector().detect()",
-            DeprecationWarning,
-            stacklevel=2
+            "ssrf_detect() 已弃用，请使用 SSRFDetector().detect()", DeprecationWarning, stacklevel=2
         )
         detector = SSRFDetector()
-        params = {param: "http://127.0.0.1"} if param else kwargs.get('params', {})
+        params = {param: "http://127.0.0.1"} if param else kwargs.get("params", {})
         results = detector.detect(url, params=params)
         return {
-            'vulnerable': len(results) > 0,
-            'results': [r.to_dict() if hasattr(r, 'to_dict') else r for r in results]
+            "vulnerable": len(results) > 0,
+            "results": [r.to_dict() if hasattr(r, "to_dict") else r for r in results],
         }
 
     def csrf_detect(url: str, **kwargs) -> dict:
         """CSRF 检测 - 已弃用"""
         warnings.warn(
-            "csrf_detect() 已弃用，请使用 CSRFDetector().detect()",
-            DeprecationWarning,
-            stacklevel=2
+            "csrf_detect() 已弃用，请使用 CSRFDetector().detect()", DeprecationWarning, stacklevel=2
         )
         detector = CSRFDetector()
         results = detector.detect(url)
         return {
-            'vulnerable': len(results) > 0,
-            'results': [r.to_dict() if hasattr(r, 'to_dict') else r for r in results]
+            "vulnerable": len(results) > 0,
+            "results": [r.to_dict() if hasattr(r, "to_dict") else r for r in results],
         }
 
     def cors_deep_check(url: str, **kwargs) -> dict:
@@ -183,28 +157,26 @@ try:
         warnings.warn(
             "cors_deep_check() 已弃用，请使用 CORSDetector().detect()",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         detector = CORSDetector()
         results = detector.detect(url)
         return {
-            'vulnerable': len(results) > 0,
-            'results': [r.to_dict() if hasattr(r, 'to_dict') else r for r in results]
+            "vulnerable": len(results) > 0,
+            "results": [r.to_dict() if hasattr(r, "to_dict") else r for r in results],
         }
 
     def lfi_detect(url: str, param: str = None, **kwargs) -> dict:
         """LFI 检测 - 已弃用"""
         warnings.warn(
-            "lfi_detect() 已弃用，请使用 LFIDetector().detect()",
-            DeprecationWarning,
-            stacklevel=2
+            "lfi_detect() 已弃用，请使用 LFIDetector().detect()", DeprecationWarning, stacklevel=2
         )
         detector = LFIDetector()
-        params = {param: "/etc/passwd"} if param else kwargs.get('params', {})
+        params = {param: "/etc/passwd"} if param else kwargs.get("params", {})
         results = detector.detect(url, params=params)
         return {
-            'vulnerable': len(results) > 0,
-            'results': [r.to_dict() if hasattr(r, 'to_dict') else r for r in results]
+            "vulnerable": len(results) > 0,
+            "results": [r.to_dict() if hasattr(r, "to_dict") else r for r in results],
         }
 
     def file_upload_detect(url: str, **kwargs) -> dict:
@@ -212,13 +184,13 @@ try:
         warnings.warn(
             "file_upload_detect() 已弃用，请使用 FileUploadDetector().detect()",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         detector = FileUploadDetector()
         results = detector.detect(url, **kwargs)
         return {
-            'vulnerable': len(results) > 0,
-            'results': [r.to_dict() if hasattr(r, 'to_dict') else r for r in results]
+            "vulnerable": len(results) > 0,
+            "results": [r.to_dict() if hasattr(r, "to_dict") else r for r in results],
         }
 
     def auth_bypass_detect(url: str, **kwargs) -> dict:
@@ -226,13 +198,13 @@ try:
         warnings.warn(
             "auth_bypass_detect() 已弃用，请使用 AuthBypassDetector().detect()",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         detector = AuthBypassDetector()
         results = detector.detect(url)
         return {
-            'vulnerable': len(results) > 0,
-            'results': [r.to_dict() if hasattr(r, 'to_dict') else r for r in results]
+            "vulnerable": len(results) > 0,
+            "results": [r.to_dict() if hasattr(r, "to_dict") else r for r in results],
         }
 
     def weak_password_detect(url: str, **kwargs) -> dict:
@@ -240,13 +212,13 @@ try:
         warnings.warn(
             "weak_password_detect() 已弃用，请使用 WeakPasswordDetector().detect()",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         detector = WeakPasswordDetector()
         results = detector.detect(url)
         return {
-            'vulnerable': len(results) > 0,
-            'results': [r.to_dict() if hasattr(r, 'to_dict') else r for r in results]
+            "vulnerable": len(results) > 0,
+            "results": [r.to_dict() if hasattr(r, "to_dict") else r for r in results],
         }
 
     # ==================== 检测器注册表 ====================
@@ -280,7 +252,7 @@ try:
         warnings.warn(
             "get_detector() 已弃用，请使用 core.detectors.DetectorFactory.create()",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         detector_type = detector_type.lower()
         if detector_type not in DETECTOR_REGISTRY:
@@ -298,7 +270,7 @@ try:
         warnings.warn(
             "list_detectors() 已弃用，请使用 core.detectors.list_detectors()",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         return {
             "sqli": "SQL 注入检测",
@@ -322,26 +294,29 @@ except ImportError as e:
     logger.warning(f"core.detectors 不可用，使用原始实现: {e}")
 
     # 从原始模块导入
-    from .base import BaseDetector, Vulnerability
-    from .injection import (
-        SQLiDetector, XSSDetector, RCEDetector,
-        XXEDetector, SSTIDetector, DeserializeDetector
-    )
-    from .request import SSRFDetector, CSRFDetector, CORSDetector
-    from .file import LFIDetector, FileUploadDetector
-    from .auth import AuthBypassDetector, WeakPasswordDetector
     from .access import IDORDetector, OpenRedirectDetector
-
-    from .injection.sqli import sqli_detect
-    from .injection.xss import xss_detect
-    from .injection.rce import cmd_inject_detect
-    from .request.ssrf import ssrf_detect
-    from .request.csrf import csrf_detect
-    from .request.cors import cors_deep_check
-    from .file.lfi import lfi_detect
-    from .file.upload import file_upload_detect
+    from .auth import AuthBypassDetector, WeakPasswordDetector
     from .auth.auth_bypass import auth_bypass_detect
     from .auth.weak_password import weak_password_detect
+    from .base import BaseDetector, Vulnerability
+    from .file import FileUploadDetector, LFIDetector
+    from .file.lfi import lfi_detect
+    from .file.upload import file_upload_detect
+    from .injection import (
+        DeserializeDetector,
+        RCEDetector,
+        SQLiDetector,
+        SSTIDetector,
+        XSSDetector,
+        XXEDetector,
+    )
+    from .injection.rce import cmd_inject_detect
+    from .injection.sqli import sqli_detect
+    from .injection.xss import xss_detect
+    from .request import CORSDetector, CSRFDetector, SSRFDetector
+    from .request.cors import cors_deep_check
+    from .request.csrf import csrf_detect
+    from .request.ssrf import ssrf_detect
 
     DETECTOR_REGISTRY = {
         "sqli": SQLiDetector,
@@ -388,7 +363,6 @@ __all__ = [
     # 基类
     "BaseDetector",
     "Vulnerability",
-
     # 检测器类
     "SQLiDetector",
     "XSSDetector",
@@ -405,7 +379,6 @@ __all__ = [
     "WeakPasswordDetector",
     "IDORDetector",
     "OpenRedirectDetector",
-
     # 便捷函数
     "sqli_detect",
     "xss_detect",
@@ -417,7 +390,6 @@ __all__ = [
     "file_upload_detect",
     "auth_bypass_detect",
     "weak_password_detect",
-
     # 注册表
     "DETECTOR_REGISTRY",
     "get_detector",

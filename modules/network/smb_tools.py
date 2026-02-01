@@ -3,7 +3,6 @@
 SMB攻击工具集
 """
 
-import json
 import logging
 import re
 import subprocess

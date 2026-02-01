@@ -6,8 +6,7 @@ CSRF (跨站请求伪造) 检测器
 
 import logging
 import re
-from typing import Any, Dict, List, Optional, Set
-from urllib.parse import parse_qs, urlparse
+from typing import Any, Dict, List, Optional
 
 from ..base import BaseDetector
 from ..factory import register_detector

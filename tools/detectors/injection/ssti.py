@@ -12,10 +12,10 @@ SSTI (Server-Side Template Injection) 检测器
 - ERB (Ruby)
 - Thymeleaf (Java)
 """
-import logging
 
-from typing import Dict, List, Any, Optional
+import logging
 import re
+from typing import Any, Dict, List, Optional
 
 from ..base import BaseDetector, Vulnerability
 
@@ -29,9 +29,22 @@ class SSTIDetector(BaseDetector):
 
     # SSTI 专用测试参数
     DEFAULT_PARAMS = [
-        "q", "search", "query", "name", "input", "template",
-        "page", "view", "content", "text", "message", "title",
-        "email", "username", "comment", "data"
+        "q",
+        "search",
+        "query",
+        "name",
+        "input",
+        "template",
+        "page",
+        "view",
+        "content",
+        "text",
+        "message",
+        "title",
+        "email",
+        "username",
+        "comment",
+        "data",
     ]
 
     # 模板引擎特征
@@ -47,7 +60,7 @@ class SSTIDetector(BaseDetector):
                 r"jinja2\.exceptions",
                 r"UndefinedError",
                 r"TemplateSyntaxError",
-            ]
+            ],
         },
         "twig": {
             "payloads": [
@@ -59,7 +72,7 @@ class SSTIDetector(BaseDetector):
             "error_patterns": [
                 r"Twig_Error",
                 r"Twig\\Error",
-            ]
+            ],
         },
         "freemarker": {
             "payloads": [
@@ -71,7 +84,7 @@ class SSTIDetector(BaseDetector):
                 r"freemarker\.core",
                 r"FreeMarker",
                 r"ParseException",
-            ]
+            ],
         },
         "velocity": {
             "payloads": [
@@ -81,7 +94,7 @@ class SSTIDetector(BaseDetector):
             "error_patterns": [
                 r"org\.apache\.velocity",
                 r"VelocityException",
-            ]
+            ],
         },
         "smarty": {
             "payloads": [
@@ -92,17 +105,17 @@ class SSTIDetector(BaseDetector):
             "error_patterns": [
                 r"Smarty",
                 r"SmartyCompilerException",
-            ]
+            ],
         },
         "mako": {
             "payloads": [
                 ("${7*7}", "49"),
-                ("<%page args=\"x=7*7\"/>${x}", "49"),
+                ('<%page args="x=7*7"/>${x}', "49"),
             ],
             "error_patterns": [
                 r"mako\.exceptions",
                 r"MakoException",
-            ]
+            ],
         },
         "erb": {
             "payloads": [
@@ -112,7 +125,7 @@ class SSTIDetector(BaseDetector):
             "error_patterns": [
                 r"ERB",
                 r"SyntaxError",
-            ]
+            ],
         },
         "thymeleaf": {
             "payloads": [
@@ -122,7 +135,7 @@ class SSTIDetector(BaseDetector):
             "error_patterns": [
                 r"org\.thymeleaf",
                 r"TemplateProcessingException",
-            ]
+            ],
         },
         "pebble": {
             "payloads": [
@@ -132,15 +145,15 @@ class SSTIDetector(BaseDetector):
             "error_patterns": [
                 r"PebbleException",
                 r"com\.mitchellbosecke\.pebble",
-            ]
+            ],
         },
         "handlebars": {
             "payloads": [
-                ("{{#with \"s\" as |string|}}", ""),
+                ('{{#with "s" as |string|}}', ""),
             ],
             "error_patterns": [
                 r"Handlebars",
-            ]
+            ],
         },
     }
 
@@ -152,10 +165,7 @@ class SSTIDetector(BaseDetector):
         return payloads
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在 SSTI 漏洞"""
         if not response.get("success"):
@@ -174,13 +184,11 @@ class SSTIDetector(BaseDetector):
         return False
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = False
+        self, url: str, param: Optional[str] = None, deep_scan: bool = False
     ) -> Dict[str, Any]:
         """执行 SSTI 检测"""
         from tools._common import reset_failure_counter
+
         reset_failure_counter()
 
         vulnerabilities = []
@@ -213,10 +221,7 @@ class SSTIDetector(BaseDetector):
                                 evidence=f"Expected '{expected}' found in response",
                                 verified=False,
                                 confidence=0.8,
-                                details={
-                                    "engine": engine,
-                                    "expected_output": expected
-                                }
+                                details={"engine": engine, "expected_output": expected},
                             )
                             vulnerabilities.append(vuln)
 
@@ -238,7 +243,7 @@ class SSTIDetector(BaseDetector):
                                             evidence=f"Template error: {pattern}",
                                             verified=False,
                                             confidence=0.5,
-                                            details={"engine": engine, "error_pattern": pattern}
+                                            details={"engine": engine, "error_pattern": pattern},
                                         )
                                         vulnerabilities.append(vuln)
                                 break
@@ -266,7 +271,7 @@ class SSTIDetector(BaseDetector):
             "vulnerabilities": [v.to_dict() for v in verified_vulns],
             "total": len(verified_vulns),
             "verified_count": sum(1 for v in verified_vulns if v.verified),
-            "recommendations": self._get_recommendations() if verified_vulns else []
+            "recommendations": self._get_recommendations() if verified_vulns else [],
         }
 
     def _verify_ssti(self, url: str, vuln: Vulnerability) -> bool:
@@ -306,5 +311,5 @@ class SSTIDetector(BaseDetector):
             "对用户输入进行严格的白名单过滤",
             "使用逻辑无关的模板引擎 (如 Mustache)",
             "禁用模板引擎的危险功能和内置对象",
-            "实施 CSP 策略限制脚本执行"
+            "实施 CSP 策略限制脚本执行",
         ]

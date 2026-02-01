@@ -4,10 +4,9 @@
 检测会话管理相关的安全漏洞
 """
 
-import hashlib
 import logging
 import re
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from ..base import BaseDetector

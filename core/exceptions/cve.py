@@ -46,8 +46,6 @@ class CVENotFound(CVEError):
         >>> raise CVENotFound("CVE不存在", cve_id="CVE-9999-99999")
     """
 
-    pass
-
 
 class PoCError(CVEError):
     """

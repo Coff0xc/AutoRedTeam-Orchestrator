@@ -15,9 +15,8 @@ import os
 import secrets
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,6 @@ logger = logging.getLogger(__name__)
 try:
     import websockets
     from websockets.client import WebSocketClientProtocol
-    from websockets.server import WebSocketServerProtocol, serve
 
     HAS_WEBSOCKETS = True
 except ImportError:
@@ -520,7 +518,7 @@ class WebSocketTunnel:
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, _exc_val, _exc_tb):
         """异步上下文管理器 - 退出"""
         await self.close()
 

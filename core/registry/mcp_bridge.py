@@ -8,11 +8,10 @@ MCP协议桥接模块
 
 from __future__ import annotations
 
-import asyncio
 import functools
 import logging
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Type
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set
 
 from .base import BaseTool, FunctionTool, ToolMetadata, ToolParameter, ToolResult
 from .categories import ToolCategory
@@ -525,7 +524,6 @@ class MCPToolBuilder:
         **kwargs,
     ) -> "MCPToolBuilder":
         """添加参数"""
-        from .base import ParamType as PT
 
         self._parameters.append(
             ToolParameter(

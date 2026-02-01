@@ -10,12 +10,11 @@ CVE 本地存储
 import json
 import logging
 import sqlite3
-import tempfile
 import threading
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Iterator, List, Optional, Tuple
 
 from .models import CVSS, CVEEntry, CVEStats, Reference, Severity, SyncStatus
 

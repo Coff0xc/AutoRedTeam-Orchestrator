@@ -3,18 +3,12 @@
 流水线工具模块 - 指纹→POC→弱口令→攻击链联动
 """
 
-from typing import Optional, List
-
 
 def register_pipeline_tools(mcp):
     """注册所有流水线工具到 MCP 服务器"""
 
     @mcp.tool()
-    def vulnerability_pipeline(
-        target: str,
-        verify_ssl: bool = True,
-        timeout: int = 10
-    ) -> dict:
+    def vulnerability_pipeline(target: str, verify_ssl: bool = True, timeout: int = 10) -> dict:
         """漏洞检测流水线 - 自动执行指纹→弱口令→漏洞→攻击链的完整流程
 
         Args:
@@ -48,10 +42,7 @@ def register_pipeline_tools(mcp):
 
     @mcp.tool()
     def fingerprint_weak_password(
-        url: str,
-        cms_hint: str = None,
-        verify_ssl: bool = True,
-        timeout: int = 10
+        url: str, cms_hint: str = None, verify_ssl: bool = True, timeout: int = 10
     ) -> dict:
         """基于指纹的弱口令检测 - 根据CMS/框架使用专用字典
 
@@ -98,10 +89,7 @@ def register_pipeline_tools(mcp):
 
     @mcp.tool()
     def targeted_vuln_scan(
-        url: str,
-        cms_list: str = None,
-        verify_ssl: bool = True,
-        timeout: int = 10
+        url: str, cms_list: str = None, verify_ssl: bool = True, timeout: int = 10
     ) -> dict:
         """基于指纹的针对性漏洞扫描 - 根据CMS执行特定漏洞检测
 
@@ -133,7 +121,7 @@ def register_pipeline_tools(mcp):
 
         # 如果提供了CMS列表，直接使用
         if cms_list:
-            pipeline.context.detected_cms = [c.strip() for c in cms_list.split(',')]
+            pipeline.context.detected_cms = [c.strip() for c in cms_list.split(",")]
         else:
             # 否则先运行指纹识别
             pipeline._run_fingerprint()
@@ -142,7 +130,7 @@ def register_pipeline_tools(mcp):
         result = pipeline._run_targeted_vuln_scan()
         result["fingerprint"] = {
             "cms": pipeline.context.detected_cms,
-            "frameworks": pipeline.context.detected_frameworks
+            "frameworks": pipeline.context.detected_frameworks,
         }
 
         return result
@@ -152,7 +140,7 @@ def register_pipeline_tools(mcp):
         url: str,
         detected_cms: str = None,
         weak_credentials: str = None,
-        vulnerabilities: str = None
+        vulnerabilities: str = None,
     ) -> dict:
         """基于上下文生成攻击链 - 融合指纹、凭证、漏洞信息
 
@@ -176,13 +164,14 @@ def register_pipeline_tools(mcp):
             }
         """
         import json as json_module
-        from core.pipeline import VulnerabilityPipeline, PipelineContext
+
+        from core.pipeline import VulnerabilityPipeline
 
         pipeline = VulnerabilityPipeline(url)
 
         # 填充上下文
         if detected_cms:
-            pipeline.context.detected_cms = [c.strip() for c in detected_cms.split(',')]
+            pipeline.context.detected_cms = [c.strip() for c in detected_cms.split(",")]
 
         if weak_credentials:
             try:
@@ -227,15 +216,15 @@ def register_pipeline_tools(mcp):
                 "endpoints": config.get("endpoints", []),
                 "credential_count": len(config.get("credentials", [])),
                 "auth_type": config.get("auth_type", "form"),
-                "check_only": config.get("check_only", False)
+                "check_only": config.get("check_only", False),
             }
 
         return {
             "supported_cms": list(CMS_DEFAULT_CREDENTIALS.keys()),
             "total_cms": len(CMS_DEFAULT_CREDENTIALS),
-            "cms_configs": configs
+            "cms_configs": configs,
         }
 
 
 # 导出
-__all__ = ['register_pipeline_tools']
+__all__ = ["register_pipeline_tools"]

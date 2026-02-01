@@ -71,7 +71,6 @@ class BasePhaseExecutor(ABC):
     @abstractmethod
     async def execute(self) -> PhaseResult:
         """执行阶段"""
-        pass
 
     async def resume(self, checkpoint_data: Dict[str, Any]) -> PhaseResult:
         """从检查点恢复执行"""

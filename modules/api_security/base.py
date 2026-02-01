@@ -265,7 +265,7 @@ class BaseAPITester(ABC):
         """支持上下文管理器"""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, _exc_val, _exc_tb):
         """退出时关闭资源"""
         self.close()
         return False
@@ -278,7 +278,6 @@ class BaseAPITester(ABC):
         Returns:
             测试结果列表
         """
-        pass
 
     async def async_test(self) -> List[APITestResult]:
         """

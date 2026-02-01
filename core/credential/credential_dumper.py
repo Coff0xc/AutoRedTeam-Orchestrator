@@ -21,13 +21,11 @@ import os
 import platform
 import re
 import sqlite3
-import sys
 import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 # 条件导入
 try:

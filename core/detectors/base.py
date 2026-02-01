@@ -106,7 +106,7 @@ class BaseDetector(ABC):
         """
         if self._http_client is None:
             try:
-                from core.http import HTTPConfig, get_client
+                from core.http import HTTPConfig
 
                 http_config = HTTPConfig()
                 http_config.timeout = self.config.get("timeout", 30)
@@ -152,7 +152,6 @@ class BaseDetector(ABC):
         Returns:
             检测结果列表
         """
-        pass
 
     async def async_detect(self, url: str, **kwargs) -> List[DetectionResult]:
         """异步检测方法
@@ -388,7 +387,7 @@ class BaseDetector(ABC):
         """
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+    def __exit__(self, exc_type, _exc_val, _exc_tb) -> bool:
         """上下文管理器出口，自动清理资源"""
         self.cleanup()
         return False  # 不抑制异常

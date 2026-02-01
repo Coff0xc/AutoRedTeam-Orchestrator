@@ -10,10 +10,9 @@ import socket
 import threading
 import time
 from collections import deque
-from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 logger = logging.getLogger(__name__)
 
@@ -324,7 +323,7 @@ class AsyncDirScanner(AsyncScanner):
         """异步上下文管理器入口"""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, _exc_val, _exc_tb):
         """异步上下文管理器出口 - 确保资源清理"""
         await self.close()
         return False
@@ -477,7 +476,7 @@ class AsyncVulnScanner(AsyncScanner):
         """异步上下文管理器入口"""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, _exc_val, _exc_tb):
         """异步上下文管理器出口 - 确保资源清理"""
         await self.close()
         return False

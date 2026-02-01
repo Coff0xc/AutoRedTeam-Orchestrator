@@ -5,16 +5,13 @@ gRPC安全测试模块
 作者: AutoRedTeam
 """
 
-import json
 import logging
-import re
 import socket
 import ssl
 import struct
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 

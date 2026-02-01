@@ -17,7 +17,6 @@ fingerprint.py - 指纹识别引擎
 import hashlib
 import logging
 import re
-import socket
 import ssl
 import urllib.error
 import urllib.request

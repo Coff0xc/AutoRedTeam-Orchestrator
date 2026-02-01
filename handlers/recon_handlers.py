@@ -11,7 +11,6 @@ from .error_handling import (
     extract_target,
     extract_url,
     handle_errors,
-    require_non_empty,
     validate_inputs,
 )
 from .tooling import tool
@@ -63,7 +62,7 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             开放端口列表和服务信息
         """
-        from core.recon import PortScanner, async_scan_ports
+        from core.recon import async_scan_ports
 
         results = await async_scan_ports(target, ports, timeout=timeout)
 
@@ -97,7 +96,7 @@ def register_recon_tools(mcp, counter, logger):
         """
         import asyncio
 
-        from core.recon import FingerprintEngine, identify_fingerprints
+        from core.recon import identify_fingerprints
 
         results = await asyncio.to_thread(identify_fingerprints, url)
 
@@ -136,7 +135,7 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             子域名列表
         """
-        from core.recon import SubdomainEnumerator, async_enumerate_subdomains
+        from core.recon import async_enumerate_subdomains
 
         results = await async_enumerate_subdomains(domain, methods=methods)
 
@@ -167,7 +166,7 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             发现的路径列表
         """
-        from core.recon import DirectoryScanner, async_scan_directories
+        from core.recon import async_scan_directories
 
         results = await async_scan_directories(url, wordlist=wordlist, extensions=extensions)
 
@@ -199,7 +198,7 @@ def register_recon_tools(mcp, counter, logger):
         """
         import asyncio
 
-        from core.recon import DNSResolver, get_dns_records
+        from core.recon import get_dns_records
 
         results = await asyncio.to_thread(get_dns_records, domain, record_types=record_types)
 
@@ -223,7 +222,7 @@ def register_recon_tools(mcp, counter, logger):
         """
         import asyncio
 
-        from core.recon import TechDetector, detect_technologies
+        from core.recon import detect_technologies
 
         results = await asyncio.to_thread(detect_technologies, url)
 
@@ -255,7 +254,7 @@ def register_recon_tools(mcp, counter, logger):
         """
         import asyncio
 
-        from core.recon import WAFDetector, detect_waf
+        from core.recon import detect_waf
 
         result = await asyncio.to_thread(detect_waf, url)
 

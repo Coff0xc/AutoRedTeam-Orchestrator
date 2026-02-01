@@ -7,19 +7,15 @@ WebSocket安全测试模块
 
 import base64
 import hashlib
-import json
 import logging
 import os
 import re
 import socket
 import ssl
-import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
-
-import requests
 
 logger = logging.getLogger(__name__)
 

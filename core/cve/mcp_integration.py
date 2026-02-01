@@ -6,9 +6,9 @@ CVE管理器 - MCP集成示例
 """
 
 import asyncio
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
-from core.cve import CVEEntry, CVEUpdateManager
+from core.cve import CVEUpdateManager
 
 # 全局实例 (在MCP服务器启动时初始化)
 cve_manager = None

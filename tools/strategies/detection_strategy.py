@@ -4,10 +4,10 @@
 应用策略模式，解耦检测逻辑
 """
 
-from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
 import logging
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DetectionContext:
     """检测上下文 - 传递给策略的数据"""
+
     url: str
     params: List[str]
     deep_scan: bool = False
@@ -43,12 +44,10 @@ class DetectionStrategy(ABC):
         Returns:
             检测结果
         """
-        pass
 
     @abstractmethod
     def get_name(self) -> str:
         """获取策略名称"""
-        pass
 
 
 class QuickScanStrategy(DetectionStrategy):
@@ -84,16 +83,14 @@ class QuickScanStrategy(DetectionStrategy):
         try:
             # 执行检测
             vulnerabilities = detector.test_payloads(
-                context.url,
-                param=test_params[0] if test_params else None,
-                stop_on_first=True
+                context.url, param=test_params[0] if test_params else None, stop_on_first=True
             )
 
             return {
                 "success": True,
                 "strategy": self.get_name(),
                 "vulnerabilities": [v.to_dict() for v in vulnerabilities],
-                "total": len(vulnerabilities)
+                "total": len(vulnerabilities),
             }
         finally:
             # 恢复原始 Payload
@@ -125,9 +122,7 @@ class DeepScanStrategy(DetectionStrategy):
 
         for param in test_params:
             vulnerabilities = detector.test_payloads(
-                context.url,
-                param=param,
-                stop_on_first=False  # 不提前停止
+                context.url, param=param, stop_on_first=False  # 不提前停止
             )
             all_vulnerabilities.extend(vulnerabilities)
 
@@ -144,7 +139,7 @@ class DeepScanStrategy(DetectionStrategy):
             "strategy": self.get_name(),
             "vulnerabilities": [v.to_dict() for v in verified_vulns],
             "total": len(verified_vulns),
-            "verified_count": sum(1 for v in verified_vulns if v.verified)
+            "verified_count": sum(1 for v in verified_vulns if v.verified),
         }
 
 
@@ -168,11 +163,7 @@ class SmartScanStrategy(DetectionStrategy):
         # 阶段1: 快速探测
         baseline = detector.get_baseline(context.url)
         if not baseline or not baseline.get("success"):
-            return {
-                "success": False,
-                "error": "无法获取基线响应",
-                "strategy": self.get_name()
-            }
+            return {"success": False, "error": "无法获取基线响应", "strategy": self.get_name()}
 
         # 分析响应特征
         features = self._analyze_response(baseline)
@@ -201,7 +192,7 @@ class SmartScanStrategy(DetectionStrategy):
             "strategy": self.get_name(),
             "features": features,
             "vulnerabilities": [v.to_dict() for v in vulnerabilities],
-            "total": len(vulnerabilities)
+            "total": len(vulnerabilities),
         }
 
     def _analyze_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
@@ -211,7 +202,7 @@ class SmartScanStrategy(DetectionStrategy):
             "response_time": response.get("response_time", 0),
             "content_length": response.get("response_length", 0),
             "server": response.get("headers", {}).get("server", "unknown"),
-            "technology": []
+            "technology": [],
         }
 
         # 检测技术栈
@@ -271,16 +262,14 @@ class TargetedScanStrategy(DetectionStrategy):
         # 只获取目标类别的 Payload
         all_payloads = detector.get_payloads()
         targeted_payloads = {
-            cat: payloads
-            for cat, payloads in all_payloads.items()
-            if cat in self.target_categories
+            cat: payloads for cat, payloads in all_payloads.items() if cat in self.target_categories
         }
 
         if not targeted_payloads:
             return {
                 "success": False,
                 "error": f"未找到目标类别: {self.target_categories}",
-                "strategy": self.get_name()
+                "strategy": self.get_name(),
             }
 
         # 临时替换 Payload
@@ -291,7 +280,7 @@ class TargetedScanStrategy(DetectionStrategy):
             vulnerabilities = detector.test_payloads(
                 context.url,
                 param=context.params[0] if context.params else None,
-                stop_on_first=context.stop_on_first
+                stop_on_first=context.stop_on_first,
             )
 
             return {
@@ -299,7 +288,7 @@ class TargetedScanStrategy(DetectionStrategy):
                 "strategy": self.get_name(),
                 "target_categories": self.target_categories,
                 "vulnerabilities": [v.to_dict() for v in vulnerabilities],
-                "total": len(vulnerabilities)
+                "total": len(vulnerabilities),
             }
         finally:
             detector.get_payloads = original_payloads
@@ -351,11 +340,7 @@ if __name__ == "__main__":
     detector = DetectorFactory.create("sqli")
 
     # 创建检测上下文
-    context = DetectionContext(
-        url="https://example.com",
-        params=["id", "page"],
-        deep_scan=False
-    )
+    context = DetectionContext(url="https://example.com", params=["id", "page"], deep_scan=False)
 
     # 使用快速扫描策略
     strategy = StrategyFactory.create("quick")

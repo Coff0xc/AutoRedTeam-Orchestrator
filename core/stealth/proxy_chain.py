@@ -4,18 +4,15 @@
 功能: 多级代理链、智能轮换、健康检查、负载均衡、失败自动恢复
 """
 
-import asyncio
 import json
 import logging
-import os
 import random
-import tempfile
 import time
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +27,7 @@ except ImportError:
     logger.warning("requests not installed, limited functionality")
 
 try:
-    import httpx
+    pass
 
     HAS_HTTPX = True
 except ImportError:
@@ -46,9 +43,9 @@ except ImportError:
 
 # 导入代理池模块
 try:
-    from .proxy_pool import Proxy, ProxyAnonymity, ProxyPool, ProxyType, ProxyValidator
+    from .proxy_pool import Proxy, ProxyPool, ProxyValidator
 except ImportError:
-    from proxy_pool import Proxy, ProxyAnonymity, ProxyPool, ProxyType, ProxyValidator
+    from proxy_pool import Proxy, ProxyPool, ProxyValidator
 
 
 class ChainStrategy(Enum):

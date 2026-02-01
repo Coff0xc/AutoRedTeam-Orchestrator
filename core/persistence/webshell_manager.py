@@ -8,13 +8,11 @@ Webshell 管理模块 - Webshell Manager
 import base64
 import hashlib
 import logging
-import os
-import random
 import secrets
 import string
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
