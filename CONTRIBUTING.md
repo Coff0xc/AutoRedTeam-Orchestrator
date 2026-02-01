@@ -63,17 +63,17 @@ python test_server.py
 
 - 遵循 [PEP 8](https://pep8.org/) 规范
 - 使用 4 空格缩进
-- 最大行宽 120 字符
+- 最大行宽 100 字符
 - 使用类型注解
 
 ### 格式化工具
 
 ```bash
 # 使用 Black 格式化代码
-black --line-length 120 your_file.py
+black --line-length 100 your_file.py
 
 # 使用 flake8 检查
-flake8 --max-line-length 120 your_file.py
+flake8 --max-line-length 100 your_file.py
 ```
 
 ### 命名规范

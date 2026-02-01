@@ -7,7 +7,7 @@ eventlet>=0.35.0,<1.0.0
 # AI/LLM Integration
 openai>=1.12.0,<2.0.0
 anthropic>=0.18.0,<1.0.0
-langchain>=0.1.0,<0.3.0
+langchain>=0.1.0,<0.2.0
 langchain-openai>=0.0.5,<1.0.0
 
 # Async & Concurrency (Performance Optimization)
@@ -49,10 +49,10 @@ defusedxml>=0.7.1,<1.0.0
 
 # Red Team Advanced Features
 # Required for SMB/WMI Pass-the-Hash, lateral movement
-impacket>=0.11.0,<0.13.0
+impacket>=0.11.0,<0.12.0
 # Required for AES encryption for payload obfuscation
 pycryptodome>=3.20.0,<4.0.0
 
 # v2.5 New Dependencies
-websockets>=12.0,<14.0
+websockets>=12.0,<13.0
 cryptography>=42.0.0,<45.0.0
