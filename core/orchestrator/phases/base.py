@@ -146,5 +146,97 @@ class BasePhaseExecutor(ABC):
             self._normalized_target = self._normalize_url(self.state.target)
         return self._normalized_target
 
+    # ============== 安全工具方法 ==============
+
+    @staticmethod
+    def _redact_credential(cred: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """脱敏凭证信息 - 仅保留类型和用户名，隐藏密码/令牌
+
+        Args:
+            cred: 原始凭证字典
+
+        Returns:
+            脱敏后的凭证字典
+        """
+        if not isinstance(cred, dict):
+            return None
+        redacted: Dict[str, Any] = {"source": cred.get("source", "unknown")}
+        if cred.get("username"):
+            redacted["username"] = str(cred["username"])
+        if cred.get("password"):
+            redacted["password"] = "***REDACTED***"
+        if cred.get("token"):
+            token = str(cred["token"])
+            redacted["token"] = token[:4] + "***" if len(token) > 4 else "***"
+        if cred.get("type"):
+            redacted["type"] = cred["type"]
+        return redacted
+
+    @staticmethod
+    def _sanitize_output(output: Optional[str], max_length: int = 200) -> str:
+        """清洗命令输出 - 截断并移除潜在敏感行
+
+        Args:
+            output: 原始输出
+            max_length: 最大保留长度
+
+        Returns:
+            清洗后的输出
+        """
+        if not output:
+            return ""
+        # 移除包含常见敏感关键字的行
+        sensitive_patterns = ("password", "passwd", "secret", "token", "key=", "api_key")
+        lines = output.split("\n")
+        safe_lines = [
+            line for line in lines if not any(p in line.lower() for p in sensitive_patterns)
+        ]
+        cleaned = "\n".join(safe_lines)
+        if len(cleaned) > max_length:
+            cleaned = cleaned[:max_length] + "...[truncated]"
+        return cleaned
+
+    @staticmethod
+    def _sanitize_error(error: str) -> str:
+        """清洗错误消息 - 移除路径和敏感信息"""
+        # 移除文件路径 (Windows 和 Unix)
+        sanitized = re.sub(r"[A-Z]:\\[\w\\/.]+", "[PATH]", error)
+        sanitized = re.sub(r"/(?:home|root|tmp|var|etc)/[\w/.]+", "[PATH]", sanitized)
+        # 移除 IP:Port 模式中的端口
+        sanitized = re.sub(r"(\d+\.\d+\.\d+\.\d+):\d+", r"\1:[PORT]", sanitized)
+        return sanitized
+
+    def _create_error_result(
+        self,
+        error: str,
+        findings: Optional[List[Dict[str, Any]]] = None,
+    ) -> PhaseResult:
+        """创建错误阶段结果"""
+        return PhaseResult(
+            success=False,
+            phase=self.phase,
+            data={},
+            findings=findings or [],
+            errors=[self._sanitize_error(error)],
+        )
+
+    def _clamp_config_int(self, key: str, default: int, min_val: int, max_val: int) -> int:
+        """获取配置整数值并限制范围
+
+        Args:
+            key: 配置键
+            default: 默认值
+            min_val: 最小值
+            max_val: 最大值
+
+        Returns:
+            范围限制后的整数
+        """
+        try:
+            value = int(self.config.get(key, default))
+        except (ValueError, TypeError):
+            value = default
+        return max(min_val, min(value, max_val))
+
 
 __all__ = ["PhaseResult", "BasePhaseExecutor", "CVE_ID_PATTERN"]

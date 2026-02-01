@@ -33,7 +33,7 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
     def required_phases(self):
         from ..state import PentestPhase
 
-        return [PentestPhase.PRIVILEGE_ESC]
+        return (PentestPhase.PRIVILEGE_ESC,)
 
     async def execute(self) -> PhaseResult:
         from ..state import PentestPhase
@@ -69,8 +69,10 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
                     errors=errors,
                 )
 
-            max_targets = int(self.config.get("max_lateral_targets", 10))
-            max_creds = int(self.config.get("max_lateral_credentials", len(self.state.credentials)))
+            max_targets = self._clamp_config_int("max_lateral_targets", 10, 1, 100)
+            max_creds = self._clamp_config_int(
+                "max_lateral_credentials", len(self.state.credentials), 1, 50
+            )
             command = self.config.get("lateral_command", "whoami")
             preferred_methods = self.config.get("preferred_methods")
 
@@ -111,9 +113,11 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
                                 host=target,
                                 method=f"lateral:{result.method or 'auto'}",
                                 privilege_level="unknown",
-                                credentials=cred if isinstance(cred, dict) else None,
+                                credentials=self._redact_credential(
+                                    cred if isinstance(cred, dict) else None
+                                ),
                                 session_token=None,
-                                notes=result.output[:200] if result.output else "",
+                                notes=self._sanitize_output(result.output),
                             )
                             self.state.add_access(access)
                             findings.append(
@@ -121,7 +125,9 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
                                     "type": "lateral_movement",
                                     "severity": "high",
                                     "title": f"横向移动成功: {target}",
-                                    "description": result.output or "",
+                                    "description": self._sanitize_output(
+                                        result.output, max_length=500
+                                    ),
                                     "phase": "lateral_movement",
                                 }
                             )
