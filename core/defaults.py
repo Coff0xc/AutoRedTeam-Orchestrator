@@ -130,6 +130,34 @@ class PerformanceDefaults:
     MEMORY_LIMIT_MB: int = _env_int("PERF_MEMORY_LIMIT_MB", 512)
 
 
+class AIDefaults:
+    """AI 引擎默认值"""
+
+    REQUEST_TIMEOUT: float = _env_float("AI_REQUEST_TIMEOUT", 30.0)
+    MAX_TOKENS: int = _env_int("AI_MAX_TOKENS", 2000)
+    MAX_INPUT_LENGTH: int = _env_int("AI_MAX_INPUT_LENGTH", 200)
+    MAX_OUTPUT_LENGTH: int = _env_int("AI_MAX_OUTPUT_LENGTH", 2000)
+    MAX_CONTEXT_LENGTH: int = _env_int("AI_MAX_CONTEXT_LENGTH", 2000)
+    MAX_SANITIZED_LENGTH: int = _env_int("AI_MAX_SANITIZED_LENGTH", 50)
+    BASE_ESTIMATE_MINUTES: int = _env_int("AI_BASE_ESTIMATE_MINUTES", 30)
+
+
+class ToolManagerDefaults:
+    """外部工具管理器默认值"""
+
+    SUBPROCESS_TIMEOUT: float = _env_float("TOOL_SUBPROCESS_TIMEOUT", 30.0)
+    DEFAULT_CHUNK_SIZE: int = _env_int("TOOL_CHUNK_SIZE", 1024)
+    MAX_SCAN_RATE: int = _env_int("TOOL_MAX_SCAN_RATE", 10000)
+    MAX_PORT: int = 65535
+    MASSCAN_DEFAULT_RATE: int = _env_int("TOOL_MASSCAN_RATE", 1000)
+
+
+class GitDefaults:
+    """Git 操作默认值"""
+
+    MAX_COMMITS: int = _env_int("GIT_MAX_COMMITS", 100)
+
+
 # 便捷访问的常量别名
 SCAN_TIMEOUT = ScanDefaults.TIMEOUT
 HTTP_TIMEOUT = HTTPDefaults.TIMEOUT
@@ -137,3 +165,6 @@ C2_SHELL_TIMEOUT = C2Defaults.SHELL_TIMEOUT
 LATERAL_MAX_WORKERS = LateralDefaults.MAX_WORKERS
 DNS_TIMEOUT = DNSDefaults.TIMEOUT
 CRED_DUMP_TIMEOUT = CredentialDefaults.DUMP_TIMEOUT
+AI_REQUEST_TIMEOUT = AIDefaults.REQUEST_TIMEOUT
+AI_MAX_TOKENS = AIDefaults.MAX_TOKENS
+SUBPROCESS_TIMEOUT = ToolManagerDefaults.SUBPROCESS_TIMEOUT

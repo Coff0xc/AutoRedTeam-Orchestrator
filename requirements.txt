@@ -7,8 +7,9 @@ eventlet>=0.35.0,<1.0.0
 # AI/LLM Integration
 openai>=1.12.0,<2.0.0
 anthropic>=0.18.0,<1.0.0
-langchain>=0.1.0,<0.2.0
-langchain-openai>=0.0.5,<1.0.0
+# langchain 0.1.x has CVE-2025-68664 (CRITICAL); upgraded to 0.3.x for security
+langchain>=0.3.0,<0.4.0
+langchain-openai>=0.2.0,<1.0.0
 
 # Async & Concurrency (Performance Optimization)
 aiohttp>=3.9.0,<4.0.0

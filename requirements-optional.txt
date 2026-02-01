@@ -3,8 +3,9 @@
 # AI/LLM Integration
 openai>=1.12.0
 anthropic>=0.18.0
-langchain>=0.1.0
-langchain-openai>=0.0.5
+# langchain 0.1.x has CVE-2025-68664; upgraded to 0.3.x
+langchain>=0.3.0
+langchain-openai>=0.2.0
 
 # Performance & Concurrency
 httpx>=0.26.0

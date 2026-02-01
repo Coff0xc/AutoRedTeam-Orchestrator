@@ -6,6 +6,7 @@
 
 import asyncio
 import logging
+import socket
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -305,7 +306,7 @@ class AsyncPortScanner:
             writer.close()
             await writer.wait_closed()
             return port
-        except Exception:
+        except (OSError, asyncio.TimeoutError, ConnectionError):
             return None
 
     async def scan(self, host: str, ports: List[int]) -> List[int]:
@@ -349,9 +350,9 @@ class AsyncDNSResolver:
                     loop.getaddrinfo(domain, None), timeout=self.timeout
                 )
                 return list(set(r[4][0] for r in result))
-            except Exception:
+            except (asyncio.TimeoutError, OSError, socket.gaierror):
                 return []
-        except Exception:
+        except (ImportError, RuntimeError):
             return []
 
     async def batch_resolve(
