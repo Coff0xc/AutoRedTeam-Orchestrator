@@ -706,9 +706,7 @@ class MiddlewareChain:
             response = await middleware.process_response(response, request)
         # 同步中间件用 to_thread 包装
         for middleware in reversed(self._middlewares):
-            response = await asyncio.to_thread(
-                middleware.process_response, response, request
-            )
+            response = await asyncio.to_thread(middleware.process_response, response, request)
         return response
 
     async def async_process_exception(
@@ -721,9 +719,7 @@ class MiddlewareChain:
                 return result
         # 同步中间件用 to_thread 包装
         for middleware in reversed(self._middlewares):
-            result = await asyncio.to_thread(
-                middleware.process_exception, exception, request
-            )
+            result = await asyncio.to_thread(middleware.process_exception, exception, request)
             if result is not None:
                 return result
         return None
