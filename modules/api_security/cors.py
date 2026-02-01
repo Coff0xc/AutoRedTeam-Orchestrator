@@ -15,8 +15,7 @@ CORS安全测试模块
 """
 
 import logging
-import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from .base import (
@@ -481,7 +480,7 @@ class CORSTester(BaseAPITester):
     # ==================== 辅助方法 ====================
 
     def _send_cors_request(
-        self, origin: str, method: str = "GET", with_credentials: bool = False
+        self, origin: str, method: str = "GET", _with_credentials: bool = False
     ) -> Optional[Dict[str, str]]:
         """
         发送CORS测试请求

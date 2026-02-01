@@ -18,10 +18,9 @@ OAuth安全测试模块
 import base64
 import hashlib
 import logging
-import re
 import secrets
-from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlencode, urlparse
 
 from .base import (
     APITestResult,

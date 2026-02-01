@@ -137,7 +137,6 @@ class UACBypass:
 
     def get_available_techniques(self) -> List[UACBypassTechnique]:
         """获取当前系统可用的绕过技术"""
-        import shutil
 
         available = []
 

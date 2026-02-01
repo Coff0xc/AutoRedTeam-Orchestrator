@@ -11,13 +11,11 @@ Warning: 仅限授权渗透测试使用！
 
 import logging
 import struct
-from typing import Optional
 
 from ..base import (
     BaseExfiltration,
     ExfilChannel,
     ExfilConfig,
-    ExfilStatus,
 )
 
 logger = logging.getLogger(__name__)

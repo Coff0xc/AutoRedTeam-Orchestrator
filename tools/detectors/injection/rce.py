@@ -8,14 +8,14 @@ RCE (命令注入) 检测器 - 基于 BaseDetector 重构
 - 带外检测 (Out-of-Band) - 需要配合 OOB 服务
 """
 
-import re
-import time
-from typing import Dict, List, Any, Optional
+import os
+import sys
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+)
 
 from tools.detectors.base import BaseDetector, Vulnerability
 
@@ -25,15 +25,35 @@ class RCEDetector(BaseDetector):
 
     # 覆盖默认测试参数
     DEFAULT_PARAMS = [
-        "cmd", "exec", "command", "ping", "query", "host", "ip",
-        "file", "path", "dir", "run", "execute", "shell", "process"
+        "cmd",
+        "exec",
+        "command",
+        "ping",
+        "query",
+        "host",
+        "ip",
+        "file",
+        "path",
+        "dir",
+        "run",
+        "execute",
+        "shell",
+        "process",
     ]
 
     # 基础命令注入 Payload (Linux)
     LINUX_PAYLOADS = [
-        "; id", "| id", "|| id", "&& id", "& id",
-        "; whoami", "| whoami", "|| whoami",
-        "`id`", "$(id)", "${id}",
+        "; id",
+        "| id",
+        "|| id",
+        "&& id",
+        "& id",
+        "; whoami",
+        "| whoami",
+        "|| whoami",
+        "`id`",
+        "$(id)",
+        "${id}",
         "| cat /etc/passwd",
         "; cat /etc/passwd",
         "| head -1 /etc/passwd",
@@ -43,7 +63,9 @@ class RCEDetector(BaseDetector):
 
     # 基础命令注入 Payload (Windows)
     WINDOWS_PAYLOADS = [
-        "& whoami", "| whoami", "|| whoami",
+        "& whoami",
+        "| whoami",
+        "|| whoami",
         "& type C:\\Windows\\win.ini",
         "| type C:\\Windows\\win.ini",
         "& dir C:\\",
@@ -69,10 +91,17 @@ class RCEDetector(BaseDetector):
 
     # 命令执行成功指示器 (Linux)
     LINUX_INDICATORS = [
-        "uid=", "gid=", "groups=",
-        "root:", "daemon:", "bin:", "nobody:",
-        "/bin/bash", "/bin/sh",
-        "Linux", "GNU/Linux",
+        "uid=",
+        "gid=",
+        "groups=",
+        "root:",
+        "daemon:",
+        "bin:",
+        "nobody:",
+        "/bin/bash",
+        "/bin/sh",
+        "Linux",
+        "GNU/Linux",
     ]
 
     # 命令执行成功指示器 (Windows)
@@ -88,10 +117,15 @@ class RCEDetector(BaseDetector):
 
     # 错误信息指示器 (可能表明存在注入点)
     ERROR_INDICATORS = [
-        "sh:", "bash:", "cmd.exe",
-        "not found", "command not found",
-        "syntax error", "unexpected token",
-        "cannot execute", "permission denied",
+        "sh:",
+        "bash:",
+        "cmd.exe",
+        "not found",
+        "command not found",
+        "syntax error",
+        "unexpected token",
+        "cannot execute",
+        "permission denied",
     ]
 
     def get_payloads(self) -> Dict[str, List]:
@@ -103,10 +137,7 @@ class RCEDetector(BaseDetector):
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在命令注入"""
         if not response or not response.get("success"):
@@ -131,11 +162,7 @@ class RCEDetector(BaseDetector):
 
         return False
 
-    def detect_basic(
-        self,
-        url: str,
-        param: Optional[str] = None
-    ) -> List[Vulnerability]:
+    def detect_basic(self, url: str, param: Optional[str] = None) -> List[Vulnerability]:
         """检测基础命令注入"""
         vulnerabilities = []
         test_params = self.get_test_params(param)
@@ -145,7 +172,7 @@ class RCEDetector(BaseDetector):
 
         for test_param in test_params:
             for payload in all_payloads:
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
                 response = self.send_request(url, encoded_payload, test_param)
 
                 if not response or not response.get("success"):
@@ -171,30 +198,28 @@ class RCEDetector(BaseDetector):
                             break
 
                 if found_indicator:
-                    vulnerabilities.append(Vulnerability(
-                        type="Command Injection",
-                        severity="CRITICAL",
-                        param=test_param,
-                        payload=payload,
-                        url=response.get("url", url),
-                        evidence=f"检测到 {os_type} 命令执行指示器: {found_indicator}",
-                        verified=False,
-                        confidence=0.85,
-                        details={
-                            "os_type": os_type,
-                            "indicator": found_indicator,
-                            "response_length": len(resp_text)
-                        }
-                    ))
+                    vulnerabilities.append(
+                        Vulnerability(
+                            type="Command Injection",
+                            severity="CRITICAL",
+                            param=test_param,
+                            payload=payload,
+                            url=response.get("url", url),
+                            evidence=f"检测到 {os_type} 命令执行指示器: {found_indicator}",
+                            verified=False,
+                            confidence=0.85,
+                            details={
+                                "os_type": os_type,
+                                "indicator": found_indicator,
+                                "response_length": len(resp_text),
+                            },
+                        )
+                    )
                     break  # 找到一个就停止该参数的测试
 
         return vulnerabilities
 
-    def detect_time_based(
-        self,
-        url: str,
-        param: Optional[str] = None
-    ) -> List[Vulnerability]:
+    def detect_time_based(self, url: str, param: Optional[str] = None) -> List[Vulnerability]:
         """检测时间盲注命令注入"""
         vulnerabilities = []
         test_params = self.get_test_params(param)
@@ -205,7 +230,7 @@ class RCEDetector(BaseDetector):
 
         for test_param in test_params:
             for payload, expected_delay in self.TIME_PAYLOADS:
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
                 response = self.send_request(url, encoded_payload, test_param)
 
                 if not response or not response.get("success"):
@@ -214,40 +239,46 @@ class RCEDetector(BaseDetector):
                 response_time = response.get("response_time", 0)
 
                 # 检查响应时间是否显著延迟
-                if response_time >= expected_delay * 0.85 and response_time >= baseline_time + expected_delay * 0.7:
+                if (
+                    response_time >= expected_delay * 0.85
+                    and response_time >= baseline_time + expected_delay * 0.7
+                ):
                     # 二次验证
                     verify_response = self.send_request(url, encoded_payload, test_param)
 
-                    if verify_response and verify_response.get("response_time", 0) >= expected_delay * 0.8:
+                    if (
+                        verify_response
+                        and verify_response.get("response_time", 0) >= expected_delay * 0.8
+                    ):
                         # 判断 OS 类型
-                        os_type = "Windows" if "timeout" in payload or "ping -n" in payload else "Linux"
+                        os_type = (
+                            "Windows" if "timeout" in payload or "ping -n" in payload else "Linux"
+                        )
 
-                        vulnerabilities.append(Vulnerability(
-                            type="Time-based Blind RCE",
-                            severity="CRITICAL",
-                            param=test_param,
-                            payload=payload,
-                            url=response.get("url", url),
-                            evidence=f"响应延迟: {response_time:.2f}s / {verify_response.get('response_time', 0):.2f}s (预期: {expected_delay}s)",
-                            verified=True,
-                            confidence=0.9,
-                            details={
-                                "os_type": os_type,
-                                "baseline_time": baseline_time,
-                                "response_time": response_time,
-                                "verify_time": verify_response.get("response_time", 0),
-                                "expected_delay": expected_delay
-                            }
-                        ))
+                        vulnerabilities.append(
+                            Vulnerability(
+                                type="Time-based Blind RCE",
+                                severity="CRITICAL",
+                                param=test_param,
+                                payload=payload,
+                                url=response.get("url", url),
+                                evidence=f"响应延迟: {response_time:.2f}s / {verify_response.get('response_time', 0):.2f}s (预期: {expected_delay}s)",
+                                verified=True,
+                                confidence=0.9,
+                                details={
+                                    "os_type": os_type,
+                                    "baseline_time": baseline_time,
+                                    "response_time": response_time,
+                                    "verify_time": verify_response.get("response_time", 0),
+                                    "expected_delay": expected_delay,
+                                },
+                            )
+                        )
                         break  # 找到一个就停止该参数的测试
 
         return vulnerabilities
 
-    def detect_error_based(
-        self,
-        url: str,
-        param: Optional[str] = None
-    ) -> List[Vulnerability]:
+    def detect_error_based(self, url: str, param: Optional[str] = None) -> List[Vulnerability]:
         """检测基于错误的命令注入 (可能存在注入点)"""
         vulnerabilities = []
         test_params = self.get_test_params(param)
@@ -263,7 +294,7 @@ class RCEDetector(BaseDetector):
 
         for test_param in test_params:
             for payload in error_payloads:
-                encoded_payload = quote(payload, safe='')
+                encoded_payload = quote(payload, safe="")
                 response = self.send_request(url, encoded_payload, test_param)
 
                 if not response or not response.get("success"):
@@ -274,29 +305,25 @@ class RCEDetector(BaseDetector):
                 # 检查错误指示器
                 for indicator in self.ERROR_INDICATORS:
                     if indicator.lower() in resp_text:
-                        vulnerabilities.append(Vulnerability(
-                            type="Potential Command Injection",
-                            severity="HIGH",
-                            param=test_param,
-                            payload=payload,
-                            url=response.get("url", url),
-                            evidence=f"检测到命令错误指示器: {indicator}",
-                            verified=False,
-                            confidence=0.6,
-                            details={
-                                "indicator": indicator,
-                                "response_length": len(resp_text)
-                            }
-                        ))
+                        vulnerabilities.append(
+                            Vulnerability(
+                                type="Potential Command Injection",
+                                severity="HIGH",
+                                param=test_param,
+                                payload=payload,
+                                url=response.get("url", url),
+                                evidence=f"检测到命令错误指示器: {indicator}",
+                                verified=False,
+                                confidence=0.6,
+                                details={"indicator": indicator, "response_length": len(resp_text)},
+                            )
+                        )
                         break
 
         return vulnerabilities
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = True
+        self, url: str, param: Optional[str] = None, deep_scan: bool = True
     ) -> Dict[str, Any]:
         """
         RCE 检测入口
@@ -345,7 +372,7 @@ class RCEDetector(BaseDetector):
                 "basic": sum(1 for v in verified_vulns if v.type == "Command Injection"),
                 "time_based": sum(1 for v in verified_vulns if "Time" in v.type),
                 "potential": sum(1 for v in verified_vulns if "Potential" in v.type),
-            }
+            },
         }
 
 

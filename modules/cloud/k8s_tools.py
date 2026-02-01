@@ -3,7 +3,6 @@
 Kubernetes安全工具
 """
 
-import base64
 import binascii
 import json
 import logging

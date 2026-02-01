@@ -10,16 +10,13 @@ import base64
 import hashlib
 import logging
 import os
-import random
 import secrets
 import select
 import socket
 import struct
-import threading
 import time
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import List, Optional
 
 from core.defaults import DNSDefaults
 

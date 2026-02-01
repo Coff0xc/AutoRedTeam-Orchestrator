@@ -16,7 +16,6 @@ subdomain.py - 子域名枚举模块
 
 import asyncio
 import logging
-import socket
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field

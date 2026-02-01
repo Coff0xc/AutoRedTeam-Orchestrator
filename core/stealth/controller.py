@@ -185,12 +185,10 @@ class EvasionTechnique(ABC):
     @abstractmethod
     async def apply(self, context: RequestContext, config: StealthConfig) -> RequestContext:
         """应用规避技术"""
-        pass
 
     @abstractmethod
     def is_applicable(self, config: StealthConfig) -> bool:
         """检查是否适用"""
-        pass
 
 
 class UserAgentRotation(EvasionTechnique):
@@ -814,7 +812,6 @@ class AdaptiveEvasion:
         """考虑降低规避级别"""
         # 只有在连续成功多次后才降级
         # 这里简化处理
-        pass
 
     def reset(self) -> None:
         """重置到原始级别"""

@@ -10,7 +10,7 @@ import logging
 import time
 import uuid
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
@@ -353,12 +353,10 @@ class BaseLateralModule(ABC):
         Returns:
             成功返回 True，失败返回 False
         """
-        pass
 
     @abstractmethod
     def disconnect(self) -> None:
         """断开连接"""
-        pass
 
     @abstractmethod
     def execute(self, command: str, timeout: Optional[float] = None) -> ExecutionResult:
@@ -372,7 +370,6 @@ class BaseLateralModule(ABC):
         Returns:
             ExecutionResult 对象
         """
-        pass
 
     def upload(self, local_path: str, remote_path: str) -> FileTransferResult:
         """
@@ -483,7 +480,7 @@ class BaseLateralModule(ABC):
             raise ConnectionError(f"无法连接到 {self.target}:{self.port} " f"({self.name})")
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type, _exc_val, _exc_tb) -> None:
         """上下文管理器出口"""
         self.disconnect()
 
@@ -499,31 +496,21 @@ class BaseLateralModule(ABC):
 class LateralModuleError(Exception):
     """横向移动模块异常基类"""
 
-    pass
-
 
 class ConnectionError(LateralModuleError):
     """连接错误"""
-
-    pass
 
 
 class AuthenticationError(LateralModuleError):
     """认证错误"""
 
-    pass
-
 
 class ExecutionError(LateralModuleError):
     """执行错误"""
 
-    pass
-
 
 class TransferError(LateralModuleError):
     """传输错误"""
-
-    pass
 
 
 # 类型别名

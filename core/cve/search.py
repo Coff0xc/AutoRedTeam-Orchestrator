@@ -8,11 +8,10 @@ CVE 搜索引擎
 """
 
 import logging
-import re
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from .models import CVEEntry, Severity
 from .storage import CVEStorage

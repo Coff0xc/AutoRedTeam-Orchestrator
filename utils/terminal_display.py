@@ -9,7 +9,7 @@ import sys
 import threading
 import time
 from datetime import datetime
-from typing import Callable, Dict, List, Optional
+from typing import Dict, List, Optional
 
 
 class Colors:

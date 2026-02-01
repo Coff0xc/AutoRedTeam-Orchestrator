@@ -25,7 +25,7 @@ import base64
 import binascii
 import codecs
 import html
-from typing import Optional, Union
+from typing import Union
 from urllib.parse import quote, quote_plus, unquote, unquote_plus
 
 

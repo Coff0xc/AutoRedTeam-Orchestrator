@@ -17,10 +17,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-import base64
-import hashlib
-import hmac
-import os
 import secrets
 import socket
 import struct
@@ -28,7 +24,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import IntEnum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 
 class KerberosMessageType(IntEnum):

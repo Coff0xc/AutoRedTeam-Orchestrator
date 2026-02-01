@@ -8,7 +8,6 @@ CVE 多源同步管理器
 
 import asyncio
 import atexit
-import hashlib
 import json
 import logging
 import os
@@ -19,7 +18,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import aiohttp
 

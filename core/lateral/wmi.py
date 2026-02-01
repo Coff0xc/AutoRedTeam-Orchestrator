@@ -21,9 +21,7 @@ from .base import (
     Credentials,
     ExecutionMethod,
     ExecutionResult,
-    FileTransferResult,
     LateralConfig,
-    LateralModuleError,
     LateralStatus,
 )
 
@@ -42,7 +40,7 @@ except ImportError:
 
 # Windows 本地 WMI
 try:
-    import wmi as local_wmi
+    pass
 
     HAS_LOCAL_WMI = True
 except ImportError:

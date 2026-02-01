@@ -14,20 +14,18 @@ logger = logging.getLogger(__name__)
 import os
 import signal
 import subprocess
-import sys
 import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from queue import Empty, Queue
-from typing import Any, Callable, Dict, List, Optional
+from typing import Dict, List, Optional
 
 # 导入终端输出
 try:
-    from utils.terminal_output import TerminalLogger, terminal
+    from utils.terminal_output import terminal
 except ImportError:
-    from terminal_output import TerminalLogger, terminal
+    from terminal_output import terminal
 
 
 class ScanStatus(Enum):

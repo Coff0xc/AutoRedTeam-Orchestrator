@@ -329,7 +329,6 @@ class DecisionEngine:
 
     def suggest_attack_paths(self) -> List[AttackPath]:
         """建议攻击路径"""
-        from .state import PentestPhase
 
         paths: List[AttackPath] = []
         findings = self.state.findings

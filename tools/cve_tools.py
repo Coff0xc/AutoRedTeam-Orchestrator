@@ -7,8 +7,9 @@ CVE相关工具模块
 - cve_recent: 最近发布的CVE
 """
 
-import requests
 from datetime import datetime, timedelta
+
+import requests
 
 
 def register_cve_tools(mcp):
@@ -43,9 +44,17 @@ def register_cve_tools(mcp):
                         cvss = "N/A"
                         metrics = cve.get("metrics", {})
                         if metrics.get("cvssMetricV31"):
-                            cvss = metrics["cvssMetricV31"][0].get("cvssData", {}).get("baseScore", "N/A")
+                            cvss = (
+                                metrics["cvssMetricV31"][0]
+                                .get("cvssData", {})
+                                .get("baseScore", "N/A")
+                            )
                         elif metrics.get("cvssMetricV30"):
-                            cvss = metrics["cvssMetricV30"][0].get("cvssData", {}).get("baseScore", "N/A")
+                            cvss = (
+                                metrics["cvssMetricV30"][0]
+                                .get("cvssData", {})
+                                .get("baseScore", "N/A")
+                            )
 
                         # 获取描述
                         desc = ""
@@ -54,13 +63,15 @@ def register_cve_tools(mcp):
                                 desc = d.get("value", "")[:200]
                                 break
 
-                        results.append({
-                            "cve_id": cve_id,
-                            "source": "NVD",
-                            "cvss": cvss,
-                            "summary": desc,
-                            "published": cve.get("published", "")[:10]
-                        })
+                        results.append(
+                            {
+                                "cve_id": cve_id,
+                                "source": "NVD",
+                                "cvss": cvss,
+                                "summary": desc,
+                                "published": cve.get("published", "")[:10],
+                            }
+                        )
             except Exception as e:
                 errors.append(f"NVD: {str(e)}")
 
@@ -68,10 +79,14 @@ def register_cve_tools(mcp):
         if source in ["github", "all"]:
             try:
                 gh_url = f"https://api.github.com/advisories?keyword={keyword}&per_page=15"
-                resp = requests.get(gh_url, timeout=15, headers={
-                    "Accept": "application/vnd.github+json",
-                    "User-Agent": "AutoRedTeam/2.0"
-                })
+                resp = requests.get(
+                    gh_url,
+                    timeout=15,
+                    headers={
+                        "Accept": "application/vnd.github+json",
+                        "User-Agent": "AutoRedTeam/2.0",
+                    },
+                )
                 if resp.status_code == 200:
                     for item in resp.json()[:10]:
                         cve_id = item.get("cve_id") or item.get("ghsa_id", "")
@@ -79,16 +94,20 @@ def register_cve_tools(mcp):
                             continue
 
                         severity = item.get("severity", "unknown").upper()
-                        cvss = {"CRITICAL": 9.0, "HIGH": 7.5, "MEDIUM": 5.0, "LOW": 2.5}.get(severity, "N/A")
+                        cvss = {"CRITICAL": 9.0, "HIGH": 7.5, "MEDIUM": 5.0, "LOW": 2.5}.get(
+                            severity, "N/A"
+                        )
 
-                        results.append({
-                            "cve_id": cve_id,
-                            "source": "GitHub",
-                            "cvss": cvss,
-                            "severity": severity,
-                            "summary": item.get("summary", "")[:200],
-                            "published": item.get("published_at", "")[:10]
-                        })
+                        results.append(
+                            {
+                                "cve_id": cve_id,
+                                "source": "GitHub",
+                                "cvss": cvss,
+                                "severity": severity,
+                                "summary": item.get("summary", "")[:200],
+                                "published": item.get("published_at", "")[:10],
+                            }
+                        )
             except Exception as e:
                 errors.append(f"GitHub: {str(e)}")
 
@@ -104,12 +123,14 @@ def register_cve_tools(mcp):
                         if year and year not in cve_id:
                             continue
                         if not any(r["cve_id"] == cve_id for r in results):  # 去重
-                            results.append({
-                                "cve_id": cve_id,
-                                "source": "CIRCL",
-                                "cvss": item.get("cvss", "N/A"),
-                                "summary": item.get("summary", "")[:200]
-                            })
+                            results.append(
+                                {
+                                    "cve_id": cve_id,
+                                    "source": "CIRCL",
+                                    "cvss": item.get("cvss", "N/A"),
+                                    "summary": item.get("summary", "")[:200],
+                                }
+                            )
             except Exception as e:
                 errors.append(f"CIRCL: {str(e)}")
 
@@ -119,6 +140,7 @@ def register_cve_tools(mcp):
                 return float(x.get("cvss", 0))
             except Exception:
                 return 0
+
         results.sort(key=get_cvss, reverse=True)
 
         return {
@@ -128,7 +150,7 @@ def register_cve_tools(mcp):
             "results": results[:20],
             "total": len(results),
             "sources_queried": source,
-            "errors": errors if errors else None
+            "errors": errors if errors else None,
         }
 
     @mcp.tool()
@@ -158,7 +180,7 @@ def register_cve_tools(mcp):
                     "version": "3.1",
                     "score": cvss_data.get("baseScore"),
                     "severity": cvss_data.get("baseSeverity"),
-                    "vector": cvss_data.get("vectorString")
+                    "vector": cvss_data.get("vectorString"),
                 }
 
             # 解析描述
@@ -179,10 +201,7 @@ def register_cve_tools(mcp):
             # 解析参考链接
             references = []
             for ref in cve.get("references", [])[:10]:
-                references.append({
-                    "url": ref.get("url"),
-                    "tags": ref.get("tags", [])
-                })
+                references.append({"url": ref.get("url"), "tags": ref.get("tags", [])})
 
             return {
                 "success": True,
@@ -193,7 +212,9 @@ def register_cve_tools(mcp):
                 "modified": cve.get("lastModified", "")[:10],
                 "affected_products": affected[:10],
                 "references": references,
-                "weaknesses": [w.get("description", [{}])[0].get("value") for w in cve.get("weaknesses", [])]
+                "weaknesses": [
+                    w.get("description", [{}])[0].get("value") for w in cve.get("weaknesses", [])
+                ],
             }
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -248,13 +269,15 @@ def register_cve_tools(mcp):
                         desc = d.get("value", "")[:150]
                         break
 
-                results.append({
-                    "cve_id": cve.get("id"),
-                    "cvss": cvss_score,
-                    "severity": cvss_severity,
-                    "summary": desc,
-                    "published": cve.get("published", "")[:10]
-                })
+                results.append(
+                    {
+                        "cve_id": cve.get("id"),
+                        "cvss": cvss_score,
+                        "severity": cvss_severity,
+                        "summary": desc,
+                        "published": cve.get("published", "")[:10],
+                    }
+                )
 
             # 按CVSS排序
             results.sort(key=lambda x: x.get("cvss", 0), reverse=True)
@@ -264,7 +287,7 @@ def register_cve_tools(mcp):
                 "period": f"最近{days}天",
                 "severity_filter": severity,
                 "results": results[:30],
-                "total": len(results)
+                "total": len(results),
             }
         except Exception as e:
             return {"success": False, "error": str(e)}

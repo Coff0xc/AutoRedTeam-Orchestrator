@@ -7,7 +7,7 @@ JS 分析引擎 - 自动提取 API 端点、路由、敏感信息
 
 import asyncio
 import re
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Set
 from urllib.parse import urljoin, urlparse
 
 import aiohttp

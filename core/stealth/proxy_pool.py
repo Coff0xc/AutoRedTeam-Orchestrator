@@ -7,13 +7,11 @@
 import asyncio
 import json
 import logging
-import os
 import random
 import re
 import threading
 import time
-from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -30,14 +28,14 @@ except ImportError:
     HAS_HTTPX = False
 
 try:
-    import aiohttp
+    pass
 
     HAS_AIOHTTP = True
 except ImportError:
     HAS_AIOHTTP = False
 
 try:
-    import requests
+    pass
 
     HAS_REQUESTS = True
 except ImportError:

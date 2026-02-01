@@ -3,10 +3,8 @@
 Nmap扫描工具集
 """
 
-import json
 import logging
 import os
-import subprocess
 import tempfile
 from dataclasses import dataclass, field
 from typing import Any, Dict, List

@@ -8,12 +8,11 @@ import html
 import logging
 import re
 from typing import Any, Dict, List, Optional, Set
-from urllib.parse import parse_qs, quote, urljoin, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 # 导入项目统一异常类型
 from core.exceptions import ConnectionError as DetectorConnectionError
 from core.exceptions import (
-    DetectorError,
     HTTPError,
 )
 from core.exceptions import TimeoutError as DetectorTimeoutError
@@ -21,7 +20,7 @@ from core.exceptions import TimeoutError as DetectorTimeoutError
 from ..base import BaseDetector
 from ..factory import register_detector
 from ..payloads import PayloadCategory, get_payloads
-from ..result import DetectionResult, DetectorType, RequestInfo, ResponseInfo, Severity
+from ..result import DetectionResult, DetectorType, Severity
 
 logger = logging.getLogger(__name__)
 

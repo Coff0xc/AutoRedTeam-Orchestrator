@@ -19,13 +19,12 @@ logger = logging.getLogger(__name__)
 
 import json
 import mimetypes
-import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Set
+from typing import Any, Dict, Generator, List, Set
 
 
 class SecretType(Enum):

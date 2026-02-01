@@ -17,16 +17,13 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from .base import (
-    AuthenticationError,
     AuthMethod,
     BaseLateralModule,
-    ConnectionError,
     Credentials,
     ExecutionMethod,
     ExecutionResult,
     FileTransferResult,
     LateralConfig,
-    LateralModuleError,
     LateralStatus,
 )
 
@@ -35,8 +32,6 @@ logger = logging.getLogger(__name__)
 # 尝试导入 impacket
 try:
     from impacket.dcerpc.v5 import scmr, transport
-    from impacket.dcerpc.v5.dcom import wmi
-    from impacket.dcerpc.v5.dcomrt import DCOMConnection
     from impacket.smbconnection import SMBConnection as ImpacketSMB
 
     HAS_IMPACKET = True

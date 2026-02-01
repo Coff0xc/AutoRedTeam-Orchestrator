@@ -16,7 +16,7 @@ HTTP 隧道 - HTTP/HTTPS Tunnel
 import logging
 import time
 import uuid
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from ..base import BaseTunnel, C2Config
 from ..encoding import C2Encoder, TrafficObfuscator
@@ -25,14 +25,14 @@ logger = logging.getLogger(__name__)
 
 # HTTP 客户端
 try:
-    from core.http import HTTPClient, HTTPConfig, HTTPResponse
+    from core.http import HTTPClient, HTTPConfig
 
     HAS_HTTP_CLIENT = True
 except ImportError:
     HAS_HTTP_CLIENT = False
 
 try:
-    import requests
+    pass
 
     HAS_REQUESTS = True
 except ImportError:

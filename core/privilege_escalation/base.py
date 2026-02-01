@@ -8,7 +8,6 @@ ATT&CK Tactic: TA0004 - Privilege Escalation
 """
 
 import logging
-import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
@@ -238,7 +237,6 @@ class BasePrivilegeEscalation(ABC):
         Returns:
             当前的权限级别
         """
-        pass
 
     @abstractmethod
     def enumerate_vectors(self) -> List[Dict[str, Any]]:
@@ -248,7 +246,6 @@ class BasePrivilegeEscalation(ABC):
         Returns:
             提权向量列表（字典格式）
         """
-        pass
 
     @abstractmethod
     def escalate(self, method: Optional[EscalationMethod] = None) -> EscalationResult:
@@ -261,7 +258,6 @@ class BasePrivilegeEscalation(ABC):
         Returns:
             提权结果
         """
-        pass
 
     def auto_escalate(self) -> EscalationResult:
         """
@@ -347,7 +343,7 @@ class BasePrivilegeEscalation(ABC):
         """上下文管理器入口"""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type, _exc_val, _exc_tb) -> None:
         """上下文管理器出口"""
         if self.config.cleanup:
             self.cleanup()

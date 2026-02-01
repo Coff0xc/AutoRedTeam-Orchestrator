@@ -22,7 +22,6 @@ from .base import (
     ExecutionResult,
     FileTransferResult,
     LateralConfig,
-    LateralModuleError,
     LateralStatus,
 )
 
@@ -30,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 # 尝试导入 pywinrm
 try:
-    import winrm
     from winrm import Session
     from winrm.protocol import Protocol
 
@@ -41,7 +39,7 @@ except ImportError:
 
 # 尝试导入 requests-ntlm (用于 NTLM 认证)
 try:
-    from requests_ntlm import HttpNtlmAuth
+    pass
 
     HAS_NTLM = True
 except ImportError:
@@ -49,7 +47,7 @@ except ImportError:
 
 # 尝试导入 requests-kerberos (用于 Kerberos 认证)
 try:
-    from requests_kerberos import HTTPKerberosAuth
+    pass
 
     HAS_KERBEROS = True
 except ImportError:
@@ -418,7 +416,7 @@ class WinRMLateral(BaseLateralModule):
         start_time = time.time()
 
         try:
-            import os
+            pass
 
             # 读取文件并编码
             with open(local_path, "rb") as f:
@@ -545,8 +543,6 @@ class WinRMLateral(BaseLateralModule):
             # 解码并写入本地文件
             encoded = result.output.strip()
             content = base64.b64decode(encoded)
-
-            import os
 
             with open(local_path, "wb") as f:
                 f.write(content)

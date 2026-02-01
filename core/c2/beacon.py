@@ -14,22 +14,20 @@ Beacon 通信模块 - Beacon Communication Module
 """
 
 import hashlib
-import json
 import logging
 import os
 import platform
 import socket
 import subprocess
-import sys
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from .base import BaseC2, BeaconInfo, C2Config, C2Status, Task, TaskResult, TaskTypes
-from .crypto import C2Crypto, CryptoAlgorithm
+from .crypto import C2Crypto
 from .protocol import ProtocolCodec, decode_tasks, encode_heartbeat, encode_result
 from .tunnels import BaseTunnel, create_tunnel
 

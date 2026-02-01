@@ -7,13 +7,9 @@ phases/poc_exec.py - PoC验证阶段执行器
 
 import asyncio
 import logging
-import re
 from typing import TYPE_CHECKING, Any, Dict, List
 
 from .base import CVE_ID_PATTERN, BasePhaseExecutor, PhaseResult
-
-if TYPE_CHECKING:
-    from ..state import PentestPhase, PentestState
 
 logger = logging.getLogger(__name__)
 

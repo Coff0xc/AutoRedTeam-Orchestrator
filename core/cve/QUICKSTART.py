@@ -31,7 +31,6 @@ data/
 步骤1: 导入模块
 """
 
-import asyncio
 
 from core.cve import CVEUpdateManager
 
@@ -149,7 +148,7 @@ export GITHUB_TOKEN="ghp_your_token"
 步骤1: 导入模块
 """
 
-from core.cve.mcp_integration import cve_search, cve_stats, cve_sync_all, init_cve_manager
+from core.cve.mcp_integration import init_cve_manager
 
 """
 步骤2: 初始化 (在服务器启动时)

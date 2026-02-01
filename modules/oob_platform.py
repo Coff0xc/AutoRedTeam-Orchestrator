@@ -7,14 +7,11 @@ OOB (Out-of-Band) 平台集成模块
 
 import hashlib
 import logging
-import socket
-import threading
 import time
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -35,12 +32,10 @@ class OOBProvider(ABC):
     @abstractmethod
     def generate_payload(self, identifier: str = None) -> Dict[str, str]:
         """生成OOB payload"""
-        pass
 
     @abstractmethod
     def check_interactions(self, identifier: str) -> List[Dict[str, Any]]:
         """检查交互记录"""
-        pass
 
 
 class InteractshProvider(OOBProvider):

@@ -15,9 +15,9 @@ import secrets
 import string
 import zlib
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 # 尝试导入加密库
 try:
@@ -99,7 +99,6 @@ class BaseEncoder(ABC):
     @abstractmethod
     def get_decoder_code(self, var_name: str = "data") -> str:
         """生成解码器代码"""
-        pass
 
 
 class XOREncoder(BaseEncoder):

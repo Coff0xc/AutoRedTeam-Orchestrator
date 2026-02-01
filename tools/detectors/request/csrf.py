@@ -8,12 +8,14 @@ CSRF 检测器 - 基于 BaseDetector 重构
 - Referer 验证检测
 """
 
-import re
-from typing import Dict, List, Any, Optional
-
-import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+import re
+import sys
+from typing import Any, Dict, List, Optional
+
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+)
 
 from tools.detectors.base import BaseDetector, Vulnerability
 
@@ -23,15 +25,23 @@ class CSRFDetector(BaseDetector):
 
     # CSRF Token 常见名称
     CSRF_TOKEN_NAMES = [
-        "csrf", "csrf_token", "csrftoken", "_csrf",
-        "_token", "authenticity_token", "csrfmiddlewaretoken",
-        "__requestverificationtoken", "antiforgery",
-        "xsrf", "xsrf_token", "__csrf_magic",
+        "csrf",
+        "csrf_token",
+        "csrftoken",
+        "_csrf",
+        "_token",
+        "authenticity_token",
+        "csrfmiddlewaretoken",
+        "__requestverificationtoken",
+        "antiforgery",
+        "xsrf",
+        "xsrf_token",
+        "__csrf_magic",
     ]
 
     # 表单相关正则
-    FORM_PATTERN = re.compile(r'<form[^>]*>(.*?)</form>', re.DOTALL | re.IGNORECASE)
-    INPUT_PATTERN = re.compile(r'<input[^>]*>', re.IGNORECASE)
+    FORM_PATTERN = re.compile(r"<form[^>]*>(.*?)</form>", re.DOTALL | re.IGNORECASE)
+    INPUT_PATTERN = re.compile(r"<input[^>]*>", re.IGNORECASE)
     META_CSRF_PATTERN = re.compile(r'<meta[^>]*name=["\']?csrf[^"\']*["\']?[^>]*>', re.IGNORECASE)
 
     def get_payloads(self) -> Dict[str, List[str]]:
@@ -43,10 +53,7 @@ class CSRFDetector(BaseDetector):
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在 CSRF 漏洞"""
         # CSRF 检测使用专门的检测方法，此方法仅作为接口实现
@@ -106,29 +113,35 @@ class CSRFDetector(BaseDetector):
 
             # 检查 SameSite 属性
             if "samesite" not in cookie_lower:
-                issues.append({
-                    "cookie": cookie_name,
-                    "issue": "Missing SameSite attribute",
-                    "severity": "MEDIUM"
-                })
+                issues.append(
+                    {
+                        "cookie": cookie_name,
+                        "issue": "Missing SameSite attribute",
+                        "severity": "MEDIUM",
+                    }
+                )
             elif "samesite=none" in cookie_lower:
                 # SameSite=None 需要 Secure 属性
                 if "secure" not in cookie_lower:
-                    issues.append({
-                        "cookie": cookie_name,
-                        "issue": "SameSite=None without Secure flag",
-                        "severity": "HIGH"
-                    })
+                    issues.append(
+                        {
+                            "cookie": cookie_name,
+                            "issue": "SameSite=None without Secure flag",
+                            "severity": "HIGH",
+                        }
+                    )
 
             # 检查敏感 Cookie 是否有 HttpOnly
             sensitive_names = ["session", "auth", "token", "jwt", "sid"]
             if any(name in cookie_name.lower() for name in sensitive_names):
                 if "httponly" not in cookie_lower:
-                    issues.append({
-                        "cookie": cookie_name,
-                        "issue": "Sensitive cookie missing HttpOnly flag",
-                        "severity": "MEDIUM"
-                    })
+                    issues.append(
+                        {
+                            "cookie": cookie_name,
+                            "issue": "Sensitive cookie missing HttpOnly flag",
+                            "severity": "MEDIUM",
+                        }
+                    )
 
         return issues
 
@@ -152,7 +165,7 @@ class CSRFDetector(BaseDetector):
                     url,
                     headers={**{"User-Agent": self.user_agent}, **evil_headers},
                     timeout=self.timeout,
-                    verify=self.verify_ssl
+                    verify=self.verify_ssl,
                 )
                 evil_status = resp.status_code
                 evil_length = len(resp.text)
@@ -170,7 +183,7 @@ class CSRFDetector(BaseDetector):
                     url,
                     headers={**{"User-Agent": self.user_agent}, **no_referer_headers},
                     timeout=self.timeout,
-                    verify=self.verify_ssl
+                    verify=self.verify_ssl,
                 )
                 no_referer_status = resp.status_code
                 no_referer_length = len(resp.text)
@@ -196,14 +209,11 @@ class CSRFDetector(BaseDetector):
             "normal_status": normal_status,
             "evil_referer_status": evil_status,
             "no_referer_status": no_referer_status,
-            "response_length_diff": abs(evil_length - normal_length)
+            "response_length_diff": abs(evil_length - normal_length),
         }
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = True
+        self, url: str, param: Optional[str] = None, deep_scan: bool = True
     ) -> Dict[str, Any]:
         """
         CSRF 检测入口
@@ -226,7 +236,7 @@ class CSRFDetector(BaseDetector):
                 "url": url,
                 "error": "Failed to fetch page",
                 "vulnerabilities": [],
-                "total": 0
+                "total": 0,
             }
 
         html = response.get("response_text", "")
@@ -236,48 +246,54 @@ class CSRFDetector(BaseDetector):
         token_check = self._check_csrf_token_in_html(html)
 
         if token_check["forms_without_csrf"] > 0 and not token_check["has_meta_csrf"]:
-            vulnerabilities.append(Vulnerability(
-                type="Missing CSRF Token",
-                severity="HIGH",
-                url=url,
-                evidence=f"发现 {token_check['forms_without_csrf']} 个表单缺少 CSRF Token",
-                verified=True,
-                confidence=0.8,
-                details={
-                    "total_forms": token_check["total_forms"],
-                    "forms_without_csrf": token_check["forms_without_csrf"],
-                    "has_meta_csrf": token_check["has_meta_csrf"]
-                }
-            ))
+            vulnerabilities.append(
+                Vulnerability(
+                    type="Missing CSRF Token",
+                    severity="HIGH",
+                    url=url,
+                    evidence=f"发现 {token_check['forms_without_csrf']} 个表单缺少 CSRF Token",
+                    verified=True,
+                    confidence=0.8,
+                    details={
+                        "total_forms": token_check["total_forms"],
+                        "forms_without_csrf": token_check["forms_without_csrf"],
+                        "has_meta_csrf": token_check["has_meta_csrf"],
+                    },
+                )
+            )
 
         # 2. 检查 SameSite Cookie
         cookie_issues = self._check_samesite_cookies(headers)
 
         for issue in cookie_issues:
-            vulnerabilities.append(Vulnerability(
-                type=f"Cookie Security: {issue['issue']}",
-                severity=issue["severity"],
-                url=url,
-                evidence=f"Cookie '{issue['cookie']}' - {issue['issue']}",
-                verified=True,
-                confidence=0.9,
-                details=issue
-            ))
+            vulnerabilities.append(
+                Vulnerability(
+                    type=f"Cookie Security: {issue['issue']}",
+                    severity=issue["severity"],
+                    url=url,
+                    evidence=f"Cookie '{issue['cookie']}' - {issue['issue']}",
+                    verified=True,
+                    confidence=0.9,
+                    details=issue,
+                )
+            )
 
         # 3. 检查 Referer 验证 (深度扫描)
         if deep_scan:
             referer_check = self._check_referer_validation(url)
 
             if referer_check.get("checked") and not referer_check.get("validates_referer"):
-                vulnerabilities.append(Vulnerability(
-                    type="No Referer Validation",
-                    severity="LOW",
-                    url=url,
-                    evidence="服务器未验证 Referer 头，可能允许跨站请求",
-                    verified=True,
-                    confidence=0.6,
-                    details=referer_check
-                ))
+                vulnerabilities.append(
+                    Vulnerability(
+                        type="No Referer Validation",
+                        severity="LOW",
+                        url=url,
+                        evidence="服务器未验证 Referer 头，可能允许跨站请求",
+                        verified=True,
+                        confidence=0.6,
+                        details=referer_check,
+                    )
+                )
 
         return {
             "success": True,
@@ -291,7 +307,7 @@ class CSRFDetector(BaseDetector):
                 "medium": sum(1 for v in vulnerabilities if v.severity == "MEDIUM"),
                 "low": sum(1 for v in vulnerabilities if v.severity == "LOW"),
             },
-            "token_check": token_check
+            "token_check": token_check,
         }
 
 

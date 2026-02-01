@@ -17,7 +17,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class C2Config:
     retry_delay: float = 5.0  # 重试延迟基数
 
     # 加密配置
-    encryption: str = "aes256"  # 加密算法: aes256, chacha20, xor, none
+    encryption: str = "aes256_gcm"  # 加密算法: aes256_gcm, aes256_cbc, chacha20, xor, none
     key: Optional[bytes] = None  # 加密密钥
     iv: Optional[bytes] = None  # 初始化向量
 
@@ -313,7 +313,7 @@ class BaseTunnel(ABC):
         self.connect()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, _exc_val, _exc_tb):
         self.disconnect()
 
 
@@ -450,7 +450,7 @@ class BaseC2(ABC):
         self.connect()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, _exc_val, _exc_tb):
         self.disconnect()
 
     def __repr__(self) -> str:

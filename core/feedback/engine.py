@@ -18,16 +18,15 @@ import urllib.parse
 from dataclasses import dataclass, field
 from datetime import datetime
 from threading import Lock
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
-from .failure_analyzer import FailureAnalysis, FailureAnalyzer, analyze_failure
+from .failure_analyzer import FailureAnalysis, FailureAnalyzer
 from .strategies import (
     AdjustmentAction,
     AdjustmentStrategy,
     AdjustmentType,
     FailureReason,
     StrategyRegistry,
-    get_strategies_for_failure,
     get_strategy_registry,
 )
 

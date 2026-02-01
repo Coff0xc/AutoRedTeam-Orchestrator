@@ -6,7 +6,7 @@ IDOR (不安全的直接对象引用) 检测器
 
 import logging
 import re
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
 
 from ..base import BaseDetector

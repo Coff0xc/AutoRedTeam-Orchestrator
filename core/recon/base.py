@@ -18,21 +18,17 @@ base.py - 侦察引擎基类
             pass
 """
 
-import asyncio
 import logging
-import socket
 import ssl
 import threading
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import urlparse
 
 from .phases import (
-    DEFAULT_PHASE_ORDER,
     PhaseManager,
     PhaseResult,
     PhaseStatus,
@@ -488,7 +484,6 @@ class BaseReconEngine(ABC):
         Returns:
             ReconResult 侦察结果
         """
-        pass
 
     @abstractmethod
     async def async_run(self) -> ReconResult:
@@ -499,7 +494,6 @@ class BaseReconEngine(ABC):
         Returns:
             ReconResult 侦察结果
         """
-        pass
 
     def run_phase(self, phase: ReconPhase) -> PhaseResult:
         """运行单个阶段

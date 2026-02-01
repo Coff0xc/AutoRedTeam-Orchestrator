@@ -4,17 +4,14 @@ OOB带外检测模块 - 支持盲SSRF/XXE/SQLi检测
 集成 Interactsh 和 DNSLog 平台
 """
 
-import base64
 import hashlib
 import logging
 import os
-import re
-import threading
 import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 try:
     import requests

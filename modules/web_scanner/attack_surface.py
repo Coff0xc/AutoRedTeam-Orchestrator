@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from html.parser import HTMLParser
 from typing import Any, Dict, List, Optional, Set, Tuple
-from urllib.parse import parse_qs, unquote, urljoin, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 
 from .injection_point import (
     InjectionPoint,

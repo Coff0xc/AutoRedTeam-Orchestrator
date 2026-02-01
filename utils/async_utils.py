@@ -62,7 +62,7 @@ def run_sync(coro: Coroutine[Any, Any, T]) -> T:
     if loop is not None:
         # 在已有事件循环中，使用线程池执行
         # 这避免了"cannot be called from a running event loop"错误
-        import concurrent.futures
+        pass
 
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(asyncio.run, coro)
@@ -365,7 +365,7 @@ class AsyncThrottle:
             # 记录当前时间
             self.timestamps.append(asyncio.get_running_loop().time())
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, _exc_val, _exc_tb):
         pass
 
 

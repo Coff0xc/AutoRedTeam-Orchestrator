@@ -34,8 +34,6 @@ warnings.warn(
 class SecurityWarning(UserWarning):
     """安全警告 - 已弃用，使用 core.http.exceptions"""
 
-    pass
-
 
 # 向后兼容：重定向到 core.http
 try:
@@ -125,7 +123,7 @@ try:
         def __enter__(self):
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type, _exc_val, _exc_tb):
             self.close()
 
     # 便捷函数 - 已弃用
@@ -242,7 +240,7 @@ except ImportError:
         def __enter__(self):
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type, _exc_val, _exc_tb):
             self.close()
 
     def get(url, **kwargs):

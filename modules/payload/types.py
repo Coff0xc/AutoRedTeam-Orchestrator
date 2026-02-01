@@ -9,9 +9,9 @@ Payload 类型定义模块 - 统一的数据类型
 """
 
 import hashlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 
 class VulnType(Enum):

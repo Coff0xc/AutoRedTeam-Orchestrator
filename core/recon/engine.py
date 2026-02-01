@@ -17,14 +17,12 @@ engine.py - 标准侦察引擎
 
 import asyncio
 import logging
-import re
 import ssl
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional
 from urllib.parse import urlparse
 
 from .base import (
@@ -38,11 +36,7 @@ from .directory import DirectoryScanner
 from .dns_resolver import DNSResolver
 from .fingerprint import FingerprintEngine
 from .phases import (
-    DEFAULT_PHASE_ORDER,
-    QUICK_PHASE_ORDER,
-    PhaseManager,
     PhaseResult,
-    PhaseStatus,
     ReconPhase,
 )
 from .port_scanner import PortScanner

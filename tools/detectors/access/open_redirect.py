@@ -8,11 +8,11 @@ Open Redirect (开放重定向) 检测器
 - JavaScript 重定向
 - Meta 标签重定向
 """
-import logging
 
-from typing import Dict, List, Any, Optional
+import logging
 import re
-from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
+from typing import Any, Dict, List, Optional
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from ..base import BaseDetector, Vulnerability
 
@@ -26,13 +26,42 @@ class OpenRedirectDetector(BaseDetector):
 
     # 重定向专用测试参数
     DEFAULT_PARAMS = [
-        "url", "redirect", "redirect_url", "redirect_uri", "redir",
-        "return", "return_url", "returnUrl", "returnTo", "return_to",
-        "next", "next_url", "nextUrl", "goto", "go", "target",
-        "dest", "destination", "link", "to", "out", "view",
-        "continue", "continueTo", "forward", "forward_url",
-        "callback", "callback_url", "fallback", "checkout_url",
-        "image_url", "load_url", "file", "reference", "site", "host"
+        "url",
+        "redirect",
+        "redirect_url",
+        "redirect_uri",
+        "redir",
+        "return",
+        "return_url",
+        "returnUrl",
+        "returnTo",
+        "return_to",
+        "next",
+        "next_url",
+        "nextUrl",
+        "goto",
+        "go",
+        "target",
+        "dest",
+        "destination",
+        "link",
+        "to",
+        "out",
+        "view",
+        "continue",
+        "continueTo",
+        "forward",
+        "forward_url",
+        "callback",
+        "callback_url",
+        "fallback",
+        "checkout_url",
+        "image_url",
+        "load_url",
+        "file",
+        "reference",
+        "site",
+        "host",
     ]
 
     # 测试域名 (使用安全的测试域名)
@@ -84,10 +113,7 @@ class OpenRedirectDetector(BaseDetector):
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在开放重定向漏洞"""
         if not response.get("success"):
@@ -125,7 +151,9 @@ class OpenRedirectDetector(BaseDetector):
                         return True
 
         # 检查 Meta 标签重定向
-        meta_pattern = r'<meta[^>]*http-equiv=["\']?refresh["\']?[^>]*content=["\']?\d+;\s*url=([^"\'>\s]+)'
+        meta_pattern = (
+            r'<meta[^>]*http-equiv=["\']?refresh["\']?[^>]*content=["\']?\d+;\s*url=([^"\'>\s]+)'
+        )
         match = re.search(meta_pattern, text, re.IGNORECASE)
         if match:
             redirect_url = match.group(1)
@@ -136,13 +164,11 @@ class OpenRedirectDetector(BaseDetector):
         return False
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = False
+        self, url: str, param: Optional[str] = None, deep_scan: bool = False
     ) -> Dict[str, Any]:
         """执行开放重定向检测"""
         from tools._common import reset_failure_counter
+
         reset_failure_counter()
 
         vulnerabilities = []
@@ -158,10 +184,7 @@ class OpenRedirectDetector(BaseDetector):
                         test_url = self._build_test_url(url, test_param, payload)
 
                         # 发送请求，不跟随重定向以检查 Location 头
-                        response = self.send_request(
-                            test_url,
-                            allow_redirects=False
-                        )
+                        response = self.send_request(test_url, allow_redirects=False)
 
                         if not response or not response.get("success"):
                             continue
@@ -188,8 +211,8 @@ class OpenRedirectDetector(BaseDetector):
                                         details={
                                             "payload_type": payload_type,
                                             "redirect_location": location,
-                                            "status_code": status
-                                        }
+                                            "status_code": status,
+                                        },
                                     )
                                     vulnerabilities.append(vuln)
 
@@ -198,8 +221,10 @@ class OpenRedirectDetector(BaseDetector):
 
                         # 检查响应内容中的重定向
                         if self.validate_response(response, payload, baseline):
-                            if not any(v.param == test_param and v.payload == payload
-                                      for v in vulnerabilities):
+                            if not any(
+                                v.param == test_param and v.payload == payload
+                                for v in vulnerabilities
+                            ):
                                 vuln = Vulnerability(
                                     type=f"Open Redirect ({payload_type})",
                                     severity="MEDIUM",
@@ -209,7 +234,7 @@ class OpenRedirectDetector(BaseDetector):
                                     evidence="Redirect found in response content",
                                     verified=False,
                                     confidence=0.6,
-                                    details={"payload_type": payload_type}
+                                    details={"payload_type": payload_type},
                                 )
                                 vulnerabilities.append(vuln)
 
@@ -236,7 +261,7 @@ class OpenRedirectDetector(BaseDetector):
             "vulnerabilities": [v.to_dict() for v in verified_vulns],
             "total": len(verified_vulns),
             "verified_count": sum(1 for v in verified_vulns if v.verified),
-            "recommendations": self._get_recommendations() if verified_vulns else []
+            "recommendations": self._get_recommendations() if verified_vulns else [],
         }
 
     def _build_test_url(self, url: str, param: str, value: str) -> str:
@@ -291,5 +316,5 @@ class OpenRedirectDetector(BaseDetector):
             "实施严格的 URL 解析和验证",
             "对重定向参数进行签名验证",
             "使用间接引用映射替代直接 URL 参数",
-            "记录并监控异常的重定向请求"
+            "记录并监控异常的重定向请求",
         ]

@@ -4,16 +4,14 @@ AI智能攻击决策引擎 v2.0
 基于目标特征、历史数据、攻击图谱进行智能决策
 """
 
-import hashlib
 import json
 import logging
 import threading
-import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

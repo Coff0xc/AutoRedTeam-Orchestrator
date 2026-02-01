@@ -20,13 +20,11 @@ dns_resolver.py - DNS解析模块
 
 import asyncio
 import logging
-import random
 import socket
-import struct
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

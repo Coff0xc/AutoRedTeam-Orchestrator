@@ -5,7 +5,6 @@ state.py - 渗透测试状态管理
 管理渗透测试过程中的状态、检查点和断点续传
 """
 
-import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime

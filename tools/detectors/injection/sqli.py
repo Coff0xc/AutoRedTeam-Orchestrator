@@ -8,13 +8,14 @@ SQL注入检测器 - 基于 BaseDetector 重构
 - 布尔盲注 (Boolean-based Blind)
 """
 
-import re
-import time
-from typing import Dict, List, Any, Optional
-
-import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+import re
+import sys
+from typing import Any, Dict, List, Optional
+
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+)
 
 from tools.detectors.base import BaseDetector, Vulnerability
 
@@ -24,17 +25,40 @@ class SQLiDetector(BaseDetector):
 
     # 覆盖默认测试参数
     DEFAULT_PARAMS = [
-        "id", "page", "cat", "search", "q", "query",
-        "user", "name", "item", "product", "order", "sort",
-        "limit", "offset", "filter", "type", "category"
+        "id",
+        "page",
+        "cat",
+        "search",
+        "q",
+        "query",
+        "user",
+        "name",
+        "item",
+        "product",
+        "order",
+        "sort",
+        "limit",
+        "offset",
+        "filter",
+        "type",
+        "category",
     ]
 
     # 错误型注入 Payload
     ERROR_PAYLOADS = [
-        "'", "\"", "' OR '1'='1", "\" OR \"1\"=\"1",
-        "1' AND '1'='1", "1 AND 1=1", "' UNION SELECT NULL--",
-        "1'1", "1 AND 1=1--", "' OR ''='", "') OR ('1'='1",
-        "1' ORDER BY 1--", "1' ORDER BY 100--",
+        "'",
+        '"',
+        "' OR '1'='1",
+        '" OR "1"="1',
+        "1' AND '1'='1",
+        "1 AND 1=1",
+        "' UNION SELECT NULL--",
+        "1'1",
+        "1 AND 1=1--",
+        "' OR ''='",
+        "') OR ('1'='1",
+        "1' ORDER BY 1--",
+        "1' ORDER BY 100--",
     ]
 
     # 时间盲注 Payload (payload, expected_delay)
@@ -51,7 +75,7 @@ class SQLiDetector(BaseDetector):
     BOOLEAN_PAYLOADS = [
         ("' AND '1'='1", "' AND '1'='2"),
         ("' AND 1=1--", "' AND 1=2--"),
-        ("\" AND \"1\"=\"1", "\" AND \"1\"=\"2"),
+        ('" AND "1"="1', '" AND "1"="2'),
         ("' AND 'a'='a'--", "' AND 'a'='b'--"),
         ("1 AND 1=1", "1 AND 1=2"),
     ]
@@ -59,23 +83,42 @@ class SQLiDetector(BaseDetector):
     # 数据库错误特征模式
     ERROR_PATTERNS = [
         # MySQL
-        r"sql syntax.*mysql", r"warning.*mysql_", r"mysqlclient", r"mysqli",
-        r"mysql_fetch", r"mysql_num_rows", r"mysql_query",
+        r"sql syntax.*mysql",
+        r"warning.*mysql_",
+        r"mysqlclient",
+        r"mysqli",
+        r"mysql_fetch",
+        r"mysql_num_rows",
+        r"mysql_query",
         # PostgreSQL
-        r"postgresql.*error", r"pg_query", r"pg_exec", r"pgsql",
-        r"psql.*error", r"pg_connect",
+        r"postgresql.*error",
+        r"pg_query",
+        r"pg_exec",
+        r"pgsql",
+        r"psql.*error",
+        r"pg_connect",
         # Oracle
-        r"ora-\d{5}", r"oracle.*driver", r"oracle.*error",
+        r"ora-\d{5}",
+        r"oracle.*driver",
+        r"oracle.*error",
         r"quoted string not properly terminated",
         # SQL Server
-        r"microsoft.*sql.*server", r"sqlserver", r"odbc.*driver",
-        r"unclosed quotation mark", r"mssql",
+        r"microsoft.*sql.*server",
+        r"sqlserver",
+        r"odbc.*driver",
+        r"unclosed quotation mark",
+        r"mssql",
         # SQLite
-        r"sqlite.*error", r"sqlite3\.operationalerror", r"sqlite_",
+        r"sqlite.*error",
+        r"sqlite3\.operationalerror",
+        r"sqlite_",
         r"unable to open database",
         # 通用
-        r"syntax error", r"sql syntax", r"query failed",
-        r"unexpected end of sql", r"invalid query",
+        r"syntax error",
+        r"sql syntax",
+        r"query failed",
+        r"unexpected end of sql",
+        r"invalid query",
         r"sql command not properly ended",
     ]
 
@@ -88,10 +131,7 @@ class SQLiDetector(BaseDetector):
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在 SQL 注入"""
         if not response or not response.get("success"):
@@ -106,11 +146,7 @@ class SQLiDetector(BaseDetector):
 
         return False
 
-    def detect_time_based(
-        self,
-        url: str,
-        param: Optional[str] = None
-    ) -> List[Vulnerability]:
+    def detect_time_based(self, url: str, param: Optional[str] = None) -> List[Vulnerability]:
         """检测时间盲注"""
         vulnerabilities = []
         test_params = self.get_test_params(param)
@@ -129,26 +165,28 @@ class SQLiDetector(BaseDetector):
                 if response_time >= expected_delay * 0.85:
                     # 二次验证
                     verify_response = self.send_request(url, payload, test_param)
-                    if verify_response and verify_response.get("response_time", 0) >= expected_delay * 0.8:
-                        vulnerabilities.append(Vulnerability(
-                            type="Time-based Blind SQLi",
-                            severity="CRITICAL",
-                            param=test_param,
-                            payload=payload,
-                            url=response.get("url", url),
-                            evidence=f"响应延迟: {response_time:.2f}s / {verify_response.get('response_time', 0):.2f}s (预期: {expected_delay}s)",
-                            verified=True,
-                            confidence=0.85
-                        ))
+                    if (
+                        verify_response
+                        and verify_response.get("response_time", 0) >= expected_delay * 0.8
+                    ):
+                        vulnerabilities.append(
+                            Vulnerability(
+                                type="Time-based Blind SQLi",
+                                severity="CRITICAL",
+                                param=test_param,
+                                payload=payload,
+                                url=response.get("url", url),
+                                evidence=f"响应延迟: {response_time:.2f}s / {verify_response.get('response_time', 0):.2f}s (预期: {expected_delay}s)",
+                                verified=True,
+                                confidence=0.85,
+                            )
+                        )
                         break  # 找到一个就停止该参数的测试
 
         return vulnerabilities
 
     def detect_boolean_based(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        baseline: Dict[str, Any] = None
+        self, url: str, param: Optional[str] = None, baseline: Dict[str, Any] = None
     ) -> List[Vulnerability]:
         """检测布尔盲注"""
         vulnerabilities = []
@@ -186,35 +224,34 @@ class SQLiDetector(BaseDetector):
 
                     if verify_true and verify_false:
                         verify_diff = abs(
-                            verify_true.get("response_length", 0) -
-                            verify_false.get("response_length", 0)
+                            verify_true.get("response_length", 0)
+                            - verify_false.get("response_length", 0)
                         )
 
                         if verify_diff > 30:
-                            vulnerabilities.append(Vulnerability(
-                                type="Boolean-based Blind SQLi",
-                                severity="HIGH",
-                                param=test_param,
-                                payload=f"TRUE: {true_payload} | FALSE: {false_payload}",
-                                url=true_response.get("url", url),
-                                evidence=f"响应长度差异: {len_diff} / {verify_diff} bytes",
-                                verified=True,
-                                confidence=0.8,
-                                details={
-                                    "true_length": true_length,
-                                    "false_length": false_length,
-                                    "baseline_length": baseline_length
-                                }
-                            ))
+                            vulnerabilities.append(
+                                Vulnerability(
+                                    type="Boolean-based Blind SQLi",
+                                    severity="HIGH",
+                                    param=test_param,
+                                    payload=f"TRUE: {true_payload} | FALSE: {false_payload}",
+                                    url=true_response.get("url", url),
+                                    evidence=f"响应长度差异: {len_diff} / {verify_diff} bytes",
+                                    verified=True,
+                                    confidence=0.8,
+                                    details={
+                                        "true_length": true_length,
+                                        "false_length": false_length,
+                                        "baseline_length": baseline_length,
+                                    },
+                                )
+                            )
                             break
 
         return vulnerabilities
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = True
+        self, url: str, param: Optional[str] = None, deep_scan: bool = True
     ) -> Dict[str, Any]:
         """
         SQL 注入检测入口
@@ -268,7 +305,7 @@ class SQLiDetector(BaseDetector):
                 "error_based": sum(1 for v in verified_vulns if "Error" in v.type),
                 "time_based": sum(1 for v in verified_vulns if "Time" in v.type),
                 "boolean_based": sum(1 for v in verified_vulns if "Boolean" in v.type),
-            }
+            },
         }
 
 

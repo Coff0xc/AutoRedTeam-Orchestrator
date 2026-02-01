@@ -11,7 +11,6 @@ SQL注入验证模块
 
 import logging
 import re
-import time
 from typing import Any, Dict, Optional
 
 from .models import VerificationResult

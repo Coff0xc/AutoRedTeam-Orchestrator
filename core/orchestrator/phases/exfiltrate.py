@@ -14,9 +14,6 @@ from typing import TYPE_CHECKING, Any, Dict, List
 
 from .base import BasePhaseExecutor, PhaseResult
 
-if TYPE_CHECKING:
-    from ..state import PentestPhase, PentestState
-
 logger = logging.getLogger(__name__)
 
 

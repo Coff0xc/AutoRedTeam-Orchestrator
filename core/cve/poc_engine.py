@@ -8,18 +8,16 @@ PoC 执行引擎
 """
 
 import logging
-import random
 import re
 import secrets
 import string
 import threading
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
-from .models import PoCExtractor, PoCMatcher, PoCTemplate, Severity
+from .models import PoCExtractor, PoCMatcher, PoCTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +39,7 @@ except ImportError:
     HAS_HTTP_FACTORY = False
 
 try:
-    import requests
+    pass
 
     HAS_REQUESTS = True
 except ImportError:

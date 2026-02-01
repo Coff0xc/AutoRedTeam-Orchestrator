@@ -3,10 +3,6 @@
 性能优化模块使用示例
 """
 
-import asyncio
-import time
-from typing import List
-
 # 导入性能优化组件
 from core.performance import (  # 管理器; 配置; 内存优化; 并发控制; 可靠性; 监控
     CircuitBreaker,

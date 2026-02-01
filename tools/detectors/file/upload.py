@@ -10,13 +10,15 @@
 - 双扩展名绕过
 """
 
+import os
 import re
-from typing import Dict, List, Any, Optional
+import sys
+from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+)
 
 from tools.detectors.base import BaseDetector, Vulnerability
 
@@ -35,33 +37,59 @@ class FileUploadDetector(BaseDetector):
         ("test.php5", "<?php echo 'test'; ?>", "application/x-php"),
         ("test.php7", "<?php echo 'test'; ?>", "application/x-php"),
         # JSP
-        ("test.jsp", "<% out.println(\"test\"); %>", "application/x-jsp"),
-        ("test.jspx", "<% out.println(\"test\"); %>", "application/xml"),
+        ("test.jsp", '<% out.println("test"); %>', "application/x-jsp"),
+        ("test.jspx", '<% out.println("test"); %>', "application/xml"),
         # ASP
-        ("test.asp", "<% Response.Write(\"test\") %>", "application/x-asp"),
-        ("test.aspx", "<% Response.Write(\"test\") %>", "application/x-aspx"),
+        ("test.asp", '<% Response.Write("test") %>', "application/x-asp"),
+        ("test.aspx", '<% Response.Write("test") %>', "application/x-aspx"),
         # 其他危险类型
         ("test.svg", "<svg onload=alert(1)>", "image/svg+xml"),
         ("test.html", "<script>alert(1)</script>", "text/html"),
         ("test.htm", "<script>alert(1)</script>", "text/html"),
-        ("test.shtml", "<!--#exec cmd=\"id\" -->", "text/html"),
+        ("test.shtml", '<!--#exec cmd="id" -->', "text/html"),
         # 配置文件
         (".htaccess", "AddType application/x-httpd-php .jpg", "text/plain"),
-        ("web.config", "<?xml version=\"1.0\"?><configuration></configuration>", "text/xml"),
+        ("web.config", '<?xml version="1.0"?><configuration></configuration>', "text/xml"),
     ]
 
     # 危险扩展名
     DANGEROUS_EXTENSIONS = [
-        ".php", ".php3", ".php4", ".php5", ".php7", ".phtml", ".phar",
-        ".jsp", ".jspx", ".jsw", ".jsv",
-        ".asp", ".aspx", ".asa", ".asax", ".ascx", ".ashx", ".asmx",
-        ".exe", ".dll", ".bat", ".cmd", ".sh", ".ps1",
-        ".svg", ".html", ".htm", ".shtml", ".xhtml",
-        ".htaccess", ".htpasswd", "web.config",
+        ".php",
+        ".php3",
+        ".php4",
+        ".php5",
+        ".php7",
+        ".phtml",
+        ".phar",
+        ".jsp",
+        ".jspx",
+        ".jsw",
+        ".jsv",
+        ".asp",
+        ".aspx",
+        ".asa",
+        ".asax",
+        ".ascx",
+        ".ashx",
+        ".asmx",
+        ".exe",
+        ".dll",
+        ".bat",
+        ".cmd",
+        ".sh",
+        ".ps1",
+        ".svg",
+        ".html",
+        ".htm",
+        ".shtml",
+        ".xhtml",
+        ".htaccess",
+        ".htpasswd",
+        "web.config",
     ]
 
     # 表单相关正则
-    FORM_PATTERN = re.compile(r'<form[^>]*>(.*?)</form>', re.DOTALL | re.IGNORECASE)
+    FORM_PATTERN = re.compile(r"<form[^>]*>(.*?)</form>", re.DOTALL | re.IGNORECASE)
     FILE_INPUT_PATTERN = re.compile(r'<input[^>]*type=["\']?file["\']?[^>]*>', re.IGNORECASE)
     ACCEPT_PATTERN = re.compile(r'accept=["\']?([^"\'>\s]+)["\']?', re.IGNORECASE)
     ACTION_PATTERN = re.compile(r'action=["\']?([^"\'>\s]+)["\']?', re.IGNORECASE)
@@ -74,10 +102,7 @@ class FileUploadDetector(BaseDetector):
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在文件上传漏洞"""
         if not response or not response.get("success"):
@@ -87,8 +112,11 @@ class FileUploadDetector(BaseDetector):
 
         # 检查上传成功指示器
         success_indicators = [
-            "upload success", "上传成功", "文件已上传",
-            "uploaded successfully", "file saved",
+            "upload success",
+            "上传成功",
+            "文件已上传",
+            "uploaded successfully",
+            "file saved",
         ]
 
         for indicator in success_indicators:
@@ -156,13 +184,13 @@ class FileUploadDetector(BaseDetector):
 
         # 检查 JavaScript 验证
         js_validation_patterns = [
-            r'\.files\[0\]\.type',
-            r'\.files\[0\]\.name',
-            r'filetype',
-            r'allowedextensions',
-            r'validextensions',
-            r'checkfiletype',
-            r'validatefile',
+            r"\.files\[0\]\.type",
+            r"\.files\[0\]\.name",
+            r"filetype",
+            r"allowedextensions",
+            r"validextensions",
+            r"checkfiletype",
+            r"validatefile",
         ]
 
         for pattern in js_validation_patterns:
@@ -193,20 +221,22 @@ class FileUploadDetector(BaseDetector):
                     severity = "LOW"
                     evidence += "，但未使用 multipart/form-data"
 
-                vulnerabilities.append(Vulnerability(
-                    type="File Upload Form Found",
-                    severity=severity,
-                    url=form.get("action") or url,
-                    evidence=evidence,
-                    verified=True,
-                    confidence=0.95,
-                    details={
-                        "form_index": form["index"],
-                        "is_multipart": form["is_multipart"],
-                        "accept_types": form["accept_types"],
-                        "action": form["action"]
-                    }
-                ))
+                vulnerabilities.append(
+                    Vulnerability(
+                        type="File Upload Form Found",
+                        severity=severity,
+                        url=form.get("action") or url,
+                        evidence=evidence,
+                        verified=True,
+                        confidence=0.95,
+                        details={
+                            "form_index": form["index"],
+                            "is_multipart": form["is_multipart"],
+                            "accept_types": form["accept_types"],
+                            "action": form["action"],
+                        },
+                    )
+                )
 
         return vulnerabilities
 
@@ -229,21 +259,23 @@ class FileUploadDetector(BaseDetector):
             if validation["has_js_validation"]:
                 issues.append("JavaScript 文件类型验证")
 
-            vulnerabilities.append(Vulnerability(
-                type="Client-side Validation Only",
-                severity="MEDIUM",
-                url=url,
-                evidence=f"仅有客户端验证可被绕过: {'; '.join(issues)}",
-                verified=True,
-                confidence=0.8,
-                details={
-                    "has_accept_attribute": validation["has_accept_attribute"],
-                    "has_js_validation": validation["has_js_validation"],
-                    "accept_types": validation["accept_types"],
-                    "js_patterns": validation["js_patterns"],
-                    "bypass_note": "客户端验证可通过修改请求或禁用 JavaScript 绕过"
-                }
-            ))
+            vulnerabilities.append(
+                Vulnerability(
+                    type="Client-side Validation Only",
+                    severity="MEDIUM",
+                    url=url,
+                    evidence=f"仅有客户端验证可被绕过: {'; '.join(issues)}",
+                    verified=True,
+                    confidence=0.8,
+                    details={
+                        "has_accept_attribute": validation["has_accept_attribute"],
+                        "has_js_validation": validation["has_js_validation"],
+                        "accept_types": validation["accept_types"],
+                        "js_patterns": validation["js_patterns"],
+                        "bypass_note": "客户端验证可通过修改请求或禁用 JavaScript 绕过",
+                    },
+                )
+            )
 
         return vulnerabilities
 
@@ -269,27 +301,32 @@ class FileUploadDetector(BaseDetector):
                 dangerous_allowed.append("*/* (所有类型)")
             # 检查是否允许危险 MIME 类型
             dangerous_mimes = [
-                "application/x-php", "application/x-httpd-php",
-                "text/x-php", "application/x-jsp",
-                "application/x-asp", "text/html",
+                "application/x-php",
+                "application/x-httpd-php",
+                "text/x-php",
+                "application/x-jsp",
+                "application/x-asp",
+                "text/html",
             ]
             for mime in dangerous_mimes:
                 if mime in accept_lower:
                     dangerous_allowed.append(mime)
 
         if dangerous_allowed:
-            vulnerabilities.append(Vulnerability(
-                type="Dangerous File Types Allowed",
-                severity="HIGH",
-                url=url,
-                evidence=f"允许上传危险文件类型: {', '.join(set(dangerous_allowed))}",
-                verified=True,
-                confidence=0.75,
-                details={
-                    "dangerous_types": list(set(dangerous_allowed)),
-                    "all_accept_types": accept_matches
-                }
-            ))
+            vulnerabilities.append(
+                Vulnerability(
+                    type="Dangerous File Types Allowed",
+                    severity="HIGH",
+                    url=url,
+                    evidence=f"允许上传危险文件类型: {', '.join(set(dangerous_allowed))}",
+                    verified=True,
+                    confidence=0.75,
+                    details={
+                        "dangerous_types": list(set(dangerous_allowed)),
+                        "all_accept_types": accept_matches,
+                    },
+                )
+            )
 
         return vulnerabilities
 
@@ -299,45 +336,42 @@ class FileUploadDetector(BaseDetector):
             {
                 "technique": "Double Extension",
                 "files": ["test.php.jpg", "test.php.png", "test.php.gif"],
-                "description": "双扩展名绕过"
+                "description": "双扩展名绕过",
             },
             {
                 "technique": "Null Byte",
                 "files": ["test.php%00.jpg", "test.php\x00.jpg"],
-                "description": "空字节截断 (PHP < 5.3.4)"
+                "description": "空字节截断 (PHP < 5.3.4)",
             },
             {
                 "technique": "Case Variation",
                 "files": ["test.PhP", "test.pHp", "test.PHP"],
-                "description": "大小写变换绕过"
+                "description": "大小写变换绕过",
             },
             {
                 "technique": "Alternative Extensions",
                 "files": ["test.phtml", "test.php5", "test.phar"],
-                "description": "替代扩展名"
+                "description": "替代扩展名",
             },
             {
                 "technique": "MIME Type Mismatch",
                 "files": [("test.php", "image/jpeg"), ("test.php", "image/gif")],
-                "description": "MIME 类型欺骗"
+                "description": "MIME 类型欺骗",
             },
             {
                 "technique": "Content-Type Bypass",
                 "files": [("test.php", "application/octet-stream")],
-                "description": "Content-Type 绕过"
+                "description": "Content-Type 绕过",
             },
             {
                 "technique": "Magic Bytes",
                 "files": ["GIF89a<?php echo 'test'; ?>"],
-                "description": "文件头伪造"
+                "description": "文件头伪造",
             },
         ]
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = True
+        self, url: str, param: Optional[str] = None, deep_scan: bool = True
     ) -> Dict[str, Any]:
         """
         文件上传漏洞检测入口
@@ -384,7 +418,7 @@ class FileUploadDetector(BaseDetector):
             },
             "test_files": [f[0] for f in self.TEST_FILES],
             "bypass_techniques": bypass_payloads,
-            "note": "文件上传漏洞需要手动测试实际上传功能"
+            "note": "文件上传漏洞需要手动测试实际上传功能",
         }
 
 

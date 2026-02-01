@@ -195,7 +195,6 @@ class BaseCloudTester(ABC):
         Returns:
             扫描发现列表
         """
-        pass
 
     async def async_scan(self) -> List[CloudFinding]:
         """

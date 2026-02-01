@@ -3,17 +3,24 @@
 侦察工具模块 - 信息收集相关功能
 包含: 端口扫描、DNS查询、HTTP探测、子域名枚举、目录扫描、技术栈识别等
 """
-import logging
 
+import logging
 import socket
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin, urlparse
 
 from ._common import (
-    GLOBAL_CONFIG, HAS_REQUESTS, HAS_DNS,
-    COMMON_DIRS, COMMON_SUBDOMAINS, SENSITIVE_FILES,
-    get_verify_ssl, check_target_reachable, check_tool, run_cmd
+    COMMON_DIRS,
+    COMMON_SUBDOMAINS,
+    GLOBAL_CONFIG,
+    HAS_DNS,
+    HAS_REQUESTS,
+    SENSITIVE_FILES,
+    check_target_reachable,
+    check_tool,
+    get_verify_ssl,
+    run_cmd,
 )
 
 # 可选依赖
@@ -27,7 +34,11 @@ def register_recon_tools(mcp):
     """注册所有侦察工具到 MCP 服务器"""
 
     @mcp.tool()
-    def port_scan(target: str, ports: str = "21,22,23,25,53,80,110,143,443,445,3306,3389,5432,6379,8080,8443", threads: int = 50) -> dict:
+    def port_scan(
+        target: str,
+        ports: str = "21,22,23,25,53,80,110,143,443,445,3306,3389,5432,6379,8080,8443",
+        threads: int = 50,
+    ) -> dict:
         """端口扫描 - 并发版本，大幅提升扫描速度"""
         results = {"target": target, "open_ports": [], "closed_ports": [], "scan_time": 0}
         port_list = [int(p.strip()) for p in ports.split(",")]
@@ -106,7 +117,7 @@ def register_recon_tools(mcp):
                 "headers": dict(resp.headers),
                 "server": resp.headers.get("Server", "Unknown"),
                 "content_length": len(resp.content),
-                "title": _extract_title(resp.text)
+                "title": _extract_title(resp.text),
             }
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -115,6 +126,7 @@ def register_recon_tools(mcp):
     def ssl_info(host: str, port: int = 443) -> dict:
         """SSL证书信息 - 纯Python实现"""
         import ssl
+
         try:
             context = ssl.create_default_context()
             context.check_hostname = False
@@ -132,7 +144,7 @@ def register_recon_tools(mcp):
                         "port": port,
                         "ssl_version": version,
                         "cipher": cipher,
-                        "cert": cert if cert else "证书信息不可用(自签名或无效)"
+                        "cert": cert if cert else "证书信息不可用(自签名或无效)",
                     }
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -145,6 +157,7 @@ def register_recon_tools(mcp):
 
         try:
             import whois
+
             w = whois.whois(target)
             return {"success": True, "data": str(w)}
         except ImportError:
@@ -163,7 +176,7 @@ def register_recon_tools(mcp):
                 f"site:{domain} filetype:sql",
                 f"site:{domain} filetype:log",
                 f"site:{domain} filetype:bak",
-                f"site:{domain} filetype:conf OR filetype:config"
+                f"site:{domain} filetype:conf OR filetype:config",
             ],
             "login": [
                 f"site:{domain} inurl:login",
@@ -171,24 +184,24 @@ def register_recon_tools(mcp):
                 f"site:{domain} inurl:signin",
                 f"site:{domain} intitle:login",
                 f"site:{domain} inurl:wp-admin",
-                f"site:{domain} inurl:administrator"
+                f"site:{domain} inurl:administrator",
             ],
             "sensitive": [
                 f"site:{domain} inurl:backup",
                 f"site:{domain} inurl:config",
-                f"site:{domain} \"index of\"",
-                f"site:{domain} intitle:\"index of\"",
+                f'site:{domain} "index of"',
+                f'site:{domain} intitle:"index of"',
                 f"site:{domain} inurl:.git",
                 f"site:{domain} inurl:.env",
-                f"site:{domain} \"password\" filetype:txt"
+                f'site:{domain} "password" filetype:txt',
             ],
             "errors": [
-                f"site:{domain} \"sql syntax\"",
-                f"site:{domain} \"mysql_fetch\"",
-                f"site:{domain} \"Warning: mysql\"",
-                f"site:{domain} \"ORA-\" OR \"Oracle error\"",
-                f"site:{domain} \"syntax error\""
-            ]
+                f'site:{domain} "sql syntax"',
+                f'site:{domain} "mysql_fetch"',
+                f'site:{domain} "Warning: mysql"',
+                f'site:{domain} "ORA-" OR "Oracle error"',
+                f'site:{domain} "syntax error"',
+            ],
         }
 
         if dork_type == "all":
@@ -198,7 +211,10 @@ def register_recon_tools(mcp):
             return {"success": True, "domain": domain, "dorks": all_dorks}
 
         if dork_type not in dorks:
-            return {"success": False, "error": f"不支持的类型。可用: {list(dorks.keys()) + ['all']}"}
+            return {
+                "success": False,
+                "error": f"不支持的类型。可用: {list(dorks.keys()) + ['all']}",
+            }
 
         return {"success": True, "domain": domain, "type": dork_type, "dorks": dorks[dork_type]}
 
@@ -208,16 +224,23 @@ def register_recon_tools(mcp):
         if not HAS_REQUESTS:
             return {"success": False, "error": "需要安装 requests: pip install requests"}
 
-        base_url = url.rstrip('/')
+        base_url = url.rstrip("/")
         found = []
         checked = 0
 
         def check_path(path):
             try:
                 test_url = urljoin(base_url + "/", path)
-                resp = requests.get(test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
+                resp = requests.get(
+                    test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False
+                )
                 if resp.status_code in [200, 301, 302, 403]:
-                    return {"path": path, "url": test_url, "status": resp.status_code, "size": len(resp.content)}
+                    return {
+                        "path": path,
+                        "url": test_url,
+                        "status": resp.status_code,
+                        "size": len(resp.content),
+                    }
             except (requests.RequestException, OSError):
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
@@ -266,12 +289,13 @@ def register_recon_tools(mcp):
         # 尝试导入响应过滤器
         try:
             from core.response_filter import get_response_filter
+
             resp_filter = get_response_filter()
             resp_filter.calibrate(url)
         except ImportError:
             resp_filter = None
 
-        base_url = url.rstrip('/')
+        base_url = url.rstrip("/")
         found = []
         filtered_count = 0
 
@@ -279,10 +303,12 @@ def register_recon_tools(mcp):
             nonlocal filtered_count
             try:
                 test_url = urljoin(base_url + "/", path)
-                resp = requests.get(test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
+                resp = requests.get(
+                    test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False
+                )
                 if resp.status_code == 200:
                     content = resp.text
-                    content_type = resp.headers.get('Content-Type', '')
+                    content_type = resp.headers.get("Content-Type", "")
 
                     if resp_filter:
                         validation = resp_filter.validate_sensitive_file(
@@ -302,7 +328,7 @@ def register_recon_tools(mcp):
                         "size": len(resp.content),
                         "content_type": content_type,
                         "confidence": confidence,
-                        "preview": content[:200] if len(content) > 0 else ""
+                        "preview": content[:200] if len(content) > 0 else "",
                     }
             except (requests.RequestException, OSError):
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
@@ -323,7 +349,7 @@ def register_recon_tools(mcp):
             "url": base_url,
             "sensitive_files": found,
             "total_checked": len(SENSITIVE_FILES),
-            "filtered_spa_fallback": filtered_count
+            "filtered_spa_fallback": filtered_count,
         }
 
     @mcp.tool()
@@ -344,7 +370,7 @@ def register_recon_tools(mcp):
                 "cms": [],
                 "javascript": [],
                 "cdn": [],
-                "security": []
+                "security": [],
             }
 
             # 框架检测
@@ -425,7 +451,7 @@ def register_recon_tools(mcp):
             "subdomains": None,
             "directories": None,
             "sensitive_files": None,
-            "ports": None
+            "ports": None,
         }
 
         if target.startswith("http"):
@@ -489,28 +515,43 @@ def register_recon_tools(mcp):
 
     # 返回注册的工具列表
     return [
-        "port_scan", "dns_lookup", "network_check", "http_probe",
-        "ssl_info", "whois_query", "google_dorks", "dir_bruteforce",
-        "subdomain_bruteforce", "sensitive_scan", "tech_detect", "full_recon"
+        "port_scan",
+        "dns_lookup",
+        "network_check",
+        "http_probe",
+        "ssl_info",
+        "whois_query",
+        "google_dorks",
+        "dir_bruteforce",
+        "subdomain_bruteforce",
+        "sensitive_scan",
+        "tech_detect",
+        "full_recon",
     ]
 
 
 def _extract_title(html: str) -> str:
     """提取HTML标题"""
     import re
-    match = re.search(r'<title[^>]*>([^<]+)</title>', html, re.IGNORECASE)
+
+    match = re.search(r"<title[^>]*>([^<]+)</title>", html, re.IGNORECASE)
     return match.group(1).strip() if match else ""
 
 
 # ============ 独立实现函数（供任务队列异步调用） ============
 # 这些函数封装了上面 @mcp.tool() 注册的功能，可以直接被 task_tools.py 导入使用
 
-def _port_scan_impl(target: str, ports: str = "21,22,23,25,53,80,110,143,443,445,3306,3389,5432,6379,8080,8443", threads: int = 50) -> dict:
+
+def _port_scan_impl(
+    target: str,
+    ports: str = "21,22,23,25,53,80,110,143,443,445,3306,3389,5432,6379,8080,8443",
+    threads: int = 50,
+) -> dict:
     """端口扫描实现 - 供任务队列调用"""
     port_list = [int(p.strip()) for p in ports.split(",")]
     threads = min(threads, GLOBAL_CONFIG["max_threads"])
     results = {"target": target, "open_ports": [], "closed_ports": [], "scan_time": 0}
-    
+
     def scan_single_port(port: int) -> tuple:
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -520,7 +561,7 @@ def _port_scan_impl(target: str, ports: str = "21,22,23,25,53,80,110,143,443,445
             return (port, result == 0)
         except Exception:
             return (port, False)
-    
+
     start_time = time.time()
     with ThreadPoolExecutor(max_workers=threads) as executor:
         futures = {executor.submit(scan_single_port, port): port for port in port_list}
@@ -530,45 +571,45 @@ def _port_scan_impl(target: str, ports: str = "21,22,23,25,53,80,110,143,443,445
                 results["open_ports"].append(port)
             else:
                 results["closed_ports"].append(port)
-    
+
     results["open_ports"].sort()
     results["closed_ports"].sort()
     results["scan_time"] = round(time.time() - start_time, 2)
-    
+
     return {"success": True, "data": results}
 
 
 def _full_recon_impl(target: str) -> dict:
     """完整侦察实现 - 供任务队列调用"""
     from urllib.parse import urlparse
-    
+
     results = {
         "target": target,
         "dns": None,
         "http": None,
         "ports": None,
     }
-    
+
     if target.startswith("http"):
         parsed = urlparse(target)
         domain = parsed.netloc
     else:
         domain = target
-    
+
     # 1. DNS 查询
     try:
         ip = socket.gethostbyname(domain)
         results["dns"] = {"success": True, "domain": domain, "ip": ip}
     except Exception as e:
         results["dns"] = {"success": False, "error": str(e)}
-    
+
     # 2. 端口扫描
     try:
         if results["dns"] and results["dns"].get("ip"):
             results["ports"] = _port_scan_impl(results["dns"]["ip"])
     except Exception as e:
         results["ports"] = {"success": False, "error": str(e)}
-    
+
     # 3. HTTP 探测
     if HAS_REQUESTS:
         try:
@@ -578,11 +619,11 @@ def _full_recon_impl(target: str) -> dict:
                 "success": True,
                 "status_code": resp.status_code,
                 "server": resp.headers.get("Server", "Unknown"),
-                "title": _extract_title(resp.text)
+                "title": _extract_title(resp.text),
             }
         except Exception as e:
             results["http"] = {"success": False, "error": str(e)}
-    
+
     return {"success": True, "results": results}
 
 
@@ -590,7 +631,7 @@ def _subdomain_bruteforce_impl(domain: str, threads: int = 10) -> dict:
     """子域名枚举实现 - 供任务队列调用"""
     found = []
     checked = 0
-    
+
     def check_subdomain(sub):
         try:
             full_domain = f"{sub}.{domain}"
@@ -598,7 +639,7 @@ def _subdomain_bruteforce_impl(domain: str, threads: int = 10) -> dict:
             return {"subdomain": full_domain, "ip": ip}
         except Exception:
             return None
-    
+
     with ThreadPoolExecutor(max_workers=threads) as executor:
         futures = {executor.submit(check_subdomain, sub): sub for sub in COMMON_SUBDOMAINS}
         for future in as_completed(futures):
@@ -606,7 +647,7 @@ def _subdomain_bruteforce_impl(domain: str, threads: int = 10) -> dict:
             result = future.result()
             if result:
                 found.append(result)
-    
+
     return {"success": True, "domain": domain, "found": found, "total_checked": checked}
 
 
@@ -614,16 +655,21 @@ def _dir_bruteforce_impl(url: str, threads: int = 10) -> dict:
     """目录扫描实现 - 供任务队列调用"""
     if not HAS_REQUESTS:
         return {"success": False, "error": "需要安装 requests"}
-    
-    base_url = url.rstrip('/')
+
+    base_url = url.rstrip("/")
     found = []
-    
+
     def check_path(path):
         try:
             test_url = urljoin(base_url + "/", path)
             resp = requests.get(test_url, timeout=5, verify=get_verify_ssl(), allow_redirects=False)
             if resp.status_code in [200, 301, 302, 403]:
-                return {"path": path, "url": test_url, "status": resp.status_code, "size": len(resp.content)}
+                return {
+                    "path": path,
+                    "url": test_url,
+                    "status": resp.status_code,
+                    "size": len(resp.content),
+                }
         except (requests.RequestException, OSError):
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
@@ -643,10 +689,10 @@ def _sensitive_scan_impl(url: str, threads: int = 10) -> dict:
     """敏感文件扫描实现 - 供任务队列调用"""
     if not HAS_REQUESTS:
         return {"success": False, "error": "需要安装 requests"}
-    
-    base_url = url.rstrip('/')
+
+    base_url = url.rstrip("/")
     found = []
-    
+
     def check_file(path):
         try:
             test_url = urljoin(base_url + "/", path)
@@ -657,7 +703,7 @@ def _sensitive_scan_impl(url: str, threads: int = 10) -> dict:
                     "url": test_url,
                     "status": resp.status_code,
                     "size": len(resp.content),
-                    "content_type": resp.headers.get('Content-Type', ''),
+                    "content_type": resp.headers.get("Content-Type", ""),
                 }
         except (requests.RequestException, OSError):
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
@@ -670,8 +716,13 @@ def _sensitive_scan_impl(url: str, threads: int = 10) -> dict:
             result = future.result()
             if result:
                 found.append(result)
-    
-    return {"success": True, "url": base_url, "sensitive_files": found, "total_checked": len(SENSITIVE_FILES)}
+
+    return {
+        "success": True,
+        "url": base_url,
+        "sensitive_files": found,
+        "total_checked": len(SENSITIVE_FILES),
+    }
 
 
 def _dns_lookup_impl(domain: str, record_type: str = "A") -> dict:
@@ -679,6 +730,7 @@ def _dns_lookup_impl(domain: str, record_type: str = "A") -> dict:
     if HAS_DNS:
         try:
             import dns.resolver
+
             answers = dns.resolver.resolve(domain, record_type)
             records = [str(r) for r in answers]
             return {"success": True, "domain": domain, "type": record_type, "records": records}
@@ -696,7 +748,7 @@ def _http_probe_impl(url: str) -> dict:
     """HTTP探测实现 - 供 pentest_tools 调用"""
     if not HAS_REQUESTS:
         return {"success": False, "error": "需要安装 requests"}
-    
+
     try:
         resp = requests.get(url, timeout=10, verify=get_verify_ssl(), allow_redirects=True)
         return {
@@ -706,7 +758,7 @@ def _http_probe_impl(url: str) -> dict:
             "headers": dict(resp.headers),
             "server": resp.headers.get("Server", "Unknown"),
             "content_length": len(resp.content),
-            "title": _extract_title(resp.text)
+            "title": _extract_title(resp.text),
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -716,12 +768,12 @@ def _tech_detect_impl(url: str) -> dict:
     """技术栈识别实现 - 供 pentest_tools 调用"""
     if not HAS_REQUESTS:
         return {"success": False, "error": "需要安装 requests"}
-    
+
     try:
         resp = requests.get(url, timeout=10, verify=get_verify_ssl())
         headers = resp.headers
         html = resp.text.lower()
-        
+
         tech = {
             "server": headers.get("Server", "Unknown"),
             "powered_by": headers.get("X-Powered-By", ""),
@@ -729,9 +781,9 @@ def _tech_detect_impl(url: str) -> dict:
             "cms": [],
             "javascript": [],
             "cdn": [],
-            "security": []
+            "security": [],
         }
-        
+
         # 框架检测
         if "x-aspnet-version" in headers or ".aspx" in html:
             tech["frameworks"].append("ASP.NET")
@@ -739,7 +791,7 @@ def _tech_detect_impl(url: str) -> dict:
             tech["frameworks"].append("Laravel")
         if "django" in html or "csrfmiddlewaretoken" in html:
             tech["frameworks"].append("Django")
-        
+
         # CMS检测
         if "wp-content" in html or "wordpress" in html:
             tech["cms"].append("WordPress")
@@ -749,13 +801,11 @@ def _tech_detect_impl(url: str) -> dict:
             tech["cms"].append("Drupal")
         if "thinkphp" in html or "think_template" in html:
             tech["cms"].append("ThinkPHP")
-        
+
         # CDN检测
         if "cloudflare" in str(headers).lower():
             tech["cdn"].append("Cloudflare")
-        
+
         return {"success": True, "url": url, "technology": tech}
     except Exception as e:
         return {"success": False, "error": str(e)}
-
-

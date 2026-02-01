@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # 尝试导入AuthManager
 try:
-    from .auth_manager import APIKey, AuthManager, Permission, ToolLevel
+    from .auth_manager import AuthManager, Permission, ToolLevel
 
     HAS_AUTH_MANAGER = True
 except ImportError:

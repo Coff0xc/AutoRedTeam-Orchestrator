@@ -7,9 +7,7 @@ storage.py - 会话持久化模块
 
 import json
 import logging
-import os
 import re
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -126,7 +124,6 @@ class SessionStorage:
         Returns:
             Path: 保存的文件路径
         """
-        from .context import ScanContext
 
         filepath = self._get_safe_path(self._contexts_dir, context.session_id)
 
@@ -209,7 +206,6 @@ class SessionStorage:
         Returns:
             Path: 保存的文件路径
         """
-        from .result import ScanResult
 
         filepath = self._get_safe_path(self._results_dir, result.session_id)
 

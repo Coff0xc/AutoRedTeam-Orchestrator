@@ -318,7 +318,6 @@ class SecureFileExfiltrator(ABC):
                             error=str(e)
                         )
         """
-        pass
 
 
 # 使用示例

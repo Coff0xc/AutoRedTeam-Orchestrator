@@ -7,14 +7,12 @@ import json
 import logging
 import re
 import subprocess
-import time
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict, List
 
 from .component_fingerprint import FINGERPRINTS, ComponentIdentifier
 from .payload_library import PayloadLibrary
-from .vuln_verifier import VerificationResult, VulnerabilityVerifier
+from .vuln_verifier import VulnerabilityVerifier
 
 # 模块 logger
 logger = logging.getLogger(__name__)

@@ -16,14 +16,13 @@ DNS 隧道 - DNS Tunnel
     - 抗检测设计
 """
 
-import hashlib
 import logging
 import random
 import secrets
 import socket
 import struct
 import time
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from ..base import BaseTunnel, C2Config
 from ..encoding import C2Encoder, ChunkEncoder

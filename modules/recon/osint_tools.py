@@ -3,7 +3,6 @@
 OSINT开源情报收集工具集
 """
 
-import json
 import logging
 import os
 import subprocess

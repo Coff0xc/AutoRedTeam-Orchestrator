@@ -51,8 +51,6 @@ class TargetUnreachable(ScanError):
         >>> raise TargetUnreachable("端口未开放", target="192.168.1.100:8080")
     """
 
-    pass
-
 
 class ScanTimeout(ScanError):
     """
@@ -157,8 +155,6 @@ class PayloadError(DetectorError):
         >>> raise PayloadError("Payload编码失败", details={"encoding": "base64", "reason": "invalid characters"})
     """
 
-    pass
-
 
 class ValidationError(DetectorError):
     """
@@ -171,8 +167,6 @@ class ValidationError(DetectorError):
         >>> raise ValidationError("必填参数缺失", details={"missing": ["target", "port"]})
     """
 
-    pass
-
 
 class DetectionTimeout(DetectorError):
     """
@@ -183,8 +177,6 @@ class DetectionTimeout(DetectorError):
     示例:
         >>> raise DetectionTimeout("SQL注入检测超时", detector_name="sqli_detector")
     """
-
-    pass
 
 
 __all__ = [

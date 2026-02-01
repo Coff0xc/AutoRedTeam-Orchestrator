@@ -8,11 +8,11 @@ IDOR (Insecure Direct Object Reference) 检测器
 - 路径参数越权
 - 水平/垂直越权
 """
-import logging
 
-from typing import Dict, List, Any, Optional
+import logging
 import re
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+from typing import Any, Dict, List, Optional
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from ..base import BaseDetector, Vulnerability
 
@@ -26,11 +26,32 @@ class IDORDetector(BaseDetector):
 
     # IDOR 专用测试参数
     DEFAULT_PARAMS = [
-        "id", "user_id", "uid", "userid", "user", "account",
-        "account_id", "profile", "profile_id", "doc", "document",
-        "doc_id", "file", "file_id", "order", "order_id",
-        "invoice", "invoice_id", "item", "item_id", "product",
-        "product_id", "record", "record_id", "report", "report_id"
+        "id",
+        "user_id",
+        "uid",
+        "userid",
+        "user",
+        "account",
+        "account_id",
+        "profile",
+        "profile_id",
+        "doc",
+        "document",
+        "doc_id",
+        "file",
+        "file_id",
+        "order",
+        "order_id",
+        "invoice",
+        "invoice_id",
+        "item",
+        "item_id",
+        "product",
+        "product_id",
+        "record",
+        "record_id",
+        "report",
+        "report_id",
     ]
 
     # 测试 ID 值
@@ -81,10 +102,7 @@ class IDORDetector(BaseDetector):
         return self.TEST_IDS
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在 IDOR 漏洞"""
         if not response.get("success"):
@@ -111,13 +129,11 @@ class IDORDetector(BaseDetector):
         return False
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = False
+        self, url: str, param: Optional[str] = None, deep_scan: bool = False
     ) -> Dict[str, Any]:
         """执行 IDOR 检测"""
         from tools._common import reset_failure_counter
+
         reset_failure_counter()
 
         vulnerabilities = []
@@ -150,7 +166,7 @@ class IDORDetector(BaseDetector):
                     responses_by_id[test_id] = {
                         "status": status,
                         "length": length,
-                        "has_data": length > 100 and status == 200
+                        "has_data": length > 100 and status == 200,
                     }
 
                     # 检查是否返回了有效数据
@@ -161,12 +177,14 @@ class IDORDetector(BaseDetector):
                             if re.search(pattern, text, re.IGNORECASE):
                                 sensitive_found.append(pattern.split("[")[0])
 
-                        findings.append({
-                            "id": test_id,
-                            "status": status,
-                            "size": length,
-                            "sensitive_data": sensitive_found[:3] if sensitive_found else None
-                        })
+                        findings.append(
+                            {
+                                "id": test_id,
+                                "status": status,
+                                "size": length,
+                                "sensitive_data": sensitive_found[:3] if sensitive_found else None,
+                            }
+                        )
 
                 except Exception as exc:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
@@ -195,8 +213,8 @@ class IDORDetector(BaseDetector):
                         details={
                             "findings": findings[:5],
                             "unique_response_sizes": unique_sizes,
-                            "has_sensitive_data": has_sensitive
-                        }
+                            "has_sensitive_data": has_sensitive,
+                        },
                     )
                     vulnerabilities.append(vuln)
 
@@ -225,7 +243,7 @@ class IDORDetector(BaseDetector):
             "vulnerabilities": [v.to_dict() for v in verified_vulns],
             "total": len(verified_vulns),
             "verified_count": sum(1 for v in verified_vulns if v.verified),
-            "recommendations": self._get_recommendations() if verified_vulns else []
+            "recommendations": self._get_recommendations() if verified_vulns else [],
         }
 
     def _build_test_url(self, url: str, param: str, value: str) -> str:
@@ -248,7 +266,7 @@ class IDORDetector(BaseDetector):
         path = parsed.path
 
         # 查找路径中的数字 ID
-        id_pattern = r'/(\d+)(?:/|$)'
+        id_pattern = r"/(\d+)(?:/|$)"
         matches = list(re.finditer(id_pattern, path))
 
         for match in matches:
@@ -262,7 +280,7 @@ class IDORDetector(BaseDetector):
 
                 try:
                     # 替换路径中的 ID
-                    new_path = path[:match.start(1)] + test_id + path[match.end(1):]
+                    new_path = path[: match.start(1)] + test_id + path[match.end(1) :]
                     new_parsed = parsed._replace(path=new_path)
                     test_url = urlunparse(new_parsed)
 
@@ -273,11 +291,7 @@ class IDORDetector(BaseDetector):
                         length = response.get("response_length", 0)
 
                         if status == 200 and length > 100:
-                            findings.append({
-                                "id": test_id,
-                                "status": status,
-                                "size": length
-                            })
+                            findings.append({"id": test_id, "status": status, "size": length})
 
                 except Exception as exc:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
@@ -293,8 +307,8 @@ class IDORDetector(BaseDetector):
                     details={
                         "original_id": original_id,
                         "findings": findings,
-                        "path_pattern": path
-                    }
+                        "path_pattern": path,
+                    },
                 )
                 vulnerabilities.append(vuln)
 
@@ -314,7 +328,7 @@ class IDORDetector(BaseDetector):
                     test_id = str(int(original_id) + 100)
                     parsed = urlparse(url)
                     path = parsed.path
-                    new_path = re.sub(rf'/{original_id}(?=/|$)', f'/{test_id}', path)
+                    new_path = re.sub(rf"/{original_id}(?=/|$)", f"/{test_id}", path)
                     new_parsed = parsed._replace(path=new_path)
                     test_url = urlunparse(new_parsed)
 
@@ -353,5 +367,5 @@ class IDORDetector(BaseDetector):
             "记录并监控异常的资源访问模式",
             "使用不可预测的随机标识符",
             "实施速率限制防止枚举攻击",
-            "对敏感操作添加二次验证"
+            "对敏感操作添加二次验证",
         ]

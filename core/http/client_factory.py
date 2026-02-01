@@ -20,7 +20,7 @@ import logging
 import warnings
 from contextlib import asynccontextmanager
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -38,8 +38,6 @@ class ClientType(Enum):
 
 class SecurityWarning(UserWarning):
     """安全警告"""
-
-    pass
 
 
 class HTTPClientFactory:

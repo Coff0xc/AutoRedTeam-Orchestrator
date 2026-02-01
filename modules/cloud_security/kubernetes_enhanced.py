@@ -7,7 +7,6 @@ Kubernetes安全增强检测模块
 
 import json
 import logging
-import re
 import subprocess
 from dataclasses import dataclass, field
 from enum import Enum

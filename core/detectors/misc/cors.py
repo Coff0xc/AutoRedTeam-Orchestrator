@@ -5,7 +5,6 @@ CORS 配置检测器
 """
 
 import logging
-import re
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 

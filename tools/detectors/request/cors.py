@@ -10,13 +10,14 @@ CORS 检测器 - 基于 BaseDetector 重构
 - 凭证泄露风险
 """
 
-import re
-from typing import Dict, List, Any, Optional
+import os
+import sys
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+)
 
 from tools.detectors.base import BaseDetector, Vulnerability
 
@@ -51,10 +52,7 @@ class CORSDetector(BaseDetector):
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在 CORS 漏洞"""
         if not response or not response.get("success"):
@@ -104,10 +102,7 @@ class CORSDetector(BaseDetector):
         return origins
 
     def _send_cors_request(
-        self,
-        url: str,
-        origin: str,
-        method: str = "GET"
+        self, url: str, origin: str, method: str = "GET"
     ) -> Optional[Dict[str, Any]]:
         """发送带 Origin 头的请求"""
         if not self.session:
@@ -124,17 +119,11 @@ class CORSDetector(BaseDetector):
                 headers["Access-Control-Request-Method"] = "POST"
                 headers["Access-Control-Request-Headers"] = "Content-Type"
                 resp = self.session.options(
-                    url,
-                    headers=headers,
-                    timeout=self.timeout,
-                    verify=self.verify_ssl
+                    url, headers=headers, timeout=self.timeout, verify=self.verify_ssl
                 )
             else:
                 resp = self.session.get(
-                    url,
-                    headers=headers,
-                    timeout=self.timeout,
-                    verify=self.verify_ssl
+                    url, headers=headers, timeout=self.timeout, verify=self.verify_ssl
                 )
 
             return {
@@ -169,21 +158,23 @@ class CORSDetector(BaseDetector):
             if acao == origin:
                 severity = "HIGH" if acac and acac.lower() == "true" else "MEDIUM"
 
-                vulnerabilities.append(Vulnerability(
-                    type="CORS Origin Reflection",
-                    severity=severity,
-                    url=url,
-                    payload=origin,
-                    evidence=f"ACAO: {acao}" + (f", ACAC: {acac}" if acac else ""),
-                    verified=True,
-                    confidence=0.9,
-                    details={
-                        "origin": origin,
-                        "acao": acao,
-                        "acac": acac,
-                        "allows_credentials": acac and acac.lower() == "true"
-                    }
-                ))
+                vulnerabilities.append(
+                    Vulnerability(
+                        type="CORS Origin Reflection",
+                        severity=severity,
+                        url=url,
+                        payload=origin,
+                        evidence=f"ACAO: {acao}" + (f", ACAC: {acac}" if acac else ""),
+                        verified=True,
+                        confidence=0.9,
+                        details={
+                            "origin": origin,
+                            "acao": acao,
+                            "acac": acac,
+                            "allows_credentials": acac and acac.lower() == "true",
+                        },
+                    )
+                )
 
         return vulnerabilities
 
@@ -210,19 +201,21 @@ class CORSDetector(BaseDetector):
                 severity = "MEDIUM"
                 evidence = "ACAO: * 允许任意来源访问"
 
-            vulnerabilities.append(Vulnerability(
-                type="CORS Wildcard Origin",
-                severity=severity,
-                url=url,
-                evidence=evidence,
-                verified=True,
-                confidence=0.95,
-                details={
-                    "acao": acao,
-                    "acac": acac,
-                    "allows_credentials": acac and acac.lower() == "true"
-                }
-            ))
+            vulnerabilities.append(
+                Vulnerability(
+                    type="CORS Wildcard Origin",
+                    severity=severity,
+                    url=url,
+                    evidence=evidence,
+                    verified=True,
+                    confidence=0.95,
+                    details={
+                        "acao": acao,
+                        "acac": acac,
+                        "allows_credentials": acac and acac.lower() == "true",
+                    },
+                )
+            )
 
         return vulnerabilities
 
@@ -242,21 +235,23 @@ class CORSDetector(BaseDetector):
         if acao == "null":
             severity = "HIGH" if acac and acac.lower() == "true" else "MEDIUM"
 
-            vulnerabilities.append(Vulnerability(
-                type="CORS Null Origin Allowed",
-                severity=severity,
-                url=url,
-                payload="null",
-                evidence=f"允许 null Origin，可通过 iframe sandbox 利用",
-                verified=True,
-                confidence=0.9,
-                details={
-                    "acao": acao,
-                    "acac": acac,
-                    "allows_credentials": acac and acac.lower() == "true",
-                    "exploitation": "使用 <iframe sandbox='allow-scripts' src='data:text/html,...'> 发起请求"
-                }
-            ))
+            vulnerabilities.append(
+                Vulnerability(
+                    type="CORS Null Origin Allowed",
+                    severity=severity,
+                    url=url,
+                    payload="null",
+                    evidence=f"允许 null Origin，可通过 iframe sandbox 利用",
+                    verified=True,
+                    confidence=0.9,
+                    details={
+                        "acao": acao,
+                        "acac": acac,
+                        "allows_credentials": acac and acac.lower() == "true",
+                        "exploitation": "使用 <iframe sandbox='allow-scripts' src='data:text/html,...'> 发起请求",
+                    },
+                )
+            )
 
         return vulnerabilities
 
@@ -279,21 +274,23 @@ class CORSDetector(BaseDetector):
             if acao == origin:
                 severity = "HIGH" if acac and acac.lower() == "true" else "MEDIUM"
 
-                vulnerabilities.append(Vulnerability(
-                    type="CORS Subdomain Bypass",
-                    severity=severity,
-                    url=url,
-                    payload=origin,
-                    evidence=f"子域名/相似域名被允许: {origin}",
-                    verified=True,
-                    confidence=0.85,
-                    details={
-                        "origin": origin,
-                        "acao": acao,
-                        "acac": acac,
-                        "allows_credentials": acac and acac.lower() == "true"
-                    }
-                ))
+                vulnerabilities.append(
+                    Vulnerability(
+                        type="CORS Subdomain Bypass",
+                        severity=severity,
+                        url=url,
+                        payload=origin,
+                        evidence=f"子域名/相似域名被允许: {origin}",
+                        verified=True,
+                        confidence=0.85,
+                        details={
+                            "origin": origin,
+                            "acao": acao,
+                            "acac": acac,
+                            "allows_credentials": acac and acac.lower() == "true",
+                        },
+                    )
+                )
                 break  # 找到一个就停止
 
         return vulnerabilities
@@ -330,28 +327,22 @@ class CORSDetector(BaseDetector):
                 issues.append(f"允许敏感头: {', '.join(allowed_sensitive)}")
 
         if issues and acao:
-            vulnerabilities.append(Vulnerability(
-                type="CORS Preflight Misconfiguration",
-                severity="MEDIUM",
-                url=url,
-                evidence="; ".join(issues),
-                verified=True,
-                confidence=0.7,
-                details={
-                    "acao": acao,
-                    "acam": acam,
-                    "acah": acah,
-                    "issues": issues
-                }
-            ))
+            vulnerabilities.append(
+                Vulnerability(
+                    type="CORS Preflight Misconfiguration",
+                    severity="MEDIUM",
+                    url=url,
+                    evidence="; ".join(issues),
+                    verified=True,
+                    confidence=0.7,
+                    details={"acao": acao, "acam": acam, "acah": acah, "issues": issues},
+                )
+            )
 
         return vulnerabilities
 
     def detect(
-        self,
-        url: str,
-        param: Optional[str] = None,
-        deep_scan: bool = True
+        self, url: str, param: Optional[str] = None, deep_scan: bool = True
     ) -> Dict[str, Any]:
         """
         CORS 检测入口
@@ -413,7 +404,7 @@ class CORSDetector(BaseDetector):
                 "subdomain_bypass": sum(1 for v in all_vulnerabilities if "Subdomain" in v.type),
                 "preflight": sum(1 for v in all_vulnerabilities if "Preflight" in v.type),
             },
-            "recommendations": recommendations
+            "recommendations": recommendations,
         }
 
 

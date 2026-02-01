@@ -11,8 +11,7 @@ import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
-from functools import wraps
-from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, TypeVar, Union
+from typing import Any, Dict, List, Optional, TypeVar, Union
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +71,6 @@ class Middleware(ABC):
         Returns:
             处理后的请求上下文
         """
-        pass
 
     @abstractmethod
     def process_response(
@@ -88,7 +86,6 @@ class Middleware(ABC):
         Returns:
             处理后的响应上下文
         """
-        pass
 
     def process_exception(
         self, exception: Exception, request: RequestContext
@@ -117,14 +114,12 @@ class AsyncMiddleware(ABC):
     @abstractmethod
     async def process_request(self, request: RequestContext) -> RequestContext:
         """处理请求 (异步)"""
-        pass
 
     @abstractmethod
     async def process_response(
         self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         """处理响应 (异步)"""
-        pass
 
     async def process_exception(
         self, exception: Exception, request: RequestContext

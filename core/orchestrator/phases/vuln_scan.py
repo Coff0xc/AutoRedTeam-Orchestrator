@@ -9,7 +9,7 @@ import asyncio
 import ipaddress
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from .base import BasePhaseExecutor, PhaseResult
@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     from core.http.client import HTTPClient
     from modules.vuln_verifier import StatisticalVerifier
 
-    from ..state import PentestPhase, PentestState
 
 logger = logging.getLogger(__name__)
 

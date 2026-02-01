@@ -11,13 +11,12 @@ Warning: 仅限授权渗透测试使用！
 
 import base64
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Union
 
 from ..base import (
     BaseExfiltration,
     ExfilChannel,
     ExfilConfig,
-    ExfilStatus,
 )
 
 logger = logging.getLogger(__name__)

@@ -6,8 +6,8 @@
 
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import parse_qs, urljoin, urlparse
+from typing import Any, Dict, List, Optional
+from urllib.parse import urljoin, urlparse
 
 from ..base import BaseDetector
 from ..factory import register_detector

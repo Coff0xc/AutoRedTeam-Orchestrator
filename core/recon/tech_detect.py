@@ -14,15 +14,13 @@ tech_detect.py - 技术栈识别模块
         print(f"{tech.name} ({tech.category}): {tech.version}")
 """
 
-import json
 import logging
 import re
 import ssl
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Pattern, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 

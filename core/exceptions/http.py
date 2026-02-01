@@ -79,8 +79,6 @@ class ConnectionError(HTTPError):
         >>> raise ConnectionError("DNS解析失败", details={"hostname": "unknown.local"})
     """
 
-    pass
-
 
 class TimeoutError(HTTPError):
     """
@@ -117,8 +115,6 @@ class SSLError(HTTPError):
         >>> raise SSLError("证书验证失败", url="https://self-signed.example.com")
         >>> raise SSLError("TLS版本不兼容", details={"supported": "TLSv1.2", "required": "TLSv1.3"})
     """
-
-    pass
 
 
 class ProxyError(HTTPError):

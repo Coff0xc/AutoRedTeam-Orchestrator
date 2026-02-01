@@ -18,11 +18,9 @@ from .config import PerformanceConfig, get_performance_config
 from .memory_optimizer import (
     CompressedStorage,
     MemoryMonitor,
-    ObjectPool,
-    ResultPaginator,
     StreamingResultProcessor,
 )
-from .monitoring import AlertManager, LogController, MetricsCollector, PerformanceMetrics
+from .monitoring import AlertManager, LogController, PerformanceMetrics
 from .reliability import (
     CheckpointManager,
     FaultRecovery,
@@ -268,7 +266,7 @@ class PerformanceManager:
         self.start()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, _exc_val, _exc_tb):
         self.stop()
         return False
 
