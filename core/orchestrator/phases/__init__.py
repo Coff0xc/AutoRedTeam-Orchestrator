@@ -13,7 +13,7 @@ phases/ - 渗透测试阶段执行器模块
 - ReportPhaseExecutor: 报告生成阶段
 """
 
-from .base import BasePhaseExecutor, CVE_ID_PATTERN, PhaseResult
+from .base import CVE_ID_PATTERN, BasePhaseExecutor, PhaseResult
 from .exfiltrate import ExfiltratePhaseExecutor
 from .exploit import ExploitPhaseExecutor
 from .lateral import LateralMovePhaseExecutor
