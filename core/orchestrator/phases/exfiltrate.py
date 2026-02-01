@@ -42,7 +42,7 @@ class ExfiltratePhaseExecutor(BasePhaseExecutor):
     def required_phases(self):
         from ..state import PentestPhase
 
-        return [PentestPhase.LATERAL_MOVE]
+        return (PentestPhase.LATERAL_MOVE,)
 
     async def execute(self) -> PhaseResult:
         from ..state import PentestPhase
@@ -142,7 +142,7 @@ class ExfiltratePhaseExecutor(BasePhaseExecutor):
                 channel=ExfilChannel(channel),
                 destination=destination,
                 encryption=bool(self.config.get("encryption", True)),
-                chunk_size=int(self.config.get("chunk_size", 4096)),
+                chunk_size=self._clamp_config_int("chunk_size", 4096, 512, 65536),
                 rate_limit=float(self.config.get("rate_limit", 0.0)),
                 timeout=float(self.config.get("timeout", 30.0)),
                 stealth=bool(self.config.get("stealth", False)),
@@ -150,7 +150,7 @@ class ExfiltratePhaseExecutor(BasePhaseExecutor):
                 dns_domain=self.config.get("exfil_dns_domain")
                 or self.config.get("dns_domain")
                 or "",
-                dns_subdomain_length=int(self.config.get("dns_subdomain_length", 63)),
+                dns_subdomain_length=self._clamp_config_int("dns_subdomain_length", 63, 1, 63),
                 nameserver=self.config.get("exfil_nameserver") or self.config.get("nameserver"),
             )
 

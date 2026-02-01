@@ -33,7 +33,7 @@ class PrivilegeEscPhaseExecutor(BasePhaseExecutor):
     def required_phases(self):
         from ..state import PentestPhase
 
-        return [PentestPhase.EXPLOIT]
+        return (PentestPhase.EXPLOIT,)
 
     async def execute(self) -> PhaseResult:
         from ..state import PentestPhase

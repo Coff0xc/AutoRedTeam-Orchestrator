@@ -34,7 +34,7 @@ class PoCExecPhaseExecutor(BasePhaseExecutor):
     def required_phases(self):
         from ..state import PentestPhase
 
-        return [PentestPhase.VULN_SCAN]
+        return (PentestPhase.VULN_SCAN,)
 
     async def execute(self) -> PhaseResult:
         from ..state import PentestPhase

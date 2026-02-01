@@ -6,12 +6,26 @@ phases/vuln_scan.py - 漏洞扫描阶段执行器
 """
 
 import asyncio
+import ipaddress
 import json
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from .base import BasePhaseExecutor, PhaseResult
+
+# SSRF 防护常量
+_ALLOWED_SCHEMES = frozenset(("http", "https"))
+_BLOCKED_IP_RANGES = (
+    ipaddress.ip_network("10.0.0.0/8"),  # RFC 1918 Class A
+    ipaddress.ip_network("172.16.0.0/12"),  # RFC 1918 Class B
+    ipaddress.ip_network("192.168.0.0/16"),  # RFC 1918 Class C
+    ipaddress.ip_network("127.0.0.0/8"),  # Loopback
+    ipaddress.ip_network("169.254.0.0/16"),  # Link-local
+    ipaddress.ip_network("::1/128"),  # IPv6 loopback
+    ipaddress.ip_network("fc00::/7"),  # IPv6 unique local
+    ipaddress.ip_network("fe80::/10"),  # IPv6 link-local
+)
 
 if TYPE_CHECKING:
     from core.detectors.false_positive_filter import FalsePositiveFilter, ResponseBaseline
@@ -40,7 +54,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
     def required_phases(self):
         from ..state import PentestPhase
 
-        return [PentestPhase.RECON]
+        return (PentestPhase.RECON,)
 
     async def execute(self) -> PhaseResult:
         from ..state import PentestPhase
@@ -89,8 +103,8 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
 
             enable_fp_filter = self.config.get("enable_false_positive_filter", True)
             enable_verifier = self.config.get("enable_verifier", True)
-            verifier_rounds = int(self.config.get("verification_rounds", 3))
-            baseline_requests = int(self.config.get("baseline_requests", 3))
+            verifier_rounds = self._clamp_config_int("verification_rounds", 3, 1, 10)
+            baseline_requests = self._clamp_config_int("baseline_requests", 3, 1, 10)
 
             http_config = HTTPConfig()
             http_config.timeout = self.config.get("timeout", 30)
@@ -221,9 +235,14 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
             )
 
     def _get_scan_targets(self) -> List[str]:
-        """获取扫描目标URL列表 - 带scope校验防止SSRF
+        """获取扫描目标URL列表 - 带完整 SSRF 防护
 
         使用规范化后的目标URL，确保与Recon阶段保持一致。
+
+        安全措施:
+        - URL Scheme 白名单 (仅 http/https)
+        - 内部 IP 地址黑名单 (RFC 1918, loopback, link-local)
+        - 主机名范围校验
 
         Returns:
             规范化后的目标URL列表
@@ -234,21 +253,100 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
         parsed_target = urlparse(normalized_target)
         allowed_hosts = {parsed_target.netloc}
 
-        extra_allowed = self.config.get("allowed_hosts", [])
-        allowed_hosts.update(extra_allowed)
+        # 安全校验: 仅允许列表类型的 allowed_hosts 配置
+        extra_allowed = self.config.get("allowed_hosts")
+        if isinstance(extra_allowed, (list, tuple)):
+            # 过滤掉非字符串和空值
+            for host in extra_allowed:
+                if isinstance(host, str) and host.strip():
+                    allowed_hosts.add(host.strip())
 
         recon_data = self.state.recon_data
-        for directory in recon_data.get("directories", [])[:50]:
+        max_directories = self._clamp_config_int("max_scan_directories", 50, 1, 200)
+
+        for directory in recon_data.get("directories", [])[:max_directories]:
             if not directory.startswith("http"):
                 url = f"{normalized_target}/{directory.lstrip('/')}"
             else:
                 url = directory
-                parsed_url = urlparse(url)
-                if parsed_url.netloc not in allowed_hosts:
-                    self.logger.warning(f"跳过越界目标: {url} (不在允许范围内)")
-                    continue
+
+            # SSRF 安全校验
+            if not self._is_safe_url(url, allowed_hosts):
+                continue
+
             targets.append(url)
         return targets
+
+    def _is_safe_url(self, url: str, allowed_hosts: set) -> bool:
+        """验证 URL 是否安全 (SSRF 防护)
+
+        Args:
+            url: 待验证的 URL
+            allowed_hosts: 允许的主机名集合
+
+        Returns:
+            True 如果 URL 安全，False 否则
+        """
+        try:
+            parsed = urlparse(url)
+
+            # 1. Scheme 白名单检查
+            if parsed.scheme.lower() not in _ALLOWED_SCHEMES:
+                self.logger.warning(f"SSRF 防护: 拒绝非 HTTP(S) URL: {url}")
+                return False
+
+            # 2. 主机名范围检查
+            hostname = parsed.hostname or ""
+            if not hostname:
+                self.logger.warning(f"SSRF 防护: URL 缺少主机名: {url}")
+                return False
+
+            if parsed.netloc not in allowed_hosts:
+                self.logger.warning(f"SSRF 防护: 主机名越界: {url} (不在允许范围内)")
+                return False
+
+            # 3. 内部 IP 地址黑名单检查
+            if self._is_internal_address(hostname):
+                self.logger.warning(f"SSRF 防护: 拒绝内部地址: {url}")
+                return False
+
+            return True
+
+        except (ValueError, TypeError) as e:
+            self.logger.warning(f"SSRF 防护: URL 解析失败 {url}: {e}")
+            return False
+
+    @staticmethod
+    def _is_internal_address(hostname: str) -> bool:
+        """检查主机名是否为内部 IP 地址字面量
+
+        注意: 此方法仅检查 IP 地址字面量，不进行 DNS 解析。
+        域名通过 allowed_hosts 检查确保范围，无需 DNS 解析。
+
+        Args:
+            hostname: 主机名或 IP 地址
+
+        Returns:
+            True 如果是内部 IP 地址字面量，False 否则
+        """
+        try:
+            # 仅检查 IP 地址字面量
+            ip = ipaddress.ip_address(hostname)
+        except ValueError:
+            # 不是 IP 地址字面量（是域名），不做内部地址检查
+            # 域名已通过 allowed_hosts 校验
+            return False
+
+        # 检查是否在阻止的 IP 范围内
+        for blocked_range in _BLOCKED_IP_RANGES:
+            if ip in blocked_range:
+                return True
+
+        # 检查其他特殊地址
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+            return True
+
+        return False
 
     def _build_param_url(self, url: str, param: str, value: str) -> str:
         """构造带参数的URL"""
