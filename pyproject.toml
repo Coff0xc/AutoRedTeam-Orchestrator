@@ -100,7 +100,7 @@ ignore_missing_imports = true
 
 [tool.pylint.main]
 jobs = 0
-fail-under = 7.0
+fail-under = 8.0
 ignore = ["tests", "backup", "venv", "__pycache__"]
 ignore-patterns = ["test_.*\\.py"]
 

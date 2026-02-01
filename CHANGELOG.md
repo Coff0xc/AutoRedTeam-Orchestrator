@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.1] - 2026-01-05
+
+### Added
+- **外部工具集成**: Nmap/Nuclei/SQLMap/ffuf/Masscan 无缝集成
+- **工具链编排**: `ext_tool_chain` 支持顺序执行多个外部工具
+- **YAML工具配置**: `config/external_tools.yaml` 支持变量替换
+- **CVE自动利用**: `cve_auto_exploit`, `cve_exploit_with_desc`, `cve_generate_poc` 三个新工具
+- **迁移指南**: `MIGRATION.md` 提供 v2.x → v3.0 完整迁移路线
+
+### Fixed
+- 版本号同步: VERSION/pyproject.toml/README 统一为 3.0.1
+- CI/CD lint 强制执行 (移除 `|| true`)
+- 依赖版本约束添加上界
+- Git 行尾规范化 (.gitattributes)
+- beacon.py 线程竞态条件 (添加 threading.Lock)
+- 泛型异常处理升级为具体异常类型
+- 硬编码路径迁移到 tempfile + pathlib
+
+### Changed
+- MCP工具总数: 89 → 100+
+- 测试覆盖率阈值: 30% → 50%
+
+---
+
+## [3.0.0] - 2026-01-04
+
+### Added
+- **模块化 MCP 服务器**: 完整重构，handlers/ 分层架构
+- **标准化侦察引擎**: StandardReconEngine 10阶段流水线
+- **攻击面发现**: `modules/web_scanner/` 注入点建模
+- **统一 Payload 引擎**: SmartPayloadEngine 合并重复实现
+- **输入验证器**: `utils/validators.py` InputValidator 类
+
+### Changed
+- 主版本升级，架构全面重构
+- handlers/ 目录: 16个专用处理模块
+- 工具注册从单文件迁移到模块化
+
+### Removed
+- `core/async_executor.py` - 已移除
+- `core/async_http_client.py` - 已移除
+- `core/concurrency_controller.py` - 已移除
+- `core/recon/standard.py` - 已移除
+- 多个过时测试文件
+
+### Security
+- 沙箱执行器 `core/security/safe_executor.py` 资源限制
+- SSH文件传输 SFTP 上传/下载
+- 加密数据外泄 AES-256-GCM/ChaCha20
+
+---
+
 ## [2.6.0] - 2026-01-07
 
 ### Added

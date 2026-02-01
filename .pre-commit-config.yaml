@@ -2,25 +2,29 @@
 # 安装: pip install pre-commit && pre-commit install
 
 repos:
-  # 本地 hooks
-  - repo: local
+  # Black 代码格式化
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
     hooks:
-      # 检查硬编码路径（跨平台兼容性）
-      - id: check-hardcoded-paths
-        name: Check for hardcoded Unix paths
-        entry: python scripts/check_paths.py
-        language: python
-        files: \.py$
-        pass_filenames: true
-        
-      # 检查文件编码
-      - id: check-encoding
-        name: Check file encoding declaration
-        entry: python -c "import sys; [exit(1) for f in sys.argv[1:] if 'encoding' not in open(f).read()[:500] and 'open(' in open(f).read()]"
-        language: python
-        files: \.py$
-        pass_filenames: true
-        verbose: false
+      - id: black
+        args: ['--line-length=100']
+        language_version: python3
+
+  # isort 导入排序
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ['--profile=black', '--line-length=100']
+
+  # flake8 代码检查
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: ['--max-line-length=100', '--extend-ignore=E501,W503,E402,E203']
+        additional_dependencies:
+          - flake8-bugbear
 
   # 标准 hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -32,3 +36,16 @@ repos:
       - id: check-json
       - id: check-added-large-files
         args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # 本地 hooks
+  - repo: local
+    hooks:
+      # 检查硬编码路径（跨平台兼容性）
+      - id: check-hardcoded-paths
+        name: Check for hardcoded Unix paths
+        entry: python scripts/check_paths.py
+        language: python
+        files: \.py$
+        pass_filenames: true
