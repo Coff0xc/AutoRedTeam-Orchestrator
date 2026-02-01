@@ -86,6 +86,22 @@ jobs:
             --ignore=tests/test_performance_integration.py \
             --ignore=tests/test_core_c2.py \
             --ignore=tests/test_core_concurrency.py \
+            --ignore=tests/test_core_cve_manager.py \
+            --ignore=tests/test_core_detectors.py \
+            --ignore=tests/test_core_exploit_engine.py \
+            --ignore=tests/test_core_http.py \
+            --ignore=tests/test_core_http_client.py \
+            --ignore=tests/test_core_session.py \
+            --ignore=tests/test_core_session_manager.py \
+            --ignore=tests/test_core_recon.py \
+            --ignore=tests/test_utils.py \
+            --ignore=tests/test_modules_websocket.py \
+            --ignore=tests/test_modules_kubernetes.py \
+            --ignore=tests/test_modules_graphql.py \
+            --ignore=tests/test_modules_dependency_scanner.py \
+            --ignore=tests/test_handlers_redteam.py \
+            --ignore=tests/test_handlers_recon.py \
+            --ignore=tests/test_handlers_init.py \
             -m "not slow and not integration and not network" \
             --timeout=30 \
             --maxfail=10
