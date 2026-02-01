@@ -7,6 +7,7 @@ AI智能攻击决策引擎 v2.0
 import hashlib
 import json
 import logging
+import threading
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -393,13 +394,24 @@ class AIDecisionEngine:
 _engine_instance: Optional[AIDecisionEngine] = None
 
 
-def get_decision_engine() -> AIDecisionEngine:
-    """获取决策引擎单例"""
-    global _engine_instance
-    if _engine_instance is None:
-        import tempfile
-        from pathlib import Path
+_engine_lock = threading.Lock()
 
-        history_path = Path(tempfile.gettempdir()) / "autored_history.json"
-        _engine_instance = AIDecisionEngine(history_file=history_path)
-    return _engine_instance
+
+def get_decision_engine() -> AIDecisionEngine:
+    """获取决策引擎单例（线程安全）"""
+    global _engine_instance
+    with _engine_lock:
+        if _engine_instance is None:
+            import tempfile
+            from pathlib import Path
+
+            history_path = Path(tempfile.gettempdir()) / "autored_history.json"
+            _engine_instance = AIDecisionEngine(history_file=history_path)
+        return _engine_instance
+
+
+def reset_decision_engine() -> None:
+    """重置决策引擎（仅用于测试）"""
+    global _engine_instance
+    with _engine_lock:
+        _engine_instance = None

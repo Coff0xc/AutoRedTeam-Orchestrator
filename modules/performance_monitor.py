@@ -320,14 +320,23 @@ def async_monitored(monitor: Optional[PerformanceMonitor] = None):
 
 # 全局监控器实例
 _monitor_instance: Optional[PerformanceMonitor] = None
+_monitor_lock = threading.Lock()
 
 
 def get_performance_monitor() -> PerformanceMonitor:
-    """获取性能监控器单例"""
+    """获取性能监控器单例（线程安全）"""
     global _monitor_instance
-    if _monitor_instance is None:
-        _monitor_instance = PerformanceMonitor()
-    return _monitor_instance
+    with _monitor_lock:
+        if _monitor_instance is None:
+            _monitor_instance = PerformanceMonitor()
+        return _monitor_instance
+
+
+def reset_performance_monitor() -> None:
+    """重置性能监控器（仅用于测试）"""
+    global _monitor_instance
+    with _monitor_lock:
+        _monitor_instance = None
 
 
 # 使用示例
