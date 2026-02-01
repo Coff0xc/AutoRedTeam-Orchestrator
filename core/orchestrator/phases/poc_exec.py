@@ -10,7 +10,7 @@ import logging
 import re
 from typing import TYPE_CHECKING, Any, Dict, List
 
-from .base import BasePhaseExecutor, CVE_ID_PATTERN, PhaseResult
+from .base import CVE_ID_PATTERN, BasePhaseExecutor, PhaseResult
 
 if TYPE_CHECKING:
     from ..state import PentestPhase, PentestState
