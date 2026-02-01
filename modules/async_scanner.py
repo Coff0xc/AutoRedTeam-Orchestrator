@@ -433,7 +433,7 @@ class AsyncSubdomainScanner(AsyncScanner):
     async def resolve(self, domain: str) -> Optional[List[str]]:
         """解析域名"""
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             result = await asyncio.wait_for(loop.getaddrinfo(domain, None), timeout=self.timeout)
             return list(set(r[4][0] for r in result))
         except (asyncio.TimeoutError, socket.gaierror, OSError):

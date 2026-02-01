@@ -343,7 +343,7 @@ class AsyncDNSResolver:
             # 降级到同步解析
             import socket
 
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             try:
                 result = await asyncio.wait_for(
                     loop.getaddrinfo(domain, None), timeout=self.timeout

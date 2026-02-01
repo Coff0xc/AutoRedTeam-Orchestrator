@@ -213,7 +213,9 @@ class JSAnalyzer:
             if HAS_HTTP_FACTORY:
                 client_ctx = get_async_client(verify_ssl=False)
             else:
-                client_ctx = aiohttp.ClientSession()
+                client_ctx = aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=60)
+                )
 
             async with client_ctx as session:
                 # 1. 获取主页面

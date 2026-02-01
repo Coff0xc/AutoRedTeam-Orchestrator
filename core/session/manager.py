@@ -60,34 +60,35 @@ class SessionManager:
             max_sessions: 最大会话数量（超过时自动清理旧会话）
             auto_cleanup_threshold: 触发自动清理的会话阈值
         """
-        # 防止重复初始化
-        if self._initialized:
-            return
+        # 防止重复初始化（使用类锁保护以避免竞态条件）
+        with self._lock:
+            if self._initialized:
+                return
 
-        self._sessions: Dict[str, ScanContext] = {}
-        self._results: Dict[str, ScanResult] = {}
-        self._session_lock = threading.RLock()  # 可重入锁
+            self._sessions: Dict[str, ScanContext] = {}
+            self._results: Dict[str, ScanResult] = {}
+            self._session_lock = threading.RLock()  # 可重入锁
 
-        # 会话限制和自动清理
-        self._max_sessions = max_sessions
-        self._auto_cleanup_threshold = auto_cleanup_threshold
-        self._cleanup_counter = 0  # 清理计数器
+            # 会话限制和自动清理
+            self._max_sessions = max_sessions
+            self._auto_cleanup_threshold = auto_cleanup_threshold
+            self._cleanup_counter = 0  # 清理计数器
 
-        # 存储
-        self._storage = SessionStorage(storage_dir) if storage_dir else SessionStorage()
-        self._auto_save = auto_save
+            # 存储
+            self._storage = SessionStorage(storage_dir) if storage_dir else SessionStorage()
+            self._auto_save = auto_save
 
-        # 事件回调
-        self._callbacks: Dict[str, List[Callable]] = {
-            "session_created": [],
-            "session_updated": [],
-            "session_completed": [],
-            "session_deleted": [],
-            "vulnerability_found": [],
-        }
+            # 事件回调
+            self._callbacks: Dict[str, List[Callable]] = {
+                "session_created": [],
+                "session_updated": [],
+                "session_completed": [],
+                "session_deleted": [],
+                "vulnerability_found": [],
+            }
 
-        self._initialized = True
-        logger.info("会话管理器初始化完成")
+            self._initialized = True
+            logger.info("会话管理器初始化完成")
 
     def create_session(
         self, target: str, config: Optional[Dict[str, Any]] = None, session_id: Optional[str] = None

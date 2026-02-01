@@ -562,8 +562,7 @@ class BaseTool(ABC):
         Returns:
             执行结果
         """
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, lambda: self.execute(**kwargs))
+        return await asyncio.to_thread(lambda: self.execute(**kwargs))
 
     def validate_params(self, **kwargs) -> Tuple[bool, List[str]]:
         """验证所有参数
@@ -721,8 +720,7 @@ class FunctionTool(BaseTool):
             if asyncio.iscoroutinefunction(self._fn):
                 result = await self._fn(**filled_kwargs)
             else:
-                loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(None, lambda: self._fn(**filled_kwargs))
+                result = await asyncio.to_thread(lambda: self._fn(**filled_kwargs))
 
             # 包装结果
             if isinstance(result, ToolResult):
@@ -924,8 +922,14 @@ class AsyncTool(BaseTool):
             执行结果
         """
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
+            # 检查是否已经在事件循环中运行
+            try:
+                asyncio.get_running_loop()
+                is_running = True
+            except RuntimeError:
+                is_running = False
+
+            if is_running:
                 # 如果事件循环正在运行，创建新任务
                 import concurrent.futures
 

@@ -339,6 +339,92 @@ class RateLimitMiddleware(Middleware):
         return response
 
 
+class AsyncRetryMiddleware(AsyncMiddleware):
+    """异步重试中间件 - 自动重试失败的请求（异步版本）"""
+
+    def __init__(
+        self,
+        max_retries: int = 3,
+        retry_delay: float = 1.0,
+        backoff_factor: float = 2.0,
+        retry_status_codes: tuple = (429, 500, 502, 503, 504),
+        retry_exceptions: tuple = (),
+    ):
+        """
+        初始化异步重试中间件
+
+        Args:
+            max_retries: 最大重试次数
+            retry_delay: 基础重试延迟 (秒)
+            backoff_factor: 指数退避因子
+            retry_status_codes: 需要重试的状态码
+            retry_exceptions: 需要重试的异常类型
+        """
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
+        self.backoff_factor = backoff_factor
+        self.retry_status_codes = retry_status_codes
+        self.retry_exceptions = retry_exceptions
+
+    async def process_request(self, request: RequestContext) -> RequestContext:
+        if request.attempt == 0:
+            request.attempt = 1
+        return request
+
+    async def process_response(
+        self, response: ResponseContext, request: RequestContext
+    ) -> ResponseContext:
+        # 检查是否需要重试
+        if (
+            response.status_code in self.retry_status_codes
+            and request.attempt < self.max_retries
+            and not request.skip_retry
+        ):
+            delay = self.retry_delay * (self.backoff_factor ** (request.attempt - 1))
+
+            # 检查 Retry-After 头
+            retry_after = response.headers.get("Retry-After")
+            if retry_after:
+                try:
+                    delay = max(delay, float(retry_after))
+                except ValueError:
+                    pass
+
+            logger.info(
+                f"[Retry] {request.method} {request.url} "
+                f"(状态码 {response.status_code}, 第 {request.attempt} 次重试, "
+                f"等待 {delay:.2f}s)"
+            )
+
+            await asyncio.sleep(delay)
+            request.attempt += 1
+            response.extras["should_retry"] = True
+
+        return response
+
+    async def process_exception(
+        self, exception: Exception, request: RequestContext
+    ) -> Optional[ResponseContext]:
+        # 检查是否是需要重试的异常
+        exc_type = type(exception).__name__
+        should_retry = any(
+            isinstance(exception, exc) for exc in self.retry_exceptions
+        ) or exc_type in ("TimeoutException", "ConnectError", "ReadTimeout")
+
+        if should_retry and request.attempt < self.max_retries:
+            delay = self.retry_delay * (self.backoff_factor ** (request.attempt - 1))
+            logger.info(
+                f"[Retry] {request.method} {request.url} "
+                f"(异常 {exc_type}, 第 {request.attempt} 次重试, 等待 {delay:.2f}s)"
+            )
+            await asyncio.sleep(delay)
+            request.attempt += 1
+            # 返回 None 表示应该重试
+            request.extras["should_retry"] = True
+
+        return None
+
+
 class AsyncRateLimitMiddleware(AsyncMiddleware):
     """异步限流中间件"""
 
@@ -604,9 +690,9 @@ class MiddlewareChain:
 
     async def async_process_request(self, request: RequestContext) -> RequestContext:
         """异步执行所有中间件的请求处理"""
-        # 先执行同步中间件
+        # 先执行同步中间件（用 to_thread 包装避免阻塞事件循环）
         for middleware in self._middlewares:
-            request = middleware.process_request(request)
+            request = await asyncio.to_thread(middleware.process_request, request)
         # 再执行异步中间件
         for middleware in self._async_middlewares:
             request = await middleware.process_request(request)
@@ -618,8 +704,11 @@ class MiddlewareChain:
         """异步执行所有中间件的响应处理 (逆序)"""
         for middleware in reversed(self._async_middlewares):
             response = await middleware.process_response(response, request)
+        # 同步中间件用 to_thread 包装
         for middleware in reversed(self._middlewares):
-            response = middleware.process_response(response, request)
+            response = await asyncio.to_thread(
+                middleware.process_response, response, request
+            )
         return response
 
     async def async_process_exception(
@@ -630,8 +719,11 @@ class MiddlewareChain:
             result = await middleware.process_exception(exception, request)
             if result is not None:
                 return result
+        # 同步中间件用 to_thread 包装
         for middleware in reversed(self._middlewares):
-            result = middleware.process_exception(exception, request)
+            result = await asyncio.to_thread(
+                middleware.process_exception, exception, request
+            )
             if result is not None:
                 return result
         return None
@@ -644,6 +736,7 @@ __all__ = [
     "ResponseContext",
     "LoggingMiddleware",
     "RetryMiddleware",
+    "AsyncRetryMiddleware",
     "RateLimitMiddleware",
     "AsyncRateLimitMiddleware",
     "HeadersMiddleware",

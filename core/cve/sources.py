@@ -134,8 +134,8 @@ class CVESource(ABC):
         if HAS_HTTP_FACTORY:
             try:
                 client = get_client()
-                response = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: client.get(url, headers=headers, timeout=timeout)
+                response = await asyncio.to_thread(
+                    lambda: client.get(url, headers=headers, timeout=timeout)
                 )
                 if response.status_code == 200:
                     return response.json()
@@ -185,8 +185,8 @@ class CVESource(ABC):
         if HAS_HTTP_FACTORY:
             try:
                 client = get_client()
-                response = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: client.get(url, headers=headers, timeout=timeout)
+                response = await asyncio.to_thread(
+                    lambda: client.get(url, headers=headers, timeout=timeout)
                 )
                 if response.status_code == 200:
                     return response.text

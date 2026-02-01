@@ -45,7 +45,7 @@ def register_recon_tools(mcp, counter, logger):
 
         config = ReconConfig(quick_mode=quick_mode)
         engine = StandardReconEngine(target, config)
-        result = engine.run()
+        result = await engine.async_run()
 
         return {"success": True, "target": target, "data": result.to_dict()}
 
@@ -95,9 +95,11 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             指纹信息列表
         """
+        import asyncio
+
         from core.recon import FingerprintEngine, identify_fingerprints
 
-        results = identify_fingerprints(url)
+        results = await asyncio.to_thread(identify_fingerprints, url)
 
         return {
             "success": True,
@@ -195,9 +197,11 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             DNS记录信息
         """
+        import asyncio
+
         from core.recon import DNSResolver, get_dns_records
 
-        results = get_dns_records(domain, record_types=record_types)
+        results = await asyncio.to_thread(get_dns_records, domain, record_types=record_types)
 
         return {
             "success": True,
@@ -217,9 +221,11 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             检测到的技术列表
         """
+        import asyncio
+
         from core.recon import TechDetector, detect_technologies
 
-        results = detect_technologies(url)
+        results = await asyncio.to_thread(detect_technologies, url)
 
         return {
             "success": True,
@@ -247,9 +253,11 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             WAF检测结果
         """
+        import asyncio
+
         from core.recon import WAFDetector, detect_waf
 
-        result = detect_waf(url)
+        result = await asyncio.to_thread(detect_waf, url)
 
         return {
             "success": True,

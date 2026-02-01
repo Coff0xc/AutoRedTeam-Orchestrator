@@ -189,10 +189,9 @@ class DNSResolver:
         Returns:
             IP地址列表
         """
-        loop = asyncio.get_event_loop()
         try:
             # 使用线程池执行阻塞的DNS查询
-            result = await loop.run_in_executor(None, lambda: socket.gethostbyname_ex(hostname))
+            result = await asyncio.to_thread(lambda: socket.gethostbyname_ex(hostname))
             return list(result[2])
         except socket.gaierror:
             return []

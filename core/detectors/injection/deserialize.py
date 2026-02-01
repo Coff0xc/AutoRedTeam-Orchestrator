@@ -664,7 +664,9 @@ tR."""
             # 回退到aiohttp
             import aiohttp
 
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=30)
+            ) as session:
                 async with session.request(
                     method,
                     target,

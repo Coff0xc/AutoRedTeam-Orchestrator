@@ -350,7 +350,7 @@ class AsyncThrottle:
 
     async def __aenter__(self):
         async with self._lock:
-            now = asyncio.get_event_loop().time()
+            now = asyncio.get_running_loop().time()
 
             # 清理过期的时间戳
             self.timestamps = [t for t in self.timestamps if now - t < self.period]
@@ -363,7 +363,7 @@ class AsyncThrottle:
                 self.timestamps.pop(0)
 
             # 记录当前时间
-            self.timestamps.append(asyncio.get_event_loop().time())
+            self.timestamps.append(asyncio.get_running_loop().time())
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
