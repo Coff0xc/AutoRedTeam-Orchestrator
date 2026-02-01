@@ -1,0 +1,54 @@
+# Bandit configuration for AutoRedTeam-Orchestrator
+# This is a red team / penetration testing tool, so many security warnings are expected
+
+# Skip checks that are expected in security testing tools:
+# B104: hardcoded_bind_all_interfaces - C2 servers bind to 0.0.0.0
+# B105: hardcoded_password_string - password testing needs hardcoded passwords
+# B106: hardcoded_password_funcarg - password testing needs hardcoded passwords
+# B107: hardcoded_password_default - password testing needs hardcoded passwords
+# B108: hardcoded_tmp_directory - temporary file operations
+# B110: try_except_pass - some exception handling is intentional
+# B112: try_except_continue - some exception handling is intentional
+# B113: request_without_timeout - some requests intentionally have no timeout
+# B310: urllib_urlopen - URL operations are core functionality
+# B311: random - non-crypto random is acceptable for IDs/jitter
+# B321: ftplib - FTP operations may be needed
+# B324: hashlib - MD5/SHA1 used for non-security purposes (IDs, checksums)
+# B402: import_paramiko - SSH operations are core functionality
+# B403: import_pickle - serialization may be needed
+# B404: import_subprocess - subprocess operations are core functionality
+# B413: import_pycrypto - encryption is core functionality
+# B501: request_with_no_cert_validation - pentest tools need to skip SSL verification
+# B507: ssh_no_host_key_verification - pentest tools may need this
+# B601: paramiko_calls - SSH operations are core functionality
+# B603: subprocess_without_shell_equals_true - subprocess calls are expected
+# B604: any_other_function_with_shell_equals_true - shell commands are expected
+# B605: start_process_with_a_shell - shell commands are expected
+# B607: start_process_with_partial_path - process execution is expected
+# B608: hardcoded_sql_expressions - SQL injection testing is core functionality
+
+skips:
+  - B104
+  - B105
+  - B106
+  - B107
+  - B108
+  - B110
+  - B112
+  - B113
+  - B310
+  - B311
+  - B321
+  - B324
+  - B402
+  - B403
+  - B404
+  - B413
+  - B501
+  - B507
+  - B601
+  - B603
+  - B604
+  - B605
+  - B607
+  - B608

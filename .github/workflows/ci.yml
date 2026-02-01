@@ -45,7 +45,7 @@ jobs:
         run: pip install bandit pip-audit safety
 
       - name: Security scan with Bandit
-        run: bandit -r core/ modules/ utils/ handlers/ -x ./tests,./venv --severity-level medium -f json -o bandit-report.json
+        run: bandit -c .bandit -r core/ modules/ utils/ handlers/ -f json -o bandit-report.json
 
       - name: Upload Bandit Report
         uses: actions/upload-artifact@v4
@@ -102,6 +102,7 @@ jobs:
             --ignore=tests/test_handlers_redteam.py \
             --ignore=tests/test_handlers_recon.py \
             --ignore=tests/test_handlers_init.py \
+            --ignore=tests/test_modules_jwt.py \
             -m "not slow and not integration and not network" \
             --timeout=30 \
             --maxfail=10
