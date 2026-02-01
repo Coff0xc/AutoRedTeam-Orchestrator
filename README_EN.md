@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>AI-Driven Automated Red Team Orchestration Framework</b><br>
-  <sub>Cross-platform | 100+ MCP Tools | 2000+ Payloads | Full ATT&CK Coverage</sub>
+  <sub>Cross-platform | 101 MCP Tools | 2000+ Payloads | Full ATT&CK Coverage | Knowledge Graph Enhanced</sub>
 </p>
 
 <p align="center">
@@ -29,14 +29,37 @@
   <img src="https://img.shields.io/badge/Version-3.0.1-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=flat-square" alt="MCP">
-  <img src="https://img.shields.io/badge/Tools-100+-FF6B6B?style=flat-square" alt="Tools">
+  <img src="https://img.shields.io/badge/Tools-101-FF6B6B?style=flat-square" alt="Tools">
+  <img src="https://img.shields.io/badge/Tests-1461-4CAF50?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License">
 </p>
 
 <p align="center">
   <a href="https://discord.gg/PtVyrMvB"><img src="https://img.shields.io/badge/Discord-Community-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord"></a>
   <a href="https://github.com/Coff0xc/AutoRedTeam-Orchestrator/wiki"><img src="https://img.shields.io/badge/Wiki-Docs-blue?style=flat-square&logo=gitbook&logoColor=white" alt="Wiki"></a>
+  <a href="https://github.com/Coff0xc/AutoRedTeam-Orchestrator/actions"><img src="https://img.shields.io/github/actions/workflow/status/Coff0xc/AutoRedTeam-Orchestrator/ci.yml?style=flat-square&logo=github-actions&logoColor=white&label=CI" alt="CI"></a>
 </p>
+
+---
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Coff0xc/AutoRedTeam-Orchestrator/main/assets/demo.gif" alt="Demo" width="700">
+</p>
+
+## Highlights
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     AutoRedTeam-Orchestrator v3.0.1                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  ● 101 MCP Tools       ● 2000+ Payloads     ● 1461 Test Cases              │
+│  ● 10-Phase Recon      ● 19 Vuln Detectors  ● 5-Protocol Lateral           │
+│  ● MCTS Attack Planner ● Knowledge Graph    ● AI PoC Generation            │
+│  ● OOB False Positive  ● DI Container       ● MCP Security Middleware      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Supported AI Editors: Cursor | Windsurf | Kiro | Claude Desktop | VS Code │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -44,22 +67,25 @@
 
 - [Overview](#overview)
 - [Core Features](#core-features)
+- [Design Philosophy](#design-philosophy)
+- [Architecture](#architecture)
 - [ATT&CK Coverage Matrix](#attck-coverage-matrix)
 - [Quick Start](#quick-start)
   - [System Requirements](#system-requirements)
   - [Installation](#installation)
   - [Verify Installation](#verify-installation)
 - [MCP Configuration](#mcp-configuration)
-- [Tool Matrix](#tool-matrix-100-mcp-tools)
+- [Tool Matrix](#tool-matrix-101-mcp-tools)
+- [Core Modules](#core-modules)
 - [External Tool Integration](#external-tool-integration)
 - [Usage Examples](#usage-examples)
   - [Natural Language Commands](#natural-language-commands)
   - [Python API](#python-api)
-- [Architecture](#architecture)
 - [Configuration](#configuration)
 - [Performance Tuning](#performance-tuning)
 - [Troubleshooting](#troubleshooting)
 - [FAQ](#faq)
+- [Development Guide](#development-guide)
 - [Changelog](#changelog)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -72,7 +98,7 @@
 
 ## Overview
 
-**AutoRedTeam-Orchestrator** is an AI-driven automated penetration testing framework built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). It wraps 100+ security tools as MCP tools, enabling seamless integration with MCP-compatible AI editors (Cursor, Windsurf, Kiro, Claude Desktop) for natural language-driven security testing.
+**AutoRedTeam-Orchestrator** is an AI-driven automated penetration testing framework built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). It wraps 101 security tools as MCP tools, enabling seamless integration with MCP-compatible AI editors (Cursor, Windsurf, Kiro, Claude Desktop) for natural language-driven security testing.
 
 ### Why AutoRedTeam-Orchestrator?
 
@@ -80,10 +106,24 @@
 |---------|-------------------|-------------|
 | **Interaction** | CLI memorization | Natural language chat |
 | **Learning Curve** | High (many parameters) | Low (AI selects tools) |
-| **Tool Integration** | Manual switching | 100+ tools unified |
-| **Attack Planning** | Manual | AI recommendations |
+| **Tool Integration** | Manual switching | 101 tools unified interface |
+| **Attack Planning** | Manual | **MCTS Algorithm + Knowledge Graph** |
+| **False Positive Reduction** | Manual verification | **OOB + Statistical Verification** |
 | **Reporting** | Manual writing | One-click professional reports |
 | **Session Management** | None | Checkpoint/resume support |
+| **Security** | Per-tool | **MCP Security Middleware unified protection** |
+
+### Comparison with Similar Projects
+
+| Feature | AutoRedTeam | Nuclei | SQLMap | Metasploit |
+|---------|-------------|--------|--------|------------|
+| AI Native | ✅ | ❌ | ❌ | ❌ |
+| MCP Protocol | ✅ | ❌ | ❌ | ❌ |
+| Natural Language | ✅ | ❌ | ❌ | ❌ |
+| MCTS Attack Planning | ✅ | ❌ | ❌ | ❌ |
+| Knowledge Graph | ✅ | ❌ | ❌ | ❌ |
+| Full Automation | ✅ | Partial | Partial | Partial |
+| False Positive Filter | Multi-method | Basic | Medium | Basic |
 
 ---
 
@@ -93,9 +133,11 @@
 <tr>
 <td width="50%">
 
-**AI-Native Design**
+### AI-Native Design
+
 - **Smart Fingerprinting** - Auto-detect target tech stack (CMS/frameworks/WAF)
-- **Attack Chain Planning** - AI-driven attack path recommendations
+- **MCTS Attack Planning** - Monte Carlo Tree Search driven optimal attack paths
+- **Knowledge Graph** - Persistent attack knowledge with cross-session learning
 - **Historical Feedback Learning** - Continuous strategy optimization
 - **Auto Payload Selection** - WAF-aware intelligent mutation
 - **AI PoC Generation** - Generate exploit code from CVE descriptions
@@ -103,10 +145,11 @@
 </td>
 <td width="50%">
 
-**Full Automation**
+### Full Automation
+
 - **10-Phase Recon Pipeline** - DNS/Port/Fingerprint/WAF/Subdomain/Directory/JS analysis
-- **Vulnerability Discovery & Verification** - Auto scan + OOB validation
-- **Smart Exploitation Orchestration** - Feedback loop + auto retry
+- **Vulnerability Discovery & Verification** - Auto scan + **multi-method validation**
+- **Smart Exploitation Orchestration** - Feedback loop engine + auto retry
 - **One-Click Professional Reports** - JSON/HTML/Markdown formats
 - **Session Checkpoint Recovery** - Resume interrupted scans
 
@@ -115,7 +158,8 @@
 <tr>
 <td width="50%">
 
-**Red Team Toolkit**
+### Red Team Toolkit
+
 - **Lateral Movement** - SMB/SSH/WMI/WinRM/PSExec (5 protocols)
 - **C2 Communication** - Beacon + DNS/HTTP/WebSocket/ICMP tunnels
 - **Evasion & Obfuscation** - XOR/AES/Base64/custom encoders
@@ -126,7 +170,8 @@
 </td>
 <td width="50%">
 
-**Security Extensions**
+### Security Extensions
+
 - **API Security** - JWT/CORS/GraphQL/WebSocket/OAuth testing
 - **Supply Chain Security** - SBOM generation/Dependency audit/CI-CD scan
 - **Cloud Native Security** - K8s RBAC/Pod security/gRPC/AWS audit
@@ -136,6 +181,183 @@
 </td>
 </tr>
 </table>
+
+---
+
+## Design Philosophy
+
+### Core Design Principles
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│                           Design Philosophy                                 │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│   1. AI-Native                                                             │
+│      └─ Not "AI wrapper", but architecturally designed for AI              │
+│         └─ Native MCP protocol support                                     │
+│         └─ Natural language driven tool selection                          │
+│         └─ MCTS algorithm driven attack planning                           │
+│                                                                            │
+│   2. Verifiable Security                                                   │
+│      └─ Multi-method cross-validation to reduce false positives            │
+│         └─ Statistical verification (significance testing)                 │
+│         └─ Boolean blind verification (True/False response comparison)     │
+│         └─ Time-based blind verification (delay detection)                 │
+│         └─ OOB verification (DNS/HTTP callback)                            │
+│                                                                            │
+│   3. Knowledge Persistence                                                 │
+│      └─ Attack knowledge persists across sessions                          │
+│         └─ Knowledge graph stores target, vuln, credential relationships   │
+│         └─ Attack path success rates calculated from history               │
+│         └─ Similar target identification accelerates new target testing    │
+│                                                                            │
+│   4. Security by Design                                                    │
+│      └─ Security is core architecture, not add-on                          │
+│         └─ MCP Security Middleware: input validation, rate limiting        │
+│         └─ TOCTOU Safety: atomic operations, race condition protection     │
+│         └─ Memory Safety: resource limits, auto cleanup                    │
+│                                                                            │
+│   5. Extensible Architecture                                               │
+│      └─ Dependency injection container for flexible service composition    │
+│         └─ Modular Handler design                                          │
+│         └─ External tools YAML configuration                               │
+│         └─ Detector composite pattern for arbitrary combinations           │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Technical Decision Matrix
+
+| Decision | Options | Choice | Rationale |
+|----------|---------|--------|-----------|
+| **Communication** | REST / gRPC / MCP | MCP | Native AI editor support, seamless NLP interaction |
+| **Attack Planning** | Rule Engine / MCTS / RL | MCTS | Online planning, no pre-training, UCB1 exploration-exploitation |
+| **Knowledge Storage** | SQL / Graph DB / Memory | Memory Graph + Optional Neo4j | Zero-dependency startup, high-perf queries, optional persistence |
+| **Dependency Mgmt** | Globals / DI | DI Container | Testability, replaceability, lifecycle management |
+| **Concurrency** | Threading / asyncio / Hybrid | asyncio primary | Optimal for IO-bound, native Python support |
+| **Hashing** | MD5 / SHA256 | SHA256 | Higher security, modern standard |
+
+---
+
+## Architecture
+
+### High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              AI Editor Layer                                │
+│        Cursor  │  Windsurf  │  Kiro  │  Claude Desktop  │  VS Code         │
+└───────────────────────────────────┬─────────────────────────────────────────┘
+                                    │ MCP Protocol (JSON-RPC over stdio)
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         MCP Server Entry                                    │
+│                      mcp_stdio_server.py                                   │
+│                        (101 tools registered)                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                        MCP Security Middleware                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐       │
+│  │ Input Valid │  │ Rate Limiter│  │ Op Authorize│  │ @secure_tool│       │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘       │
+└───────────────────────────────────┬─────────────────────────────────────────┘
+                                    │
+        ┌───────────────────────────┼───────────────────────────┐
+        ▼                           ▼                           ▼
+┌───────────────────┐   ┌───────────────────┐   ┌───────────────────┐
+│   handlers/       │   │   core/           │   │   modules/        │
+│   MCP Handlers    │   │   Core Engines    │   │   Feature Modules │
+├───────────────────┤   ├───────────────────┤   ├───────────────────┤
+│ • recon_handlers  │   │ • recon/          │   │ • api_security/   │
+│ • detector_hdlrs  │   │   10-phase recon  │   │   JWT/CORS/GQL    │
+│ • cve_handlers    │   │ • detectors/      │   │ • supply_chain/   │
+│ • redteam_hdlrs   │   │   Vuln detectors  │   │   SBOM/Deps       │
+│ • lateral_hdlrs   │   │ • mcts_planner    │   │ • cloud_security/ │
+│ • external_hdlrs  │   │   MCTS planning   │   │   K8s/gRPC/AWS    │
+│ • ai_handlers     │   │ • knowledge/      │   │ • payload/        │
+│ • session_hdlrs   │   │   Knowledge graph │   │   2000+ Payloads  │
+└───────────────────┘   │ • container       │   └───────────────────┘
+                        │   DI Container    │
+                        │ • c2/             │
+                        │   C2 Comms        │
+                        │ • lateral/        │
+                        │   Lateral Move    │
+                        │ • cve/            │
+                        │   CVE Intel+PoC   │
+                        └───────────────────┘
+```
+
+### Directory Structure
+
+```
+AutoRedTeam-Orchestrator/
+├── mcp_stdio_server.py          # MCP Server Entry (101 tools registered)
+├── VERSION                      # Version file
+├── pyproject.toml               # Project config
+├── requirements.txt             # Production dependencies
+├── requirements-dev.txt         # Development dependencies
+│
+├── handlers/                    # MCP Tool Handlers (16 modules)
+│   ├── recon_handlers.py        # Recon tools (8)
+│   ├── detector_handlers.py     # Vuln detection tools (11)
+│   ├── api_security_handlers.py # API security tools (7)
+│   ├── supply_chain_handlers.py # Supply chain tools (3)
+│   ├── cloud_security_handlers.py # Cloud security tools (3)
+│   ├── cve_handlers.py          # CVE tools (8)
+│   ├── redteam_handlers.py      # Red team core tools (14)
+│   ├── lateral_handlers.py      # Lateral movement tools (9)
+│   ├── persistence_handlers.py  # Persistence tools (3)
+│   ├── ad_handlers.py           # AD attack tools (3)
+│   ├── orchestration_handlers.py # Orchestration tools (11)
+│   ├── external_tools_handlers.py # External tools (8)
+│   ├── ai_handlers.py           # AI assisted tools (3)
+│   ├── session_handlers.py      # Session tools (4)
+│   ├── report_handlers.py       # Report tools (2)
+│   └── misc_handlers.py         # Misc tools (3)
+│
+├── core/                        # Core Engines
+│   ├── __init__.py              # Version definition
+│   │
+│   ├── security/                # Security Components ⭐ v3.0.2
+│   │   └── mcp_security.py      # MCP Security Middleware
+│   │
+│   ├── container.py             # DI Container ⭐ v3.0.2
+│   │
+│   ├── mcts_planner.py          # MCTS Attack Planner ⭐ v3.0.2
+│   │
+│   ├── knowledge/               # Knowledge Graph ⭐ v3.0.2
+│   │   ├── __init__.py
+│   │   ├── manager.py           # Knowledge Manager
+│   │   └── models.py            # Data Models
+│   │
+│   ├── recon/                   # Recon Engine (10-phase pipeline)
+│   ├── detectors/               # Vulnerability Detectors
+│   ├── cve/                     # CVE Intelligence
+│   ├── c2/                      # C2 Communication Framework
+│   ├── lateral/                 # Lateral Movement
+│   ├── evasion/                 # Evasion & Obfuscation
+│   ├── persistence/             # Persistence Mechanisms
+│   ├── credential/              # Credential Access
+│   ├── ad/                      # AD Attacks
+│   ├── session/                 # Session Management
+│   ├── tools/                   # External Tool Management
+│   └── exfiltration/            # Data Exfiltration
+│
+├── modules/                     # Feature Modules
+│   ├── api_security/            # API Security
+│   ├── supply_chain/            # Supply Chain Security
+│   ├── cloud_security/          # Cloud Security
+│   └── payload/                 # Payload Engine
+│
+├── utils/                       # Utility Functions
+├── wordlists/                   # Built-in Wordlists
+├── config/                      # Configuration Files
+├── tests/                       # Test Suite (1461 test cases)
+├── poc-templates/               # PoC Templates
+├── templates/                   # Report Templates
+├── scripts/                     # Utility Scripts
+└── docs/                        # Documentation
+```
 
 ---
 
@@ -223,6 +445,9 @@ pip install -r requirements-dev.txt
 
 # Install pre-commit hooks
 pre-commit install
+
+# Run tests
+pytest tests/ -v
 ```
 
 ### Verify Installation
@@ -235,8 +460,9 @@ python mcp_stdio_server.py --version
 # Run self-check
 python -c "from core import __version__; print(f'Core version: {__version__}')"
 
-# Run tests (dev environment)
-pytest tests/ -v --tb=short
+# Run core module tests
+pytest tests/test_mcp_security.py tests/test_container.py tests/test_mcts_planner.py tests/test_knowledge_manager.py tests/test_advanced_verifier.py -v
+# Expected: 291+ passed
 ```
 
 ---
@@ -352,7 +578,7 @@ Add the following configuration to your AI editor's MCP config file:
 
 ---
 
-## Tool Matrix (100+ MCP Tools)
+## Tool Matrix (101 MCP Tools)
 
 | Category | Count | Key Tools | Description |
 |----------|-------|-----------|-------------|
@@ -370,6 +596,166 @@ Add the following configuration to your AI editor's MCP config file:
 | **External Tools** | 8 | `ext_nmap_scan` `ext_nuclei_scan` `ext_sqlmap_scan` `ext_ffuf_fuzz` `ext_masscan_scan` `ext_tool_chain` `ext_tools_status` | Professional tool integration |
 | **AI Assisted** | 3 | `smart_payload` `ai_attack_chain` `smart_pentest` | Intelligent analysis |
 | **Session/Reports** | 9 | `session_create` `session_status` `session_list` `session_complete` `generate_report` `export_findings` | Session management + reporting |
+
+---
+
+## Core Modules
+
+### 1. MCP Security Middleware (v3.0.2)
+
+**Location**: `core/security/mcp_security.py`
+
+Provides unified security protection layer for all MCP tool calls:
+
+```python
+from core.security.mcp_security import MCPSecurityMiddleware, RateLimitConfig
+
+security = MCPSecurityMiddleware(
+    rate_limit_config=RateLimitConfig(
+        requests_per_minute=60,
+        burst_limit=10,
+    ),
+    max_risk=RiskLevel.HIGH,
+)
+
+# Validate target
+result = security.validate_target("192.168.1.1")
+if not result.valid:
+    print(f"Rejected: {result.errors}")
+
+# Decorator protection
+@security.secure_tool(operation="port_scan", rate_limit_key="scan")
+async def port_scan(target: str):
+    # ...
+```
+
+**Core Features**:
+- **Input Validation**: IP/Domain/URL/CIDR/Port/Path validation, SSRF detection
+- **Rate Limiting**: Sliding window + Token bucket, resource exhaustion prevention
+- **Operation Authorization**: Risk-level based operation control
+- **Memory Protection**: Auto cleanup of expired data, memory leak prevention
+
+### 2. MCTS Attack Planner (v3.0.2)
+
+**Location**: `core/mcts_planner.py`
+
+Uses Monte Carlo Tree Search algorithm to plan optimal attack paths:
+
+```python
+from core.mcts_planner import MCTSPlanner, AttackState
+
+planner = MCTSPlanner(exploration_weight=1.414, max_depth=10)
+
+state = AttackState(
+    target="192.168.1.100",
+    target_type="linux_server",
+    open_ports={22: "ssh", 80: "http"},
+)
+
+result = planner.plan(state, iterations=1000)
+print(f"Recommended actions: {result['recommended_actions']}")
+```
+
+**Core Features**:
+- **UCB1 Algorithm**: Balances exploration and exploitation
+- **Action Generation**: Intelligently generates available actions based on state
+- **Attack Simulation**: Simulates attack execution to estimate success rates
+- **Path Extraction**: Extracts optimal attack path sequences
+
+### 3. Knowledge Graph (v3.0.2)
+
+**Location**: `core/knowledge/`
+
+Persistent storage for attack knowledge with cross-session learning:
+
+```python
+from core.knowledge import KnowledgeManager
+
+km = KnowledgeManager()
+
+# Store target
+target_id = km.store_target("192.168.1.100", "linux_server")
+
+# Store service
+service_id = km.store_service(target_id, "nginx", 80)
+
+# Store vulnerability
+vuln_id = km.store_vulnerability(service_id, "CVE-2021-44228", "critical")
+
+# Find attack paths
+paths = km.get_attack_paths(target_id, credential_id)
+
+# Find similar targets
+similar = km.find_similar_targets("192.168.1.100")
+```
+
+**Core Features**:
+- **Entity Storage**: Target, Service, Vulnerability, Credential
+- **Relationship Modeling**: HOSTS, HAS_VULNERABILITY, OBTAINED_FROM
+- **BFS Path Discovery**: Multi-path discovery support
+- **Similarity Matching**: Same-subnet/same-domain identification
+
+### 4. Advanced Verifier (v3.0.2 Enhanced)
+
+**Location**: `core/detectors/advanced_verifier.py`
+
+Multi-method cross-validation to reduce false positive rates:
+
+```python
+from core.detectors.advanced_verifier import AdvancedVerifier
+
+verifier = AdvancedVerifier(callback_server="oob.example.com")
+
+results = verifier.multi_method_verify(
+    url="http://target.com/api?id=1",
+    vuln_type="sqli",
+    request_func=make_request,
+    methods=["statistical", "boolean_blind", "time_based"],
+)
+
+aggregated = verifier.aggregate_results(results)
+print(f"Status: {aggregated.status}, Confidence: {aggregated.confidence:.2%}")
+```
+
+**Verification Methods**:
+- **Statistical Verification**: Multi-sample response difference significance
+- **Boolean Blind Verification**: True/False condition comparison
+- **Time-based Blind Verification**: Delay detection with network jitter compensation
+- **OOB Verification**: DNS/HTTP out-of-band callback confirmation
+
+### 5. Dependency Injection Container (v3.0.2)
+
+**Location**: `core/container.py`
+
+Flexible service composition and lifecycle management:
+
+```python
+from core.container import Container, singleton, inject
+
+container = Container()
+
+# Register services
+container.register_singleton(KnowledgeManager)
+container.register_transient(SQLiDetector)
+
+# Use decorators
+@singleton
+class ConfigManager:
+    pass
+
+# Inject dependencies
+config = inject(ConfigManager)
+
+# Scoped container (request-level)
+with container.create_scope() as scope:
+    service = scope.resolve(RequestService)
+```
+
+**Core Features**:
+- **Lifecycle**: Singleton, Scoped, Transient
+- **Auto Injection**: Constructor parameter auto-resolution
+- **Cycle Detection**: Detect and report circular dependencies
+- **Resource Cleanup**: Scoped containers auto-call dispose()
 
 ---
 
@@ -406,23 +792,15 @@ tools:
     enabled: true
     path: "${base_path}/nuclei/nuclei"
     templates_path: "${base_path}/nuclei-templates"
-    default_args:
-      quick: ["-silent", "-severity", "critical,high"]
-      cve: ["-silent", "-tags", "cve"]
 
   sqlmap:
     enabled: true
     path: "${base_path}/sqlmap/sqlmap.py"
     python_script: true
-    default_args:
-      detect: ["--batch", "--level=2", "--risk=1"]
-      exploit: ["--batch", "--level=5", "--risk=3", "--dump"]
 
   ffuf:
     enabled: true
     path: "${base_path}/ffuf/ffuf"
-    default_args:
-      dir: ["-t", "50", "-fc", "404"]
 
   masscan:
     enabled: true
@@ -563,117 +941,47 @@ async def main():
 asyncio.run(main())
 ```
 
-#### Lateral Movement
+#### MCTS Attack Planning
 
 ```python
-from core.lateral import SMBLateralMove, SSHLateralMove
+from core.mcts_planner import MCTSPlanner, AttackState
 
-# SMB lateral
-smb = SMBLateralMove(
+planner = MCTSPlanner(exploration_weight=1.414, max_depth=10)
+
+state = AttackState(
     target="192.168.1.100",
-    credential={"username": "admin", "password_hash": "aad3b435..."}
+    target_type="linux_server",
+    open_ports={22: "ssh", 80: "http", 3306: "mysql"},
 )
-result = await smb.execute_command("whoami")
 
-# SSH tunnel
-ssh = SSHLateralMove(
-    target="192.168.1.100",
-    credential={"username": "root", "private_key_path": "/path/to/key"}
-)
-await ssh.create_tunnel(local_port=8080, remote_port=80)
+result = planner.plan(state, iterations=1000)
+
+print(f"Recommended attack sequence:")
+for action, visits, reward in result['recommended_actions']:
+    print(f"  - {action.type.value}: {action.target_port} (confidence: {reward:.2f})")
 ```
 
-#### CVE Auto-Exploitation
+#### Knowledge Graph
 
 ```python
-from core.cve import CVEAutoExploit
+from core.knowledge import KnowledgeManager
 
-exploit = CVEAutoExploit()
+km = KnowledgeManager()
 
-# Search and exploit
-results = await exploit.search_and_exploit(
-    cve_id="CVE-2021-44228",
-    target="https://target.com"
-)
+# Build knowledge
+target_id = km.store_target("192.168.1.100", "linux_server")
+service_id = km.store_service(target_id, "nginx", 80)
+vuln_id = km.store_vulnerability(service_id, "CVE-2021-44228", "critical")
 
-# AI-generated PoC
-poc_code = await exploit.generate_poc(
-    cve_id="CVE-2024-12345",
-    target_info={"os": "linux", "service": "nginx"}
-)
-```
+# Query attack paths
+paths = km.get_attack_paths(target_id, vuln_id)
+for path in paths:
+    print(f"Path length: {path.length}, Success rate: {path.success_rate:.2%}")
 
-#### Session Management
-
-```python
-from core.session import SessionManager
-
-manager = SessionManager()
-
-# Create session
-session_id = await manager.create_session(
-    target="https://target.com",
-    scan_type="full_pentest"
-)
-
-# Resume session
-await manager.resume_session(session_id)
-
-# Export results
-await manager.export_findings(session_id, format="html")
-```
-
----
-
-## Architecture
-
-```
-AutoRedTeam-Orchestrator/
-├── mcp_stdio_server.py       # MCP Server Entry (100+ tools registered)
-│
-├── handlers/                 # MCP Tool Handlers (16 modules)
-│   ├── recon_handlers.py           # Recon tools (8)
-│   ├── detector_handlers.py        # Vuln detection tools (11)
-│   ├── api_security_handlers.py    # API security tools (7)
-│   ├── supply_chain_handlers.py    # Supply chain tools (3)
-│   ├── cloud_security_handlers.py  # Cloud security tools (3)
-│   ├── cve_handlers.py             # CVE tools (8)
-│   ├── redteam_handlers.py         # Red team tools (14)
-│   ├── lateral_handlers.py         # Lateral movement tools (9)
-│   ├── persistence_handlers.py     # Persistence tools (3)
-│   ├── ad_handlers.py              # AD attack tools (3)
-│   ├── orchestration_handlers.py   # Orchestration tools (11)
-│   ├── external_tools_handlers.py  # External tools (8)
-│   ├── ai_handlers.py              # AI assisted tools (3)
-│   ├── session_handlers.py         # Session tools (4)
-│   ├── report_handlers.py          # Report tools (2)
-│   └── misc_handlers.py            # Misc tools (3)
-│
-├── core/                     # Core Engines
-│   ├── recon/               # Recon Engine (10-phase pipeline)
-│   ├── detectors/           # Vulnerability Detectors
-│   ├── cve/                 # CVE Intelligence
-│   ├── c2/                  # C2 Communication Framework
-│   ├── lateral/             # Lateral Movement
-│   ├── evasion/             # Evasion & Obfuscation
-│   ├── persistence/         # Persistence
-│   ├── credential/          # Credential Access
-│   ├── ad/                  # AD Attacks
-│   ├── session/             # Session Management
-│   ├── tools/               # External Tool Management
-│   └── security/            # Security Components
-│
-├── modules/                  # Feature Modules
-│   ├── api_security/        # API Security
-│   ├── supply_chain/        # Supply Chain Security
-│   ├── cloud_security/      # Cloud Security
-│   └── payload/             # Payload Engine
-│
-├── utils/                    # Utility Functions
-├── wordlists/                # Built-in Wordlists
-├── config/                   # Configuration Files
-├── tests/                    # Test Suite (1075 test cases)
-└── docs/                     # Documentation
+# Find similar targets
+similar = km.find_similar_targets("192.168.1.100", top_k=5)
+for match in similar:
+    print(f"Similar target: {match.entity.properties['target']}, Score: {match.score:.2f}")
 ```
 
 ---
@@ -684,35 +992,25 @@ AutoRedTeam-Orchestrator/
 
 ```bash
 # ========== Security ==========
-# Master key (auto-generated on first run)
 REDTEAM_MASTER_KEY=
-
-# MCP authorization key (optional)
 AUTOREDTEAM_API_KEY=
-
-# Auth mode: strict, permissive, disabled
 AUTOREDTEAM_AUTH_MODE=permissive
 
 # ========== API Keys ==========
-# AI analysis
 OPENAI_API_KEY=your_key
 ANTHROPIC_API_KEY=your_key
-
-# Reconnaissance
 SHODAN_API_KEY=your_key
 CENSYS_API_ID=your_id
 CENSYS_API_SECRET=your_secret
-
-# CVE intelligence
 NVD_API_KEY=your_key
 GITHUB_TOKEN=your_token
 
-# ========== Proxy Settings ==========
+# ========== Proxy ==========
 HTTP_PROXY=
 HTTPS_PROXY=
 SOCKS_PROXY=
 
-# ========== Global Config ==========
+# ========== Global ==========
 VERIFY_SSL=false
 RATE_LIMIT_DELAY=0.3
 MAX_THREADS=50
@@ -721,17 +1019,6 @@ REQUEST_TIMEOUT=10
 # ========== Logging ==========
 LOG_LEVEL=INFO
 LOG_FILE=logs/redteam.log
-```
-
-### pyproject.toml Optional Dependencies
-
-```bash
-# Install specific features only
-pip install autoredteam-orchestrator[ai]        # AI features
-pip install autoredteam-orchestrator[recon]     # Recon features
-pip install autoredteam-orchestrator[network]   # Network features
-pip install autoredteam-orchestrator[reporting] # Reporting
-pip install autoredteam-orchestrator[dev]       # Dev dependencies
 ```
 
 ---
@@ -743,83 +1030,52 @@ pip install autoredteam-orchestrator[dev]       # Dev dependencies
 ```yaml
 # config/performance.yaml
 concurrency:
-  max_threads: 100          # Max threads
-  max_async_tasks: 200      # Max async tasks
-  connection_pool_size: 50  # Connection pool size
+  max_threads: 100
+  max_async_tasks: 200
+  connection_pool_size: 50
 
 rate_limiting:
-  requests_per_second: 50   # Requests per second
-  burst_size: 100           # Burst size
+  requests_per_second: 50
+  burst_size: 100
 
 timeouts:
-  connect: 5                # Connect timeout (seconds)
-  read: 30                  # Read timeout
-  total: 120                # Total timeout
+  connect: 5
+  read: 30
+  total: 120
 ```
 
 ### Memory Optimization
 
 ```python
-# Use streaming for large-scale scans
 engine = StandardReconEngine(
     target="192.168.0.0/16",
     config=ReconConfig(
-        streaming_mode=True,    # Enable streaming
-        batch_size=1000,        # Batch size
-        memory_limit="2GB"      # Memory limit
+        streaming_mode=True,
+        batch_size=1000,
+        memory_limit="2GB"
     )
 )
-```
-
-### Distributed Scanning
-
-```python
-# Use Celery distributed task queue
-from core.distributed import DistributedScanner
-
-scanner = DistributedScanner(
-    broker="redis://localhost:6379",
-    workers=10
-)
-await scanner.scan_targets(["192.168.1.0/24", "192.168.2.0/24"])
 ```
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
-
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| MCP server won't connect | Path error or Python env issue | Check absolute path in config, verify Python interpreter |
-| Import errors | PYTHONPATH not set | Add `PYTHONPATH` env variable to config |
-| External tool call fails | Tool not installed or path error | Run `ext_tools_status` to check tool status |
-| CVE sync fails | Network issue or API rate limit | Check network, configure NVD_API_KEY |
+| MCP server won't connect | Path error or Python env issue | Check absolute path, verify Python interpreter |
+| Import errors | PYTHONPATH not set | Add `PYTHONPATH` env variable |
+| External tool fails | Tool not installed or path error | Run `ext_tools_status` |
+| CVE sync fails | Network or API rate limit | Check network, configure NVD_API_KEY |
 | Slow scanning | Low concurrency config | Adjust `MAX_THREADS` and `RATE_LIMIT_DELAY` |
 | Out of memory | Large-scale scan | Enable `streaming_mode`, set `memory_limit` |
 
 ### Debug Mode
 
 ```bash
-# Enable verbose logging
 LOG_LEVEL=DEBUG python mcp_stdio_server.py
-
-# Check for syntax errors
 python -m py_compile mcp_stdio_server.py
-
-# Run single test
-pytest tests/test_recon.py::test_port_scan -v
-```
-
-### Log Analysis
-
-```bash
-# View recent errors
-tail -f logs/redteam.log | grep ERROR
-
-# Analyze performance bottlenecks
-grep "elapsed" logs/redteam.log | sort -t: -k4 -n
+pytest tests/test_mcp_security.py::TestInputValidator -v
 ```
 
 ---
@@ -829,69 +1085,117 @@ grep "elapsed" logs/redteam.log | sort -t: -k4 -n
 <details>
 <summary><b>Q: How to use in offline environments?</b></summary>
 
-A:
 1. Pre-download CVE database: `python core/cve/update_manager.py sync --offline-export`
 2. Use local wordlist files
-3. Disable network-dependent features: `OFFLINE_MODE=true`
+3. Disable network features: `OFFLINE_MODE=true`
 
 </details>
 
 <details>
 <summary><b>Q: How to add custom detectors?</b></summary>
 
-A:
 1. Create new file in `core/detectors/`
 2. Inherit `BaseDetector` class
 3. Implement `detect()` and `async_detect()` methods
 4. Register MCP tool in `handlers/detector_handlers.py`
 
-```python
-from core.detectors.base import BaseDetector
+</details>
 
-class CustomDetector(BaseDetector):
-    async def async_detect(self, url, params):
-        # Implement detection logic
-        return VulnResult(...)
-```
+<details>
+<summary><b>Q: How does MCTS planner work?</b></summary>
+
+MCTS plans attack paths through four phases:
+
+1. **Selection**: UCB1 algorithm selects optimal path from root
+2. **Expansion**: Expand new attack actions at leaf nodes
+3. **Simulation**: Simulate attack execution and evaluate rewards
+4. **Backpropagation**: Propagate rewards back to update path nodes
+
+UCB1 formula: `UCB1 = Q/N + c * sqrt(ln(N_parent) / N)`
+
+Where `c = sqrt(2)` is exploration weight, balancing "known good paths" and "unexplored paths".
 
 </details>
 
 <details>
-<summary><b>Q: How to integrate other external tools?</b></summary>
+<summary><b>Q: How does Knowledge Graph reduce duplicate work?</b></summary>
 
-A:
-1. Add tool config in `config/external_tools.yaml`
-2. Add MCP tool function in `handlers/external_tools_handlers.py`
-3. Use `core/tools/tool_manager.py`'s `execute_tool()` method
-
-</details>
-
-<details>
-<summary><b>Q: How to handle WAF blocking?</b></summary>
-
-A:
-1. Use `smart_payload` tool for automatic WAF bypass payload selection
-2. Configure proxy pool: `PROXY_POOL=true`
-3. Enable traffic mutation: `traffic_mutation=true`
-4. Reduce scan speed: `RATE_LIMIT_DELAY=1.0`
-
-</details>
-
-<details>
-<summary><b>Q: What report formats are supported?</b></summary>
-
-A:
-- JSON (machine-readable)
-- HTML (visual report with charts)
-- Markdown (suitable for Git/Wiki)
-- PDF (requires `reportlab`)
-- DOCX (requires `python-docx`)
+1. **Target Similarity**: Identify same-subnet/same-domain targets, reuse vuln info
+2. **Attack Path Success Rates**: Calculate path success rates from history
+3. **Credential Association**: Auto-associate credentials with accessible targets
+4. **Action History Learning**: Record action success rates, optimize future decisions
 
 </details>
 
 ---
 
+## Development Guide
+
+### Code Standards
+
+```bash
+# Format code
+black core/ modules/ handlers/ utils/
+isort core/ modules/ handlers/ utils/
+
+# Static analysis
+pylint core/ modules/ handlers/ utils/
+mypy core/ modules/ handlers/ utils/
+
+# Run tests
+pytest tests/ -v --cov=core --cov-report=html
+```
+
+### Adding New MCP Tools
+
+```python
+# 1. Add handler in handlers/
+# handlers/my_handlers.py
+
+from mcp import tool
+
+@tool()
+async def my_new_tool(target: str, option: str = "default") -> dict:
+    """Tool description
+
+    Args:
+        target: Target address
+        option: Optional parameter
+
+    Returns:
+        Result dictionary
+    """
+    return {"success": True, "data": ...}
+
+# 2. Import in mcp_stdio_server.py
+from handlers.my_handlers import my_new_tool
+```
+
+---
+
 ## Changelog
+
+### v3.0.2 (In Development) - Architecture Hardening
+
+**New Modules** (Implemented, pending release)
+- **MCP Security Middleware** - Input validation, rate limiting, operation authorization
+- **DI Container** - Lifecycle management, circular dependency detection
+- **MCTS Attack Planner** - UCB1 algorithm, attack path optimization
+- **Knowledge Graph** - Entity relationship storage, BFS path discovery
+- **Advanced Verifier Enhancement** - OOB thread safety, SSTI payloads
+
+**Security Fixes**
+- Fixed TOCTOU race conditions (extended lock scope)
+- Fixed duration authorization expiry logic
+- Added SSRF detection (private IP validation)
+- Fixed Rate Limiter memory leak (max_keys eviction)
+- Fixed DNS injection (token ID sanitization)
+- MD5 → SHA256 hash upgrade
+
+**Test Enhancement**
+- Added 291 test cases (mcp_security: 62, container: 39, mcts: 57, verifier: 43, knowledge: 90)
+- Thread safety test coverage
+- Integration test workflows
 
 ### v3.0.1 (2026-01-30) - Quality Hardening
 
@@ -902,7 +1206,6 @@ A:
 **Fixed**
 - Version sync - Unified VERSION/pyproject.toml/source code
 - ToolCounter fix - Added external_tools/lateral/persistence/ad categories
-- Test fixes - Updated outdated test case references
 - Thread safety - Added threading.Lock to beacon.py state management
 
 **Improved**
@@ -917,44 +1220,26 @@ A:
 - Tool chain orchestration - YAML-driven multi-tool combinations
 - Handler modularization - 16 independent Handler modules
 
-**Improved**
-- MCP tools now at 100+
-- Feedback loop engine - Smart exploitation orchestrator
-- WAF bypass - Enhanced payload mutation engine
-
-<details>
-<summary><b>View more versions</b></summary>
-
-### v2.8.0 (2026-01-15) - Security Hardening
-- Enhanced input validation, unified exception handling, performance optimization
-
-### v2.7.1 (2026-01-10) - Web Scanner Engine
-- Web Scanner module, built-in wordlists
-
-### v2.7.0 (2026-01-09) - Architecture Refactoring
-- Modular refactoring, StandardReconEngine
-
-### v2.6.0 (2026-01-07) - API/Supply Chain/Cloud Security
-- JWT/CORS/GraphQL/WebSocket security testing
-- SBOM generation, K8s/gRPC security audit
-
-</details>
-
 ---
 
 ## Roadmap
 
 ### In Progress
+
+- [ ] v3.0.2 Release (MCP Security Middleware, MCTS Planner, Knowledge Graph, DI Container)
 - [ ] Web UI management interface
 - [ ] Distributed scanning cluster
 
 ### Planned
+
 - [ ] More cloud platforms (GCP/Alibaba Cloud/Tencent Cloud)
 - [ ] Burp Suite plugin integration
 - [ ] Mobile app security testing
 - [ ] AI autonomous attack agent
+- [ ] Neo4j knowledge graph backend
 
-### Completed
+### Completed (v3.0.1)
+
 - [x] Full Red Team toolkit
 - [x] CVE intelligence & AI PoC generation
 - [x] API/Supply Chain/Cloud security modules
@@ -998,6 +1283,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format:
 - `refactor:` Refactoring
 - `test:` Testing
 - `chore:` Build/tools
+- `security:` Security related
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
@@ -1015,16 +1301,68 @@ See [SECURITY.md](SECURITY.md) for details.
 
 ## Acknowledgments
 
-- [Nuclei](https://github.com/projectdiscovery/nuclei) - Vulnerability scanner engine design
-- [SQLMap](https://github.com/sqlmapproject/sqlmap) - SQL injection detection approach
-- [Impacket](https://github.com/fortra/impacket) - Network protocol implementation
-- [MCP Protocol](https://modelcontextprotocol.io/) - AI tool protocol standard
+### Core Dependencies
+
+| Project | Purpose | License |
+|---------|---------|---------|
+| [MCP Protocol](https://modelcontextprotocol.io/) | AI tool protocol standard | MIT |
+| [aiohttp](https://github.com/aio-libs/aiohttp) | Async HTTP client | Apache-2.0 |
+| [pydantic](https://github.com/pydantic/pydantic) | Data validation | MIT |
+| [pytest](https://github.com/pytest-dev/pytest) | Testing framework | MIT |
+
+### Design Inspiration
+
+| Project | Inspiration |
+|---------|-------------|
+| [Nuclei](https://github.com/projectdiscovery/nuclei) | Vulnerability scanner engine design |
+| [SQLMap](https://github.com/sqlmapproject/sqlmap) | SQL injection detection approach |
+| [Impacket](https://github.com/fortra/impacket) | Network protocol implementation |
+| [Metasploit](https://github.com/rapid7/metasploit-framework) | Post-exploitation module design |
+
+### Algorithm References
+
+| Algorithm | Purpose | Reference |
+|-----------|---------|-----------|
+| UCB1 | MCTS exploration-exploitation balance | Auer et al., 2002 |
+| BFS | Knowledge graph path discovery | - |
+| Token Bucket | Rate limiting | - |
+| Sliding Window | Rate limiting | - |
+
+---
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Coff0xc/AutoRedTeam-Orchestrator&type=Date)](https://star-history.com/#Coff0xc/AutoRedTeam-Orchestrator&Date)
 
 ---
 
 ## License
 
 This project is licensed under the **MIT License** - see [LICENSE](LICENSE) file for details.
+
+```
+MIT License
+
+Copyright (c) 2026 Coff0xc
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
 
 ---
 
@@ -1038,8 +1376,20 @@ This project is licensed under the **MIT License** - see [LICENSE](LICENSE) file
 > - Adherence to **professional ethics** standards
 >
 > Unauthorized use may violate the law. **The developers are not responsible for any misuse**.
+>
+> This tool contains red team attack capabilities (lateral movement, C2 communication, persistence, etc.), intended only for:
+> - Authorized penetration testing
+> - Security research and education
+> - CTF competitions
+> - Defensive capability validation
+>
+> **Prohibited for any illegal purposes.**
 
 ---
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Built%20with-Python%20%26%20%E2%9D%A4-blue?style=for-the-badge" alt="Built with Python">
+</p>
 
 <p align="center">
   <b>Made with ❤️ by <a href="https://github.com/Coff0xc">Coff0xc</a></b>
@@ -1049,4 +1399,8 @@ This project is licensed under the **MIT License** - see [LICENSE](LICENSE) file
   <a href="https://discord.gg/PtVyrMvB">Discord</a> ·
   <a href="mailto:Coff0xc@protonmail.com">Email</a> ·
   <a href="https://github.com/Coff0xc/AutoRedTeam-Orchestrator/issues">Issues</a>
+</p>
+
+<p align="center">
+  <sub>If this project helps you, please consider giving it a ⭐ Star!</sub>
 </p>
