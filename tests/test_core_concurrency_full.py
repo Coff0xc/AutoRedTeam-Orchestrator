@@ -146,7 +146,7 @@ class TestSlidingWindowRateLimiter:
         """测试滑动窗口创建"""
         from core.concurrency import SlidingWindowRateLimiter
 
-        limiter = SlidingWindowRateLimiter(rate=10, window_size=1.0)
+        limiter = SlidingWindowRateLimiter(max_requests=10, window_seconds=1.0)
 
         assert limiter is not None
 
@@ -381,12 +381,13 @@ class TestScheduledTask:
 
     def test_scheduled_task(self):
         """测试计划任务"""
+        import time
         from core.concurrency import ScheduledTask
 
         task = ScheduledTask(
+            run_at=time.monotonic() + 1.0,
             task_id="test-001",
-            func=lambda: None,
-            delay=1.0
+            fn=lambda: None,
         )
 
         assert task is not None
