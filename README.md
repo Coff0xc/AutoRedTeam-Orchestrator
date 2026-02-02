@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-3.0.1-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-3.0.2-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=flat-square" alt="MCP">
   <img src="https://img.shields.io/badge/Tools-101-FF6B6B?style=flat-square" alt="Tools">
@@ -42,7 +42,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     AutoRedTeam-Orchestrator v3.0.1                        │
+│                     AutoRedTeam-Orchestrator v3.0.2                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  ● 101 MCP 工具       ● 2000+ Payload      ● 1461 测试用例                │
 │  ● 10 阶段侦察        ● 19 漏洞检测器       ● 5 协议横向移动               │
@@ -470,9 +470,7 @@ AutoRedTeam-Orchestrator/
 │
 ├── poc-templates/               # PoC 模板
 ├── templates/                   # 报告模板
-├── scripts/                     # 工具脚本
-└── docs/                        # 文档
-    └── Web安全能力分析与优化方案.md
+└── scripts/                     # 工具脚本
 ```
 
 ---
@@ -571,7 +569,7 @@ pytest tests/ -v
 ```bash
 # 检查版本
 python mcp_stdio_server.py --version
-# 输出: AutoRedTeam-Orchestrator v3.0.1
+# 输出: AutoRedTeam-Orchestrator v3.0.2
 
 # 运行自检
 python -c "from core import __version__; print(f'Core version: {__version__}')"

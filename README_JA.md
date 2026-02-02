@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-3.0.1-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-3.0.2-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=flat-square" alt="MCP">
   <img src="https://img.shields.io/badge/Tools-101-FF6B6B?style=flat-square" alt="Tools">
@@ -42,7 +42,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     AutoRedTeam-Orchestrator v3.0.1                        │
+│                     AutoRedTeam-Orchestrator v3.0.2                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  ● 101 MCP ツール      ● 2000+ Payload      ● 1461 テストケース            │
 │  ● 10 段階偵察         ● 19 脆弱性検出器    ● 5 プロトコルラテラル         │
@@ -347,8 +347,7 @@ AutoRedTeam-Orchestrator/
 ├── tests/                       # テストスイート (1461 テストケース)
 ├── poc-templates/               # PoC テンプレート
 ├── templates/                   # レポートテンプレート
-├── scripts/                     # ユーティリティスクリプト
-└── docs/                        # ドキュメント
+└── scripts/                     # ユーティリティスクリプト
 ```
 
 ---
@@ -447,7 +446,7 @@ pytest tests/ -v
 ```bash
 # バージョン確認
 python mcp_stdio_server.py --version
-# 出力: AutoRedTeam-Orchestrator v3.0.1
+# 出力: AutoRedTeam-Orchestrator v3.0.2
 
 # セルフチェック実行
 python -c "from core import __version__; print(f'Core version: {__version__}')"

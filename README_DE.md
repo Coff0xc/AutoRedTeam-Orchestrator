@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-3.0.1-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-3.0.2-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=flat-square" alt="MCP">
   <img src="https://img.shields.io/badge/Tools-101-FF6B6B?style=flat-square" alt="Tools">
@@ -42,7 +42,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     AutoRedTeam-Orchestrator v3.0.1                        │
+│                     AutoRedTeam-Orchestrator v3.0.2                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  ● 101 MCP Tools       ● 2000+ Payloads     ● 1461 Testfälle              │
 │  ● 10-Phasen Recon     ● 19 Vuln-Detektoren ● 5-Protokoll Lateral         │
@@ -348,8 +348,7 @@ AutoRedTeam-Orchestrator/
 ├── tests/                       # Test-Suite (1461 Testfälle)
 ├── poc-templates/               # PoC-Vorlagen
 ├── templates/                   # Berichtsvorlagen
-├── scripts/                     # Hilfsskripte
-└── docs/                        # Dokumentation
+└── scripts/                     # Hilfsskripte
 ```
 
 ---
@@ -448,7 +447,7 @@ pytest tests/ -v
 ```bash
 # Version prüfen
 python mcp_stdio_server.py --version
-# Ausgabe: AutoRedTeam-Orchestrator v3.0.1
+# Ausgabe: AutoRedTeam-Orchestrator v3.0.2
 
 # Selbsttest ausführen
 python -c "from core import __version__; print(f'Core version: {__version__}')"

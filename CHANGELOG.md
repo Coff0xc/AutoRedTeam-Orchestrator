@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.2] - 2026-02-02
+
+### Added
+
+- **MCP 安全中间件** (`core/security/mcp_security.py`): 输入验证、速率限制、操作授权、SSRF 检测
+- **DI 依赖注入容器** (`core/container.py`): Singleton/Scoped/Transient 生命周期、循环依赖检测
+- **MCTS 攻击规划器** (`core/mcts_planner.py`): UCB1 算法、攻击路径最优化、模拟评估
+- **知识图谱** (`core/knowledge/`): 实体关系存储、BFS 路径发现、目标相似性匹配
+- **高级验证器增强** (`core/detectors/advanced_verifier.py`): OOB/统计/布尔盲注/时间盲注多方法交叉验证
+- 291 个新测试用例 (mcp_security: 62, container: 39, mcts: 57, verifier: 43, knowledge: 90)
+
+### Fixed
+
+- TOCTOU 竞态条件 (扩展锁范围)
+- 时长授权过期逻辑
+- Rate Limiter 内存泄漏 (max_keys 驱逐)
+- DNS 注入 (token ID 净化)
+- MD5 → SHA256 哈希升级
+
+### Changed
+
+- 版本号: 3.0.1 → 3.0.2
+- 删除空 `docs/` 目录及过时文档引用
+- 全量多语言 README 更新 (CN/EN/JA/RU/DE/FR)
+
+### Security
+
+- SSRF 检测 (私有 IP 验证)
+- OOB 线程安全
+- SSTI payload 增强
+
 ## [3.0.1] - 2026-01-05
 
 ### Added

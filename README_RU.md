@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Версия-3.0.1-blue?style=flat-square" alt="Версия">
+  <img src="https://img.shields.io/badge/Версия-3.0.2-blue?style=flat-square" alt="Версия">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=flat-square" alt="MCP">
   <img src="https://img.shields.io/badge/Инструменты-101-FF6B6B?style=flat-square" alt="Инструменты">
@@ -42,7 +42,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     AutoRedTeam-Orchestrator v3.0.1                        │
+│                     AutoRedTeam-Orchestrator v3.0.2                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  ● 101 MCP инструмент  ● 2000+ Payload        ● 1461 тестовый случай      │
 │  ● 10-фазная разведка  ● 19 детекторов уязв.   ● 5-протокольный латерал   │
@@ -351,8 +351,7 @@ AutoRedTeam-Orchestrator/
 ├── tests/                       # Набор тестов (1461 тестовый случай)
 ├── poc-templates/               # Шаблоны PoC
 ├── templates/                   # Шаблоны отчётов
-├── scripts/                     # Утилитарные скрипты
-└── docs/                        # Документация
+└── scripts/                     # Утилитарные скрипты
 ```
 
 ---
@@ -451,7 +450,7 @@ pytest tests/ -v
 ```bash
 # Проверить версию
 python mcp_stdio_server.py --version
-# Вывод: AutoRedTeam-Orchestrator v3.0.1
+# Вывод: AutoRedTeam-Orchestrator v3.0.2
 
 # Запустить самопроверку
 python -c "from core import __version__; print(f'Core version: {__version__}')"
