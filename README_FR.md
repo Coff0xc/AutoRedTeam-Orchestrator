@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Coff0xc/AutoRedTeam-Orchestrator/main/assets/banner.png" alt="AutoRedTeam-Orchestrator" width="800">
-</p>
-
 <h1 align="center">AutoRedTeam-Orchestrator</h1>
 
 <p align="center">
@@ -41,10 +37,6 @@
 </p>
 
 ---
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Coff0xc/AutoRedTeam-Orchestrator/main/assets/demo.gif" alt="Démonstration" width="700">
-</p>
 
 ## Points Forts
 
