@@ -1,7 +1,8 @@
 # 核心依赖 (最小可运行)
-# 如需完整功能，请使用 requirements.txt 或 pyproject.toml 的可选依赖分组
-mcp>=1.0.0
-requests>=2.31.0
-aiohttp>=3.9.0
-pyyaml>=6.0.0
-pydantic>=2.6.0
+# 仅包含 MCP 服务器启动所需的最小依赖集
+
+mcp>=1.0.0,<2.0.0
+requests>=2.31.0,<3.0.0
+aiohttp>=3.9.0,<4.0.0
+pyyaml>=6.0.0,<7.0.0
+defusedxml>=0.7.1,<1.0.0

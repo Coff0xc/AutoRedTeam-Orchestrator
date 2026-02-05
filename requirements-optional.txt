@@ -1,44 +1,37 @@
-# 可选依赖分组 (按功能拆分)
+# 可选依赖 (按功能分组)
+# 这些依赖当前未被代码使用，但保留以备将来扩展
 
-# AI/LLM Integration
-openai>=1.12.0
-anthropic>=0.18.0
+# === AI/LLM 扩展 ===
 # langchain 0.1.x has CVE-2025-68664; upgraded to 0.3.x
-langchain>=0.3.0
-langchain-openai>=0.2.0
+langchain>=0.3.0,<0.4.0
+langchain-openai>=0.2.0,<1.0.0
 
-# Performance & Concurrency
-httpx>=0.26.0
-celery>=5.3.0
-redis>=5.0.0
+# === 异步任务队列 ===
+celery>=5.3.0,<6.0.0
+redis>=5.0.0,<6.0.0
 
-# Recon & Intel
-python-nmap>=0.7.1
-shodan>=1.31.0
-censys>=2.2.0
-dnspython>=2.5.0
-whois>=0.9.27
-beautifulsoup4>=4.12.0
-lxml>=5.1.0
+# === 实时通信 ===
+python-socketio>=5.10.0,<6.0.0
+eventlet>=0.35.0,<1.0.0
 
-# Network & Crypto
-paramiko>=3.4.0
-pexpect>=4.9.0
-websockets>=12.0
-cryptography>=42.0.0
+# === HTML/XML 解析 ===
+beautifulsoup4>=4.12.0,<5.0.0
+lxml>=5.1.0,<6.0.0
 
-# Storage
-sqlalchemy>=2.0.0
-pymongo>=4.6.0
+# === 数据库 ===
+sqlalchemy>=2.0.0,<3.0.0
+pymongo>=4.6.0,<5.0.0
 
-# Reporting
-jinja2>=3.1.0
-markdown>=3.5.0
-python-docx>=1.1.0
-reportlab>=4.0.0
+# === 报告生成 (PDF) ===
+reportlab>=4.0.0,<5.0.0
 
-# CLI / UI
-python-dotenv>=1.0.0
-colorama>=0.4.6
-rich>=13.7.0
-click>=8.1.0
+# === CLI/UI 增强 ===
+colorama>=0.4.6,<1.0.0
+rich>=13.7.0,<14.0.0
+python-dotenv>=1.0.0,<2.0.0
+
+# === 数据验证 ===
+pydantic>=2.6.0,<3.0.0
+
+# === 终端交互 ===
+pexpect>=4.9.0,<5.0.0
