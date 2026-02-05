@@ -50,6 +50,7 @@
 │  ● OOB 误报过滤       ● 依赖注入容器        ● MCP 安全中间件               │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  支持 AI 编辑器: Cursor | Windsurf | Kiro | Claude Desktop | VS Code      │
+│                  | OpenCode | Claude Code                                 │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -67,7 +68,7 @@
   - [安装方式](#安装方式)
   - [验证安装](#验证安装)
 - [MCP 配置](#mcp-配置)
-- [工具矩阵](#工具矩阵-101-mcp-工具)
+- [工具矩阵](#工具矩阵-100-mcp-工具)
 - [核心模块详解](#核心模块详解)
 - [外部工具集成](#外部工具集成)
 - [使用示例](#使用示例)
@@ -90,7 +91,7 @@
 
 ## 项目简介
 
-**AutoRedTeam-Orchestrator** 是一个基于 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) 的 AI 驱动自动化渗透测试框架。它将 101 个安全工具封装为 MCP 工具，可与支持 MCP 的 AI 编辑器 (Cursor, Windsurf, Kiro, Claude Desktop) 无缝集成，实现自然语言驱动的自动化安全测试。
+**AutoRedTeam-Orchestrator** 是一个基于 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) 的 AI 驱动自动化渗透测试框架。它将 101 个安全工具封装为 MCP 工具，可与支持 MCP 的 AI 编辑器 (Cursor, Windsurf, Kiro, Claude Desktop, OpenCode, Claude Code) 无缝集成，实现自然语言驱动的自动化安全测试。
 
 ### 为什么选择 AutoRedTeam-Orchestrator？
 
@@ -240,6 +241,7 @@
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              AI 编辑器层                                    │
 │        Cursor  │  Windsurf  │  Kiro  │  Claude Desktop  │  VS Code         │
+│        OpenCode │  Claude Code                                             │
 └───────────────────────────────────┬─────────────────────────────────────────┘
                                     │ MCP Protocol (JSON-RPC over stdio)
                                     ▼
@@ -544,11 +546,11 @@ pip install -r requirements-core.txt
 #### 方式三：Docker 部署
 
 ```bash
-docker pull coff0xc/autoredteam:latest
+docker pull ghcr.io/coff0xc/autoredteam:latest
 docker run -it --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data:/app/data \
-  coff0xc/autoredteam
+  ghcr.io/coff0xc/autoredteam
 ```
 
 #### 方式四：开发环境
@@ -594,6 +596,8 @@ pytest tests/test_mcp_security.py tests/test_container.py tests/test_mcts_planne
 | Kiro | `~/.kiro/mcp.json` |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
 | VS Code (MCP 扩展) | `.vscode/mcp.json` |
+| OpenCode | `~/.config/opencode/mcp.json` 或 `~/.opencode/mcp.json` |
+| Claude Code | `~/.claude/mcp.json` |
 
 ### 配置示例
 
@@ -654,6 +658,44 @@ pytest tests/test_mcp_security.py tests/test_container.py tests/test_mcts_planne
 
 <details>
 <summary><b>Claude Desktop</b></summary>
+
+```json
+{
+  "mcpServers": {
+    "redteam": {
+      "command": "python",
+      "args": ["/absolute/path/to/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>OpenCode</b> - <code>~/.config/opencode/mcp.json</code></summary>
+
+```json
+{
+  "mcpServers": {
+    "redteam": {
+      "command": "python",
+      "args": ["/absolute/path/to/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Claude Code</b> - <code>~/.claude/mcp.json</code></summary>
 
 ```json
 {

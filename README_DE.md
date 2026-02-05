@@ -50,6 +50,7 @@
 │  ● OOB False Positive  ● DI Container       ● MCP Security Middleware     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  Unterstützte KI-Editoren: Cursor | Windsurf | Kiro | Claude Desktop | VS Code │
+│                            | OpenCode | Claude Code                           │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -90,7 +91,7 @@
 
 ## Projektübersicht
 
-**AutoRedTeam-Orchestrator** ist ein KI-gesteuertes automatisiertes Penetrationstest-Framework basierend auf dem [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Es kapselt 101 Sicherheitstools als MCP-Tools und ermöglicht nahtlose Integration mit MCP-kompatiblen KI-Editoren (Cursor, Windsurf, Kiro, Claude Desktop) für natürlichsprachliche automatisierte Sicherheitstests.
+**AutoRedTeam-Orchestrator** ist ein KI-gesteuertes automatisiertes Penetrationstest-Framework basierend auf dem [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Es kapselt 101 Sicherheitstools als MCP-Tools und ermöglicht nahtlose Integration mit MCP-kompatiblen KI-Editoren (Cursor, Windsurf, Kiro, Claude Desktop, OpenCode, Claude Code) für natürlichsprachliche automatisierte Sicherheitstests.
 
 ### Warum AutoRedTeam-Orchestrator?
 
@@ -241,6 +242,7 @@
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              KI-Editor-Schicht                              │
 │        Cursor  │  Windsurf  │  Kiro  │  Claude Desktop  │  VS Code         │
+│        OpenCode │  Claude Code                                             │
 └───────────────────────────────────┬─────────────────────────────────────────┘
                                     │ MCP Protokoll (JSON-RPC über stdio)
                                     ▼
@@ -422,11 +424,11 @@ pip install -r requirements-core.txt
 #### Option 3: Docker Deployment
 
 ```bash
-docker pull coff0xc/autoredteam:latest
+docker pull ghcr.io/coff0xc/autoredteam:latest
 docker run -it --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data:/app/data \
-  coff0xc/autoredteam
+  ghcr.io/coff0xc/autoredteam
 ```
 
 #### Option 4: Entwicklungsumgebung
@@ -472,6 +474,8 @@ Fügen Sie die folgende Konfiguration zur MCP-Konfigurationsdatei Ihres KI-Edito
 | Kiro | `~/.kiro/mcp.json` |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
 | VS Code (MCP Erweiterung) | `.vscode/mcp.json` |
+| OpenCode | `~/.config/opencode/mcp.json` oder `~/.opencode/mcp.json` |
+| Claude Code | `~/.claude/mcp.json` |
 
 ### Konfigurationsbeispiele
 
@@ -532,6 +536,44 @@ Fügen Sie die folgende Konfiguration zur MCP-Konfigurationsdatei Ihres KI-Edito
 
 <details>
 <summary><b>Claude Desktop</b></summary>
+
+```json
+{
+  "mcpServers": {
+    "redteam": {
+      "command": "python",
+      "args": ["/absoluter/pfad/zu/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>OpenCode</b> - <code>~/.config/opencode/mcp.json</code></summary>
+
+```json
+{
+  "mcpServers": {
+    "redteam": {
+      "command": "python",
+      "args": ["/absoluter/pfad/zu/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Claude Code</b> - <code>~/.claude/mcp.json</code></summary>
 
 ```json
 {
