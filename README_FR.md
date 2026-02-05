@@ -423,11 +423,11 @@ pip install -r requirements-core.txt
 #### Méthode 3 : Déploiement Docker
 
 ```bash
-docker pull ghcr.io/coff0xc/autoredteam:latest
+docker pull ghcr.io/coff0xc/autoredteam-orchestrator-orchestrator:latest
 docker run -it --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data:/app/data \
-  ghcr.io/coff0xc/autoredteam
+  ghcr.io/coff0xc/autoredteam-orchestrator
 ```
 
 #### Méthode 4 : Environnement de Développement

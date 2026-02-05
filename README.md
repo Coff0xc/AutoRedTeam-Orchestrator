@@ -546,11 +546,11 @@ pip install -r requirements-core.txt
 #### 方式三：Docker 部署
 
 ```bash
-docker pull ghcr.io/coff0xc/autoredteam:latest
+docker pull ghcr.io/coff0xc/autoredteam-orchestrator:latest
 docker run -it --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data:/app/data \
-  ghcr.io/coff0xc/autoredteam
+  ghcr.io/coff0xc/autoredteam-orchestrator
 ```
 
 #### 方式四：开发环境
