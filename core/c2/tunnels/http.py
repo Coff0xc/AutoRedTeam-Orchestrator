@@ -32,7 +32,7 @@ except ImportError:
     HAS_HTTP_CLIENT = False
 
 try:
-    pass
+    import requests
 
     HAS_REQUESTS = True
 except ImportError:

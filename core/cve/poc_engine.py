@@ -39,7 +39,7 @@ except ImportError:
     HAS_HTTP_FACTORY = False
 
 try:
-    pass
+    import requests
 
     HAS_REQUESTS = True
 except ImportError:

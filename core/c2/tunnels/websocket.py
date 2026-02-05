@@ -34,7 +34,7 @@ except ImportError:
     HAS_WEBSOCKET = False
 
 try:
-    pass
+    import websockets
 
     HAS_WEBSOCKETS = True
 except ImportError:
