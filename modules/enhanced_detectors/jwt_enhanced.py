@@ -27,6 +27,21 @@ try:
 except ImportError:
     HAS_HTTP_FACTORY = False
 
+# 导入共享常量
+try:
+    from core.constants import (
+        KID_INJECTION_PAYLOADS as _KID_PAYLOADS,
+        NONE_ALGORITHM_VARIANTS as _NONE_VARIANTS,
+        WEAK_SECRETS as _WEAK_SECRETS,
+    )
+
+    _HAS_CONSTANTS = True
+except ImportError:
+    _HAS_CONSTANTS = False
+    _WEAK_SECRETS = []
+    _NONE_VARIANTS = []
+    _KID_PAYLOADS = []
+
 
 class JWTVulnType(Enum):
     """JWT漏洞类型"""
@@ -71,74 +86,28 @@ class JWTInfo:
 class JWTSecurityTester:
     """JWT安全测试器"""
 
-    # 常见弱密钥列表 (扩展版)
-    WEAK_SECRETS = [
-        # 常见默认密钥
-        "secret",
-        "password",
-        "123456",
-        "admin",
-        "key",
-        "jwt",
-        "jwt_secret",
-        "jwt-secret",
-        "secret123",
-        "password123",
-        "changeme",
-        "mysecret",
-        "supersecret",
-        "defaultsecret",
-        "your-256-bit-secret",
-        "your-secret-key",
-        "my-secret-key",
-        # 框架默认
-        "django-insecure-key",
-        "rails_secret",
-        "laravel_secret",
-        "express_secret",
-        "flask_secret",
-        "spring_secret",
-        # 简单模式
-        "1234567890",
-        "0987654321",
-        "qwerty",
-        "letmein",
-        "abc123",
-        "test",
-        "demo",
-        "development",
-        "production",
-        # 空值和特殊
-        "",
-        " ",
-        "null",
-        "undefined",
-        "none",
+    # 使用共享常量 (向后兼容)
+    WEAK_SECRETS = _WEAK_SECRETS if _HAS_CONSTANTS else [
+        "secret", "password", "123456", "admin", "key", "jwt", "jwt_secret",
+        "jwt-secret", "secret123", "password123", "changeme", "mysecret",
+        "supersecret", "defaultsecret", "your-256-bit-secret", "your-secret-key",
+        "my-secret-key", "django-insecure-key", "rails_secret", "laravel_secret",
+        "express_secret", "flask_secret", "spring_secret", "1234567890",
+        "0987654321", "qwerty", "letmein", "abc123", "test", "demo",
+        "development", "production", "", " ", "null", "undefined", "none",
     ]
 
-    # None算法变体
-    NONE_ALGORITHM_VARIANTS = [
-        "none",
-        "None",
-        "NONE",
-        "nOnE",
-        "none ",
-        " none",
-        "none\t",
-        "\tnone",
+    NONE_ALGORITHM_VARIANTS = _NONE_VARIANTS if _HAS_CONSTANTS else [
+        "none", "None", "NONE", "nOnE", "none ", " none", "none\t", "\tnone",
     ]
 
-    # KID注入Payloads
-    KID_INJECTION_PAYLOADS = [
-        # 路径遍历
+    KID_INJECTION_PAYLOADS = _KID_PAYLOADS if _HAS_CONSTANTS else [
         ("../../../etc/passwd", "path_traversal"),
         ("....//....//etc/passwd", "path_traversal_bypass"),
         ("/dev/null", "null_file"),
-        # SQL注入
         ("' OR '1'='1", "sqli"),
         ("1' AND '1'='1", "sqli"),
         ("' UNION SELECT 'secret' --", "sqli_union"),
-        # 命令注入
         ("; cat /etc/passwd", "command_injection"),
         ("| id", "command_injection"),
         ("$(id)", "command_substitution"),

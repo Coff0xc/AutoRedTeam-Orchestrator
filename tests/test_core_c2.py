@@ -221,24 +221,26 @@ class TestHTTPTunnel:
 
     def test_http_tunnel_creation(self):
         """测试 HTTP 隧道创建"""
-        from core.c2 import HTTPTunnel
+        from core.c2 import HTTPTunnel, C2Config
 
-        tunnel = HTTPTunnel(
+        config = C2Config(
             server="c2.example.com",
             port=443
         )
+        tunnel = HTTPTunnel(config)
 
         assert tunnel is not None
 
     def test_http_tunnel_url(self):
         """测试 HTTP 隧道 URL"""
-        from core.c2 import HTTPTunnel
+        from core.c2 import HTTPTunnel, C2Config
 
-        tunnel = HTTPTunnel(
+        config = C2Config(
             server="c2.example.com",
             port=443,
-            use_ssl=True
+            protocol="https"
         )
+        tunnel = HTTPTunnel(config)
 
         if hasattr(tunnel, 'url'):
             assert "https" in tunnel.url or "c2.example.com" in tunnel.url
@@ -249,11 +251,13 @@ class TestDNSTunnel:
 
     def test_dns_tunnel_creation(self):
         """测试 DNS 隧道创建"""
-        from core.c2 import DNSTunnel
+        from core.c2 import DNSTunnel, C2Config
 
-        tunnel = DNSTunnel(
-            domain="c2.example.com"
+        config = C2Config(
+            server="c2.example.com",
+            port=53
         )
+        tunnel = DNSTunnel(config)
 
         assert tunnel is not None
 
@@ -263,12 +267,13 @@ class TestWebSocketTunnel:
 
     def test_websocket_tunnel_creation(self):
         """测试 WebSocket 隧道创建"""
-        from core.c2 import WebSocketTunnel
+        from core.c2 import WebSocketTunnel, C2Config
 
-        tunnel = WebSocketTunnel(
+        config = C2Config(
             server="c2.example.com",
             port=443
         )
+        tunnel = WebSocketTunnel(config)
 
         assert tunnel is not None
 
@@ -344,13 +349,15 @@ class TestC2Crypto:
     def test_quick_encrypt(self):
         """测试快速加密"""
         from core.c2 import quick_encrypt, quick_decrypt
+        import os
 
         plaintext = b"test data"
+        key = os.urandom(32)  # 256-bit key
 
-        encrypted = quick_encrypt(plaintext)
+        encrypted = quick_encrypt(plaintext, key)
         assert encrypted is not None
 
-        decrypted = quick_decrypt(encrypted)
+        decrypted = quick_decrypt(encrypted, key)
         assert decrypted == plaintext
 
 
@@ -492,9 +499,10 @@ class TestProtocol:
 
     def test_message(self):
         """测试消息"""
-        from core.c2 import Message
+        from core.c2 import Message, MessageHeader
 
-        msg = Message()
+        header = MessageHeader()
+        msg = Message(header=header, payload=b"test")
 
         assert msg is not None
 
@@ -514,7 +522,7 @@ class TestProtocolFunctions:
         """测试编码心跳"""
         from core.c2 import encode_heartbeat
 
-        heartbeat = encode_heartbeat()
+        heartbeat = encode_heartbeat(beacon_id="test-beacon-001")
 
         assert heartbeat is not None
 
@@ -522,7 +530,7 @@ class TestProtocolFunctions:
         """测试解码心跳"""
         from core.c2 import encode_heartbeat, decode_heartbeat
 
-        encoded = encode_heartbeat()
+        encoded = encode_heartbeat(beacon_id="test-beacon-001")
 
         if encoded:
             decoded = decode_heartbeat(encoded)
@@ -533,7 +541,7 @@ class TestProtocolFunctions:
         from core.c2 import encode_tasks, Task
 
         tasks = [
-            Task(task_id="1", task_type="shell", command="whoami")
+            Task(id="1", type="shell", payload="whoami")
         ]
 
         encoded = encode_tasks(tasks)

