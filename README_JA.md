@@ -50,6 +50,7 @@
 │  ● OOB 誤検知低減      ● DI コンテナ        ● MCP セキュリティミドルウェア │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  対応 AI エディタ: Cursor | Windsurf | Kiro | Claude Desktop | VS Code     │
+│                    | OpenCode | Claude Code                               │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -90,7 +91,7 @@
 
 ## プロジェクト概要
 
-**AutoRedTeam-Orchestrator** は、[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) に基づく AI 駆動の自動化ペネトレーションテストフレームワークです。101 のセキュリティツールを MCP ツールとしてカプセル化し、MCP 対応 AI エディタ (Cursor, Windsurf, Kiro, Claude Desktop) とシームレスに統合することで、自然言語駆動の自動化セキュリティテストを実現します。
+**AutoRedTeam-Orchestrator** は、[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) に基づく AI 駆動の自動化ペネトレーションテストフレームワークです。101 のセキュリティツールを MCP ツールとしてカプセル化し、MCP 対応 AI エディタ (Cursor, Windsurf, Kiro, Claude Desktop, OpenCode, Claude Code) とシームレスに統合することで、自然言語駆動の自動化セキュリティテストを実現します。
 
 ### なぜ AutoRedTeam-Orchestrator を選ぶのか？
 
@@ -240,6 +241,7 @@
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              AI エディタ層                                  │
 │        Cursor  │  Windsurf  │  Kiro  │  Claude Desktop  │  VS Code         │
+│        OpenCode │  Claude Code                                             │
 └───────────────────────────────────┬─────────────────────────────────────────┘
                                     │ MCP プロトコル (JSON-RPC over stdio)
                                     ▼
@@ -421,11 +423,11 @@ pip install -r requirements-core.txt
 #### 方法 3：Docker デプロイ
 
 ```bash
-docker pull coff0xc/autoredteam:latest
+docker pull ghcr.io/coff0xc/autoredteam:latest
 docker run -it --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data:/app/data \
-  coff0xc/autoredteam
+  ghcr.io/coff0xc/autoredteam
 ```
 
 #### 方法 4：開発環境
@@ -471,6 +473,8 @@ AI エディタの MCP 設定ファイルに以下の設定を追加してくだ
 | Kiro | `~/.kiro/mcp.json` |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
 | VS Code (MCP 拡張) | `.vscode/mcp.json` |
+| OpenCode | `~/.config/opencode/mcp.json` または `~/.opencode/mcp.json` |
+| Claude Code | `~/.claude/mcp.json` |
 
 ### 設定例
 
@@ -531,6 +535,44 @@ AI エディタの MCP 設定ファイルに以下の設定を追加してくだ
 
 <details>
 <summary><b>Claude Desktop</b></summary>
+
+```json
+{
+  "mcpServers": {
+    "redteam": {
+      "command": "python",
+      "args": ["/absolute/path/to/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>OpenCode</b> - <code>~/.config/opencode/mcp.json</code></summary>
+
+```json
+{
+  "mcpServers": {
+    "redteam": {
+      "command": "python",
+      "args": ["/absolute/path/to/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Claude Code</b> - <code>~/.claude/mcp.json</code></summary>
 
 ```json
 {

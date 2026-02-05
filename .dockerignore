@@ -1,0 +1,69 @@
+# Git
+.git
+.gitattributes
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Documentation (keep README for reference)
+*.md
+!README.md
+
+# Development files
+.pre-commit-config.yaml
+.bandit
+requirements-dev.txt
+requirements-optional.txt
+pyproject.toml
+
+# Local data (will be mounted as volumes)
+data/
+logs/
+reports/
+
+# Examples and tests
+examples/
+tests/
+scripts/
+poc-templates/
+
+# Claude/Cursor config
+.claude/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db

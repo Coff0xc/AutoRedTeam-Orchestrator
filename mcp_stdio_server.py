@@ -3,7 +3,7 @@
 AutoRedTeam-Orchestrator MCP Server
 AI驱动的自动化渗透测试框架 - MCP协议服务端
 
-版本: 3.0.1
+版本: 3.0.2
 作者: AutoRedTeam Team
 许可: 仅限授权安全测试使用
 
@@ -91,7 +91,7 @@ def register_all_tools():
     from handlers import register_all_handlers
 
     logger.info("=" * 60)
-    logger.info("AutoRedTeam MCP Server v3.0.1 - 工具注册")
+    logger.info("AutoRedTeam MCP Server v3.0.2 - 工具注册")
     logger.info("=" * 60)
 
     # 使用模块化的 handlers 注册所有工具
@@ -111,7 +111,7 @@ def main():
     register_all_tools()
 
     # 启动MCP服务器
-    logger.info("AutoRedTeam MCP Server v3.0.1 启动中...")
+    logger.info("AutoRedTeam MCP Server v3.0.2 启动中...")
     logger.info("支持: Cursor / Windsurf / Kiro 等AI编辑器")
     logger.info("-" * 60)
 

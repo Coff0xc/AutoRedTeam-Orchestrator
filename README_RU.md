@@ -50,7 +50,7 @@
 │  ● OOB верификация     ● DI контейнер          ● MCP Security Middleware  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  Поддерживаемые ИИ-редакторы: Cursor | Windsurf | Kiro | Claude Desktop   │
-│                               | VS Code                                   │
+│                               | VS Code | OpenCode | Claude Code          │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -91,7 +91,7 @@
 
 ## Обзор проекта
 
-**AutoRedTeam-Orchestrator** — это фреймворк автоматизированного тестирования на проникновение на основе ИИ, построенный на [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Он инкапсулирует 101 инструмент безопасности как MCP-инструменты, обеспечивая бесшовную интеграцию с MCP-совместимыми ИИ-редакторами (Cursor, Windsurf, Kiro, Claude Desktop) для автоматизированного тестирования безопасности на естественном языке.
+**AutoRedTeam-Orchestrator** — это фреймворк автоматизированного тестирования на проникновение на основе ИИ, построенный на [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Он инкапсулирует 101 инструмент безопасности как MCP-инструменты, обеспечивая бесшовную интеграцию с MCP-совместимыми ИИ-редакторами (Cursor, Windsurf, Kiro, Claude Desktop, OpenCode, Claude Code) для автоматизированного тестирования безопасности на естественном языке.
 
 ### Почему AutoRedTeam-Orchestrator?
 
@@ -243,6 +243,7 @@
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           Слой ИИ-редакторов                               │
 │        Cursor  │  Windsurf  │  Kiro  │  Claude Desktop  │  VS Code         │
+│        OpenCode │  Claude Code                                             │
 └───────────────────────────────────┬─────────────────────────────────────────┘
                                     │ MCP-протокол (JSON-RPC поверх stdio)
                                     ▼
@@ -425,11 +426,11 @@ pip install -r requirements-core.txt
 #### Вариант 3: Развёртывание Docker
 
 ```bash
-docker pull coff0xc/autoredteam:latest
+docker pull ghcr.io/coff0xc/autoredteam:latest
 docker run -it --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data:/app/data \
-  coff0xc/autoredteam
+  ghcr.io/coff0xc/autoredteam
 ```
 
 #### Вариант 4: Среда разработки
@@ -475,6 +476,8 @@ pytest tests/test_mcp_security.py tests/test_container.py tests/test_mcts_planne
 | Kiro | `~/.kiro/mcp.json` |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
 | VS Code (MCP расширение) | `.vscode/mcp.json` |
+| OpenCode | `~/.config/opencode/mcp.json` или `~/.opencode/mcp.json` |
+| Claude Code | `~/.claude/mcp.json` |
 
 ### Примеры конфигурации
 
@@ -535,6 +538,44 @@ pytest tests/test_mcp_security.py tests/test_container.py tests/test_mcts_planne
 
 <details>
 <summary><b>Claude Desktop</b></summary>
+
+```json
+{
+  "mcpServers": {
+    "redteam": {
+      "command": "python",
+      "args": ["/абсолютный/путь/к/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>OpenCode</b> - <code>~/.config/opencode/mcp.json</code></summary>
+
+```json
+{
+  "mcpServers": {
+    "redteam": {
+      "command": "python",
+      "args": ["/абсолютный/путь/к/AutoRedTeam-Orchestrator/mcp_stdio_server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Claude Code</b> - <code>~/.claude/mcp.json</code></summary>
 
 ```json
 {
