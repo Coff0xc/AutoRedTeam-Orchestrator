@@ -57,8 +57,8 @@ async def stealth_request(
     if not HAS_STEALTH:
         return {"error": "Stealth module not available"}
 
-    from core.stealth.fingerprint_spoofer import BrowserType, FingerprintSpoofer
-    from core.stealth.traffic_mutator import MutationConfig, TrafficMutator
+    from core.stealth import BrowserType, FingerprintSpoofer
+    from core.stealth import MutationConfig, TrafficMutator
 
     # 配置
     config = MutationConfig()
@@ -116,7 +116,7 @@ async def proxy_pool_manage(
     if not HAS_STEALTH:
         return {"error": "Stealth module not available"}
 
-    from core.stealth.proxy_pool import ProxyPool
+    from core.stealth import ProxyPool
 
     # 使用全局代理池
     global _proxy_pool
@@ -164,7 +164,7 @@ async def browser_fingerprint(browser: str = "random") -> Dict[str, Any]:
     if not HAS_STEALTH:
         return {"error": "Stealth module not available"}
 
-    from core.stealth.fingerprint_spoofer import (
+    from core.stealth import (
         BrowserProfileFactory,
         BrowserType,
         FingerprintSpoofer,
@@ -211,7 +211,7 @@ async def sqli_detect(
     if not HAS_EXPLOIT:
         return {"error": "Exploit module not available"}
 
-    from core.exploit.pure_sqli import PureSQLiEngine
+    from core.exploit import PureSQLiEngine
 
     engine = PureSQLiEngine(waf_bypass=waf_bypass)
 
@@ -246,7 +246,7 @@ async def sqli_exploit(
     if not HAS_EXPLOIT:
         return {"error": "Exploit module not available"}
 
-    from core.exploit.pure_sqli import DBType, InjectionPoint, PureSQLiEngine, SQLiType
+    from core.exploit import DBType, InjectionPoint, PureSQLiEngine, SQLiType
 
     engine = PureSQLiEngine()
 
@@ -288,7 +288,7 @@ async def port_scan_advanced(
     if not HAS_EXPLOIT:
         return {"error": "Exploit module not available"}
 
-    from core.exploit.pure_scanner import PurePortScanner, run_async
+    from core.exploit import PurePortScanner, run_async
 
     scanner = PurePortScanner(concurrency=concurrency, service_detection=service_detection)
 
@@ -336,7 +336,7 @@ async def network_scan(
     if not HAS_EXPLOIT:
         return {"error": "Exploit module not available"}
 
-    from core.exploit.pure_scanner import PurePortScanner, run_async
+    from core.exploit import PurePortScanner, run_async
 
     scanner = PurePortScanner(concurrency=concurrency, service_detection=False)
     ports = ports or [22, 80, 443, 3389, 8080]
