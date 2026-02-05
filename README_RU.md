@@ -426,7 +426,7 @@ pip install -r requirements-core.txt
 #### Вариант 3: Развёртывание Docker
 
 ```bash
-docker pull ghcr.io/coff0xc/autoredteam-orchestrator-orchestrator:latest
+docker pull ghcr.io/coff0xc/autoredteam-orchestrator:latest
 docker run -it --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data:/app/data \
