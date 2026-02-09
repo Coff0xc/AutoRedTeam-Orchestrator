@@ -228,7 +228,7 @@ def create_lateral(
 
     module_class = module_map.get(method.lower())
     if not module_class:
-        logger.error(f"未知的横向移动方法: {method}")
+        logger.error("未知的横向移动方法: %s", method)
         return None
 
     # WinRM SSL 特殊处理
@@ -263,7 +263,7 @@ def auto_lateral(
     available = get_available_methods(target)
 
     if not available:
-        logger.warning(f"未发现可用的横向移动端口: {target}")
+        logger.warning("未发现可用的横向移动端口: %s", target)
         return None
 
     # 默认优先级
@@ -275,17 +275,17 @@ def auto_lateral(
         methods_to_try = [m for m in default_priority if m in available]
 
     for method in methods_to_try:
-        logger.info(f"尝试 {method} 连接到 {target}")
+        logger.info("尝试 %s 连接到 %s", method, target)
         module = create_lateral(method, target, credentials, config)
 
         if module and module.connect():
-            logger.info(f"成功通过 {method} 连接到 {target}")
+            logger.info("成功通过 %s 连接到 %s", method, target)
             return module
 
         if module:
             module.disconnect()
 
-    logger.error(f"所有方法均失败: {target}")
+    logger.error("所有方法均失败: %s", target)
     return None
 
 
@@ -555,7 +555,7 @@ if __name__ == "__main__":
 
     logger.info("常见横向移动端口:")
     for port, (name, desc) in COMMON_PORTS.items():
-        logger.info(f"  {port}: {name} ({desc})")
+        logger.info("  %s: %s (%s)", port, name, desc)
 
     logger.info("使用示例:")
     logger.info("  from core.lateral.utils import check_port, detect_os, create_lateral")

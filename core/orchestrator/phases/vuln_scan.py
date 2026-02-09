@@ -129,7 +129,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
                                 target_url, _baseline_request, num_requests=baseline_requests
                             )
                         except (OSError, ConnectionError) as e:
-                            self.logger.debug(f"基线构建失败 {target_url}: {e}")
+                            self.logger.debug("基线构建失败 %s: %s", target_url, e)
 
                     results = await detector.async_detect(target_url)
 
@@ -193,7 +193,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
                             self.state.add_finding(finding)
 
                 except (OSError, ConnectionError, asyncio.TimeoutError) as e:
-                    self.logger.exception(f"扫描 {target_url} 失败: {e}")
+                    self.logger.exception("扫描 %s 失败: %s", target_url, e)
                     errors.append(f"扫描 {target_url} 失败: {e}")
                     continue
 
@@ -213,7 +213,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
             )
 
         except ImportError as e:
-            self.logger.exception(f"漏洞扫描模块导入失败: {e}")
+            self.logger.exception("漏洞扫描模块导入失败: %s", e)
             errors.append(f"模块导入失败: {e}")
             return PhaseResult(
                 success=False,
@@ -223,7 +223,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
                 errors=errors,
             )
         except (OSError, ConnectionError, asyncio.TimeoutError) as e:
-            self.logger.exception(f"漏洞扫描阶段失败: {e}")
+            self.logger.exception("漏洞扫描阶段失败: %s", e)
             errors.append(str(e))
             return PhaseResult(
                 success=False,
@@ -291,28 +291,28 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
 
             # 1. Scheme 白名单检查
             if parsed.scheme.lower() not in _ALLOWED_SCHEMES:
-                self.logger.warning(f"SSRF 防护: 拒绝非 HTTP(S) URL: {url}")
+                self.logger.warning("SSRF 防护: 拒绝非 HTTP(S) URL: %s", url)
                 return False
 
             # 2. 主机名范围检查
             hostname = parsed.hostname or ""
             if not hostname:
-                self.logger.warning(f"SSRF 防护: URL 缺少主机名: {url}")
+                self.logger.warning("SSRF 防护: URL 缺少主机名: %s", url)
                 return False
 
             if parsed.netloc not in allowed_hosts:
-                self.logger.warning(f"SSRF 防护: 主机名越界: {url} (不在允许范围内)")
+                self.logger.warning("SSRF 防护: 主机名越界: %s (不在允许范围内)", url)
                 return False
 
             # 3. 内部 IP 地址黑名单检查
             if self._is_internal_address(hostname):
-                self.logger.warning(f"SSRF 防护: 拒绝内部地址: {url}")
+                self.logger.warning("SSRF 防护: 拒绝内部地址: %s", url)
                 return False
 
             return True
 
         except (ValueError, TypeError) as e:
-            self.logger.warning(f"SSRF 防护: URL 解析失败 {url}: {e}")
+            self.logger.warning("SSRF 防护: URL 解析失败 %s: %s", url, e)
             return False
 
     @staticmethod
@@ -442,7 +442,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
                 url=resp.url,
             )
         except (OSError, ConnectionError) as e:
-            self.logger.debug(f"误报过滤失败 {result.url}: {e}")
+            self.logger.debug("误报过滤失败 %s: %s", result.url, e)
             return None
 
     async def _apply_statistical_verification(

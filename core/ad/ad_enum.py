@@ -306,7 +306,7 @@ class SimpleLDAPClient:
         except socket.timeout:
             logger.debug("LDAP search timed out")
         except Exception as e:
-            logger.debug(f"LDAP search failed: {e}")
+            logger.debug("LDAP search failed: %s", e)
 
         return results
 
@@ -498,7 +498,7 @@ class ADEnumerator:
     def _log(self, message: str):
         """日志输出"""
         if self.verbose:
-            logger.debug(f"[ADEnum] {message}")
+            logger.debug("[ADEnum] %s", message)
 
     def _domain_to_dn(self, domain: str) -> str:
         """将域名转换为DN"""
@@ -855,6 +855,6 @@ if __name__ == "__main__":
     if not password and username:
         password = _getpass.getpass(f"Password for {username}: ")
 
-    logger.info(f"=== AD Enumeration: {domain} ===")
+    logger.info("=== AD Enumeration: %s ===", domain)
     result = ad_enumerate(domain, dc_ip, username, password, "all", verbose=True)
     logger.info(json.dumps(result, indent=2, ensure_ascii=False))

@@ -122,7 +122,7 @@ class AWSTester(BaseCloudTester):
             else:
                 self._session = boto3.Session(region_name=self.region)
         except Exception as e:
-            logger.error(f"初始化AWS会话失败: {e}")
+            logger.error("初始化AWS会话失败: %s", e)
             self._session = None
 
     def scan(self) -> List[CloudFinding]:
@@ -145,7 +145,7 @@ class AWSTester(BaseCloudTester):
         except NoCredentialsError:
             logger.error("AWS凭证未配置")
         except Exception as e:
-            logger.error(f"AWS扫描失败: {e}")
+            logger.error("AWS扫描失败: %s", e)
 
         return self._findings
 
@@ -198,7 +198,7 @@ class AWSTester(BaseCloudTester):
                             break
 
                 except ClientError as e:
-                    logger.debug(f"获取存储桶ACL失败 {bucket_name}: {e}")
+                    logger.debug("获取存储桶ACL失败 %s: %s", bucket_name, e)
 
                 # 检查存储桶策略
                 try:
@@ -224,7 +224,7 @@ class AWSTester(BaseCloudTester):
                     pass  # 没有策略
 
         except Exception as e:
-            logger.error(f"S3检查失败: {e}")
+            logger.error("S3检查失败: %s", e)
 
         return findings
 
@@ -295,7 +295,7 @@ class AWSTester(BaseCloudTester):
                         )
 
         except Exception as e:
-            logger.error(f"IAM检查失败: {e}")
+            logger.error("IAM检查失败: %s", e)
 
         return findings
 
@@ -387,7 +387,7 @@ class AWSTester(BaseCloudTester):
                                     break
 
         except Exception as e:
-            logger.error(f"安全组检查失败: {e}")
+            logger.error("安全组检查失败: %s", e)
 
         return findings
 
@@ -425,7 +425,7 @@ class AWSTester(BaseCloudTester):
                     findings.append(finding)
 
         except Exception as e:
-            logger.error(f"RDS检查失败: {e}")
+            logger.error("RDS检查失败: %s", e)
 
         return findings
 
@@ -468,7 +468,7 @@ class AWSTester(BaseCloudTester):
                     )
 
         except Exception as e:
-            logger.error(f"CloudTrail检查失败: {e}")
+            logger.error("CloudTrail检查失败: %s", e)
 
         return findings
 
@@ -509,7 +509,7 @@ class AWSTester(BaseCloudTester):
                         )
 
         except Exception as e:
-            logger.error(f"EC2元数据检查失败: {e}")
+            logger.error("EC2元数据检查失败: %s", e)
 
         return findings
 

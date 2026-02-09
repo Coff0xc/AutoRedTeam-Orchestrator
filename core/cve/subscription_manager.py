@@ -126,7 +126,7 @@ class SubscriptionManager:
         # 初始化扩展数据库表
         self._init_subscription_tables()
 
-        logger.info(f"订阅管理器初始化成功: {self.db_path}")
+        logger.info("订阅管理器初始化成功: %s", self.db_path)
 
     def _init_subscription_tables(self):
         """初始化订阅相关数据库表 (含迁移逻辑)"""
@@ -159,7 +159,7 @@ class SubscriptionManager:
                     if col_name not in existing_cols:
                         alter_sql = f"ALTER TABLE subscriptions ADD COLUMN {col_name} {col_def}"
                         cursor.execute(alter_sql)
-                        logger.info(f"迁移: 添加列 {col_name}")
+                        logger.info("迁移: 添加列 %s", col_name)
 
                 # 3. 确保NOT NULL列有默认值 (仅针对新添加的列)
                 # filter_type 和 filter_value 如果是NULL需要更新
@@ -199,7 +199,7 @@ class SubscriptionManager:
             logger.info("订阅数据库表初始化成功")
 
         except Exception as e:
-            logger.error(f"订阅数据库表初始化失败: {e}")
+            logger.error("订阅数据库表初始化失败: %s", e)
             raise
 
     def add_subscription(
@@ -284,11 +284,11 @@ class SubscriptionManager:
             conn.commit()
             conn.close()
 
-            logger.info(f"订阅添加成功: ID={subscription_id}, {filter_type}={filter_value}")
+            logger.info("订阅添加成功: ID=%s, %s=%s", subscription_id, filter_type, filter_value)
             return subscription_id
 
         except Exception as e:
-            logger.error(f"添加订阅失败: {e}")
+            logger.error("添加订阅失败: %s", e)
             raise
 
     def remove_subscription(self, subscription_id: int) -> bool:
@@ -318,14 +318,14 @@ class SubscriptionManager:
             conn.close()
 
             if deleted:
-                logger.info(f"订阅删除成功: ID={subscription_id}")
+                logger.info("订阅删除成功: ID=%s", subscription_id)
             else:
-                logger.warning(f"订阅不存在: ID={subscription_id}")
+                logger.warning("订阅不存在: ID=%s", subscription_id)
 
             return deleted
 
         except Exception as e:
-            logger.error(f"删除订阅失败: {e}")
+            logger.error("删除订阅失败: %s", e)
             return False
 
     def enable_subscription(self, subscription_id: int) -> bool:
@@ -352,14 +352,14 @@ class SubscriptionManager:
 
             if updated:
                 status = "启用" if enabled else "禁用"
-                logger.info(f"订阅{status}成功: ID={subscription_id}")
+                logger.info("订阅%s成功: ID=%s", status, subscription_id)
             else:
-                logger.warning(f"订阅不存在: ID={subscription_id}")
+                logger.warning("订阅不存在: ID=%s", subscription_id)
 
             return updated
 
         except Exception as e:
-            logger.error(f"切换订阅状态失败: {e}")
+            logger.error("切换订阅状态失败: %s", e)
             return False
 
     def list_subscriptions(self, enabled_only: bool = False) -> List[Subscription]:
@@ -403,7 +403,7 @@ class SubscriptionManager:
             return subscriptions
 
         except Exception as e:
-            logger.error(f"列出订阅失败: {e}")
+            logger.error("列出订阅失败: %s", e)
             return []
 
     def check_new_cves(self) -> Dict[int, List[CVEEntry]]:
@@ -448,7 +448,7 @@ class SubscriptionManager:
             return matches
 
         except Exception as e:
-            logger.error(f"检查新CVE失败: {e}")
+            logger.error("检查新CVE失败: %s", e)
             return {}
 
     def _match_subscription(self, subscription: Subscription) -> List[CVEEntry]:
@@ -483,11 +483,11 @@ class SubscriptionManager:
                 min_score, max_score = map(float, filter_value.split("-"))
                 return self._search_by_cvss_range(min_score, max_score, min_cvss)
             except Exception as e:
-                logger.error(f"CVSS范围解析失败: {e}")
+                logger.error("CVSS范围解析失败: %s", e)
                 return []
 
         else:
-            logger.warning(f"未知的过滤类型: {filter_type}")
+            logger.warning("未知的过滤类型: %s", filter_type)
             return []
 
     def _search_by_product(self, product: str, min_cvss: float) -> List[CVEEntry]:
@@ -512,7 +512,7 @@ class SubscriptionManager:
             return [CVEEntry(*row) for row in rows]
 
         except Exception as e:
-            logger.error(f"产品搜索失败: {e}")
+            logger.error("产品搜索失败: %s", e)
             return []
 
     def _search_by_cvss_range(
@@ -541,7 +541,7 @@ class SubscriptionManager:
             return [CVEEntry(*row) for row in rows]
 
         except Exception as e:
-            logger.error(f"CVSS范围搜索失败: {e}")
+            logger.error("CVSS范围搜索失败: %s", e)
             return []
 
     def _filter_notified_cves(self, subscription_id: int, cves: List[CVEEntry]) -> List[CVEEntry]:
@@ -580,7 +580,7 @@ class SubscriptionManager:
             return new_cves
 
         except Exception as e:
-            logger.error(f"过滤已通知CVE失败: {e}")
+            logger.error("过滤已通知CVE失败: %s", e)
             return cves
 
     def _send_notification(self, subscription: Subscription, cves: List[CVEEntry]):
@@ -604,13 +604,13 @@ class SubscriptionManager:
                 self._notify_webhook(subscription, cves)
 
             else:
-                logger.warning(f"未知的通知方式: {notify_method}")
+                logger.warning("未知的通知方式: %s", notify_method)
 
             # 记录通知历史
             self._log_notifications(subscription.id, cves)
 
         except Exception as e:
-            logger.error(f"发送通知失败: {e}")
+            logger.error("发送通知失败: %s", e)
 
     def _notify_console(self, subscription: Subscription, cves: List[CVEEntry]):
         """控制台通知"""
@@ -662,10 +662,10 @@ class SubscriptionManager:
                     f.write(f"更新: {cve.last_updated}\n")
                     f.write("\n")
 
-            logger.info(f"文件通知已写入: {file_path}")
+            logger.info("文件通知已写入: %s", file_path)
 
         except Exception as e:
-            logger.error(f"写入文件失败: {e}")
+            logger.error("写入文件失败: %s", e)
 
     def _notify_webhook(self, subscription: Subscription, cves: List[CVEEntry]):
         """Webhook通知 (HTTP回调)"""
@@ -699,10 +699,10 @@ class SubscriptionManager:
             # 异步HTTP POST
             asyncio.create_task(self._post_webhook(subscription.notify_target, payload))
 
-            logger.info(f"Webhook通知已发送: {subscription.notify_target}")
+            logger.info("Webhook通知已发送: %s", subscription.notify_target)
 
         except Exception as e:
-            logger.error(f"Webhook通知失败: {e}")
+            logger.error("Webhook通知失败: %s", e)
 
     async def _post_webhook(self, url: str, payload: Dict):
         """异步POST Webhook"""
@@ -716,12 +716,12 @@ class SubscriptionManager:
             async with client_ctx as session:
                 async with session.post(url, json=payload, timeout=10, ssl=False) as resp:
                     if resp.status == 200:
-                        logger.info(f"Webhook成功: {url}")
+                        logger.info("Webhook成功: %s", url)
                     else:
-                        logger.error(f"Webhook失败 {resp.status}: {url}")
+                        logger.error("Webhook失败 %s: %s", resp.status, url)
 
         except Exception as e:
-            logger.error(f"Webhook异常: {e}")
+            logger.error("Webhook异常: %s", e)
 
     def _log_notifications(self, subscription_id: int, cves: List[CVEEntry]):
         """记录通知历史"""
@@ -743,7 +743,7 @@ class SubscriptionManager:
             conn.close()
 
         except Exception as e:
-            logger.error(f"记录通知历史失败: {e}")
+            logger.error("记录通知历史失败: %s", e)
 
     def _update_last_notified(self, subscription_id: int):
         """更新最后通知时间"""
@@ -764,7 +764,7 @@ class SubscriptionManager:
             conn.close()
 
         except Exception as e:
-            logger.error(f"更新最后通知时间失败: {e}")
+            logger.error("更新最后通知时间失败: %s", e)
 
     def get_subscription_stats(self, subscription_id: int) -> Dict:
         """
@@ -821,7 +821,7 @@ class SubscriptionManager:
             }
 
         except Exception as e:
-            logger.error(f"获取订阅统计失败: {e}")
+            logger.error("获取订阅统计失败: %s", e)
             return {}
 
 

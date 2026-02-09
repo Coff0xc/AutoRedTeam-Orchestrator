@@ -225,7 +225,7 @@ class GlobalConfig:
                     return json.loads(content)
 
         except Exception as e:
-            logger.warning(f"加载配置文件失败 {path}: {e}")
+            logger.warning("加载配置文件失败 %s: %s", path, e)
             return {}
 
     @classmethod

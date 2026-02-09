@@ -183,7 +183,7 @@ class CVESearchEngine:
             )
 
         except Exception as e:
-            logger.error(f"[Search] 搜索失败: {e}")
+            logger.error("[Search] 搜索失败: %s", e)
             return SearchResult(
                 execution_time_ms=(time.time() - start_time) * 1000, query=search_filter.keyword
             )
@@ -324,7 +324,7 @@ class CVESearchEngine:
             return [self.storage._row_to_entry(row) for row in cursor.fetchall()]
 
         except sqlite3.OperationalError as e:
-            logger.warning(f"[Search] FTS 搜索失败，回退到 LIKE: {e}")
+            logger.warning("[Search] FTS 搜索失败，回退到 LIKE: %s", e)
             # 回退到 LIKE 搜索
             return self.search(keyword=query, limit=limit)
 

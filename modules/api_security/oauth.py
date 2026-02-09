@@ -147,11 +147,11 @@ class OAuthTester(BaseAPITester):
                         "userinfo_endpoint": config.get("userinfo_endpoint"),
                         "jwks_uri": config.get("jwks_uri"),
                     }
-                    logger.info(f"发现OpenID配置: {path}")
+                    logger.info("发现OpenID配置: %s", path)
                     break
 
             except Exception as e:
-                logger.debug(f"获取OpenID配置失败 {path}: {e}")
+                logger.debug("获取OpenID配置失败 %s: %s", path, e)
 
     def test_redirect_uri_validation(self) -> Optional[APITestResult]:
         """
@@ -399,7 +399,7 @@ class OAuthTester(BaseAPITester):
                 )
 
         except Exception as e:
-            logger.debug(f"Token泄露测试失败: {e}")
+            logger.debug("Token泄露测试失败: %s", e)
 
         return None
 
@@ -573,7 +573,7 @@ class OAuthTester(BaseAPITester):
             }
 
         except Exception as e:
-            logger.debug(f"授权请求失败: {e}")
+            logger.debug("授权请求失败: %s", e)
             return {"success": False, "error": str(e)}
 
     def _test_redirect_uri(self, redirect_uri: str) -> Dict[str, Any]:
@@ -618,7 +618,7 @@ class OAuthTester(BaseAPITester):
             }
 
         except Exception as e:
-            logger.debug(f"redirect_uri测试失败: {e}")
+            logger.debug("redirect_uri测试失败: %s", e)
             return {"accepted": False, "error": str(e)}
 
 

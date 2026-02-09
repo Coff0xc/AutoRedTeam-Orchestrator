@@ -105,7 +105,7 @@ class SessionDetector(BaseDetector):
         try:
             response = self.http_client.get(url, headers=headers)
         except Exception as e:
-            logger.warning(f"无法获取响应: {e}")
+            logger.warning("无法获取响应: %s", e)
             self._log_detection_end(url, results)
             return results
 
@@ -228,7 +228,7 @@ class SessionDetector(BaseDetector):
                 if session_id:
                     session_ids.append(session_id)
             except Exception as e:
-                logger.debug(f"获取会话 ID 失败: {e}")
+                logger.debug("获取会话 ID 失败: %s", e)
 
         if len(session_ids) < 2:
             return results
@@ -307,7 +307,7 @@ class SessionDetector(BaseDetector):
                 )
 
         except Exception as e:
-            logger.debug(f"会话固定检测失败: {e}")
+            logger.debug("会话固定检测失败: %s", e)
 
         return results
 

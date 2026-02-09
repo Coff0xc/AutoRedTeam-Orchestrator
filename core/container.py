@@ -383,12 +383,12 @@ class ScopedContainer(Container):
                 try:
                     instance.dispose()
                 except Exception as e:
-                    logger.warning(f"释放资源失败: {e}")
+                    logger.warning("释放资源失败: %s", e)
             elif hasattr(instance, "close"):
                 try:
                     instance.close()
                 except Exception as e:
-                    logger.warning(f"关闭资源失败: {e}")
+                    logger.warning("关闭资源失败: %s", e)
 
         self._scoped_instances.clear()
 

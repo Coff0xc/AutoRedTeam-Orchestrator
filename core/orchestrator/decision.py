@@ -161,7 +161,7 @@ class DecisionEngine:
     def update_threat_context(self, recon_data: Dict[str, Any]) -> None:
         """更新威胁上下文"""
         self.threat_context = ThreatContext.from_recon_data(recon_data)
-        self.logger.info(f"威胁上下文更新: 防御评分={self.threat_context.defense_score:.1f}")
+        self.logger.info("威胁上下文更新: 防御评分=%.1f", self.threat_context.defense_score)
 
     def record_attack_result(
         self,
@@ -224,7 +224,7 @@ class DecisionEngine:
         if self._should_backtrack():
             backtrack_phase = self._get_backtrack_phase(current)
             if backtrack_phase:
-                self.logger.info(f"检测到攻击受阻，回退至 {backtrack_phase.value}")
+                self.logger.info("检测到攻击受阻，回退至 %s", backtrack_phase.value)
                 return backtrack_phase
 
         next_idx = current_idx + 1
@@ -232,7 +232,7 @@ class DecisionEngine:
             next_phase = phase_order[next_idx]
             skip_reason = self._should_skip_phase_v2(next_phase)
             if skip_reason:
-                self.logger.info(f"跳过阶段 {next_phase.value}: {skip_reason}")
+                self.logger.info("跳过阶段 %s: %s", next_phase.value, skip_reason)
                 next_idx += 1
                 continue
             return next_phase

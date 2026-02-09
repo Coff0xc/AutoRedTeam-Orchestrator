@@ -141,7 +141,7 @@ class ToolRegistry:
                 for alias in aliases:
                     self._aliases[alias] = name
 
-            logger.debug(f"工具已注册: {name} [{category.value}]")
+            logger.debug("工具已注册: %s [%s]", name, category.value)
 
     def register_function(
         self,
@@ -197,7 +197,7 @@ class ToolRegistry:
             for alias in aliases_to_remove:
                 del self._aliases[alias]
 
-            logger.debug(f"工具已注销: {name}")
+            logger.debug("工具已注销: %s", name)
             return tool
 
     def _remove_indexes(self, name: str) -> None:
@@ -394,7 +394,7 @@ class ToolRegistry:
         except ToolNotFoundError as e:
             return ToolResult.fail(error=str(e))
         except Exception as e:
-            logger.exception(f"工具执行异常: {name}")
+            logger.exception("工具执行异常: %s", name)
             return ToolResult.fail(error=f"执行异常: {e}")
 
     async def async_execute(self, name: str, validate: bool = True, **kwargs) -> ToolResult:
@@ -423,7 +423,7 @@ class ToolRegistry:
         except ToolNotFoundError as e:
             return ToolResult.fail(error=str(e))
         except Exception as e:
-            logger.exception(f"工具异步执行异常: {name}")
+            logger.exception("工具异步执行异常: %s", name)
             return ToolResult.fail(error=f"执行异常: {e}")
 
     def get_schemas(self) -> Dict[str, Dict[str, Any]]:

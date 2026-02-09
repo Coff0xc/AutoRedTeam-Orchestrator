@@ -201,7 +201,7 @@ class HTTPClientFactory:
             try:
                 cls._sync_session.close()
             except Exception as e:
-                logger.warning(f"关闭同步 Session 失败: {e}")
+                logger.warning("关闭同步 Session 失败: %s", e)
             cls._sync_session = None
         logger.debug("HTTP 客户端已清理")
 

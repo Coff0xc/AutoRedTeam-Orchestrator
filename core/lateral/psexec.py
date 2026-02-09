@@ -142,11 +142,11 @@ class PsExecLateral(BaseLateralModule):
 
             self._connect_time = time.time()
             self._set_status(LateralStatus.CONNECTED)
-            self.logger.info(f"PsExec 连接成功: {self.credentials.username}@{self.target}")
+            self.logger.info("PsExec 连接成功: %s@%s", self.credentials.username, self.target)
             return True
 
         except Exception as e:
-            self.logger.error(f"PsExec 连接失败: {e}")
+            self.logger.error("PsExec 连接失败: %s", e)
             self._set_status(LateralStatus.FAILED)
             self._cleanup()
             return False
@@ -224,7 +224,7 @@ class PsExecLateral(BaseLateralModule):
                 scmr.hRStartServiceW(self._dce, service_handle)
             except Exception as e:
                 # 服务可能立即停止，这是正常的
-                self.logger.debug(f"服务启动: {e}")
+                self.logger.debug("服务启动: %s", e)
 
             # 等待执行
             time.sleep(1)
@@ -372,7 +372,7 @@ class PsExecLateral(BaseLateralModule):
             with open(local_path, "rb") as f:
                 self._smb_conn.putFile(self.share, remote_path, f.read)
 
-            self.logger.info(f"上传成功: {local_path} -> {remote_path}")
+            self.logger.info("上传成功: %s -> %s", local_path, remote_path)
 
             # 执行文件
             full_path = f"C:{remote_path}"
@@ -570,7 +570,7 @@ def psexec_upload_exec(
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("=== PsExec Lateral Movement Module ===")
-    logger.info(f"impacket 可用: {HAS_IMPACKET}")
+    logger.info("impacket 可用: %s", HAS_IMPACKET)
     logger.info("使用示例:")
     logger.info("  from core.lateral import PsExecLateral, Credentials, psexec")
     logger.info("  result = psexec('192.168.1.100', 'admin', 'password', command='whoami')")

@@ -265,7 +265,7 @@ class JWTTester(BaseAPITester):
                 return result
 
         except Exception as e:
-            logger.debug(f"算法混淆测试失败: {e}")
+            logger.debug("算法混淆测试失败: %s", e)
 
         return None
 
@@ -430,7 +430,7 @@ class JWTTester(BaseAPITester):
 
             # 这里实际测试需要设置一个真实的JWK endpoint
             # 简化版本：检查服务端是否验证jku域名
-            logger.debug(f"测试JKU: {jku}")
+            logger.debug("测试JKU: %s", jku)
 
         # 由于需要实际JWK服务器，这里只返回警告
         if original_jku:
@@ -586,7 +586,7 @@ class JWTTester(BaseAPITester):
             }
 
         except Exception as e:
-            logger.warning(f"JWT解码失败: {e}")
+            logger.warning("JWT解码失败: %s", e)
             return None
 
     def _base64url_decode(self, data: str) -> bytes:
@@ -675,7 +675,7 @@ class JWTTester(BaseAPITester):
             return response.status_code < 400
 
         except Exception as e:
-            logger.debug(f"验证令牌时发生错误: {e}")
+            logger.debug("验证令牌时发生错误: %s", e)
             return False
 
     def _get_public_key(self) -> Optional[str]:
@@ -705,7 +705,7 @@ class JWTTester(BaseAPITester):
                     # 尝试从JWKS提取公钥
                     if "keys" in data and data["keys"]:
                         # 简化：返回第一个密钥
-                        logger.info(f"从{path}获取到JWKS")
+                        logger.info("从%s获取到JWKS", path)
                         return json.dumps(data["keys"][0])
                     elif "jwks_uri" in data:
                         # OpenID配置，递归获取
@@ -716,7 +716,7 @@ class JWTTester(BaseAPITester):
                                 return json.dumps(jwks_data["keys"][0])
 
             except Exception as e:
-                logger.debug(f"获取公钥失败 {path}: {e}")
+                logger.debug("获取公钥失败 %s: %s", path, e)
                 continue
 
         return None

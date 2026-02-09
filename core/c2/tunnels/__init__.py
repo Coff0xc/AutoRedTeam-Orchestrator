@@ -103,7 +103,7 @@ def register_tunnel(protocol: str, tunnel_class: Type[BaseTunnel]) -> None:
         tunnel_class: 隧道类
     """
     TUNNEL_REGISTRY[protocol.lower()] = tunnel_class
-    logger.info(f"Registered tunnel type: {protocol}")
+    logger.info("Registered tunnel type: %s", protocol)
 
 
 def list_available_tunnels() -> list[str]:

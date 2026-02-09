@@ -258,7 +258,7 @@ class BaseExfiltration(ABC):
         """设置状态"""
         old_status = self.status
         self.status = status
-        self.logger.debug(f"Status: {old_status.value} -> {status.value}")
+        self.logger.debug("Status: %s -> %s", old_status.value, status.value)
 
     @abstractmethod
     def connect(self) -> bool:
@@ -419,18 +419,18 @@ class BaseExfiltration(ABC):
                     # 使用lstat()检查符号链接，不跟随链接
                     stat_info = partial.lstat()
                     if stat_module.S_ISLNK(stat_info.st_mode):
-                        self.logger.warning(f"Symlink detected in path component: {partial}")
+                        self.logger.warning("Symlink detected in path component: %s", partial)
                         return ExfilResult(
                             success=False, channel=self.channel, error="Access denied"
                         )
                 except PermissionError:
                     # 无法访问的路径也应拒绝
-                    self.logger.warning(f"Permission denied accessing path component: {partial}")
+                    self.logger.warning("Permission denied accessing path component: %s", partial)
                     return ExfilResult(success=False, channel=self.channel, error="Access denied")
                 except OSError as e:
                     # 路径不存在是预期行为，继续检查
                     if e.errno not in (errno.ENOENT, errno.ENOTDIR):
-                        self.logger.error(f"Unexpected OS error during symlink check: {e}")
+                        self.logger.error("Unexpected OS error during symlink check: %s", e)
                         return ExfilResult(
                             success=False, channel=self.channel, error="Access denied"
                         )
@@ -480,7 +480,7 @@ class BaseExfiltration(ABC):
                         )
 
             except (OSError, RuntimeError) as e:
-                self.logger.error(f"Path resolution failed: {e}")
+                self.logger.error("Path resolution failed: %s", e)
                 return ExfilResult(success=False, channel=self.channel, error="Access denied")
 
             # 可选：白名单检查
@@ -491,7 +491,7 @@ class BaseExfiltration(ABC):
                 try:
                     # Python 3.9+
                     if not resolved_path.is_relative_to(allowed_base):
-                        self.logger.warning(f"Path outside allowed directory: {file_path}")
+                        self.logger.warning("Path outside allowed directory: %s", file_path)
                         return ExfilResult(
                             success=False, channel=self.channel, error="Access denied"
                         )
@@ -500,7 +500,7 @@ class BaseExfiltration(ABC):
                     try:
                         resolved_path.relative_to(allowed_base)
                     except ValueError:
-                        self.logger.warning(f"Path outside allowed directory: {file_path}")
+                        self.logger.warning("Path outside allowed directory: %s", file_path)
                         return ExfilResult(
                             success=False, channel=self.channel, error="Access denied"
                         )
@@ -527,14 +527,14 @@ class BaseExfiltration(ABC):
 
                         # 检查是否为普通文件
                         if not stat_module.S_ISREG(stat_info.st_mode):
-                            self.logger.warning(f"Not a regular file: {file_path}")
+                            self.logger.warning("Not a regular file: %s", file_path)
                             return ExfilResult(
                                 success=False, channel=self.channel, error="Access denied"
                             )
 
                         # 检查危险权限位（setuid/setgid）
                         if stat_info.st_mode & (stat_module.S_ISUID | stat_module.S_ISGID):
-                            self.logger.warning(f"Setuid/setgid file detected: {file_path}")
+                            self.logger.warning("Setuid/setgid file detected: %s", file_path)
                             return ExfilResult(
                                 success=False, channel=self.channel, error="Access denied"
                             )
@@ -550,7 +550,7 @@ class BaseExfiltration(ABC):
 
                         # 检查空文件
                         if stat_info.st_size == 0:
-                            self.logger.info(f"Empty file: {file_path}")
+                            self.logger.info("Empty file: %s", file_path)
                             return self.exfiltrate(b"")
 
                         # 分块读取，防止内存耗尽
@@ -565,7 +565,7 @@ class BaseExfiltration(ABC):
 
                             # 双重检查防止恶意文件
                             if total_read > MAX_FILE_SIZE:
-                                self.logger.warning(f"File size exceeded during read: {total_read}")
+                                self.logger.warning("File size exceeded during read: %s", total_read)
                                 return ExfilResult(
                                     success=False, channel=self.channel, error="Access denied"
                                 )
@@ -575,22 +575,22 @@ class BaseExfiltration(ABC):
 
                 except Exception as e:
                     # fdopen成功后，文件描述符由文件对象管理，不需要手动关闭
-                    self.logger.error(f"File read error: {e}")
+                    self.logger.error("File read error: %s", e)
                     return ExfilResult(success=False, channel=self.channel, error="Access denied")
 
             except FileNotFoundError:
-                self.logger.info(f"File not found: {file_path}")
+                self.logger.info("File not found: %s", file_path)
                 return ExfilResult(success=False, channel=self.channel, error="Access denied")
             except PermissionError:
-                self.logger.warning(f"Permission denied: {file_path}")
+                self.logger.warning("Permission denied: %s", file_path)
                 return ExfilResult(success=False, channel=self.channel, error="Access denied")
             except IsADirectoryError:
-                self.logger.warning(f"Is a directory: {file_path}")
+                self.logger.warning("Is a directory: %s", file_path)
                 return ExfilResult(success=False, channel=self.channel, error="Access denied")
             except OSError as e:
                 # O_NOFOLLOW会在遇到符号链接时抛出OSError
                 if hasattr(os, "O_NOFOLLOW"):
-                    self.logger.warning(f"Symlink or OS error: {file_path}")
+                    self.logger.warning("Symlink or OS error: %s", file_path)
                     return ExfilResult(success=False, channel=self.channel, error="Access denied")
                 raise
 

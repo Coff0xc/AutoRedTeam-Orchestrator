@@ -613,7 +613,7 @@ class KubernetesTester(BaseCloudTester):
                     self._scan_pod_spec(pod_spec, name, namespace)
 
         except Exception as e:
-            logger.error(f"扫描清单文件失败: {e}")
+            logger.error("扫描清单文件失败: %s", e)
 
         return self._findings
 

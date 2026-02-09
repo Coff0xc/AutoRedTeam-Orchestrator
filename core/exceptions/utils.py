@@ -126,14 +126,14 @@ def handle_exceptions(
                     if isinstance(e, exc_type):
                         new_exc = wrap_exception(e, target_exc)
                         if logger:
-                            logger.warning(f"{target_exc.__name__}: {e}")
+                            logger.warning("%s: %s", target_exc.__name__, e)
                         if reraise:
                             raise new_exc from e
                         return default_return
 
                 # 未映射的异常
                 if logger:
-                    logger.exception(f"未预期的错误: {e}")
+                    logger.exception("未预期的错误: %s", e)
                 if reraise:
                     raise wrap_exception(e) from e
                 return default_return
@@ -153,13 +153,13 @@ def handle_exceptions(
                     if isinstance(e, exc_type):
                         new_exc = wrap_exception(e, target_exc)
                         if logger:
-                            logger.warning(f"{target_exc.__name__}: {e}")
+                            logger.warning("%s: %s", target_exc.__name__, e)
                         if reraise:
                             raise new_exc from e
                         return default_return
 
                 if logger:
-                    logger.exception(f"未预期的错误: {e}")
+                    logger.exception("未预期的错误: %s", e)
                 if reraise:
                     raise wrap_exception(e) from e
                 return default_return

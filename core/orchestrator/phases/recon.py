@@ -78,7 +78,7 @@ class ReconPhaseExecutor(BasePhaseExecutor):
 
         except ImportError as e:
             errors.append(f"模块导入失败: {e}")
-            self.logger.exception(f"侦察阶段导入失败: {e}")
+            self.logger.exception("侦察阶段导入失败: %s", e)
             return PhaseResult(
                 success=False,
                 phase=PentestPhase.RECON,
@@ -88,7 +88,7 @@ class ReconPhaseExecutor(BasePhaseExecutor):
             )
         except (OSError, asyncio.TimeoutError) as e:
             errors.append(str(e))
-            self.logger.exception(f"侦察阶段失败: {e}")
+            self.logger.exception("侦察阶段失败: %s", e)
             return PhaseResult(
                 success=False,
                 phase=PentestPhase.RECON,

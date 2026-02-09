@@ -156,7 +156,7 @@ class CircuitBreaker:
         elif new_state == CircuitState.HALF_OPEN:
             self._success_count = 0
 
-        logger.info(f"熔断器 '{self.name}' 状态变化: {old_state.value} -> {new_state.value}")
+        logger.info("熔断器 '%s' 状态变化: %s -> %s", self.name, old_state.value, new_state.value)
 
     def _is_excluded_exception(self, exc: Exception) -> bool:
         """检查是否是排除的异常类型"""
@@ -289,14 +289,14 @@ class CircuitBreaker:
             self._failure_count = 0
             self._success_count = 0
             self._last_failure_time = None
-            logger.info(f"熔断器 '{self.name}' 已重置")
+            logger.info("熔断器 '%s' 已重置", self.name)
 
     def force_open(self) -> None:
         """强制打开熔断器"""
         with self._lock:
             self._transition_to(CircuitState.OPEN)
             self._last_failure_time = time.monotonic()
-            logger.info(f"熔断器 '{self.name}' 被强制打开")
+            logger.info("熔断器 '%s' 被强制打开", self.name)
 
     @property
     def stats(self) -> dict:

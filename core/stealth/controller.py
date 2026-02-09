@@ -317,7 +317,7 @@ class HumanBehaviorSimulation(EvasionTechnique):
             oldest = self._request_history[0][0]
             wait_time = 60 - (now - oldest)
             if wait_time > 0:
-                logger.debug(f"Rate limiting: waiting {wait_time:.2f}s")
+                logger.debug("Rate limiting: waiting %.2fs", wait_time)
                 await asyncio.sleep(wait_time)
 
         # 添加常见浏览器行为特征
@@ -375,7 +375,7 @@ class WorkingHoursEnforcement(EvasionTechnique):
                 )
 
             wait_seconds = (next_start - now).total_seconds()
-            logger.info(f"Outside working hours, waiting {wait_seconds/3600:.1f} hours")
+            logger.info("Outside working hours, waiting %.1f hours", wait_seconds/3600)
 
             # 如果等待时间太长，分段等待并允许取消
             while wait_seconds > 0:
@@ -565,7 +565,7 @@ class DomainFronting(EvasionTechnique):
                     (parts.scheme, fronting_netloc, parts.path, parts.query, parts.fragment)
                 )
 
-            logger.debug(f"Domain fronting: {config.fronting_domain} -> {original_host}")
+            logger.debug("Domain fronting: %s -> %s", config.fronting_domain, original_host)
 
         return context
 
@@ -609,7 +609,7 @@ class StealthController:
         # 根据级别调整配置
         self._apply_level_defaults()
 
-        logger.info(f"StealthController initialized with level: {self.config.level.value}")
+        logger.info("StealthController initialized with level: %s", self.config.level.value)
 
     def _apply_level_defaults(self) -> None:
         """根据隐蔽级别应用默认配置"""
@@ -664,7 +664,7 @@ class StealthController:
                         self.metrics.user_agents_used = technique.used_agents_count
 
                 except Exception as e:
-                    logger.warning(f"Evasion technique {technique.name} failed: {e}")
+                    logger.warning("Evasion technique %s failed: %s", technique.name, e)
 
         return context
 
@@ -806,7 +806,7 @@ class AdaptiveEvasion:
         if current_idx < len(level_order) - 1:
             new_level = level_order[current_idx + 1]
             self.controller.update_config(level=new_level)
-            logger.warning(f"Escalating stealth level to: {new_level.value}")
+            logger.warning("Escalating stealth level to: %s", new_level.value)
 
     def _consider_deescalate(self) -> None:
         """考虑降低规避级别"""

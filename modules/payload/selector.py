@@ -80,7 +80,7 @@ class SmartPayloadSelector:
                         self.stats[key] = PayloadStats.from_dict(value)
                 logger.debug(f"Loaded {len(self.stats)} payload stats from {self.stats_file}")
             except Exception as e:
-                logger.warning(f"加载 Payload 统计失败: {e}")
+                logger.warning("加载 Payload 统计失败: %s", e)
 
     def _save_stats(self):
         """保存统计数据"""
@@ -90,7 +90,7 @@ class SmartPayloadSelector:
             with open(self.stats_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            logger.warning(f"保存 Payload 统计失败: {e}")
+            logger.warning("保存 Payload 统计失败: %s", e)
 
     def select(
         self,

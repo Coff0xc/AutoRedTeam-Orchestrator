@@ -408,4 +408,4 @@ if __name__ == "__main__":
     # 测试超时
     terminal.info("测试超时场景...")
     result = run_monitored_scan(["sleep", "100"], "sleep", "test", timeout=3)
-    logger.info(f"超时测试结果: {result}")
+    logger.info("超时测试结果: %s", result)

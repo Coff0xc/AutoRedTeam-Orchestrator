@@ -221,7 +221,7 @@ class OpenRedirectDetector(BaseDetector):
                     )
 
             except Exception as e:
-                logger.debug(f"开放重定向检测失败: {e}")
+                logger.debug("开放重定向检测失败: %s", e)
 
         return None
 

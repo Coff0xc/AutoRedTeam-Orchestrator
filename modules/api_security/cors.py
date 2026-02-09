@@ -509,7 +509,7 @@ class CORSTester(BaseAPITester):
             return self._extract_cors_headers(response)
 
         except Exception as e:
-            logger.debug(f"CORS请求失败: {e}")
+            logger.debug("CORS请求失败: %s", e)
             return None
 
     def _send_preflight_request(
@@ -542,7 +542,7 @@ class CORSTester(BaseAPITester):
             return self._extract_cors_headers(response)
 
         except Exception as e:
-            logger.debug(f"Preflight请求失败: {e}")
+            logger.debug("Preflight请求失败: %s", e)
             return None
 
     def _send_method_override_request(
@@ -571,7 +571,7 @@ class CORSTester(BaseAPITester):
             return self._extract_cors_headers(response)
 
         except Exception as e:
-            logger.debug(f"方法覆盖请求失败: {e}")
+            logger.debug("方法覆盖请求失败: %s", e)
             return None
 
     def _extract_cors_headers(self, response) -> Dict[str, str]:

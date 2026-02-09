@@ -146,7 +146,7 @@ class CORSDetector(BaseDetector):
                 )
 
         except Exception as e:
-            logger.debug(f"通配符 CORS 测试失败: {e}")
+            logger.debug("通配符 CORS 测试失败: %s", e)
 
         return None
 
@@ -185,7 +185,7 @@ class CORSDetector(BaseDetector):
                 )
 
         except Exception as e:
-            logger.debug(f"Origin 反射测试失败: {e}")
+            logger.debug("Origin 反射测试失败: %s", e)
 
         return None
 
@@ -220,7 +220,7 @@ class CORSDetector(BaseDetector):
                 )
 
         except Exception as e:
-            logger.debug(f"Null Origin 测试失败: {e}")
+            logger.debug("Null Origin 测试失败: %s", e)
 
         return None
 
@@ -272,7 +272,7 @@ class CORSDetector(BaseDetector):
                     )
 
             except Exception as e:
-                logger.debug(f"子域名绕过测试失败: {e}")
+                logger.debug("子域名绕过测试失败: %s", e)
 
         return None
 
@@ -322,7 +322,7 @@ class CORSDetector(BaseDetector):
                         result.severity = Severity.HIGH
 
                 except Exception as e:
-                    logger.debug(f"凭证暴露测试失败: {e}")
+                    logger.debug("凭证暴露测试失败: %s", e)
 
         return results
 

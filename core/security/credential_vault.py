@@ -50,7 +50,7 @@ class CredentialVault:
                 self._cipher = Fernet(self._key)
                 logger.debug("凭证存储使用 Fernet 加密")
             except Exception as e:
-                logger.warning(f"Fernet 初始化失败，回退到 Base64: {e}")
+                logger.warning("Fernet 初始化失败，回退到 Base64: %s", e)
                 self._cipher = None
 
     def _get_key_from_env(self) -> Optional[bytes]:
@@ -72,12 +72,12 @@ class CredentialVault:
         """
         if self._cipher:
             encrypted = self._cipher.encrypt(credential.encode()).decode()
-            logger.debug(f"凭证 '{name}' 已加密存储")
+            logger.debug("凭证 '%s' 已加密存储", name)
             return encrypted
 
         # 回退到 Base64（不安全，仅用于开发环境）
         encoded = base64.b64encode(credential.encode()).decode()
-        logger.warning(f"凭证 '{name}' 使用 Base64 编码（建议设置 {self.ENV_KEY_NAME}）")
+        logger.warning("凭证 '%s' 使用 Base64 编码（建议设置 %s）", name, self.ENV_KEY_NAME)
         return encoded
 
     def retrieve(self, name: str, encrypted: str) -> str:
@@ -93,10 +93,10 @@ class CredentialVault:
         if self._cipher:
             try:
                 decrypted = self._cipher.decrypt(encrypted.encode()).decode()
-                logger.debug(f"凭证 '{name}' 已解密")
+                logger.debug("凭证 '%s' 已解密", name)
                 return decrypted
             except Exception as e:
-                logger.error(f"凭证 '{name}' 解密失败: {e}")
+                logger.error("凭证 '%s' 解密失败: %s", name, e)
                 raise ValueError(f"凭证解密失败: {name}")
 
         # 回退到 Base64 解码

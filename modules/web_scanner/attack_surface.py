@@ -295,7 +295,7 @@ class AttackSurfaceDiscovery:
                         return await resp.text(), resp.status
                     return None, resp.status
             except Exception as e:
-                logger.debug(f"获取 {url} 失败: {e}")
+                logger.debug("获取 %s 失败: %s", url, e)
                 return None, 0
         else:
             # 降级使用 urllib
@@ -312,7 +312,7 @@ class AttackSurfaceDiscovery:
                 with urllib.request.urlopen(req, timeout=self.timeout, context=ctx) as resp:
                     return resp.read().decode("utf-8", errors="ignore"), resp.status
             except Exception as e:
-                logger.debug(f"获取 {url} 失败: {e}")
+                logger.debug("获取 %s 失败: %s", url, e)
                 return None, 0
 
     def _parse_url_params(self, url: str) -> List[InjectionPoint]:
@@ -502,7 +502,7 @@ class AttackSurfaceDiscovery:
                             queue.append((link, depth + 1))
 
                 except Exception as e:
-                    logger.debug(f"解析 {url} 失败: {e}")
+                    logger.debug("解析 %s 失败: %s", url, e)
                     result.errors.append(f"Parse error: {url}")
 
             # 处理表单
@@ -539,12 +539,12 @@ class AttackSurfaceDiscovery:
                                     p.source = InjectionPointSource.JS_ANALYSIS
                                 result.injection_points.add_many(points)
                     except Exception as e:
-                        logger.debug(f"分析 JS {script_url} 失败: {e}")
+                        logger.debug("分析 JS %s 失败: %s", script_url, e)
 
             result.success = True
 
         except Exception as e:
-            logger.error(f"攻面发现失败: {e}")
+            logger.error("攻面发现失败: %s", e)
             result.errors.append(str(e))
 
         finally:

@@ -128,7 +128,7 @@ class CredentialDumper:
     def _log(self, message: str):
         """日志输出"""
         if self.verbose:
-            logger.debug(f"[CredDump] {message}")
+            logger.debug("[CredDump] %s", message)
 
     # ==================== Windows凭证提取 ====================
 

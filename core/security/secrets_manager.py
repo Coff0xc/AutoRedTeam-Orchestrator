@@ -64,7 +64,7 @@ class SecretsManager:
                 logger.info("从密钥文件加载主密钥")
                 return key
             except Exception as e:
-                logger.error(f"读取密钥文件失败: {e}")
+                logger.error("读取密钥文件失败: %s", e)
 
         # 3. 生成新密钥
         logger.warning("生成新的主密钥")
@@ -77,9 +77,9 @@ class SecretsManager:
             # 设置文件权限（仅所有者可读写）
             if os.name != "nt":  # Unix-like系统
                 os.chmod(key_file, 0o600)
-            logger.info(f"主密钥已保存到: {key_file}")
+            logger.info("主密钥已保存到: %s", key_file)
         except Exception as e:
-            logger.error(f"保存密钥文件失败: {e}")
+            logger.error("保存密钥文件失败: %s", e)
 
         return new_key
 
@@ -116,7 +116,7 @@ class SecretsManager:
                 if len(salt) == 16:  # 有效的盐值
                     return salt
             except Exception as e:
-                logger.warning(f"读取盐值文件失败: {e}")
+                logger.warning("读取盐值文件失败: %s", e)
 
         # 生成新的随机盐值
         salt = secrets.token_bytes(16)
@@ -136,9 +136,9 @@ class SecretsManager:
                     os.chmod(salt_file, stat.S_IRUSR | stat.S_IWUSR)
                 except OSError:
                     pass
-            logger.info(f"KDF盐值已保存到: {salt_file}")
+            logger.info("KDF盐值已保存到: %s", salt_file)
         except Exception as e:
-            logger.error(f"保存盐值文件失败: {e}")
+            logger.error("保存盐值文件失败: %s", e)
 
         return salt
 
@@ -152,7 +152,7 @@ class SecretsManager:
         """
         self.secrets[key] = value
         self._save_secrets()
-        logger.info(f"设置敏感信息: {key}")
+        logger.info("设置敏感信息: %s", key)
 
     def get_secret(self, key: str, default: str = None) -> Optional[str]:
         """
@@ -178,7 +178,7 @@ class SecretsManager:
         if key in self.secrets:
             del self.secrets[key]
             self._save_secrets()
-            logger.info(f"删除敏感信息: {key}")
+            logger.info("删除敏感信息: %s", key)
 
     def list_secrets(self) -> list:
         """列出所有密钥名称（不包含值）"""
@@ -225,7 +225,7 @@ class SecretsManager:
             logger.info(f"加载了 {len(self.secrets)} 个敏感信息")
 
         except Exception as e:
-            logger.error(f"加载敏感信息失败: {e}")
+            logger.error("加载敏感信息失败: %s", e)
 
     def _save_secrets(self):
         """保存加密的敏感信息"""
@@ -243,7 +243,7 @@ class SecretsManager:
                 os.chmod(secrets_file, 0o600)
 
         except Exception as e:
-            logger.error(f"保存敏感信息失败: {e}")
+            logger.error("保存敏感信息失败: %s", e)
 
 
 class ConfigEncryptor:
@@ -269,7 +269,7 @@ class ConfigEncryptor:
         with open(output_path, "wb") as f:
             f.write(encrypted)
 
-        logger.info(f"配置文件已加密: {output_path}")
+        logger.info("配置文件已加密: %s", output_path)
 
     @staticmethod
     def decrypt_config(encrypted_path: str, output_path: str, master_key: str):
@@ -291,7 +291,7 @@ class ConfigEncryptor:
         with open(output_path, "wb") as f:
             f.write(decrypted)
 
-        logger.info(f"配置文件已解密: {output_path}")
+        logger.info("配置文件已解密: %s", output_path)
 
 
 class EnvironmentManager:
@@ -324,7 +324,7 @@ class EnvironmentManager:
         """
         env_path = Path(env_file)
         if not env_path.exists():
-            logger.warning(f".env文件不存在: {env_file}")
+            logger.warning(".env文件不存在: %s", env_file)
             return
 
         try:
@@ -340,10 +340,10 @@ class EnvironmentManager:
                         value = value.strip().strip('"').strip("'")
                         os.environ[key] = value
 
-            logger.info(f"已加载环境变量: {env_file}")
+            logger.info("已加载环境变量: %s", env_file)
 
         except Exception as e:
-            logger.error(f"加载.env文件失败: {e}")
+            logger.error("加载.env文件失败: %s", e)
 
     @staticmethod
     def check_sensitive_vars() -> Dict[str, bool]:

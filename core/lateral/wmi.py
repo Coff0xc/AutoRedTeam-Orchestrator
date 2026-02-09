@@ -206,15 +206,15 @@ class WMILateral(BaseLateralModule):
 
             self._connect_time = time.time()
             self._set_status(LateralStatus.CONNECTED)
-            self.logger.info(f"WMI 连接成功: {self.credentials.username}@{self.target}")
+            self.logger.info("WMI 连接成功: %s@%s", self.credentials.username, self.target)
             return True
 
         except (socket.error, socket.timeout, OSError) as e:
-            self.logger.error(f"WMI 网络连接失败: {e}")
+            self.logger.error("WMI 网络连接失败: %s", e)
             self._set_status(LateralStatus.FAILED)
             return False
         except (ValueError, KeyError, AttributeError) as e:
-            self.logger.error(f"WMI 认证/协议错误: {e}")
+            self.logger.error("WMI 认证/协议错误: %s", e)
             self._set_status(LateralStatus.FAILED)
             return False
 
@@ -697,12 +697,12 @@ def wmi_recon(target: str, username: str, password: str, domain: str = "") -> Di
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("=== WMI Lateral Movement Module ===")
-    logger.info(f"impacket 可用: {HAS_IMPACKET}")
-    logger.info(f"本地 WMI 可用: {HAS_LOCAL_WMI}")
+    logger.info("impacket 可用: %s", HAS_IMPACKET)
+    logger.info("本地 WMI 可用: %s", HAS_LOCAL_WMI)
     logger.info("使用示例:")
     logger.info("  from core.lateral import WMILateral, Credentials, wmi_exec")
     logger.info("  result = wmi_exec('192.168.1.100', 'admin', 'password', 'whoami')")
     logger.info("常用 WQL 查询:")
     for name in dir(WQLQueries):
         if not name.startswith("_"):
-            logger.info(f"  {name}")
+            logger.info("  %s", name)

@@ -395,7 +395,7 @@ class XXEDetector(BaseDetector):
         try:
             return self.http_client.post(url, data=payload, headers=headers)
         except Exception as e:
-            logger.debug(f"XXE 请求失败: {e}")
+            logger.debug("XXE 请求失败: %s", e)
             return None
 
     def _check_file_content(self, response_text: str, expected_os: str) -> tuple:

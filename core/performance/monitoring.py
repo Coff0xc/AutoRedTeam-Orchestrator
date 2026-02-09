@@ -485,7 +485,7 @@ class AlertManager:
             try:
                 callback(alert)
             except Exception as e:
-                logger.error(f"告警回调失败: {e}")
+                logger.error("告警回调失败: %s", e)
 
         # 发送Webhook
         if self.webhook_url:
@@ -513,7 +513,7 @@ class AlertManager:
             urllib.request.urlopen(req, timeout=10)
             self._stats["notifications_sent"] += 1
         except Exception as e:
-            logger.error(f"Webhook发送失败: {e}")
+            logger.error("Webhook发送失败: %s", e)
             self._stats["notifications_failed"] += 1
 
     def add_callback(self, callback: Callable[[Alert], None]):

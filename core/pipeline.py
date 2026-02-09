@@ -331,7 +331,7 @@ class VulnerabilityPipeline:
         if self.manager:
             cached = self.manager.get_tech(self.target)
             if cached:
-                logger.info(f"指纹识别命中缓存: {self.target}")
+                logger.info("指纹识别命中缓存: %s", self.target)
                 self.context.fingerprint = cached
                 self.context.detected_cms = cached.get("cms", [])
                 self.context.detected_frameworks = cached.get("frameworks", [])

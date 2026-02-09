@@ -269,7 +269,7 @@ if __name__ == "__main__":
         deps = ", ".join(
             f"{k}={'已安装' if v else '未安装'}" for k, v in status.items() if k != "available"
         )
-        logger.info(f"  {module}: {available} ({deps})")
+        logger.info("  %s: %s (%s)", module, available, deps)
 
     logger.info(f"\n认证方式: {', '.join(info['auth_methods'])}")
 

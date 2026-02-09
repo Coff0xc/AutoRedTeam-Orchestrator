@@ -74,7 +74,7 @@ class DNSExfiltration(BaseExfiltration):
                 if self._is_ip(self._nameserver):
                     self._resolver.nameservers = [self._nameserver]
                 else:
-                    self.logger.warning(f"无效的 nameserver (需 IP): {self._nameserver}")
+                    self.logger.warning("无效的 nameserver (需 IP): %s", self._nameserver)
 
             if not self._domain:
                 self.logger.error("DNS 外泄缺少域名: 请设置 dns_domain 或 destination(域名)")
@@ -92,7 +92,7 @@ class DNSExfiltration(BaseExfiltration):
             self.logger.error("dnspython library not available")
             return False
         except Exception as e:
-            self.logger.error(f"DNS resolver setup failed: {e}")
+            self.logger.error("DNS resolver setup failed: %s", e)
             return False
 
     def disconnect(self) -> None:
@@ -136,7 +136,7 @@ class DNSExfiltration(BaseExfiltration):
             return sent_any
 
         except Exception as e:
-            self.logger.error(f"DNS exfil failed: {e}")
+            self.logger.error("DNS exfil failed: %s", e)
             return False
 
     def _encode_payload(self, data: bytes) -> str:

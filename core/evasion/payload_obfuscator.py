@@ -907,10 +907,10 @@ if __name__ == "__main__":
 
     logger.info("Payload Obfuscation Module")
     logger.info("=" * 50)
-    logger.info(f"AES available: {HAS_CRYPTO}")
+    logger.info("AES available: %s", HAS_CRYPTO)
     logger.info("Usage:")
     logger.info("  from core.evasion import obfuscate_payload, obfuscate_python_code")
     logger.info("  result = obfuscate_payload('print(\"hello\")', encoding='xor')")
     logger.info("Supported encodings:")
     for enc in EncodingType:
-        logger.info(f"  - {enc.value}")
+        logger.info("  - %s", enc.value)

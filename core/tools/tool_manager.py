@@ -201,7 +201,7 @@ class ResultParser:
                 result["hosts"].append(host_info)
 
         except ET.ParseError as e:
-            logger.error(f"Nmap XML 解析失败: {e}")
+            logger.error("Nmap XML 解析失败: %s", e)
 
         return result
 
@@ -351,7 +351,7 @@ class ResultParser:
                     )
 
         except json.JSONDecodeError as e:
-            logger.debug(f"Masscan JSON 解析失败，尝试文本解析: {e}")
+            logger.debug("Masscan JSON 解析失败，尝试文本解析: %s", e)
             # 文本格式解析
             for line in output.strip().split("\n"):
                 match = re.search(r"(\d+)/(\w+)\s+(\w+)\s+(\S+)", line)
@@ -473,9 +473,9 @@ class ToolManager:
                         if "performance" in yaml_config:
                             config["performance"].update(yaml_config["performance"])
 
-                logger.info(f"已加载配置: {self.config_path}")
+                logger.info("已加载配置: %s", self.config_path)
             except (yaml.YAMLError, IOError, OSError) as e:
-                logger.warning(f"加载配置失败，使用默认配置: {e}")
+                logger.warning("加载配置失败，使用默认配置: %s", e)
 
         return config
 
@@ -505,7 +505,7 @@ class ToolManager:
                     info.status = ToolStatus.AVAILABLE
                 else:
                     info.status = ToolStatus.NOT_FOUND
-                    logger.warning(f"工具 {name} 路径验证失败: {custom_path}")
+                    logger.warning("工具 %s 路径验证失败: %s", name, custom_path)
             else:
                 # 尝试系统 PATH
                 which_result = shutil.which(name)
@@ -543,12 +543,12 @@ class ToolManager:
 
             # 检查文件是否存在
             if not resolved.exists():
-                logger.debug(f"工具路径不存在: {resolved}")
+                logger.debug("工具路径不存在: %s", resolved)
                 return None
 
             # 检查是否是文件（不是目录）
             if not resolved.is_file():
-                logger.warning(f"工具路径不是文件: {resolved}")
+                logger.warning("工具路径不是文件: %s", resolved)
                 return None
 
             # 防止访问敏感系统目录
@@ -563,7 +563,7 @@ class ToolManager:
             for sensitive_dir in sensitive_dirs:
                 try:
                     if sensitive_dir.exists() and resolved.is_relative_to(sensitive_dir):
-                        logger.warning(f"工具 {tool_name} 路径在敏感目录中被拒绝: {resolved}")
+                        logger.warning("工具 %s 路径在敏感目录中被拒绝: %s", tool_name, resolved)
                         return None
                 except (ValueError, TypeError):
                     # is_relative_to 在不相关路径时抛出 ValueError
@@ -572,13 +572,13 @@ class ToolManager:
             # 验证路径中不包含路径遍历序列
             path_str = str(resolved)
             if ".." in path_str:
-                logger.warning(f"工具路径包含路径遍历序列: {path}")
+                logger.warning("工具路径包含路径遍历序列: %s", path)
                 return None
 
             return str(resolved)
 
         except (OSError, ValueError) as e:
-            logger.warning(f"工具路径验证失败 {path}: {e}")
+            logger.warning("工具路径验证失败 %s: %s", path, e)
             return None
 
     def _get_tool_version(self, info: ToolInfo) -> Optional[str]:
@@ -597,7 +597,7 @@ class ToolManager:
             if match:
                 return match.group(1)
         except (subprocess.TimeoutExpired, subprocess.SubprocessError, OSError) as e:
-            logger.debug(f"获取 {info.name} 版本失败: {e}")
+            logger.debug("获取 %s 版本失败: %s", info.name, e)
 
         return None
 
@@ -666,7 +666,7 @@ class ToolManager:
         if info.status != ToolStatus.AVAILABLE:
             # 尝试回退
             if info.fallback and info.fallback != "internal":
-                logger.info(f"{tool} 不可用，尝试使用 {info.fallback}")
+                logger.info("%s 不可用，尝试使用 %s", tool, info.fallback)
                 return await self.run(
                     info.fallback, target, preset, extra_args, timeout, parse_output
                 )
@@ -727,7 +727,7 @@ class ToolManager:
                 except ProcessLookupError:
                     pass  # 进程已经结束
                 except OSError as e:
-                    logger.warning(f"终止超时进程失败: {e}")
+                    logger.warning("终止超时进程失败: %s", e)
             return ToolResult(
                 tool=tool,
                 success=False,
@@ -756,7 +756,7 @@ class ToolManager:
                 try:
                     os.unlink(nmap_xml)
                 except (OSError, PermissionError) as e:
-                    logger.debug(f"清理临时文件失败: {e}")
+                    logger.debug("清理临时文件失败: %s", e)
 
     def _build_command(
         self, info: ToolInfo, target: str, preset: str, extra_args: Optional[List[str]]
@@ -828,7 +828,7 @@ class ToolManager:
                     # 注意: 临时文件在 run() 的 finally 块中清理
                     return ResultParser.parse_nmap_xml(xml_content)
                 except (IOError, OSError, ValueError, ET.ParseError) as e:
-                    logger.warning(f"解析 Nmap XML 失败: {e}")
+                    logger.warning("解析 Nmap XML 失败: %s", e)
             return {"raw": output}
 
         elif tool == "nuclei":
@@ -877,7 +877,7 @@ class ToolManager:
             # 检查条件
             if condition:
                 if condition == "has_params" and "?" not in target:
-                    logger.info(f"跳过 {tool_name}: 条件不满足 ({condition})")
+                    logger.info("跳过 %s: 条件不满足 (%s)", tool_name, condition)
                     continue
 
             # 处理依赖
@@ -894,7 +894,7 @@ class ToolManager:
             previous_result = result
 
             if not result.success:
-                logger.warning(f"工具链步骤失败: {tool_name}")
+                logger.warning("工具链步骤失败: %s", tool_name)
                 # 继续执行后续步骤
 
         return results

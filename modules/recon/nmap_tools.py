@@ -93,7 +93,7 @@ class NmapBaseTool(BaseTool):
             return result
 
         except Exception as e:
-            logger.error(f"解析Nmap XML失败: {e}")
+            logger.error("解析Nmap XML失败: %s", e)
             return {"success": False, "error": f"XML解析失败: {str(e)}"}
 
     def _parse_host(self, host_elem) -> Dict[str, Any]:

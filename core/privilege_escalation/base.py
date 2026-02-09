@@ -227,7 +227,7 @@ class BasePrivilegeEscalation(ABC):
         """设置状态"""
         old_status = self.status
         self.status = status
-        self.logger.debug(f"Status: {old_status.value} -> {status.value}")
+        self.logger.debug("Status: %s -> %s", old_status.value, status.value)
 
     @abstractmethod
     def check_current_privilege(self) -> PrivilegeLevel:
@@ -298,7 +298,7 @@ class BasePrivilegeEscalation(ABC):
         for vector in filtered_vectors:
             try:
                 method = EscalationMethod(vector.get("method"))
-                self.logger.info(f"Trying escalation method: {method.value}")
+                self.logger.info("Trying escalation method: %s", method.value)
 
                 result = self.escalate(method)
                 if result.success:

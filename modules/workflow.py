@@ -29,7 +29,7 @@ class AutoWorkflow:
         target_type = self.ai._identify_target_type(target)
         self.session.add_target(target, target_type)
 
-        logger.info(f"开始自动化工作流: {target} [{target_type}]")
+        logger.info("开始自动化工作流: %s [%s]", target, target_type)
 
         workflow_result = {
             "target": target,

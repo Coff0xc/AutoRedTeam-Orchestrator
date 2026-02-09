@@ -62,7 +62,7 @@ class PrivilegeEscPhaseExecutor(BasePhaseExecutor):
                 try:
                     methods.append(EscalationMethod(name))
                 except ValueError:
-                    self.logger.warning(f"未知提权方法: {name}")
+                    self.logger.warning("未知提权方法: %s", name)
 
             escalation_config = EscalationConfig(
                 timeout=float(self.config.get("timeout", 60)),
@@ -119,7 +119,7 @@ class PrivilegeEscPhaseExecutor(BasePhaseExecutor):
 
         except ImportError as e:
             errors.append(f"模块导入失败: {e}")
-            self.logger.exception(f"权限提升模块导入失败: {e}")
+            self.logger.exception("权限提升模块导入失败: %s", e)
             return PhaseResult(
                 success=False,
                 phase=PentestPhase.PRIVILEGE_ESC,
@@ -129,7 +129,7 @@ class PrivilegeEscPhaseExecutor(BasePhaseExecutor):
             )
         except (OSError, asyncio.TimeoutError, PermissionError) as e:
             errors.append(str(e))
-            self.logger.exception(f"权限提升阶段失败: {e}")
+            self.logger.exception("权限提升阶段失败: %s", e)
             return PhaseResult(
                 success=False,
                 phase=PentestPhase.PRIVILEGE_ESC,

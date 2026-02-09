@@ -151,7 +151,7 @@ class SecurityHeadersDetector(BaseDetector):
         try:
             response = self.http_client.get(url, headers=headers)
         except Exception as e:
-            logger.warning(f"无法获取响应: {e}")
+            logger.warning("无法获取响应: %s", e)
             self._log_detection_end(url, results)
             return results
 

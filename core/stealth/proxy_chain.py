@@ -150,16 +150,16 @@ class ProxyChain:
         temp_proxy = pool._parse_proxy_string(proxy_url)
 
         if not temp_proxy:
-            logger.error(f"Invalid proxy URL: {proxy_url}")
+            logger.error("Invalid proxy URL: %s", proxy_url)
             return False
 
         # 检查重复
         if temp_proxy in self._proxies:
-            logger.debug(f"Proxy already in chain: {proxy_url}")
+            logger.debug("Proxy already in chain: %s", proxy_url)
             return False
 
         self._proxies.append(temp_proxy)
-        logger.info(f"[{self.name}] Added proxy: {proxy_url}")
+        logger.info("[%s] Added proxy: %s", self.name, proxy_url)
         return True
 
     def remove_proxy(self, index: int) -> bool:
@@ -174,9 +174,9 @@ class ProxyChain:
         """
         if 0 <= index < len(self._proxies):
             removed = self._proxies.pop(index)
-            logger.info(f"[{self.name}] Removed proxy at index {index}: {removed.url}")
+            logger.info("[%s] Removed proxy at index %s: %s", self.name, index, removed.url)
             return True
-        logger.warning(f"[{self.name}] Invalid proxy index: {index}")
+        logger.warning("[%s] Invalid proxy index: %s", self.name, index)
         return False
 
     def get_chain(self) -> List[str]:
@@ -192,7 +192,7 @@ class ProxyChain:
         """轮换代理顺序 (将第一个移到最后)"""
         if len(self._proxies) > 1:
             self._proxies.append(self._proxies.pop(0))
-            logger.debug(f"[{self.name}] Rotated proxy chain")
+            logger.debug("[%s] Rotated proxy chain", self.name)
 
     def verify_proxy(self, proxy_url: str, timeout: float = 10.0) -> Tuple[bool, float]:
         """
@@ -273,11 +273,11 @@ class ProxyChain:
             return None
 
         if not self._enabled:
-            logger.warning(f"[{self.name}] Chain is disabled")
+            logger.warning("[%s] Chain is disabled", self.name)
             return None
 
         if not self._proxies:
-            logger.error(f"[{self.name}] No proxies in chain")
+            logger.error("[%s] No proxies in chain", self.name)
             return None
 
         # 延迟抖动
@@ -289,7 +289,7 @@ class ProxyChain:
         valid_proxies = [p for p in self._proxies if p.is_valid] if auto_cleanup else self._proxies
 
         if not valid_proxies:
-            logger.error(f"[{self.name}] No valid proxies available")
+            logger.error("[%s] No valid proxies available", self.name)
             return None
 
         # 根据策略选择代理
@@ -335,12 +335,12 @@ class ProxyChain:
                     last_error = e
                     proxy.fail_count += 1
 
-                    logger.debug(f"[{self.name}] Request failed via {proxy.url}: {e}")
+                    logger.debug("[%s] Request failed via %s: %s", self.name, proxy.url, e)
 
                     # 标记失效代理
                     if auto_cleanup and proxy.fail_count >= 3:
                         proxy.is_valid = False
-                        logger.warning(f"[{self.name}] Proxy marked invalid: {proxy.url}")
+                        logger.warning("[%s] Proxy marked invalid: %s", self.name, proxy.url)
 
                     # STRICT 模式下失败即停止
                     if self.strategy == ChainStrategy.STRICT:
@@ -360,7 +360,7 @@ class ProxyChain:
         # 所有尝试失败
         self._metrics.total_requests += 1
         self._metrics.failed_requests += 1
-        logger.error(f"[{self.name}] All proxy attempts failed: {last_error}")
+        logger.error("[%s] All proxy attempts failed: %s", self.name, last_error)
         return None
 
     def request(self, url: str, method: str = "GET", **kwargs) -> Optional[requests.Response]:
@@ -398,17 +398,17 @@ class ProxyChain:
     def enable(self):
         """启用代理链"""
         self._enabled = True
-        logger.info(f"[{self.name}] Chain enabled")
+        logger.info("[%s] Chain enabled", self.name)
 
     def disable(self):
         """禁用代理链"""
         self._enabled = False
-        logger.info(f"[{self.name}] Chain disabled")
+        logger.info("[%s] Chain disabled", self.name)
 
     def clear(self):
         """清空代理链"""
         self._proxies.clear()
-        logger.info(f"[{self.name}] Chain cleared")
+        logger.info("[%s] Chain cleared", self.name)
 
     def export_proxychains_config(self, filepath: str):
         """
@@ -442,7 +442,7 @@ class ProxyChain:
 
         config = "\n".join(lines)
         Path(filepath).write_text(config, encoding="utf-8")
-        logger.info(f"[{self.name}] Exported proxychains config to {filepath}")
+        logger.info("[%s] Exported proxychains config to %s", self.name, filepath)
 
 
 class ProxyChainManager:
@@ -483,14 +483,14 @@ class ProxyChainManager:
     ) -> ProxyChain:
         """创建代理链"""
         if name in self._chains:
-            logger.warning(f"Chain '{name}' already exists")
+            logger.warning("Chain '%s' already exists", name)
             return self._chains[name]
 
         chain = ProxyChain(name=name, strategy=strategy, **kwargs)
         self._chains[name] = chain
         self._chain_queue.append(name)
 
-        logger.info(f"Created chain: {name}")
+        logger.info("Created chain: %s", name)
         return chain
 
     def remove_chain(self, name: str) -> bool:
@@ -499,7 +499,7 @@ class ProxyChainManager:
             del self._chains[name]
             if name in self._chain_queue:
                 self._chain_queue.remove(name)
-            logger.info(f"Removed chain: {name}")
+            logger.info("Removed chain: %s", name)
             return True
         return False
 
@@ -512,7 +512,7 @@ class ProxyChainManager:
         chain = self.get_chain(chain_name)
         if chain:
             return chain.add_proxy(proxy_url)
-        logger.error(f"Chain not found: {chain_name}")
+        logger.error("Chain not found: %s", chain_name)
         return False
 
     def integrate_proxy_pool(self, pool: ProxyPool, chain_name: str, count: int = 5) -> int:
@@ -529,7 +529,7 @@ class ProxyChainManager:
         """
         chain = self.get_chain(chain_name)
         if not chain:
-            logger.error(f"Chain not found: {chain_name}")
+            logger.error("Chain not found: %s", chain_name)
             return 0
 
         added = 0
@@ -539,7 +539,7 @@ class ProxyChainManager:
                 chain.add_proxy(proxy.url)
                 added += 1
 
-        logger.info(f"Integrated {added} proxies from pool to chain '{chain_name}'")
+        logger.info("Integrated %s proxies from pool to chain '%s'", added, chain_name)
         return added
 
     def select_chain(self) -> Optional[ProxyChain]:
@@ -590,7 +590,7 @@ class ProxyChainManager:
         if chain_name:
             chain = self.get_chain(chain_name)
             if not chain:
-                logger.error(f"Chain not found: {chain_name}")
+                logger.error("Chain not found: %s", chain_name)
                 return None
         else:
             chain = self.select_chain()
@@ -625,7 +625,7 @@ class ProxyChainManager:
             cleaned += before - len(chain._proxies)
 
         if cleaned > 0:
-            logger.info(f"Auto cleanup: removed {cleaned} invalid proxies")
+            logger.info("Auto cleanup: removed %s invalid proxies", cleaned)
         return cleaned
 
 

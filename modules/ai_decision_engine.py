@@ -144,7 +144,7 @@ class AIDecisionEngine:
                 with open(self.history_file, "r", encoding="utf-8") as f:
                     self.attack_history.update(json.load(f))
             except Exception as e:
-                logger.warning(f"加载历史数据失败: {e}")
+                logger.warning("加载历史数据失败: %s", e)
 
     def _save_history(self):
         """保存历史攻击数据"""
@@ -154,7 +154,7 @@ class AIDecisionEngine:
                 with open(self.history_file, "w", encoding="utf-8") as f:
                     json.dump(dict(self.attack_history), f, indent=2)
             except Exception as e:
-                logger.warning(f"保存历史数据失败: {e}")
+                logger.warning("保存历史数据失败: %s", e)
 
     def analyze_target(self, context: TargetContext) -> List[AttackSuggestion]:
         """分析目标并生成攻击建议"""

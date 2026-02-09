@@ -131,7 +131,7 @@ class AutoPentestOrchestrator:
     async def run(self, start_phase: Optional[PentestPhase] = None) -> Dict[str, Any]:
         """执行完整渗透流程"""
         start_time = datetime.now()
-        self.logger.info(f"开始渗透测试: {self.target}, session={self.state.session_id}")
+        self.logger.info("开始渗透测试: %s, session=%s", self.target, self.state.session_id)
 
         if start_phase:
             start_idx = self.PHASE_ORDER.index(start_phase)
@@ -146,7 +146,7 @@ class AutoPentestOrchestrator:
         try:
             for phase in self.PHASE_ORDER[start_idx:]:
                 if phase.value in self.config.skip_phases:
-                    self.logger.info(f"跳过阶段: {phase.value}")
+                    self.logger.info("跳过阶段: %s", phase.value)
                     self.state.phase_status[phase.value] = PhaseStatus.SKIPPED
                     continue
 
@@ -161,7 +161,7 @@ class AutoPentestOrchestrator:
                 await self._save_state()
 
                 if not result.success and phase in (PentestPhase.RECON, PentestPhase.VULN_SCAN):
-                    self.logger.error(f"关键阶段失败: {phase.value}")
+                    self.logger.error("关键阶段失败: %s", phase.value)
                     self._has_critical_failure = True
                     break
 
@@ -174,7 +174,7 @@ class AutoPentestOrchestrator:
                 self.state.current_phase = PentestPhase.COMPLETED
 
         except Exception as e:
-            self.logger.exception(f"执行失败: {e}")  # 使用exception记录堆栈
+            self.logger.exception("执行失败: %s", e)  # 使用exception记录堆栈
             self.state.current_phase = PentestPhase.FAILED
             results["error"] = str(e)
 
@@ -254,7 +254,7 @@ class AutoPentestOrchestrator:
             return result
 
         except Exception as e:
-            self.logger.exception(f"阶段 {phase.value} 执行异常: {e}")
+            self.logger.exception("阶段 %s 执行异常: %s", phase.value, e)
             self.state.fail_phase(phase, str(e))
             return PhaseResult(success=False, phase=phase, data={}, findings=[], errors=[str(e)])
 
@@ -295,7 +295,7 @@ class AutoPentestOrchestrator:
                 )
                 self._storage.save_context(context)
             except Exception as e:
-                self.logger.exception(f"保存状态失败: {e}")
+                self.logger.exception("保存状态失败: %s", e)
 
     def _report_progress(self, phase: PentestPhase, status: str) -> None:
         """报告进度 - 使用脱敏数据"""
@@ -306,7 +306,7 @@ class AutoPentestOrchestrator:
                 # 使用脱敏数据进行回调，避免敏感信息泄露
                 self._progress_callback(phase.value, status, self.state.to_safe_dict())
             except Exception as e:
-                self.logger.warning(f"进度回调失败: {e}")
+                self.logger.warning("进度回调失败: %s", e)
 
     def _summarize_findings(self) -> Dict[str, Any]:
         """汇总发现"""

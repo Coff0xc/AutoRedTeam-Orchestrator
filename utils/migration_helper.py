@@ -43,7 +43,7 @@ class LegacyAdapter:
                 "total": result.get("total", 0),
             }
         except Exception as e:
-            logger.error(f"SQLi 检测失败: {e}")
+            logger.error("SQLi 检测失败: %s", e)
             return {"success": False, "error": str(e)}
 
     @staticmethod
@@ -71,7 +71,7 @@ class LegacyAdapter:
                 "total": result.get("total", 0),
             }
         except Exception as e:
-            logger.error(f"XSS 检测失败: {e}")
+            logger.error("XSS 检测失败: %s", e)
             return {"success": False, "error": str(e)}
 
 

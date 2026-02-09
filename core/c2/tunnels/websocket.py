@@ -130,14 +130,14 @@ class WebSocketTunnel(BaseTunnel):
                     self._recv_thread = threading.Thread(target=self._receive_loop, daemon=True)
                     self._recv_thread.start()
 
-                    logger.debug(f"WebSocket tunnel connected: {url}")
+                    logger.debug("WebSocket tunnel connected: %s", url)
                     return True
 
             logger.warning("WebSocket connection failed")
             return False
 
         except Exception as e:
-            logger.error(f"WebSocket connect error: {e}")
+            logger.error("WebSocket connect error: %s", e)
             return False
 
     def disconnect(self) -> None:
@@ -180,7 +180,7 @@ class WebSocketTunnel(BaseTunnel):
             return True
 
         except Exception as e:
-            logger.error(f"WebSocket send error: {e}")
+            logger.error("WebSocket send error: %s", e)
             self._handle_disconnect()
             return False
 
@@ -201,7 +201,7 @@ class WebSocketTunnel(BaseTunnel):
             self._ws.send(text)
             return True
         except Exception as e:
-            logger.error(f"WebSocket send text error: {e}")
+            logger.error("WebSocket send text error: %s", e)
             return False
 
     def send_json(self, data: Dict[str, Any]) -> bool:
@@ -218,7 +218,7 @@ class WebSocketTunnel(BaseTunnel):
             text = json.dumps(data, separators=(",", ":"))
             return self.send_text(text)
         except Exception as e:
-            logger.error(f"WebSocket send JSON error: {e}")
+            logger.error("WebSocket send JSON error: %s", e)
             return False
 
     def receive(self, timeout: Optional[float] = None) -> Optional[bytes]:
@@ -242,7 +242,7 @@ class WebSocketTunnel(BaseTunnel):
         except queue.Empty:
             return None
         except Exception as e:
-            logger.debug(f"WebSocket receive error: {e}")
+            logger.debug("WebSocket receive error: %s", e)
             return None
 
     def receive_nowait(self) -> Optional[bytes]:
@@ -300,7 +300,7 @@ class WebSocketTunnel(BaseTunnel):
                     try:
                         self._on_message(data)
                     except Exception as e:
-                        logger.error(f"Message callback error: {e}")
+                        logger.error("Message callback error: %s", e)
 
             except websocket.WebSocketTimeoutException:
                 continue
@@ -309,7 +309,7 @@ class WebSocketTunnel(BaseTunnel):
                 break
             except Exception as e:
                 if self._running:
-                    logger.debug(f"Receive loop error: {e}")
+                    logger.debug("Receive loop error: %s", e)
                     if self._on_error:
                         self._on_error(e)
                 break
@@ -323,7 +323,7 @@ class WebSocketTunnel(BaseTunnel):
             try:
                 self._on_close()
             except Exception as e:
-                logger.error(f"Close callback error: {e}")
+                logger.error("Close callback error: %s", e)
 
 
 # ==================== 高级 WebSocket 隧道 ====================

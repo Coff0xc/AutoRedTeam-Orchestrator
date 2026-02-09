@@ -184,7 +184,7 @@ class ExfiltratePhaseExecutor(BasePhaseExecutor):
 
         except ImportError as e:
             errors.append(f"模块导入失败: {e}")
-            self.logger.exception(f"数据外泄模块导入失败: {e}")
+            self.logger.exception("数据外泄模块导入失败: %s", e)
             return PhaseResult(
                 success=False,
                 phase=PentestPhase.EXFILTRATE,
@@ -194,7 +194,7 @@ class ExfiltratePhaseExecutor(BasePhaseExecutor):
             )
         except (OSError, ConnectionError, ValueError) as e:
             errors.append(str(e))
-            self.logger.exception(f"数据外泄阶段失败: {e}")
+            self.logger.exception("数据外泄阶段失败: %s", e)
             return PhaseResult(
                 success=False,
                 phase=PentestPhase.EXFILTRATE,

@@ -134,7 +134,7 @@ class TaskWrapper:
                 try:
                     self.callback(result if success else None, error)
                 except Exception as cb_err:
-                    logger.warning(f"回调执行失败: {cb_err}")
+                    logger.warning("回调执行失败: %s", cb_err)
 
 
 class DynamicThreadPool:
@@ -191,7 +191,7 @@ class DynamicThreadPool:
         # 启动线程池
         self._initialize_executor()
 
-        logger.info(f"线程池 '{name}' 已初始化: workers={min_workers}-{max_workers}")
+        logger.info("线程池 '%s' 已初始化: workers=%s-%s", name, min_workers, max_workers)
 
     def _initialize_executor(self) -> None:
         """初始化执行器"""
@@ -351,7 +351,7 @@ class DynamicThreadPool:
             try:
                 yield future.result()
             except Exception as e:
-                logger.warning(f"任务执行失败: {e}")
+                logger.warning("任务执行失败: %s", e)
                 yield None
 
     def batch_submit(
@@ -386,7 +386,7 @@ class DynamicThreadPool:
                     try:
                         callback(results)
                     except Exception as e:
-                        logger.warning(f"批量回调执行失败: {e}")
+                        logger.warning("批量回调执行失败: %s", e)
 
         for task in tasks:
             if len(task) == 2:
@@ -439,10 +439,10 @@ class DynamicThreadPool:
             self._shutdown = True
 
             if self._executor is not None:
-                logger.info(f"正在关闭线程池 '{self.name}'...")
+                logger.info("正在关闭线程池 '%s'...", self.name)
                 self._executor.shutdown(wait=wait, cancel_futures=cancel_pending)
                 self._executor = None
-                logger.info(f"线程池 '{self.name}' 已关闭")
+                logger.info("线程池 '%s' 已关闭", self.name)
 
     @property
     def stats(self) -> Dict[str, Any]:
@@ -554,7 +554,7 @@ class AsyncPool:
         try:
             return await asyncio.wait_for(self.run(coros, return_exceptions), timeout=timeout)
         except asyncio.TimeoutError:
-            logger.warning(f"批量任务超时 ({timeout}s)")
+            logger.warning("批量任务超时 (%ss)", timeout)
             return [asyncio.TimeoutError(f"超时 {timeout}s")] * len(coros)
 
     async def map(

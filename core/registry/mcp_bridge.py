@@ -155,9 +155,9 @@ class MCPBridge:
                 self._register_to_mcp(tool)
                 count += 1
             except Exception as e:
-                logger.error(f"注册工具到MCP失败: {name}, 错误: {e}")
+                logger.error("注册工具到MCP失败: %s, 错误: %s", name, e)
 
-        logger.info(f"从注册表同步 {count} 个工具到MCP")
+        logger.info("从注册表同步 %s 个工具到MCP", count)
         return count
 
     def register_tool(self, tool: BaseTool, to_registry: bool = True, to_mcp: bool = True) -> None:
@@ -181,7 +181,7 @@ class MCPBridge:
             else:
                 # MCP未绑定，加入挂起列表
                 self._pending_tools.append(tool)
-                logger.debug(f"工具 {name} 加入挂起队列，等待MCP绑定")
+                logger.debug("工具 %s 加入挂起队列，等待MCP绑定", name)
 
     def register_function(
         self,
@@ -224,7 +224,7 @@ class MCPBridge:
 
         name = tool.metadata.name
         if name in self._registered_tools:
-            logger.debug(f"工具 {name} 已注册到MCP，跳过")
+            logger.debug("工具 %s 已注册到MCP，跳过", name)
             return
 
         # 创建MCP包装函数
@@ -238,9 +238,9 @@ class MCPBridge:
         try:
             self._mcp.tool(name=name, description=tool.metadata.description)(wrapper)
             self._registered_tools.add(name)
-            logger.debug(f"工具已注册到MCP: {name}")
+            logger.debug("工具已注册到MCP: %s", name)
         except Exception as e:
-            logger.error(f"MCP注册失败: {name}, 错误: {e}")
+            logger.error("MCP注册失败: %s, 错误: %s", name, e)
             raise
 
     def _create_mcp_wrapper(self, tool: BaseTool) -> Callable:

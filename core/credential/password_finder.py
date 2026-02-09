@@ -289,7 +289,7 @@ class PasswordFinder:
     def _log(self, message: str):
         """日志输出"""
         if self.verbose:
-            logger.debug(f"[SecretFinder] {message}")
+            logger.debug("[SecretFinder] %s", message)
 
     def _should_skip_file(self, file_path: Path) -> bool:
         """判断是否跳过文件"""
@@ -755,7 +755,7 @@ if __name__ == "__main__":
     else:
         target_path = "."
 
-    logger.info(f"=== Secret Finder - Scanning: {target_path} ===")
+    logger.info("=== Secret Finder - Scanning: %s ===", target_path)
     finder = PasswordFinder(verbose=True)
     findings = finder.scan_directory(target_path)
 

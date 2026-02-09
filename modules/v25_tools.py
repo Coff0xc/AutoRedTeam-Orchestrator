@@ -123,7 +123,7 @@ def register_v25_tools(mcp):
         logger.info("JS分析工具已注册")
 
     except ImportError as e:
-        logger.warning(f"JS分析模块加载失败: {e}")
+        logger.warning("JS分析模块加载失败: %s", e)
 
     # ========== CVE同步工具 ==========
     try:
@@ -243,7 +243,7 @@ def register_v25_tools(mcp):
         logger.info("CVE同步工具已注册")
 
     except ImportError as e:
-        logger.warning(f"CVE模块加载失败: {e}")
+        logger.warning("CVE模块加载失败: %s", e)
 
     # ========== PoC执行工具 ==========
     try:
@@ -317,7 +317,7 @@ def register_v25_tools(mcp):
         logger.info("PoC执行工具已注册")
 
     except ImportError as e:
-        logger.warning(f"PoC模块加载失败: {e}")
+        logger.warning("PoC模块加载失败: %s", e)
 
     # ========== WebSocket隧道工具 ==========
     try:
@@ -376,7 +376,7 @@ def register_v25_tools(mcp):
         logger.info("WebSocket隧道工具已注册")
 
     except ImportError as e:
-        logger.warning(f"WebSocket隧道模块加载失败: {e}")
+        logger.warning("WebSocket隧道模块加载失败: %s", e)
 
     # ========== 分块传输工具 ==========
     try:
@@ -422,7 +422,7 @@ def register_v25_tools(mcp):
         logger.info("分块传输工具已注册")
 
     except ImportError as e:
-        logger.warning(f"分块传输模块加载失败: {e}")
+        logger.warning("分块传输模块加载失败: %s", e)
 
     return registered
 
@@ -440,7 +440,7 @@ if __name__ == "__main__":
 
         logger.info("   [OK] JSAnalyzer 导入成功")
     except Exception as e:
-        logger.error(f"   [FAIL] {e}")
+        logger.error("   [FAIL] %s", e)
 
     logger.info("\n2. 测试CVE模块:")
     try:
@@ -448,7 +448,7 @@ if __name__ == "__main__":
 
         logger.info("   [OK] CVEUpdateManager 导入成功")
     except Exception as e:
-        logger.error(f"   [FAIL] {e}")
+        logger.error("   [FAIL] %s", e)
 
     logger.info("\n3. 测试PoC模块:")
     try:
@@ -456,7 +456,7 @@ if __name__ == "__main__":
 
         logger.info("   [OK] PoCEngine 导入成功")
     except Exception as e:
-        logger.error(f"   [FAIL] {e}")
+        logger.error("   [FAIL] %s", e)
 
     logger.info("\n4. 测试WebSocket隧道:")
     try:
@@ -464,7 +464,7 @@ if __name__ == "__main__":
 
         logger.info("   [OK] WebSocketTunnel 导入成功")
     except Exception as e:
-        logger.error(f"   [FAIL] {e}")
+        logger.error("   [FAIL] %s", e)
 
     logger.info("\n5. 测试分块传输:")
     try:
@@ -472,7 +472,7 @@ if __name__ == "__main__":
 
         logger.info("   [OK] ChunkEncoder 导入成功")
     except Exception as e:
-        logger.error(f"   [FAIL] {e}")
+        logger.error("   [FAIL] %s", e)
 
     logger.info("\n" + "=" * 50)
     logger.info("测试完成!")

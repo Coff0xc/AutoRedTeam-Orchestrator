@@ -244,7 +244,7 @@ class AuthBypassDetector(BaseDetector):
                     break
 
             except Exception as e:
-                logger.debug(f"方法绕过测试失败 ({method}): {e}")
+                logger.debug("方法绕过测试失败 (%s): %s", method, e)
 
         return results
 
@@ -294,7 +294,7 @@ class AuthBypassDetector(BaseDetector):
                     return results  # 发现一个就返回
 
             except Exception as e:
-                logger.debug(f"路径绕过测试失败: {e}")
+                logger.debug("路径绕过测试失败: %s", e)
 
         return results
 
@@ -339,7 +339,7 @@ class AuthBypassDetector(BaseDetector):
                     return results
 
             except Exception as e:
-                logger.debug(f"头部绕过测试失败: {e}")
+                logger.debug("头部绕过测试失败: %s", e)
 
         return results
 
@@ -381,7 +381,7 @@ class AuthBypassDetector(BaseDetector):
                         )
 
             except Exception as e:
-                logger.debug(f"后门路径测试失败 ({path}): {e}")
+                logger.debug("后门路径测试失败 (%s): %s", path, e)
 
         return results
 
@@ -390,7 +390,7 @@ class AuthBypassDetector(BaseDetector):
         try:
             return self.http_client.get(url, headers=headers)
         except Exception as e:
-            logger.debug(f"获取基线失败: {e}")
+            logger.debug("获取基线失败: %s", e)
             return None
 
     def _is_bypass_success(self, response: Any, baseline: Any) -> bool:

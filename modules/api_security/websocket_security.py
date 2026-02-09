@@ -198,7 +198,7 @@ class WebSocketSecurityTester:
             return status_code, headers, body_part
 
         except Exception as e:
-            logger.error(f"解析响应失败: {e}")
+            logger.error("解析响应失败: %s", e)
             return 0, {}, data
 
     def _try_ws_connect(
@@ -599,7 +599,7 @@ class WebSocketSecurityTester:
                         result["recommendations"].append(test_result["remediation"])
 
             except Exception as e:
-                logger.error(f"测试{test_name}失败: {e}")
+                logger.error("测试%s失败: %s", test_name, e)
                 result["tests"][test_name] = {"error": str(e)}
 
         result["summary"]["highest_severity"] = highest_severity

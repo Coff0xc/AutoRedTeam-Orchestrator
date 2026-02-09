@@ -110,14 +110,14 @@ class HTTPTunnel(BaseTunnel):
                     resp_data.get("session") or resp_data.get("id") or str(uuid.uuid4())[:16]
                 )
                 self._connected = True
-                logger.debug(f"HTTP tunnel connected, session: {self._session_id}")
+                logger.debug("HTTP tunnel connected, session: %s", self._session_id)
                 return True
 
             logger.warning("HTTP tunnel connection failed")
             return False
 
         except Exception as e:
-            logger.error(f"HTTP tunnel connect error: {e}")
+            logger.error("HTTP tunnel connect error: %s", e)
             return False
 
     def disconnect(self) -> None:
@@ -126,7 +126,7 @@ class HTTPTunnel(BaseTunnel):
             try:
                 self._post(self.config.close_path, json={"session": self._session_id})
             except Exception as e:
-                logger.debug(f"Disconnect request failed: {e}")
+                logger.debug("Disconnect request failed: %s", e)
 
         self._close_client()
         self._connected = False
@@ -176,7 +176,7 @@ class HTTPTunnel(BaseTunnel):
             return False
 
         except Exception as e:
-            logger.error(f"Send error: {e}")
+            logger.error("Send error: %s", e)
             return False
 
     def receive(self, timeout: Optional[float] = None) -> Optional[bytes]:
@@ -216,7 +216,7 @@ class HTTPTunnel(BaseTunnel):
             return None
 
         except Exception as e:
-            logger.debug(f"Receive error: {e}")
+            logger.debug("Receive error: %s", e)
             return None
 
     # ==================== 内部方法 ====================
@@ -316,7 +316,7 @@ class HTTPTunnel(BaseTunnel):
                     url, headers=headers, params=params, timeout=timeout, verify=False
                 )
         except Exception as e:
-            logger.debug(f"GET {path} failed: {e}")
+            logger.debug("GET %s failed: %s", path, e)
             return None
 
     def _post(
@@ -341,7 +341,7 @@ class HTTPTunnel(BaseTunnel):
                     url, headers=headers, json=json, data=data, timeout=timeout, verify=False
                 )
         except Exception as e:
-            logger.debug(f"POST {path} failed: {e}")
+            logger.debug("POST %s failed: %s", path, e)
             return None
 
     def _is_success(self, response: Any) -> bool:

@@ -264,16 +264,16 @@ class XSSDetector(BaseDetector):
 
                     except DetectorTimeoutError as e:
                         # 请求超时 - 常见情况
-                        logger.debug(f"反射型 XSS 检测超时 {url}: {e}")
+                        logger.debug("反射型 XSS 检测超时 %s: %s", url, e)
                     except DetectorConnectionError as e:
                         # 连接失败 - 目标可能不可达
-                        logger.debug(f"反射型 XSS 检测连接失败 {url}: {e}")
+                        logger.debug("反射型 XSS 检测连接失败 %s: %s", url, e)
                     except HTTPError as e:
                         # 其他 HTTP 错误
-                        logger.debug(f"反射型 XSS 检测 HTTP 错误 {url}: {e}")
+                        logger.debug("反射型 XSS 检测 HTTP 错误 %s: %s", url, e)
                     except (AttributeError, TypeError) as e:
                         # 响应对象属性访问错误（如 response.text 不存在）
-                        logger.debug(f"反射型 XSS 检测响应解析失败: {e}")
+                        logger.debug("反射型 XSS 检测响应解析失败: %s", e)
                     except Exception as e:
                         # 捕获其他未预期异常，保证检测流程继续
                         # 注意：这里使用宽泛捕获是为了单个 payload 测试失败不影响整体检测
@@ -329,19 +329,19 @@ class XSSDetector(BaseDetector):
 
         except DetectorTimeoutError as e:
             # 请求超时
-            logger.debug(f"DOM XSS 检测超时 {url}: {e}")
+            logger.debug("DOM XSS 检测超时 %s: %s", url, e)
         except DetectorConnectionError as e:
             # 连接失败
-            logger.debug(f"DOM XSS 检测连接失败 {url}: {e}")
+            logger.debug("DOM XSS 检测连接失败 %s: %s", url, e)
         except HTTPError as e:
             # HTTP 错误
-            logger.debug(f"DOM XSS 检测 HTTP 错误 {url}: {e}")
+            logger.debug("DOM XSS 检测 HTTP 错误 %s: %s", url, e)
         except (AttributeError, TypeError) as e:
             # 响应对象属性访问错误
-            logger.debug(f"DOM XSS 检测响应解析失败: {e}")
+            logger.debug("DOM XSS 检测响应解析失败: %s", e)
         except re.error as e:
             # 正则表达式错误（在 _find_dom_xss_patterns 中可能发生）
-            logger.warning(f"DOM XSS 检测正则表达式错误: {e}")
+            logger.warning("DOM XSS 检测正则表达式错误: %s", e)
         except Exception as e:
             # 捕获其他未预期异常
             # 注意：DOM XSS 检测失败不应影响其他检测

@@ -85,7 +85,7 @@ class TokenManipulation:
                             privileges.append(priv.value)
 
         except Exception as e:
-            self.logger.warning(f"Failed to get privileges: {e}")
+            self.logger.warning("Failed to get privileges: %s", e)
 
         return privileges
 
@@ -122,7 +122,7 @@ class TokenManipulation:
                         continue
 
         except Exception as e:
-            self.logger.warning(f"Failed to list processes: {e}")
+            self.logger.warning("Failed to list processes: %s", e)
 
         return processes
 
@@ -385,7 +385,7 @@ class TokenManipulation:
             return success
 
         except Exception as e:
-            self.logger.error(f"CreateProcessWithToken failed: {e}")
+            self.logger.error("CreateProcessWithToken failed: %s", e)
             return False
 
 

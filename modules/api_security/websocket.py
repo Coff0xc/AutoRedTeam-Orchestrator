@@ -494,7 +494,7 @@ class WebSocketTester(BaseAPITester):
                 try:
                     sock.close()
                 except OSError as e:
-                    logger.debug(f"关闭socket失败: {e}")
+                    logger.debug("关闭socket失败: %s", e)
 
         return result
 
@@ -551,7 +551,7 @@ class WebSocketTester(BaseAPITester):
             return status_code, headers
 
         except Exception as e:
-            logger.debug(f"解析HTTP响应失败: {e}")
+            logger.debug("解析HTTP响应失败: %s", e)
             return 0, {}
 
     def _generate_cswsh_poc(self) -> str:

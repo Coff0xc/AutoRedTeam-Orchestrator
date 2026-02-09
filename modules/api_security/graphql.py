@@ -678,7 +678,7 @@ class GraphQLTester(BaseAPITester):
             try:
                 data = response.json()
             except (json.JSONDecodeError, ValueError) as e:
-                logger.debug(f"JSON解析失败: {e}")
+                logger.debug("JSON解析失败: %s", e)
                 data = {}
 
             return {
@@ -689,7 +689,7 @@ class GraphQLTester(BaseAPITester):
             }
 
         except Exception as e:
-            logger.debug(f"GraphQL请求失败: {e}")
+            logger.debug("GraphQL请求失败: %s", e)
             return {"success": False, "error": str(e)}
 
     def _send_batch(self, batch: List[Dict]) -> Dict[str, Any]:
@@ -706,13 +706,13 @@ class GraphQLTester(BaseAPITester):
             try:
                 data = response.json()
             except (json.JSONDecodeError, ValueError) as e:
-                logger.debug(f"批量响应JSON解析失败: {e}")
+                logger.debug("批量响应JSON解析失败: %s", e)
                 data = {}
 
             return {"success": True, "status_code": response.status_code, "data": data}
 
         except Exception as e:
-            logger.debug(f"GraphQL批量请求失败: {e}")
+            logger.debug("GraphQL批量请求失败: %s", e)
             return {"success": False, "error": str(e)}
 
     def _generate_nested_query(self, depth: int) -> str:

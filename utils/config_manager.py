@@ -210,7 +210,7 @@ class ConfigManager:
         config_path = self._find_config_file()
 
         if config_path and config_path.exists():
-            logger.info(f"加载配置文件: {config_path}")
+            logger.info("加载配置文件: %s", config_path)
             config_dict = self._load_yaml(config_path)
         else:
             logger.warning("未找到配置文件，使用默认配置")
@@ -249,7 +249,7 @@ class ConfigManager:
             with open(path, "r", encoding="utf-8") as f:
                 return yaml.safe_load(f) or {}
         except Exception as e:
-            logger.error(f"加载配置文件失败: {e}")
+            logger.error("加载配置文件失败: %s", e)
             return {}
 
     def _apply_env_overrides(self, config: Dict[str, Any]) -> Dict[str, Any]:

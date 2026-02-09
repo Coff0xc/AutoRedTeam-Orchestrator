@@ -231,7 +231,7 @@ class PathTraversalDetector(BaseDetector):
                     )
 
             except Exception as e:
-                logger.debug(f"路径遍历检测失败: {e}")
+                logger.debug("路径遍历检测失败: %s", e)
 
         return None
 

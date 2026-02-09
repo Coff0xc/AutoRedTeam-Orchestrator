@@ -103,7 +103,7 @@ class AzureTester(BaseCloudTester):
         try:
             self._credential = DefaultAzureCredential()
         except Exception as e:
-            logger.error(f"Azure认证失败: {e}")
+            logger.error("Azure认证失败: %s", e)
             self._credential = None
 
     def scan(self) -> List[CloudFinding]:
@@ -123,7 +123,7 @@ class AzureTester(BaseCloudTester):
             self.check_sql_firewalls()
 
         except Exception as e:
-            logger.error(f"Azure扫描失败: {e}")
+            logger.error("Azure扫描失败: %s", e)
 
         return self._findings
 
@@ -192,7 +192,7 @@ class AzureTester(BaseCloudTester):
                     )
 
         except Exception as e:
-            logger.error(f"存储账户检查失败: {e}")
+            logger.error("存储账户检查失败: %s", e)
 
         return findings
 
@@ -248,7 +248,7 @@ class AzureTester(BaseCloudTester):
                                 break
 
         except Exception as e:
-            logger.error(f"NSG检查失败: {e}")
+            logger.error("NSG检查失败: %s", e)
 
         return findings
 
@@ -305,7 +305,7 @@ class AzureTester(BaseCloudTester):
                     )
 
         except Exception as e:
-            logger.error(f"Key Vault检查失败: {e}")
+            logger.error("Key Vault检查失败: %s", e)
 
         return findings
 
@@ -359,7 +359,7 @@ class AzureTester(BaseCloudTester):
                     continue
 
         except Exception as e:
-            logger.error(f"RBAC检查失败: {e}")
+            logger.error("RBAC检查失败: %s", e)
 
         return findings
 
@@ -420,7 +420,7 @@ class AzureTester(BaseCloudTester):
         except ImportError:
             logger.debug("azure-mgmt-sql未安装，跳过SQL检查")
         except Exception as e:
-            logger.error(f"SQL防火墙检查失败: {e}")
+            logger.error("SQL防火墙检查失败: %s", e)
 
         return findings
 

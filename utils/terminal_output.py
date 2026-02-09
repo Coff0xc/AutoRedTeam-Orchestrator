@@ -48,14 +48,14 @@ class TerminalLogger:
         try:
             self.log_file = open(LOG_FILE, "a", buffering=1, encoding="utf-8")
         except OSError as e:
-            logger.debug(f"无法打开日志文件: {e}")
+            logger.debug("无法打开日志文件: %s", e)
 
         # 跨平台：仅在 Unix 系统尝试获取真实 TTY
         if sys.platform != "win32":
             try:
                 self.real_tty = open("/dev/tty", "w", encoding="utf-8")
             except OSError as e:
-                logger.debug(f"无法打开 /dev/tty: {e}")
+                logger.debug("无法打开 /dev/tty: %s", e)
 
     def __enter__(self):
         """上下文管理器入口"""

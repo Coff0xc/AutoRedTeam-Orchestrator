@@ -141,11 +141,11 @@ class WinRMLateral(BaseLateralModule):
 
             self._connect_time = time.time()
             self._set_status(LateralStatus.CONNECTED)
-            self.logger.info(f"WinRM 连接成功: {self.credentials.username}@{self.target}")
+            self.logger.info("WinRM 连接成功: %s@%s", self.credentials.username, self.target)
             return True
 
         except (socket.error, socket.timeout, OSError) as e:
-            self.logger.error(f"WinRM 连接失败: {e}")
+            self.logger.error("WinRM 连接失败: %s", e)
             self._set_status(LateralStatus.FAILED)
             return False
 
@@ -318,7 +318,7 @@ class WinRMLateral(BaseLateralModule):
 
                 return json.loads(result.output)
             except (json.JSONDecodeError, ValueError) as e:
-                self.logger.debug(f"JSON 解析失败: {e}")
+                self.logger.debug("JSON 解析失败: %s", e)
 
         return {"error": result.error or "获取失败"}
 
@@ -336,7 +336,7 @@ class WinRMLateral(BaseLateralModule):
                 data = json.loads(result.output)
                 return data if isinstance(data, list) else [data]
             except (json.JSONDecodeError, ValueError) as e:
-                self.logger.debug(f"JSON 解析失败: {e}")
+                self.logger.debug("JSON 解析失败: %s", e)
 
         return []
 
@@ -354,7 +354,7 @@ class WinRMLateral(BaseLateralModule):
                 data = json.loads(result.output)
                 return data if isinstance(data, list) else [data]
             except (json.JSONDecodeError, ValueError) as e:
-                self.logger.debug(f"JSON 解析失败: {e}")
+                self.logger.debug("JSON 解析失败: %s", e)
 
         return []
 
@@ -372,7 +372,7 @@ class WinRMLateral(BaseLateralModule):
                 data = json.loads(result.output)
                 return data if isinstance(data, list) else [data]
             except (json.JSONDecodeError, ValueError) as e:
-                self.logger.debug(f"JSON 解析失败: {e}")
+                self.logger.debug("JSON 解析失败: %s", e)
 
         return []
 
@@ -392,7 +392,7 @@ class WinRMLateral(BaseLateralModule):
                 data = json.loads(result.output)
                 return data if isinstance(data, list) else [data]
             except (json.JSONDecodeError, ValueError) as e:
-                self.logger.debug(f"JSON 解析失败: {e}")
+                self.logger.debug("JSON 解析失败: %s", e)
 
         return []
 
@@ -465,7 +465,7 @@ class WinRMLateral(BaseLateralModule):
                     )
 
             self._set_status(LateralStatus.CONNECTED)
-            self.logger.info(f"上传成功: {local_path} -> {remote_path}")
+            self.logger.info("上传成功: %s -> %s", local_path, remote_path)
 
             return FileTransferResult(
                 success=True,
@@ -549,7 +549,7 @@ class WinRMLateral(BaseLateralModule):
 
             file_size = len(content)
             self._set_status(LateralStatus.CONNECTED)
-            self.logger.info(f"下载成功: {remote_path} -> {local_path}")
+            self.logger.info("下载成功: %s -> %s", remote_path, local_path)
 
             return FileTransferResult(
                 success=True,
@@ -687,9 +687,9 @@ def winrm_ps(
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("=== WinRM Lateral Movement Module ===")
-    logger.info(f"pywinrm 可用: {HAS_WINRM}")
-    logger.info(f"NTLM 认证可用: {HAS_NTLM}")
-    logger.info(f"Kerberos 认证可用: {HAS_KERBEROS}")
+    logger.info("pywinrm 可用: %s", HAS_WINRM)
+    logger.info("NTLM 认证可用: %s", HAS_NTLM)
+    logger.info("Kerberos 认证可用: %s", HAS_KERBEROS)
     logger.info("使用示例:")
     logger.info("  from core.lateral import WinRMLateral, Credentials, winrm_exec")
     logger.info("  result = winrm_exec('192.168.1.100', 'admin', 'password', 'whoami')")

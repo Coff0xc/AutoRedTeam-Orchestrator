@@ -239,7 +239,7 @@ class JSAnalyzer:
                 results["routes"] = sorted(list(results["routes"]))
 
         except Exception as e:
-            logger.error(f"[JSAnalyzer] 分析失败: {e}")
+            logger.error("[JSAnalyzer] 分析失败: %s", e)
             results["error"] = str(e)
 
         return results
@@ -254,7 +254,7 @@ class JSAnalyzer:
                 if resp.status == 200:
                     return await resp.text(encoding="utf-8", errors="ignore")
         except Exception as e:
-            logger.warning(f"[JSAnalyzer] 下载失败 {url}: {e}")
+            logger.warning("[JSAnalyzer] 下载失败 %s: %s", url, e)
         return ""
 
     @classmethod
@@ -371,7 +371,7 @@ async def test_js_analyzer():
     """
 
     endpoints = JSAnalyzer.extract_api_endpoints(test_code)
-    logger.info(f"✅ API 端点: {endpoints}")
+    logger.info("✅ API 端点: %s", endpoints)
 
     # 测试 2: 敏感信息提取
     # 注意: 以下为测试用的假密钥示例，格式仿真但非真实密钥
@@ -381,7 +381,7 @@ async def test_js_analyzer():
     """
 
     secrets = JSAnalyzer.extract_secrets(secret_code)
-    logger.info(f"✅ 敏感信息: {secrets}")
+    logger.info("✅ 敏感信息: %s", secrets)
 
     # 测试 3: 实际 URL 分析 (需要联网)
     # result = await JSAnalyzer.analyze_url("https://example.com")

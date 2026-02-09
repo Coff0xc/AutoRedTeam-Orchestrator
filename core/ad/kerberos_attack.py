@@ -485,7 +485,7 @@ class KerberosAttacker:
 
     def _log(self, message: str):
         if self.verbose:
-            logger.debug(f"[Kerberos] {message}")
+            logger.debug("[Kerberos] %s", message)
 
     def asrep_roast(self, usernames: List[str]) -> AttackResult:
         """
@@ -710,6 +710,6 @@ if __name__ == "__main__":
     attack_type = sys.argv[3]
     targets = sys.argv[4:] if len(sys.argv) > 4 else []
 
-    logger.info(f"=== Kerberos Attack: {attack_type} ===")
+    logger.info("=== Kerberos Attack: %s ===", attack_type)
     result = kerberos_attack(domain, dc_ip, attack_type, targets, verbose=True)
     logger.info(json.dumps(result, indent=2, ensure_ascii=False))

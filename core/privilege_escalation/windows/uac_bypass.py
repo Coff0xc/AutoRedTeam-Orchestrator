@@ -122,7 +122,7 @@ class UACBypass:
             self._uac_info = info
 
         except Exception as e:
-            self.logger.warning(f"Failed to get UAC info: {e}")
+            self.logger.warning("Failed to get UAC info: %s", e)
 
         return info
 

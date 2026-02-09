@@ -37,7 +37,7 @@ def _format_tool_error(tool_name: str, error: Exception, logger) -> Dict[str, An
 
     # 根据异常类型提供更有用的错误信息
     if isinstance(error, ImportError):
-        logger.warning(f"{tool_name}: 模块导入失败 - {error_msg}")
+        logger.warning("%s: 模块导入失败 - %s", tool_name, error_msg)
         return {
             "success": False,
             "error": f"模块导入失败: {error_msg}",
@@ -45,7 +45,7 @@ def _format_tool_error(tool_name: str, error: Exception, logger) -> Dict[str, An
             "hint": "请确保 core.tools 模块已正确安装",
         }
     elif isinstance(error, FileNotFoundError):
-        logger.warning(f"{tool_name}: 工具未找到 - {error_msg}")
+        logger.warning("%s: 工具未找到 - %s", tool_name, error_msg)
         return {
             "success": False,
             "error": f"工具未找到: {error_msg}",
@@ -53,7 +53,7 @@ def _format_tool_error(tool_name: str, error: Exception, logger) -> Dict[str, An
             "hint": "请检查 config/external_tools.yaml 中的工具路径配置",
         }
     elif isinstance(error, subprocess.TimeoutExpired):
-        logger.warning(f"{tool_name}: 执行超时")
+        logger.warning("%s: 执行超时", tool_name)
         return {
             "success": False,
             "error": "工具执行超时",
@@ -61,7 +61,7 @@ def _format_tool_error(tool_name: str, error: Exception, logger) -> Dict[str, An
             "hint": "可尝试减少扫描范围或增加超时时间",
         }
     elif isinstance(error, PermissionError):
-        logger.warning(f"{tool_name}: 权限不足 - {error_msg}")
+        logger.warning("%s: 权限不足 - %s", tool_name, error_msg)
         return {
             "success": False,
             "error": f"权限不足: {error_msg}",
@@ -69,14 +69,14 @@ def _format_tool_error(tool_name: str, error: Exception, logger) -> Dict[str, An
             "hint": "某些扫描功能可能需要管理员/root权限",
         }
     elif isinstance(error, (asyncio.TimeoutError, TimeoutError)):
-        logger.warning(f"{tool_name}: 异步操作超时")
+        logger.warning("%s: 异步操作超时", tool_name)
         return {"success": False, "error": "操作超时", "error_type": error_type}
     elif isinstance(error, (ConnectionError, OSError)):
-        logger.warning(f"{tool_name}: 连接/IO错误 - {error_msg}")
+        logger.warning("%s: 连接/IO错误 - %s", tool_name, error_msg)
         return {"success": False, "error": f"连接或IO错误: {error_msg}", "error_type": error_type}
     else:
         # 通用异常处理
-        logger.error(f"{tool_name}: 执行失败 - [{error_type}] {error_msg}")
+        logger.error("%s: 执行失败 - [%s] %s", tool_name, error_type, error_msg)
         return {"success": False, "error": error_msg, "error_type": error_type}
 
 

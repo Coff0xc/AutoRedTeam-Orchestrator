@@ -308,16 +308,16 @@ class SQLiDetector(BaseDetector):
                 )
         except DetectorTimeoutError as e:
             # 请求超时 - 可能是服务器处理慢或网络问题
-            logger.debug(f"错误型注入检测超时 {url}: {e}")
+            logger.debug("错误型注入检测超时 %s: %s", url, e)
         except DetectorConnectionError as e:
             # 连接失败 - 目标可能不可达
-            logger.debug(f"错误型注入检测连接失败 {url}: {e}")
+            logger.debug("错误型注入检测连接失败 %s: %s", url, e)
         except HTTPError as e:
             # 其他 HTTP 错误
-            logger.debug(f"错误型注入检测 HTTP 错误 {url}: {e}")
+            logger.debug("错误型注入检测 HTTP 错误 %s: %s", url, e)
         except (AttributeError, TypeError) as e:
             # 响应对象属性访问错误（如 response.text 不存在）
-            logger.debug(f"错误型注入检测响应解析失败: {e}")
+            logger.debug("错误型注入检测响应解析失败: %s", e)
         except Exception as e:
             # 捕获其他未预期异常，保证检测流程继续
             # 注意：这里使用宽泛捕获是为了单个 payload 测试失败不影响整体检测
@@ -388,7 +388,7 @@ class SQLiDetector(BaseDetector):
             # 超时可能是时间盲注成功的信号，需要进一步验证
             elapsed = time.time() - start_time
             if elapsed >= self.TIME_THRESHOLD:
-                logger.info(f"时间盲注检测: 请求超时可能表明存在漏洞 {url}")
+                logger.info("时间盲注检测: 请求超时可能表明存在漏洞 %s", url)
                 request_info = self._build_request_info(
                     method=method,
                     url=url,
@@ -408,13 +408,13 @@ class SQLiDetector(BaseDetector):
                     remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
                     extra={"injection_type": "time-based", "delay": elapsed, "timeout": True},
                 )
-            logger.debug(f"时间盲注检测超时 {url}: {e}")
+            logger.debug("时间盲注检测超时 %s: %s", url, e)
         except DetectorConnectionError as e:
             # 连接失败 - 目标可能不可达
-            logger.debug(f"时间盲注检测连接失败 {url}: {e}")
+            logger.debug("时间盲注检测连接失败 %s: %s", url, e)
         except HTTPError as e:
             # 其他 HTTP 错误
-            logger.debug(f"时间盲注检测 HTTP 错误 {url}: {e}")
+            logger.debug("时间盲注检测 HTTP 错误 %s: %s", url, e)
         except Exception as e:
             # 捕获其他未预期异常
             # 注意：这里使用宽泛捕获是为了单个 payload 测试失败不影响整体检测
@@ -512,16 +512,16 @@ class SQLiDetector(BaseDetector):
 
             except DetectorTimeoutError as e:
                 # 请求超时
-                logger.debug(f"布尔盲注检测超时 {url}: {e}")
+                logger.debug("布尔盲注检测超时 %s: %s", url, e)
             except DetectorConnectionError as e:
                 # 连接失败
-                logger.debug(f"布尔盲注检测连接失败 {url}: {e}")
+                logger.debug("布尔盲注检测连接失败 %s: %s", url, e)
             except HTTPError as e:
                 # HTTP 错误
-                logger.debug(f"布尔盲注检测 HTTP 错误 {url}: {e}")
+                logger.debug("布尔盲注检测 HTTP 错误 %s: %s", url, e)
             except (AttributeError, TypeError) as e:
                 # 响应对象属性访问错误
-                logger.debug(f"布尔盲注检测响应解析失败: {e}")
+                logger.debug("布尔盲注检测响应解析失败: %s", e)
             except Exception as e:
                 # 捕获其他未预期异常
                 # 注意：这里使用宽泛捕获是为了单个 payload 测试失败不影响整体检测
@@ -569,17 +569,17 @@ class SQLiDetector(BaseDetector):
             else:
                 return self.http_client.post(url, data=params, headers=headers)
         except DetectorTimeoutError as e:
-            logger.debug(f"获取基线响应超时 {url}: {e}")
+            logger.debug("获取基线响应超时 %s: %s", url, e)
             return None
         except DetectorConnectionError as e:
-            logger.debug(f"获取基线响应连接失败 {url}: {e}")
+            logger.debug("获取基线响应连接失败 %s: %s", url, e)
             return None
         except HTTPError as e:
-            logger.debug(f"获取基线响应 HTTP 错误 {url}: {e}")
+            logger.debug("获取基线响应 HTTP 错误 %s: %s", url, e)
             return None
         except (OSError, IOError) as e:
             # 网络层错误
-            logger.debug(f"获取基线响应网络错误 {url}: {e}")
+            logger.debug("获取基线响应网络错误 %s: %s", url, e)
             return None
         except Exception as e:
             # 捕获其他未预期异常
@@ -708,7 +708,7 @@ class SQLiDetector(BaseDetector):
             logger.debug("SQL注入验证: 请求超时，可能存在漏洞")
             return False
         except (DetectorConnectionError, HTTPError) as e:
-            logger.debug(f"SQL注入验证失败: {e}")
+            logger.debug("SQL注入验证失败: %s", e)
             return False
         except Exception as e:
             logger.debug(f"SQL注入验证未预期错误: {type(e).__name__}: {e}")

@@ -356,7 +356,7 @@ class BaseC2(ABC):
             try:
                 self._on_status_change(status)
             except Exception as e:
-                logger.error(f"Status change callback error: {e}")
+                logger.error("Status change callback error: %s", e)
 
     def on_status_change(self, callback: Callable[[C2Status], None]) -> None:
         """注册状态变化回调"""
@@ -409,7 +409,7 @@ class BaseC2(ABC):
             handler: 处理函数，接收 payload 返回结果
         """
         self._task_handlers[task_type] = handler
-        logger.debug(f"Registered handler for task type: {task_type}")
+        logger.debug("Registered handler for task type: %s", task_type)
 
     def unregister_handler(self, task_type: str) -> None:
         """取消注册任务处理器"""
@@ -442,7 +442,7 @@ class BaseC2(ABC):
 
         except Exception as e:
             elapsed = time.time() - start_time
-            logger.error(f"Task {task.id} failed: {e}")
+            logger.error("Task %s failed: %s", task.id, e)
 
             return TaskResult(task_id=task.id, success=False, error=str(e), elapsed=elapsed)
 

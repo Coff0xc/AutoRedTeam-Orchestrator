@@ -745,7 +745,7 @@ class WAFBypassEngine:
                         )
                     )
             except Exception as e:
-                logger.debug(f"变异失败 {strategy}: {e}")
+                logger.debug("变异失败 %s: %s", strategy, e)
 
         # 组合策略
         if len(strategies) >= 2:

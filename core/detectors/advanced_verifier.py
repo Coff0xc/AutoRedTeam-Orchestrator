@@ -347,7 +347,7 @@ class AdvancedVerifier:
                 body, status, resp_time = request_func(url, baseline_payload)
                 baseline_responses.append((body, status, resp_time))
             except Exception as e:
-                logger.warning(f"基线请求失败: {e}")
+                logger.warning("基线请求失败: %s", e)
 
         if not baseline_responses:
             return VerificationResult(
@@ -372,7 +372,7 @@ class AdvancedVerifier:
                     body, status, resp_time = request_func(url, payload)
                     payload_responses.append((body, status, resp_time))
                 except Exception as e:
-                    logger.warning(f"Payload 请求失败: {e}")
+                    logger.warning("Payload 请求失败: %s", e)
 
             if not payload_responses:
                 continue

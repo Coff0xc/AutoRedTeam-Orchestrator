@@ -180,7 +180,7 @@ class DependencyScanner:
                 return vulns
 
         except requests.RequestException as e:
-            logger.error(f"OSV查询失败 ({package}): {e}")
+            logger.error("OSV查询失败 (%s): %s", package, e)
 
         return []
 
@@ -225,7 +225,7 @@ class DependencyScanner:
                         results[pkg["name"]] = vulns
 
         except requests.RequestException as e:
-            logger.error(f"OSV批量查询失败: {e}")
+            logger.error("OSV批量查询失败: %s", e)
 
             # 回退到单个查询
             for pkg in packages:
@@ -419,4 +419,4 @@ if __name__ == "__main__":
     logger.info(f"requests 2.25.0 漏洞数: {len(vulns)}")
 
     for v in vulns:
-        logger.info(f"  - {v.vuln_id}: {v.title}")
+        logger.info("  - %s: %s", v.vuln_id, v.title)

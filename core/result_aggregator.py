@@ -70,9 +70,9 @@ class ResultAggregator:
         if result_hash not in self._result_hash_set:
             self.results.append(vuln)
             self._result_hash_set.add(result_hash)
-            logger.debug(f"添加结果: {vuln.vuln_type} - {vuln.url}")
+            logger.debug("添加结果: %s - %s", vuln.vuln_type, vuln.url)
         else:
-            logger.debug(f"跳过重复结果: {vuln.vuln_type} - {vuln.url}")
+            logger.debug("跳过重复结果: %s - %s", vuln.vuln_type, vuln.url)
 
     def add_batch(self, results: List[Dict[str, Any]], source: str = "unknown"):
         """
@@ -171,7 +171,7 @@ class ResultAggregator:
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        logger.info(f"结果已导出到: {output_file}")
+        logger.info("结果已导出到: %s", output_file)
 
     def export_csv(self, output_file: str):
         """导出为 CSV 格式"""
@@ -213,7 +213,7 @@ class ResultAggregator:
                     ]
                 )
 
-        logger.info(f"结果已导出到: {output_file}")
+        logger.info("结果已导出到: %s", output_file)
 
     def export_markdown(self, output_file: str):
         """导出为 Markdown 格式"""
@@ -267,7 +267,7 @@ class ResultAggregator:
                     f.write(f"- **已验证**: {'是' if vuln.verified else '否'}\n")
                     f.write(f"- **来源**: {vuln.source}\n\n")
 
-        logger.info(f"结果已导出到: {output_file}")
+        logger.info("结果已导出到: %s", output_file)
 
     def clear(self):
         """清空所有结果"""

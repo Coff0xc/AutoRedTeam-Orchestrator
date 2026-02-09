@@ -78,7 +78,7 @@ class WindowsPrivilegeEscalation(BasePrivilegeEscalation):
                 return PrivilegeLevel.LOW
 
         except Exception as e:
-            self.logger.warning(f"Failed to check privilege: {e}")
+            self.logger.warning("Failed to check privilege: %s", e)
             return PrivilegeLevel.LOW
 
     def enumerate_vectors(self) -> List[Dict[str, Any]]:

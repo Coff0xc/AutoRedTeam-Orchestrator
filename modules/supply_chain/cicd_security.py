@@ -171,7 +171,7 @@ class CICDSecurityScanner:
         try:
             return file_path.read_text(encoding="utf-8")
         except Exception as e:
-            logger.error(f"读取文件失败 {file_path}: {e}")
+            logger.error("读取文件失败 %s: %s", file_path, e)
             return ""
 
     def _extract_context(self, content: str, match_start: int, context_lines: int = 2) -> tuple:

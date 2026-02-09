@@ -161,7 +161,7 @@ class ProxyValidator:
             return False, response_time
 
         except RequestException as e:
-            logger.debug(f"Proxy validation failed: {proxy.url} - {e}")
+            logger.debug("Proxy validation failed: %s - %s", proxy.url, e)
             return False, time.time() - start_time
 
     async def validate_async(self, proxy: Proxy) -> Tuple[bool, float]:
@@ -184,7 +184,7 @@ class ProxyValidator:
                 return False, response_time
 
         except Exception as e:
-            logger.debug(f"Async proxy validation failed: {proxy.url} - {e}")
+            logger.debug("Async proxy validation failed: %s - %s", proxy.url, e)
             return False, time.time() - start_time
 
     def check_anonymity(self, proxy: Proxy, real_ip: str) -> ProxyAnonymity:
@@ -293,7 +293,7 @@ class ProxyPool:
         # 检查黑名单
         proxy_key = f"{proxy.host}:{proxy.port}"
         if proxy_key in self._blacklist:
-            logger.debug(f"Proxy in blacklist: {proxy_key}")
+            logger.debug("Proxy in blacklist: %s", proxy_key)
             return False
 
         # 检查重复
@@ -310,14 +310,14 @@ class ProxyPool:
             proxy.last_check = time.time()
 
             if not is_valid:
-                logger.debug(f"Proxy validation failed: {proxy_str}")
+                logger.debug("Proxy validation failed: %s", proxy_str)
                 return False
 
         with self._lock:
             self._proxies.append(proxy)
             self._stats["total_added"] += 1
 
-        logger.info(f"Proxy added: {proxy.url}")
+        logger.info("Proxy added: %s", proxy.url)
         return True
 
     def add_proxies(self, proxy_list: List[str]) -> int:
@@ -334,14 +334,14 @@ class ProxyPool:
             if proxy in self._proxies:
                 self._proxies.remove(proxy)
                 self._stats["total_removed"] += 1
-                logger.info(f"Proxy removed: {proxy.url}")
+                logger.info("Proxy removed: %s", proxy.url)
 
     def blacklist_proxy(self, proxy: Proxy):
         """将代理加入黑名单"""
         proxy_key = f"{proxy.host}:{proxy.port}"
         self._blacklist.add(proxy_key)
         self.remove_proxy(proxy)
-        logger.info(f"Proxy blacklisted: {proxy_key}")
+        logger.info("Proxy blacklisted: %s", proxy_key)
 
     def get_proxy(self, strategy: str = "random") -> Optional[Proxy]:
         """
@@ -408,7 +408,7 @@ class ProxyPool:
                 # 超过失败次数则移除
                 if proxy.fail_count >= self.max_fail_count:
                     proxy.is_valid = False
-                    logger.warning(f"Proxy marked invalid: {proxy.url}")
+                    logger.warning("Proxy marked invalid: %s", proxy.url)
 
     def load_from_file(self, filepath: str) -> int:
         """
@@ -420,7 +420,7 @@ class ProxyPool:
         """
         path = Path(filepath)
         if not path.exists():
-            logger.error(f"Proxy file not found: {filepath}")
+            logger.error("Proxy file not found: %s", filepath)
             return 0
 
         content = path.read_text(encoding="utf-8")
@@ -558,7 +558,7 @@ class ProxyPool:
                 )
 
         except Exception as e:
-            logger.error(f"Failed to parse proxy: {proxy_str} - {e}")
+            logger.error("Failed to parse proxy: %s - %s", proxy_str, e)
 
         return None
 
@@ -665,11 +665,11 @@ if __name__ == "__main__":
     pool.add_proxy("http://127.0.0.1:8080")
     pool.add_proxy("socks5://127.0.0.1:1080")
 
-    logger.info(f"Total proxies: {pool.count}")
+    logger.info("Total proxies: %s", pool.count)
     logger.info(f"Stats: {pool.get_stats()}")
 
     # 获取代理
     proxy = pool.get_proxy()
     if proxy:
-        logger.info(f"Selected proxy: {proxy.url}")
-        logger.info(f"Dict format: {proxy.dict_format}")
+        logger.info("Selected proxy: %s", proxy.url)
+        logger.info("Dict format: %s", proxy.dict_format)

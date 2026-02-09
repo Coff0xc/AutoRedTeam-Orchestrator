@@ -82,7 +82,7 @@ class DynamicThreadPool:
         # 启动自动调整线程
         self._adjuster_thread = threading.Thread(target=self._auto_adjust_loop, daemon=True)
         self._adjuster_thread.start()
-        logger.info(f"动态线程池已启动，初始线程数: {self.current_threads}")
+        logger.info("动态线程池已启动，初始线程数: %s", self.current_threads)
 
     def stop(self, wait: bool = True):
         """停止线程池"""
@@ -99,7 +99,7 @@ class DynamicThreadPool:
                 self._adjust_pool_size()
                 time.sleep(self.adjust_interval)
             except Exception as e:
-                logger.error(f"线程池调整错误: {e}")
+                logger.error("线程池调整错误: %s", e)
 
     def _adjust_pool_size(self):
         """根据负载调整线程池大小"""
@@ -117,14 +117,14 @@ class DynamicThreadPool:
                 new_size = min(int(self.current_threads * 1.5), self.max_threads)
                 if new_size > self.current_threads:
                     self._stats["scale_ups"] += 1
-                    logger.debug(f"线程池扩容: {self.current_threads} -> {new_size}")
+                    logger.debug("线程池扩容: %s -> %s", self.current_threads, new_size)
 
             elif load_ratio < self.scale_down_threshold:
                 # 缩容
                 new_size = max(int(self.current_threads * 0.7), self.min_threads)
                 if new_size < self.current_threads:
                     self._stats["scale_downs"] += 1
-                    logger.debug(f"线程池缩容: {self.current_threads} -> {new_size}")
+                    logger.debug("线程池缩容: %s -> %s", self.current_threads, new_size)
 
             if new_size != self.current_threads:
                 self.current_threads = new_size
@@ -247,7 +247,7 @@ class ConnectionPoolManager:
                 self._cleanup_expired()
                 time.sleep(self.health_check_interval)
             except Exception as e:
-                logger.error(f"连接池清理错误: {e}")
+                logger.error("连接池清理错误: %s", e)
 
     def _cleanup_expired(self):
         """清理过期连接"""
@@ -275,7 +275,7 @@ class ConnectionPoolManager:
                 conn.close()
             self._stats["closed"] += 1
         except Exception as e:
-            logger.warning(f"关闭连接失败: {e}")
+            logger.warning("关闭连接失败: %s", e)
 
     def _close_all(self):
         """关闭所有连接"""
@@ -628,7 +628,7 @@ class CircuitBreaker:
         self._stats["state_changes"] += 1
         if service:
             self._service_breakers[service]["state"] = CircuitState.OPEN
-            logger.warning(f"熔断器打开: {service}")
+            logger.warning("熔断器打开: %s", service)
         else:
             self._state = CircuitState.OPEN
             logger.warning("熔断器打开")
@@ -641,7 +641,7 @@ class CircuitBreaker:
             state["state"] = CircuitState.HALF_OPEN
             state["half_open_calls"] = 0
             state["success_count"] = 0
-            logger.info(f"熔断器半开: {service}")
+            logger.info("熔断器半开: %s", service)
         else:
             self._state = CircuitState.HALF_OPEN
             self._half_open_calls = 0
@@ -655,7 +655,7 @@ class CircuitBreaker:
             state = self._service_breakers[service]
             state["state"] = CircuitState.CLOSED
             state["failure_count"] = 0
-            logger.info(f"熔断器关闭: {service}")
+            logger.info("熔断器关闭: %s", service)
         else:
             self._state = CircuitState.CLOSED
             self._failure_count = 0

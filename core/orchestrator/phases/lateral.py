@@ -130,7 +130,7 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
                             )
                             break
                     except (OSError, ConnectionError, asyncio.TimeoutError) as e:
-                        self.logger.exception(f"横向移动失败: {target} - {e}")
+                        self.logger.exception("横向移动失败: %s - %s", target, e)
                         errors.append(f"横向移动失败 {target}: {e}")
 
                 if not target_success:
@@ -153,7 +153,7 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
 
         except ImportError as e:
             errors.append(f"模块导入失败: {e}")
-            self.logger.exception(f"横向移动模块导入失败: {e}")
+            self.logger.exception("横向移动模块导入失败: %s", e)
             return PhaseResult(
                 success=False,
                 phase=PentestPhase.LATERAL_MOVE,
@@ -163,7 +163,7 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
             )
         except (OSError, ConnectionError, asyncio.TimeoutError) as e:
             errors.append(str(e))
-            self.logger.exception(f"横向移动阶段失败: {e}")
+            self.logger.exception("横向移动阶段失败: %s", e)
             return PhaseResult(
                 success=False,
                 phase=PentestPhase.LATERAL_MOVE,

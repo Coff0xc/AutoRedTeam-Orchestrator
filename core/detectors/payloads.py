@@ -710,7 +710,7 @@ class PayloadManager:
         count = 0
 
         if not os.path.exists(path):
-            logger.warning(f"Payload 文件不存在: {path}")
+            logger.warning("Payload 文件不存在: %s", path)
             return 0
 
         try:
@@ -744,9 +744,9 @@ class PayloadManager:
                             self.add(Payload(value=line, category=category))
                             count += 1
 
-            logger.info(f"从 {path} 加载了 {count} 个 payload")
+            logger.info("从 %s 加载了 %s 个 payload", path, count)
         except Exception as e:
-            logger.error(f"加载 payload 文件失败: {e}")
+            logger.error("加载 payload 文件失败: %s", e)
 
         return count
 
@@ -767,9 +767,9 @@ class PayloadManager:
             with open(path, "w", encoding="utf-8") as f:
                 for payload in payloads:
                     f.write(payload + "\n")
-            logger.info(f"导出 {count} 个 payload 到 {path}")
+            logger.info("导出 %s 个 payload 到 %s", count, path)
         except Exception as e:
-            logger.error(f"导出 payload 失败: {e}")
+            logger.error("导出 payload 失败: %s", e)
             return 0
 
         return count

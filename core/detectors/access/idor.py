@@ -223,7 +223,7 @@ class IDORDetector(BaseDetector):
                         break
 
                 except (ConnectionError, TimeoutError, OSError) as e:
-                    logger.debug(f"IDOR 检测失败: {e}")
+                    logger.debug("IDOR 检测失败: %s", e)
 
         return results
 
@@ -297,7 +297,7 @@ class IDORDetector(BaseDetector):
                         break
 
                 except (ConnectionError, TimeoutError, OSError) as e:
-                    logger.debug(f"路径 IDOR 检测失败: {e}")
+                    logger.debug("路径 IDOR 检测失败: %s", e)
 
         return results
 
@@ -395,7 +395,7 @@ class IDORDetector(BaseDetector):
             else:
                 return self.http_client.post(url, data=params, headers=headers)
         except (ConnectionError, TimeoutError, OSError) as e:
-            logger.debug(f"获取基线失败: {e}")
+            logger.debug("获取基线失败: %s", e)
             return None
 
     def get_payloads(self) -> List[str]:

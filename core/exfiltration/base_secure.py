@@ -63,7 +63,7 @@ class SecureFileExfiltrator(ABC):
                     raise ValueError("allowed_base_path must be a directory")
                 self._allowed_base = allowed_base
             except (OSError, ValueError) as e:
-                logger.error(f"Invalid allowed_base_path: {e}")
+                logger.error("Invalid allowed_base_path: %s", e)
                 raise ValueError("Configuration error: invalid allowed_base_path")
         else:
             self._allowed_base = None
@@ -155,19 +155,19 @@ class SecureFileExfiltrator(ABC):
 
             # 1. 检查符号链接 (在 resolve 之前)
             if self._check_symlink_in_path(original_path):
-                logger.warning(f"Symlink detected in path: {file_path}")
+                logger.warning("Symlink detected in path: %s", file_path)
                 return None, "Access denied"
 
             # 2. 解析为绝对路径 (strict=False 允许路径不存在)
             try:
                 resolved_path = original_path.resolve(strict=False)
             except (OSError, RuntimeError) as e:
-                logger.warning(f"Path resolution failed: {file_path}, error: {e}")
+                logger.warning("Path resolution failed: %s, error: %s", file_path, e)
                 return None, "Access denied"
 
             # 3. 检查路径遍历
             if self._is_path_traversal(file_path, resolved_path):
-                logger.warning(f"Path traversal detected: {file_path}")
+                logger.warning("Path traversal detected: %s", file_path)
                 return None, "Access denied"
 
             # 4. 白名单检查
@@ -181,7 +181,7 @@ class SecureFileExfiltrator(ABC):
             return resolved_path, None
 
         except Exception as e:
-            logger.error(f"Path validation failed: {file_path}, error: {e}")
+            logger.error("Path validation failed: %s, error: %s", file_path, e)
             return None, "Access denied"
 
     def _read_file_safe(self, path: Path) -> bytes:
@@ -225,7 +225,7 @@ class SecureFileExfiltrator(ABC):
                     return f.read()
             except (OSError, IOError, IsADirectoryError, MemoryError) as e:
                 os.close(fd)
-                logger.debug(f"文件读取失败: {path}, 错误: {e}")
+                logger.debug("文件读取失败: %s, 错误: %s", path, e)
                 raise
 
         except OSError as e:
@@ -270,11 +270,11 @@ class SecureFileExfiltrator(ABC):
             )
         except OSError as e:
             # 文件系统错误
-            logger.error(f"File operation failed: {validated_path}, error: {e}")
+            logger.error("File operation failed: %s, error: %s", validated_path, e)
             return ExfilResult(success=False, channel=self.channel, error="File operation failed")
         except Exception as e:
             # 未预期的错误
-            logger.exception(f"Unexpected error during file exfiltration: {validated_path}")
+            logger.exception("Unexpected error during file exfiltration: %s", validated_path)
             return ExfilResult(success=False, channel=self.channel, error="Internal error")
 
     @abstractmethod

@@ -265,11 +265,11 @@ class PoCEngine:
             with self._templates_lock:
                 self._templates[template.id] = template
 
-            logger.debug(f"[PoCEngine] 加载模板: {template.id}")
+            logger.debug("[PoCEngine] 加载模板: %s", template.id)
             return template
 
         except Exception as e:
-            logger.error(f"[PoCEngine] 加载模板失败 {path}: {e}")
+            logger.error("[PoCEngine] 加载模板失败 %s: %s", path, e)
             return None
 
     def load_template_from_dict(self, data: Dict[str, Any]) -> Optional[PoCTemplate]:
@@ -291,7 +291,7 @@ class PoCEngine:
             return template
 
         except Exception as e:
-            logger.error(f"[PoCEngine] 解析模板失败: {e}")
+            logger.error("[PoCEngine] 解析模板失败: %s", e)
             return None
 
     def load_template_from_yaml(self, yaml_str: str) -> Optional[PoCTemplate]:
@@ -313,7 +313,7 @@ class PoCEngine:
             return self.load_template_from_dict(data)
 
         except Exception as e:
-            logger.error(f"[PoCEngine] 解析 YAML 失败: {e}")
+            logger.error("[PoCEngine] 解析 YAML 失败: %s", e)
             return None
 
     def get_template(self, template_id: str) -> Optional[PoCTemplate]:
@@ -441,7 +441,7 @@ class PoCEngine:
 
         except Exception as e:
             execution_time = (time.time() - start_time) * 1000
-            logger.error(f"[PoCEngine] 执行失败: {e}")
+            logger.error("[PoCEngine] 执行失败: %s", e)
 
             return PoCResult(
                 success=False,
@@ -557,7 +557,7 @@ class PoCEngine:
                 return (response.status_code, response.text, dict(response.headers))
 
         except Exception as e:
-            logger.debug(f"[PoCEngine] 请求失败 {url}: {e}")
+            logger.debug("[PoCEngine] 请求失败 %s: %s", url, e)
             return None
 
     def _check_matchers(
@@ -875,28 +875,28 @@ if __name__ == "__main__":
     template = engine.load_template_from_dict(sample_template_data)
 
     if template:
-        logger.info(f"[+] 加载模板: {template.id}")
-        logger.info(f"    名称: {template.name}")
-        logger.info(f"    严重性: {template.severity.value}")
+        logger.info("[+] 加载模板: %s", template.id)
+        logger.info("    名称: %s", template.name)
+        logger.info("    严重性: %s", template.severity.value)
 
     # 变量替换测试
     logger.info("[+] 变量替换测试:")
     test_url = "https://example.com:8443/api/v1"
     test_text = "URL: {{BaseURL}}, Host: {{Host}}, Random: {{randstr}}"
     replaced = VariableReplacer.replace(test_text, test_url)
-    logger.info(f"    原始: {test_text}")
-    logger.info(f"    替换: {replaced}")
+    logger.info("    原始: %s", test_text)
+    logger.info("    替换: %s", replaced)
 
     # 如果提供了目标，执行测试
     if len(sys.argv) > 1:
         target = sys.argv[1]
-        logger.info(f"[+] 执行测试: {target}")
+        logger.info("[+] 执行测试: %s", target)
 
         if template:
             result = engine.execute(target, template)
-            logger.info(f"    成功: {result.success}")
-            logger.info(f"    漏洞: {result.vulnerable}")
-            logger.info(f"    耗时: {result.execution_time_ms:.1f}ms")
+            logger.info("    成功: %s", result.success)
+            logger.info("    漏洞: %s", result.vulnerable)
+            logger.info("    耗时: %.1fms", result.execution_time_ms)
 
             if result.error:
-                logger.info(f"    错误: {result.error}")
+                logger.info("    错误: %s", result.error)

@@ -183,7 +183,7 @@ class JA3Spoofer:
         try:
             context.set_ciphers(cipher_string)
         except ssl.SSLError as e:
-            logger.warning(f"Failed to set ciphers: {e}, using default")
+            logger.warning("Failed to set ciphers: %s, using default", e)
 
         # 设置 ALPN (HTTP/2 支持)
         try:
@@ -418,7 +418,7 @@ class FingerprintSpoofer:
 
         # 注意: requests 默认不支持自定义 SSL Context
         # 需要使用 HTTPAdapter 或其他方式
-        logger.info(f"Applied {self.profile.browser_type.value} fingerprint to session")
+        logger.info("Applied %s fingerprint to session", self.profile.browser_type.value)
 
 
 class HTTPAdapter:
@@ -486,8 +486,8 @@ if __name__ == "__main__":
     spoofer = FingerprintSpoofer(BrowserType.CHROME)
 
     logger.info("Browser Profile:")
-    logger.info(f"  Type: {spoofer.profile.browser_type.value}")
-    logger.info(f"  Version: {spoofer.profile.version}")
+    logger.info("  Type: %s", spoofer.profile.browser_type.value)
+    logger.info("  Version: %s", spoofer.profile.version)
     logger.info(f"  User-Agent: {spoofer.profile.user_agent[:60]}...")
 
     logger.info("Headers:")

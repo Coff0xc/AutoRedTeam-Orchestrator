@@ -110,7 +110,7 @@ class NucleiScanTool(BaseTool):
                                             )
 
                 except Exception as e:
-                    logger.error(f"解析Nuclei JSON失败: {e}")
+                    logger.error("解析Nuclei JSON失败: %s", e)
 
             # 按严重性排序
             severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}

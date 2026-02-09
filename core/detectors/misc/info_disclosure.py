@@ -204,7 +204,7 @@ class InfoDisclosureDetector(BaseDetector):
                     response_results = self._check_response_content(url, response.text)
                     results.extend(response_results)
                 except Exception as e:
-                    logger.debug(f"获取响应失败: {e}")
+                    logger.debug("获取响应失败: %s", e)
 
         self._log_detection_end(url, results)
         return results
@@ -256,7 +256,7 @@ class InfoDisclosureDetector(BaseDetector):
                         results[-1].severity = severity
 
             except Exception as e:
-                logger.debug(f"敏感路径检测失败 ({path}): {e}")
+                logger.debug("敏感路径检测失败 (%s): %s", path, e)
 
         return results
 

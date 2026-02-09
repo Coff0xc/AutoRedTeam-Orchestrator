@@ -276,7 +276,7 @@ class FileUploadDetector(BaseDetector):
                     results.append(result)
 
         except Exception as e:
-            logger.debug(f"[{self.name}] 表单检测失败: {e}")
+            logger.debug("[%s] 表单检测失败: %s", self.name, e)
 
         return results
 
@@ -330,7 +330,7 @@ class FileUploadDetector(BaseDetector):
                 results.append(result)
 
         except Exception as e:
-            logger.debug(f"[{self.name}] 客户端验证检测失败: {e}")
+            logger.debug("[%s] 客户端验证检测失败: %s", self.name, e)
 
         return results
 
@@ -396,7 +396,7 @@ class FileUploadDetector(BaseDetector):
                 results.append(result)
 
         except Exception as e:
-            logger.debug(f"[{self.name}] 危险扩展名检测失败: {e}")
+            logger.debug("[%s] 危险扩展名检测失败: %s", self.name, e)
 
         return results
 

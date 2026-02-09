@@ -67,7 +67,7 @@ def timer(func: Callable[..., T]) -> Callable[..., T]:
         start = time.perf_counter()
         result = func(*args, **kwargs)
         elapsed = time.perf_counter() - start
-        logger.info(f"{func.__name__} 执行时间: {elapsed:.4f}秒")
+        logger.info("%s 执行时间: %.4f秒", func.__name__, elapsed)
         return result
 
     return wrapper
@@ -89,7 +89,7 @@ def async_timer(func: Callable[..., T]) -> Callable[..., T]:
         start = time.perf_counter()
         result = await func(*args, **kwargs)
         elapsed = time.perf_counter() - start
-        logger.info(f"{func.__name__} 执行时间: {elapsed:.4f}秒")
+        logger.info("%s 执行时间: %.4f秒", func.__name__, elapsed)
         return result
 
     return wrapper
@@ -134,7 +134,7 @@ def retry(
                     return func(*args, **kwargs)
                 except exceptions as e:
                     last_exception = e
-                    logger.warning(f"{func.__name__} 失败 (尝试 {attempt}/{max_attempts}): {e}")
+                    logger.warning("%s 失败 (尝试 %s/%s): %s", func.__name__, attempt, max_attempts, e)
 
                     if attempt < max_attempts:
                         if on_retry:
@@ -142,7 +142,7 @@ def retry(
                         time.sleep(current_delay)
                         current_delay *= backoff
 
-            logger.error(f"{func.__name__} 重试失败 ({max_attempts}次)")
+            logger.error("%s 重试失败 (%s次)", func.__name__, max_attempts)
             raise last_exception  # type: ignore
 
         return wrapper
@@ -180,7 +180,7 @@ def async_retry(
                     return await func(*args, **kwargs)
                 except exceptions as e:
                     last_exception = e
-                    logger.warning(f"{func.__name__} 失败 (尝试 {attempt}/{max_attempts}): {e}")
+                    logger.warning("%s 失败 (尝试 %s/%s): %s", func.__name__, attempt, max_attempts, e)
 
                     if attempt < max_attempts:
                         await asyncio.sleep(current_delay)
@@ -280,7 +280,7 @@ def cache(ttl: int = 3600, maxsize: int = 128, key_func: Optional[Callable] = No
             # 尝试获取缓存
             found, value = cache_store.get(cache_key)
             if found:
-                logger.debug(f"{func.__name__} 命中缓存")
+                logger.debug("%s 命中缓存", func.__name__)
                 return value
 
             # 执行函数
@@ -425,7 +425,7 @@ def rate_limit(calls: int = 10, period: float = 1.0, raise_on_limit: bool = Fals
                     if sleep_time > 0:
                         if raise_on_limit:
                             raise RuntimeError(f"速率限制：{func.__name__} 调用过于频繁")
-                        logger.debug(f"{func.__name__} 速率限制，等待 {sleep_time:.2f}秒")
+                        logger.debug("%s 速率限制，等待 %.2f秒", func.__name__, sleep_time)
                         time.sleep(sleep_time)
                         call_times.pop(0)
 
@@ -482,7 +482,7 @@ def log_execution(
                 return result
 
             except Exception as e:
-                logger.error(f"{func.__name__} 执行失败: {e}")
+                logger.error("%s 执行失败: %s", func.__name__, e)
                 raise
 
         return wrapper
@@ -519,7 +519,7 @@ def safe_execute(
                 return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
-                    logger.error(f"{func.__name__} 执行异常: {e}")
+                    logger.error("%s 执行异常: %s", func.__name__, e)
                 return default_return
 
         return wrapper

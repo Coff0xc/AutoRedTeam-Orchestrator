@@ -183,7 +183,7 @@ class SBOMGenerator:
                     dependencies.append(dep)
 
         except Exception as e:
-            logger.error(f"解析requirements.txt失败: {e}")
+            logger.error("解析requirements.txt失败: %s", e)
 
         return dependencies
 
@@ -232,7 +232,7 @@ class SBOMGenerator:
                 dependencies.append(dep)
 
         except Exception as e:
-            logger.error(f"解析package.json失败: {e}")
+            logger.error("解析package.json失败: %s", e)
 
         return dependencies
 
@@ -282,7 +282,7 @@ class SBOMGenerator:
                         dependencies.append(dep)
 
         except Exception as e:
-            logger.error(f"解析go.mod失败: {e}")
+            logger.error("解析go.mod失败: %s", e)
 
         return dependencies
 
@@ -328,7 +328,7 @@ class SBOMGenerator:
                         dependencies.append(dep)
 
         except Exception as e:
-            logger.error(f"解析pyproject.toml失败: {e}")
+            logger.error("解析pyproject.toml失败: %s", e)
 
         return dependencies
 

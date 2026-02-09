@@ -346,7 +346,7 @@ tR."""
                         )
 
                 except Exception as e:
-                    logger.debug(f"Payload {payload_info.name} failed: {e}")
+                    logger.debug("Payload %s failed: %s", payload_info.name, e)
 
         self._log_detection_end(url, results)
         return results
@@ -390,7 +390,7 @@ tR."""
                 return True, f"Error-based detection: {response_body[:200]}"
 
         except Exception as e:
-            logger.debug(f"Request failed: {e}")
+            logger.debug("Request failed: %s", e)
 
         return False, None
 
@@ -571,7 +571,7 @@ tR."""
                     return True, f"OOB callback received: {callback_id}"
 
         except Exception as e:
-            logger.debug(f"Request failed: {e}")
+            logger.debug("Request failed: %s", e)
 
         return False, None
 
@@ -773,10 +773,10 @@ class FastjsonDetector(DeserializeDetector):
                     await asyncio.sleep(2)
                     if await self._check_oob_callback(callback_id):
                         detected_versions.append(version_range)
-                        logger.info(f"Version {version_range} detected via OOB callback")
+                        logger.info("Version %s detected via OOB callback", version_range)
 
             except Exception as e:
-                logger.debug(f"Version probe failed for {version_range}: {e}")
+                logger.debug("Version probe failed for %s: %s", version_range, e)
                 continue
 
         # 返回最精确的版本范围
@@ -862,7 +862,7 @@ class FastjsonDetector(DeserializeDetector):
                         )
                     )
             except Exception as e:
-                logger.debug(f"Bypass payload {payload_info.name} failed: {e}")
+                logger.debug("Bypass payload %s failed: %s", payload_info.name, e)
                 continue
 
         return results

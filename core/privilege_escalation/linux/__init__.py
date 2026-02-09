@@ -65,7 +65,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
                 return PrivilegeLevel.LOW
 
         except Exception as e:
-            self.logger.warning(f"Failed to check privilege: {e}")
+            self.logger.warning("Failed to check privilege: %s", e)
             return PrivilegeLevel.LOW
 
     def enumerate_vectors(self) -> List[Dict[str, Any]]:
@@ -221,7 +221,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
                     evidence=f"Binary: {binary}",
                 )
             except (subprocess.TimeoutExpired, OSError, ValueError) as e:
-                logger.debug(f"Capability exploit attempt failed: {e}")
+                logger.debug("Capability exploit attempt failed: %s", e)
 
         return EscalationResult(
             success=False,

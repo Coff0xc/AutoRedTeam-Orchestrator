@@ -184,7 +184,7 @@ class CVEStorage:
         # 初始化数据库
         self._init_database()
 
-        logger.info(f"[Storage] 初始化完成: {self.db_path}")
+        logger.info("[Storage] 初始化完成: %s", self.db_path)
 
     def _get_connection(self) -> sqlite3.Connection:
         """获取线程本地的数据库连接"""
@@ -218,7 +218,7 @@ class CVEStorage:
             conn.commit()
             logger.debug("[Storage] 数据库表结构初始化完成")
         except Exception as e:
-            logger.error(f"[Storage] 数据库初始化失败: {e}")
+            logger.error("[Storage] 数据库初始化失败: %s", e)
             raise
 
     def save(self, entry: CVEEntry) -> bool:
@@ -362,9 +362,9 @@ class CVEStorage:
                 else:
                     updated_count += 1
             except Exception as e:
-                logger.warning(f"[Storage] 保存 {entry.cve_id} 失败: {e}")
+                logger.warning("[Storage] 保存 %s 失败: %s", entry.cve_id, e)
 
-        logger.info(f"[Storage] 批量保存完成: 新增 {new_count}, 更新 {updated_count}")
+        logger.info("[Storage] 批量保存完成: 新增 %s, 更新 %s", new_count, updated_count)
         return new_count, updated_count
 
     def get(self, cve_id: str) -> Optional[CVEEntry]:

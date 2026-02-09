@@ -571,7 +571,7 @@ class GraphQLSecurityTester:
                         result["recommendations"].append(test_result["remediation"])
 
             except Exception as e:
-                logger.error(f"测试{test_name}失败: {e}")
+                logger.error("测试%s失败: %s", test_name, e)
                 result["tests"][test_name] = {"error": str(e)}
 
         result["summary"]["highest_severity"] = highest_severity

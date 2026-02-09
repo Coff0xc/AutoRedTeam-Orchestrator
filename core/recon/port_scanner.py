@@ -355,7 +355,7 @@ class PortScanner:
                         with self._lock:
                             results.append(result)
                 except Exception as e:
-                    self._logger.debug(f"Port scan error: {e}")
+                    self._logger.debug("Port scan error: %s", e)
 
         return sorted(results, key=lambda x: x.port)
 
@@ -473,7 +473,7 @@ class PortScanner:
         except ConnectionRefusedError:
             return PortInfo(port=port, state="closed")
         except Exception as e:
-            self._logger.debug(f"Port {port} scan error: {e}")
+            self._logger.debug("Port %s scan error: %s", port, e)
             return PortInfo(port=port, state="unknown")
 
     async def _async_scan_port(self, host: str, port: int) -> Optional[PortInfo]:
@@ -513,7 +513,7 @@ class PortScanner:
         except ConnectionRefusedError:
             return PortInfo(port=port, state="closed")
         except Exception as e:
-            self._logger.debug(f"Async port {port} scan error: {e}")
+            self._logger.debug("Async port %s scan error: %s", port, e)
             return PortInfo(port=port, state="unknown")
 
     def _grab_banner(self, sock: socket.socket, port: int) -> Optional[str]:

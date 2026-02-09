@@ -46,14 +46,14 @@ def get_auth_manager() -> Optional["AuthManager"]:
         try:
             _auth_config["manager"] = AuthManager()
         except Exception as e:
-            logger.error(f"初始化AuthManager失败: {e}")
+            logger.error("初始化AuthManager失败: %s", e)
     return _auth_config["manager"]
 
 
 def set_auth_mode(mode: AuthMode):
     """设置授权模式"""
     _auth_config["mode"] = mode
-    logger.info(f"授权模式设置为: {mode.value}")
+    logger.info("授权模式设置为: %s", mode.value)
 
 
 def set_audit_enabled(enabled: bool):
@@ -101,7 +101,7 @@ def require_auth(
             # 无Key情况处理
             if not api_key_str:
                 if _auth_config["mode"] == AuthMode.STRICT:
-                    logger.warning(f"工具 {actual_tool_name} 需要授权，但未提供API Key")
+                    logger.warning("工具 %s 需要授权，但未提供API Key", actual_tool_name)
                     return {
                         "success": False,
                         "error": "Authorization required. Set AUTOREDTEAM_API_KEY environment variable.",
@@ -109,7 +109,7 @@ def require_auth(
                     }
                 else:
                     # 宽松模式：允许但记录警告
-                    logger.warning(f"工具 {actual_tool_name} 未授权访问（宽松模式）")
+                    logger.warning("工具 %s 未授权访问（宽松模式）", actual_tool_name)
                     return await func(*args, **kwargs)
 
             # 验证API Key

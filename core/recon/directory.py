@@ -399,7 +399,7 @@ class DirectoryScanner:
         total = len(wordlist)
         processed = 0
 
-        self._logger.info(f"Starting directory scan for {base_url} with {total} paths")
+        self._logger.info("Starting directory scan for %s with %s paths", base_url, total)
 
         with ThreadPoolExecutor(max_workers=self.threads) as executor:
             futures = {}
@@ -429,7 +429,7 @@ class DirectoryScanner:
                                 results.append(result)
 
                 except Exception as e:
-                    self._logger.debug(f"Error checking {path}: {e}")
+                    self._logger.debug("Error checking %s: %s", path, e)
 
                 # 报告进度
                 if self._progress_callback and processed % 50 == 0:
@@ -538,7 +538,7 @@ class DirectoryScanner:
                 )
 
         except Exception as e:
-            self._logger.debug(f"Request error for {url}: {e}")
+            self._logger.debug("Request error for %s: %s", url, e)
 
         return None
 
@@ -570,9 +570,9 @@ class DirectoryScanner:
                         self._404_signature = body[:500]
 
         except urllib.error.HTTPError as e:
-            self._logger.debug(f"HTTPError during 404 detection: {e.code}")
+            self._logger.debug("HTTPError during 404 detection: %s", e.code)
         except Exception as e:
-            self._logger.debug(f"404 detection error: {e}")
+            self._logger.debug("404 detection error: %s", e)
 
     def _is_fake_404(self, body: str, status: int) -> bool:
         """检查是否为伪装的404页面
@@ -634,7 +634,7 @@ class DirectoryScanner:
                                     if path and not path.startswith("#"):
                                         base_words.add(path)
                         except Exception as e:
-                            self._logger.warning(f"Failed to load wordlist: {e}")
+                            self._logger.warning("Failed to load wordlist: %s", e)
 
                 # 添加内置字典
                 base_words.update(self.COMMON_DIRECTORIES)

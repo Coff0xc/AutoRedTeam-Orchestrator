@@ -548,7 +548,7 @@ class AIPoCGenerator:
             return yaml_str
 
         except Exception as e:
-            logger.error(f"生成PoC失败: {e}")
+            logger.error("生成PoC失败: %s", e)
             # 返回最小可用模板
             return self._generate_minimal_template(cve_id, severity)
 

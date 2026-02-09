@@ -269,7 +269,7 @@ class RCEDetector(BaseDetector):
                     )
 
             except (ConnectionError, TimeoutError, OSError) as e:
-                logger.debug(f"回显型命令注入检测失败: {e}")
+                logger.debug("回显型命令注入检测失败: %s", e)
 
         return None
 
@@ -370,7 +370,7 @@ class RCEDetector(BaseDetector):
                         )
 
             except (ConnectionError, TimeoutError, OSError) as e:
-                logger.debug(f"时间盲注检测失败: {e}")
+                logger.debug("时间盲注检测失败: %s", e)
 
         return None
 

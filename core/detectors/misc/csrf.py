@@ -259,7 +259,7 @@ class CSRFDetector(BaseDetector):
                         )
                     )
             except Exception as e:
-                logger.debug(f"Token 移除测试失败: {e}")
+                logger.debug("Token 移除测试失败: %s", e)
 
         # 测试 2: 空 Token
         for key in data.keys():
@@ -284,7 +284,7 @@ class CSRFDetector(BaseDetector):
                             )
                         )
                 except Exception as e:
-                    logger.debug(f"空 Token 测试失败: {e}")
+                    logger.debug("空 Token 测试失败: %s", e)
 
         # 测试 3: 错误的 Token
         for key in data.keys():
@@ -309,7 +309,7 @@ class CSRFDetector(BaseDetector):
                             )
                         )
                 except Exception as e:
-                    logger.debug(f"无效 Token 测试失败: {e}")
+                    logger.debug("无效 Token 测试失败: %s", e)
 
         return results
 
@@ -348,7 +348,7 @@ class CSRFDetector(BaseDetector):
                 )
 
         except Exception as e:
-            logger.debug(f"Referer 验证测试失败: {e}")
+            logger.debug("Referer 验证测试失败: %s", e)
 
         return None
 
@@ -396,7 +396,7 @@ class CSRFDetector(BaseDetector):
                     )
 
         except Exception as e:
-            logger.debug(f"SameSite 检测失败: {e}")
+            logger.debug("SameSite 检测失败: %s", e)
 
         return None
 

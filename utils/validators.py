@@ -843,7 +843,7 @@ def validate_params(**validators):
                         validated = validator(value)
                         bound.arguments[param_name] = validated
                     except ValidationError as e:
-                        logger.error(f"参数验证失败 [{param_name}]: {e}")
+                        logger.error("参数验证失败 [%s]: %s", param_name, e)
                         raise
 
             return func(**bound.arguments)

@@ -459,7 +459,7 @@ class TrafficMutator:
             should_pause, pause_time = self.humanizer.should_pause(self._request_count)
             if should_pause:
                 delay += pause_time
-                logger.debug(f"Adding human-like pause: {pause_time:.1f}s")
+                logger.debug("Adding human-like pause: %.1fs", pause_time)
 
         # 5. 添加 Referrer
         if "Referer" not in mutated_headers:

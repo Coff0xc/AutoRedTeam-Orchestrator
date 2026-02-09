@@ -344,7 +344,7 @@ class SSRFDetector(BaseDetector):
                         )
 
             except Exception as e:
-                logger.debug(f"AWS 元数据检测失败: {e}")
+                logger.debug("AWS 元数据检测失败: %s", e)
 
         return None
 
@@ -458,7 +458,7 @@ class SSRFDetector(BaseDetector):
                         )
 
             except Exception as e:
-                logger.debug(f"内网访问检测失败: {e}")
+                logger.debug("内网访问检测失败: %s", e)
 
         return None
 
@@ -522,7 +522,7 @@ class SSRFDetector(BaseDetector):
                     )
 
             except Exception as e:
-                logger.debug(f"文件协议检测失败: {e}")
+                logger.debug("文件协议检测失败: %s", e)
 
         return None
 
@@ -645,7 +645,7 @@ class SSRFDetector(BaseDetector):
                         )
 
             except Exception as e:
-                logger.debug(f"GCP 元数据检测失败: {e}")
+                logger.debug("GCP 元数据检测失败: %s", e)
 
         return None
 
@@ -718,7 +718,7 @@ class SSRFDetector(BaseDetector):
                         )
 
             except Exception as e:
-                logger.debug(f"Azure 元数据检测失败: {e}")
+                logger.debug("Azure 元数据检测失败: %s", e)
 
         return None
 
@@ -786,7 +786,7 @@ class SSRFDetector(BaseDetector):
                         )
 
             except Exception as e:
-                logger.debug(f"阿里云元数据检测失败: {e}")
+                logger.debug("阿里云元数据检测失败: %s", e)
 
         return None
 
@@ -859,7 +859,7 @@ class SSRFDetector(BaseDetector):
                     )
 
             except Exception as e:
-                logger.debug(f"{protocol}:// 协议检测失败: {e}")
+                logger.debug("%s:// 协议检测失败: %s", protocol, e)
 
         return None
 
@@ -981,6 +981,6 @@ class SSRFDetector(BaseDetector):
                     )
 
             except Exception as e:
-                logger.debug(f"盲 SSRF 检测失败: {e}")
+                logger.debug("盲 SSRF 检测失败: %s", e)
 
         return None

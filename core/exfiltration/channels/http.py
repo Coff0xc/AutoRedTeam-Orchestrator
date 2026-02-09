@@ -116,18 +116,18 @@ class HTTPExfiltration(BaseExfiltration):
                 return response.status_code < 500
             except requests.exceptions.SSLError as e:
                 # SSL错误必须失败
-                self.logger.error(f"SSL verification failed: {e}")
+                self.logger.error("SSL verification failed: %s", e)
                 return False
             except requests.RequestException as e:
                 # 其他网络错误可以容忍，在实际发送时重试
-                self.logger.warning(f"Connection test failed: {e}, will retry on send")
+                self.logger.warning("Connection test failed: %s, will retry on send", e)
                 return True
 
         except ImportError:
             self.logger.error("requests library not available")
             return False
         except Exception as e:
-            self.logger.error(f"Connection failed: {e}")
+            self.logger.error("Connection failed: %s", e)
             return False
 
     def disconnect(self) -> None:
@@ -191,10 +191,10 @@ class HTTPExfiltration(BaseExfiltration):
             return response.status_code in (200, 201, 202, 204)
 
         except requests.RequestException as e:
-            self.logger.warning(f"Send chunk failed: {e}")
+            self.logger.warning("Send chunk failed: %s", e)
             return False
         except Exception as e:
-            self.logger.error(f"Unexpected error: {e}")
+            self.logger.error("Unexpected error: %s", e)
             return False
 
 

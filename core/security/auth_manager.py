@@ -216,7 +216,7 @@ class AuthManager:
         self.keys[key_id] = api_key
         self._save_keys()
 
-        logger.info(f"生成API密钥: {name} (ID: {key_id})")
+        logger.info("生成API密钥: %s (ID: %s)", name, key_id)
 
         return {
             "key_id": key_id,
@@ -243,27 +243,27 @@ class AuthManager:
 
         api_key = self.keys.get(key_id)
         if not api_key:
-            logger.warning(f"密钥不存在: {key_id}")
+            logger.warning("密钥不存在: %s", key_id)
             return None
 
         # 检查密钥是否启用
         if not api_key.enabled:
-            logger.warning(f"密钥已禁用: {key_id}")
+            logger.warning("密钥已禁用: %s", key_id)
             return None
 
         # 检查是否过期
         if api_key.expires_at and datetime.now() > api_key.expires_at:
-            logger.warning(f"密钥已过期: {key_id}")
+            logger.warning("密钥已过期: %s", key_id)
             return None
 
         # 验证密钥
         if not self._verify_key_hash(secret, api_key.key_hash):
-            logger.warning(f"密钥验证失败: {key_id}")
+            logger.warning("密钥验证失败: %s", key_id)
             return None
 
         # 检查速率限制
         if not self._check_rate_limit(key_id, api_key.rate_limit):
-            logger.warning(f"速率限制超出: {key_id}")
+            logger.warning("速率限制超出: %s", key_id)
             return None
 
         # 更新使用信息
@@ -292,7 +292,7 @@ class AuthManager:
 
         # 检查等级限制
         if tool_level.value > api_key.max_tool_level.value:
-            logger.warning(f"工具等级超出限制: {tool_name} ({tool_level.name})")
+            logger.warning("工具等级超出限制: %s (%s)", tool_name, tool_level.name)
             return False
 
         # 检查具体权限
@@ -387,7 +387,7 @@ class AuthManager:
         if key_id in self.keys:
             self.keys[key_id].enabled = False
             self._save_keys()
-            logger.info(f"密钥已撤销: {key_id}")
+            logger.info("密钥已撤销: %s", key_id)
 
     def list_keys(self) -> List[Dict]:
         """列出所有密钥"""
@@ -493,7 +493,7 @@ class AuthManager:
             logger.info(f"加载了 {len(self.keys)} 个API密钥")
 
         except Exception as e:
-            logger.error(f"加载密钥失败: {e}")
+            logger.error("加载密钥失败: %s", e)
 
     def _save_keys(self):
         """保存密钥"""

@@ -343,7 +343,7 @@ class BaseLateralModule(ABC):
         """设置状态"""
         old_status = self.status
         self.status = status
-        self.logger.debug(f"Status: {old_status.value} -> {status.value}")
+        self.logger.debug("Status: %s -> %s", old_status.value, status.value)
 
     @abstractmethod
     def connect(self) -> bool:
@@ -455,7 +455,7 @@ class BaseLateralModule(ABC):
 
             return result.success
         except Exception as e:
-            self.logger.error(f"连接测试失败: {e}")
+            self.logger.error("连接测试失败: %s", e)
             return False
 
     def get_info(self) -> Dict[str, Any]:
@@ -538,10 +538,10 @@ if __name__ == "__main__":
         ntlm_hash="aad3b435b51404eeaad3b435b51404ee:8846f7eaee8fb117ad06bdd830b7586c",
         domain="WORKGROUP",
     )
-    logger.info(f"Credentials: {creds}")
-    logger.info(f"  Method: {creds.method.value}")
-    logger.info(f"  LM Hash: {creds.lm_hash}")
-    logger.info(f"  NT Hash: {creds.nt_hash}")
+    logger.info("Credentials: %s", creds)
+    logger.info("  Method: %s", creds.method.value)
+    logger.info("  LM Hash: %s", creds.lm_hash)
+    logger.info("  NT Hash: %s", creds.nt_hash)
 
     # 测试 ExecutionResult
     result = ExecutionResult(success=True, output="NT AUTHORITY\\SYSTEM", exit_code=0, duration=0.5)

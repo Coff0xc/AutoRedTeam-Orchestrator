@@ -119,7 +119,7 @@ class BaseDetector(ABC):
                 self._http_client = HTTPClient(config=http_config)
             except ImportError as e:
                 # core.http 不可用时，使用 requests 作为回退
-                logger.warning(f"[{self.name}] core.http 不可用，使用 requests 回退: {e}")
+                logger.warning("[%s] core.http 不可用，使用 requests 回退: %s", self.name, e)
                 try:
                     import requests
 
@@ -129,7 +129,7 @@ class BaseDetector(ABC):
                     session.timeout = self.config.get("timeout", 30)
                     self._http_client = session
                 except ImportError as req_e:
-                    logger.error(f"[{self.name}] 无法加载HTTP客户端: {req_e}")
+                    logger.error("[%s] 无法加载HTTP客户端: %s", self.name, req_e)
                     raise DetectorError(
                         f"HTTP客户端初始化失败: 缺少必要的依赖 (requests)",
                         detector_name=self.name,
@@ -137,7 +137,7 @@ class BaseDetector(ABC):
                     )
             except (TypeError, ValueError) as e:
                 # 配置参数类型错误
-                logger.error(f"[{self.name}] HTTP客户端配置错误: {e}")
+                logger.error("[%s] HTTP客户端配置错误: %s", self.name, e)
                 raise DetectorError(f"HTTP客户端配置无效: {e}", detector_name=self.name, cause=e)
         return self._http_client
 
@@ -201,7 +201,7 @@ class BaseDetector(ABC):
             for payload in payloads:
                 mutated.extend(PayloadMutator.mutate(payload, waf=waf_type))
         except Exception as e:
-            logger.debug(f"[{self.name}] 智能Payload扩展失败: {e}")
+            logger.debug("[%s] 智能Payload扩展失败: %s", self.name, e)
             return payloads
 
         merged: List[str] = []
@@ -329,7 +329,7 @@ class BaseDetector(ABC):
     def _log_detection_start(self, url: str) -> None:
         """记录检测开始"""
         self._start_time = time.time()
-        logger.info(f"[{self.name}] 开始检测: {url}")
+        logger.info("[%s] 开始检测: %s", self.name, url)
 
     def _log_detection_end(self, url: str, results: List[DetectionResult]) -> None:
         """记录检测结束"""
@@ -356,19 +356,19 @@ class BaseDetector(ABC):
             return response
         except DetectorTimeoutError as e:
             # 请求超时 - 常见情况，使用 debug 级别
-            logger.debug(f"[{self.name}] 请求超时 {url}: {e}")
+            logger.debug("[%s] 请求超时 %s: %s", self.name, url, e)
             return None
         except DetectorConnectionError as e:
             # 连接失败 - 目标可能不可达
-            logger.debug(f"[{self.name}] 连接失败 {url}: {e}")
+            logger.debug("[%s] 连接失败 %s: %s", self.name, url, e)
             return None
         except HTTPError as e:
             # 其他 HTTP 错误
-            logger.debug(f"[{self.name}] HTTP 错误 {url}: {e}")
+            logger.debug("[%s] HTTP 错误 %s: %s", self.name, url, e)
             return None
         except (OSError, IOError) as e:
             # 网络层错误（socket 错误等）
-            logger.debug(f"[{self.name}] 网络错误 {url}: {e}")
+            logger.debug("[%s] 网络错误 %s: %s", self.name, url, e)
             return None
         except Exception as e:
             # 捕获所有其他异常以保证检测器稳定性
@@ -414,7 +414,7 @@ class BaseDetector(ABC):
                         # 没有运行中的事件循环，同步关闭
                         pass
             except Exception as e:
-                logger.debug(f"[{self.name}] 清理HTTP客户端时出错: {e}")
+                logger.debug("[%s] 清理HTTP客户端时出错: %s", self.name, e)
             finally:
                 self._http_client = None
 
@@ -451,7 +451,7 @@ class BaseDetector(ABC):
                 result.confidence = min(1.0, result.confidence + 0.3)
             return is_verified
         except Exception as e:
-            logger.debug(f"[{self.name}] 二次验证失败: {e}")
+            logger.debug("[%s] 二次验证失败: %s", self.name, e)
             return False
 
     def _do_verify(self, result: DetectionResult) -> bool:
@@ -502,7 +502,7 @@ class BaseDetector(ABC):
             return False
 
         except Exception as e:
-            logger.debug(f"[{self.name}] 二次验证请求失败: {e}")
+            logger.debug("[%s] 二次验证请求失败: %s", self.name, e)
             return False
 
     def verify_all(self, results: List[DetectionResult]) -> List[DetectionResult]:
@@ -573,10 +573,10 @@ class CompositeDetector(BaseDetector):
                 all_results.extend(results)
             except DetectorError as e:
                 # 检测器特定错误 - 记录并继续
-                logger.error(f"[{detector.name}] 检测器错误: {e}")
+                logger.error("[%s] 检测器错误: %s", detector.name, e)
             except HTTPError as e:
                 # HTTP 相关错误 - 可能是目标问题
-                logger.warning(f"[{detector.name}] HTTP 错误: {e}")
+                logger.warning("[%s] HTTP 错误: %s", detector.name, e)
             except (ValueError, TypeError, KeyError) as e:
                 # 数据处理错误 - 可能是响应格式问题
                 logger.error(f"[{detector.name}] 数据处理错误: {type(e).__name__}: {e}")
@@ -612,10 +612,10 @@ class CompositeDetector(BaseDetector):
             detector_name = self.detectors[idx].name
             if isinstance(results, DetectorError):
                 # 检测器特定错误
-                logger.error(f"[{detector_name}] 检测器错误: {results}")
+                logger.error("[%s] 检测器错误: %s", detector_name, results)
             elif isinstance(results, HTTPError):
                 # HTTP 相关错误
-                logger.warning(f"[{detector_name}] HTTP 错误: {results}")
+                logger.warning("[%s] HTTP 错误: %s", detector_name, results)
             elif isinstance(results, (ValueError, TypeError, KeyError)):
                 # 数据处理错误
                 logger.error(f"[{detector_name}] 数据处理错误: {type(results).__name__}: {results}")

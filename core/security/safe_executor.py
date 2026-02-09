@@ -214,7 +214,7 @@ class SafeExecutor:
             }
 
         except (OSError, subprocess.SubprocessError) as e:
-            logger.error(f"命令执行失败: {e}")
+            logger.error("命令执行失败: %s", e)
             return {
                 "success": False,
                 "error": f"执行错误: {e}",
@@ -223,7 +223,7 @@ class SafeExecutor:
                 "returncode": -1,
             }
         except ValueError as e:
-            logger.error(f"命令参数错误: {e}")
+            logger.error("命令参数错误: %s", e)
             return {
                 "success": False,
                 "error": f"参数错误: {e}",
@@ -342,13 +342,13 @@ class SafeExecutor:
     def add_whitelist(self, name: str, whitelist: CommandWhitelist):
         """添加白名单命令"""
         self.whitelist[name] = whitelist
-        logger.info(f"添加白名单命令: {name}")
+        logger.info("添加白名单命令: %s", name)
 
     def remove_whitelist(self, name: str):
         """移除白名单命令"""
         if name in self.whitelist:
             del self.whitelist[name]
-            logger.info(f"移除白名单命令: {name}")
+            logger.info("移除白名单命令: %s", name)
 
 
 class SecurityError(Exception):
@@ -488,7 +488,7 @@ class SandboxExecutor:
         import tempfile
 
         workdir = tempfile.mkdtemp(prefix="sandbox_")
-        logger.debug(f"创建沙箱工作目录: {workdir}")
+        logger.debug("创建沙箱工作目录: %s", workdir)
         return workdir
 
     def _cleanup_temp_workdir(self, workdir: str) -> None:
@@ -498,9 +498,9 @@ class SandboxExecutor:
         try:
             if workdir and os.path.isdir(workdir) and "sandbox_" in workdir:
                 shutil.rmtree(workdir, ignore_errors=True)
-                logger.debug(f"清理沙箱工作目录: {workdir}")
+                logger.debug("清理沙箱工作目录: %s", workdir)
         except (OSError, PermissionError) as e:
-            logger.warning(f"清理临时目录失败: {e}")
+            logger.warning("清理临时目录失败: %s", e)
 
     def execute(
         self, cmd: List[str], timeout: int = 60, cwd: Optional[str] = None, cleanup: bool = True
@@ -626,7 +626,7 @@ class SandboxExecutor:
             }
 
         except SecurityError as e:
-            logger.warning(f"沙箱安全检查失败: {e}")
+            logger.warning("沙箱安全检查失败: %s", e)
             return {
                 "success": False,
                 "error": f"安全检查失败: {e}",
@@ -659,7 +659,7 @@ class SandboxExecutor:
             }
 
         except (OSError, subprocess.SubprocessError) as e:
-            logger.error(f"沙箱执行失败: {e}")
+            logger.error("沙箱执行失败: %s", e)
             return {
                 "success": False,
                 "error": f"执行错误: {e}",
@@ -670,7 +670,7 @@ class SandboxExecutor:
             }
 
         except ValueError as e:
-            logger.error(f"沙箱参数错误: {e}")
+            logger.error("沙箱参数错误: %s", e)
             return {
                 "success": False,
                 "error": f"参数错误: {e}",
@@ -778,17 +778,17 @@ if __name__ == "__main__":
     logger.info("[测试2] 危险命令（应该被阻止）")
     try:
         result = executor.execute(["rm", "-rf", "/"])
-        logger.warning(f"  意外通过: {result}")
+        logger.warning("  意外通过: %s", result)
     except SecurityError as e:
-        logger.info(f"  预期阻止: {e}")
+        logger.info("  预期阻止: %s", e)
 
     # 测试命令注入
     logger.info("[测试3] 命令注入（应该被阻止）")
     try:
         result = executor.execute(["nmap", "-sV; rm -rf /"])
-        logger.warning(f"  意外通过: {result}")
+        logger.warning("  意外通过: %s", result)
     except SecurityError as e:
-        logger.info(f"  预期阻止: {e}")
+        logger.info("  预期阻止: %s", e)
 
     # 测试 SandboxExecutor
     logger.info("=" * 60)

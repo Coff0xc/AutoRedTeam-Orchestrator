@@ -144,7 +144,7 @@ class PrivilegeEnumerator:
             self._system_info = info
 
         except Exception as e:
-            self.logger.error(f"Failed to collect system info: {e}")
+            self.logger.error("Failed to collect system info: %s", e)
 
         return info
 
@@ -163,7 +163,7 @@ class PrivilegeEnumerator:
                 info.kernel_version = platform.release()
 
         except Exception as e:
-            self.logger.warning(f"Linux info collection error: {e}")
+            self.logger.warning("Linux info collection error: %s", e)
 
         return info
 
@@ -191,7 +191,7 @@ class PrivilegeEnumerator:
                 pass
 
         except Exception as e:
-            self.logger.warning(f"Windows info collection error: {e}")
+            self.logger.warning("Windows info collection error: %s", e)
 
         return info
 
@@ -335,7 +335,7 @@ class PrivilegeEnumerator:
                     )
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.logger.debug(f"SUID check error: {e}")
+            self.logger.debug("SUID check error: %s", e)
 
         return vectors
 
@@ -383,7 +383,7 @@ class PrivilegeEnumerator:
                     )
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.logger.debug(f"Sudo check error: {e}")
+            self.logger.debug("Sudo check error: %s", e)
 
         return vectors
 
@@ -430,7 +430,7 @@ class PrivilegeEnumerator:
                             break
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.logger.debug(f"Capability check error: {e}")
+            self.logger.debug("Capability check error: %s", e)
 
         return vectors
 
@@ -491,7 +491,7 @@ class PrivilegeEnumerator:
                     )
 
         except Exception as e:
-            self.logger.debug(f"Kernel check error: {e}")
+            self.logger.debug("Kernel check error: %s", e)
 
         return vectors
 
@@ -557,7 +557,7 @@ class PrivilegeEnumerator:
                 )
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.logger.debug(f"UAC check error: {e}")
+            self.logger.debug("UAC check error: %s", e)
 
         return vectors
 
@@ -612,7 +612,7 @@ class PrivilegeEnumerator:
                 )
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.logger.debug(f"AlwaysInstallElevated check error: {e}")
+            self.logger.debug("AlwaysInstallElevated check error: %s", e)
 
         return vectors
 
@@ -658,7 +658,7 @@ class PrivilegeEnumerator:
                         break  # 只报告第一个
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.logger.debug(f"Unquoted path check error: {e}")
+            self.logger.debug("Unquoted path check error: %s", e)
 
         return vectors
 
@@ -720,7 +720,7 @@ class PrivilegeEnumerator:
                     )
 
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.logger.debug(f"Token privilege check error: {e}")
+            self.logger.debug("Token privilege check error: %s", e)
 
         return vectors
 

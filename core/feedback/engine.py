@@ -273,12 +273,12 @@ class FeedbackLoopEngine:
                     adjustment = self._select_adjustment(analysis, context)
                     if adjustment:
                         context.adjustments.append(adjustment)
-                        logger.info(f"应用调整策略: {adjustment.strategy.name}")
+                        logger.info("应用调整策略: %s", adjustment.strategy.name)
 
                     # 计算延迟
                     delay = self._calculate_delay(context, analysis)
                     if delay > 0:
-                        logger.debug(f"等待 {delay:.2f} 秒后重试")
+                        logger.debug("等待 %.2f 秒后重试", delay)
                         await asyncio.sleep(delay)
                 else:
                     # 记录失败的策略

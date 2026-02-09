@@ -152,7 +152,7 @@ class LFIDetector(BaseDetector):
             self.payloads = self._enhance_payloads(get_payloads(PayloadCategory.LFI))
         except (ImportError, KeyError, AttributeError):
             # 如果 PayloadCategory.LFI 不存在,使用内置 payloads
-            logger.debug(f"[{self.name}] 使用内置 LFI payloads")
+            logger.debug("[%s] 使用内置 LFI payloads", self.name)
             self.payloads = [p[0] for p in self.LFI_PAYLOADS]
 
         # 配置
@@ -314,7 +314,7 @@ class LFIDetector(BaseDetector):
                         break  # 找到一个就停止该参数的测试
 
                 except Exception as e:
-                    logger.debug(f"[{self.name}] LFI 检测失败 {param_name}: {e}")
+                    logger.debug("[%s] LFI 检测失败 %s: %s", self.name, param_name, e)
 
         return results
 
@@ -381,7 +381,7 @@ class LFIDetector(BaseDetector):
                         break
 
                 except Exception as e:
-                    logger.debug(f"[{self.name}] PHP Wrapper 检测失败 {param_name}: {e}")
+                    logger.debug("[%s] PHP Wrapper 检测失败 %s: %s", self.name, param_name, e)
 
         return results
 
@@ -456,7 +456,7 @@ class LFIDetector(BaseDetector):
                             break
 
                 except Exception as e:
-                    logger.debug(f"[{self.name}] RFI 检测失败 {param_name}: {e}")
+                    logger.debug("[%s] RFI 检测失败 %s: %s", self.name, param_name, e)
 
         return results
 
@@ -531,7 +531,7 @@ class LFIDetector(BaseDetector):
                             break
 
                 except Exception as e:
-                    logger.debug(f"[{self.name}] 错误检测失败 {param_name}: {e}")
+                    logger.debug("[%s] 错误检测失败 %s: %s", self.name, param_name, e)
 
         return results
 

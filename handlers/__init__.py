@@ -90,13 +90,13 @@ def register_all_handlers(mcp, counter, logger):
             register_func(mcp, counter, logger)
         except ImportError as e:
             # 模块依赖缺失，某些功能可能不可用
-            logger.warning(f"{name}注册失败 - 模块导入错误: {e}")
+            logger.warning("%s注册失败 - 模块导入错误: %s", name, e)
         except AttributeError as e:
             # 注册函数不存在或签名不匹配
-            logger.warning(f"{name}注册失败 - 属性错误: {e}")
+            logger.warning("%s注册失败 - 属性错误: %s", name, e)
         except TypeError as e:
             # 参数类型不匹配
-            logger.warning(f"{name}注册失败 - 类型错误: {e}")
+            logger.warning("%s注册失败 - 类型错误: %s", name, e)
         except Exception as e:
             # 兜底: 注册过程可能涉及第三方库的各种异常，
             # 为保证其他模块正常注册，此处捕获所有异常

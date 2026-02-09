@@ -61,7 +61,7 @@ class RateLimiter:
         if len(self.request_times) >= self.requests_per_period:
             sleep_time = (self.request_times[0] - cutoff).total_seconds()
             if sleep_time > 0:
-                logger.debug(f"速率限制: 等待 {sleep_time:.1f}s")
+                logger.debug("速率限制: 等待 %.1fs", sleep_time)
                 await asyncio.sleep(sleep_time)
 
         # 记录本次请求
@@ -139,10 +139,10 @@ class CVESource(ABC):
                 if response.status_code == 200:
                     return response.json()
                 else:
-                    logger.warning(f"HTTP {response.status_code}: {url}")
+                    logger.warning("HTTP %s: %s", response.status_code, url)
                     return None
             except Exception as e:
-                logger.error(f"请求失败 [{self.name}]: {url}, 错误: {e}")
+                logger.error("请求失败 [%s]: %s, 错误: %s", self.name, url, e)
                 return None
 
         elif HAS_AIOHTTP:
@@ -157,10 +157,10 @@ class CVESource(ABC):
                         if resp.status == 200:
                             return await resp.json()
                         else:
-                            logger.warning(f"HTTP {resp.status}: {url}")
+                            logger.warning("HTTP %s: %s", resp.status, url)
                             return None
             except Exception as e:
-                logger.error(f"请求失败 [{self.name}]: {url}, 错误: {e}")
+                logger.error("请求失败 [%s]: %s, 错误: %s", self.name, url, e)
                 return None
 
         else:
@@ -190,10 +190,10 @@ class CVESource(ABC):
                 if response.status_code == 200:
                     return response.text
                 else:
-                    logger.warning(f"HTTP {response.status_code}: {url}")
+                    logger.warning("HTTP %s: %s", response.status_code, url)
                     return None
             except Exception as e:
-                logger.error(f"请求失败 [{self.name}]: {url}, 错误: {e}")
+                logger.error("请求失败 [%s]: %s, 错误: %s", self.name, url, e)
                 return None
 
         elif HAS_AIOHTTP:
@@ -208,10 +208,10 @@ class CVESource(ABC):
                         if resp.status == 200:
                             return await resp.text()
                         else:
-                            logger.warning(f"HTTP {resp.status}: {url}")
+                            logger.warning("HTTP %s: %s", resp.status, url)
                             return None
             except Exception as e:
-                logger.error(f"请求失败 [{self.name}]: {url}, 错误: {e}")
+                logger.error("请求失败 [%s]: %s, 错误: %s", self.name, url, e)
                 return None
 
         else:
@@ -252,7 +252,7 @@ class NVDSource(CVESource):
 
     async def fetch_recent(self, days: int = 7) -> List[CVEEntry]:
         """获取最近的 CVE"""
-        logger.info(f"[NVD] 获取最近 {days} 天的 CVE")
+        logger.info("[NVD] 获取最近 %s 天的 CVE", days)
 
         entries = []
         end_date = datetime.now()
@@ -299,14 +299,14 @@ class NVDSource(CVESource):
                 break
 
             start_index += results_per_page
-            logger.debug(f"[NVD] 进度: {start_index}/{total_results}")
+            logger.debug("[NVD] 进度: %s/%s", start_index, total_results)
 
         logger.info(f"[NVD] 获取完成: {len(entries)} 条")
         return entries
 
     async def search(self, keyword: str, limit: int = 100) -> List[CVEEntry]:
         """搜索 CVE"""
-        logger.info(f"[NVD] 搜索: {keyword}")
+        logger.info("[NVD] 搜索: %s", keyword)
 
         entries = []
         await self._rate_limiter.acquire()
@@ -329,7 +329,7 @@ class NVDSource(CVESource):
 
     async def get_detail(self, cve_id: str) -> Optional[CVEEntry]:
         """获取 CVE 详情"""
-        logger.debug(f"[NVD] 获取详情: {cve_id}")
+        logger.debug("[NVD] 获取详情: %s", cve_id)
 
         await self._rate_limiter.acquire()
 
@@ -495,7 +495,7 @@ class NVDSource(CVESource):
             )
 
         except Exception as e:
-            logger.error(f"[NVD] 解析 CVE 失败: {e}")
+            logger.error("[NVD] 解析 CVE 失败: %s", e)
             return None
 
 
@@ -526,7 +526,7 @@ class NucleiSource(CVESource):
 
     async def fetch_recent(self, days: int = 7) -> List[CVEEntry]:
         """获取最近的 CVE 模板"""
-        logger.info(f"[Nuclei] 获取最近更新的模板 (days={days})")
+        logger.info("[Nuclei] 获取最近更新的模板 (days=%s)", days)
 
         entries = []
         await self._rate_limiter.acquire()
@@ -582,7 +582,7 @@ class NucleiSource(CVESource):
 
     async def search(self, keyword: str, limit: int = 100) -> List[CVEEntry]:
         """搜索 Nuclei 模板"""
-        logger.info(f"[Nuclei] 搜索: {keyword}")
+        logger.info("[Nuclei] 搜索: %s", keyword)
 
         entries = []
         await self._rate_limiter.acquire()
@@ -697,7 +697,7 @@ class ExploitDBSource(CVESource):
                         self._cache[cve_id] = entry
 
             except Exception as e:
-                logger.debug(f"[ExploitDB] 解析行失败: {e}")
+                logger.debug("[ExploitDB] 解析行失败: %s", e)
                 continue
 
         self._cache_loaded = True
@@ -751,7 +751,7 @@ class GitHubPoCSource(CVESource):
 
     async def fetch_recent(self, days: int = 7) -> List[CVEEntry]:
         """获取最近的 PoC"""
-        logger.info(f"[GitHub PoC] 获取最近 {days} 天的 PoC")
+        logger.info("[GitHub PoC] 获取最近 %s 天的 PoC", days)
 
         entries = []
         await self._rate_limiter.acquire()
@@ -794,7 +794,7 @@ class GitHubPoCSource(CVESource):
 
     async def search(self, keyword: str, limit: int = 100) -> List[CVEEntry]:
         """搜索 GitHub PoC"""
-        logger.info(f"[GitHub PoC] 搜索: {keyword}")
+        logger.info("[GitHub PoC] 搜索: %s", keyword)
 
         entries = []
         await self._rate_limiter.acquire()
@@ -864,7 +864,7 @@ class AggregatedSource(CVESource):
 
     async def search(self, keyword: str, limit: int = 100) -> List[CVEEntry]:
         """从所有源搜索并去重合并"""
-        logger.info(f"[Aggregated] 搜索: {keyword}")
+        logger.info("[Aggregated] 搜索: %s", keyword)
 
         tasks = [source.search(keyword, limit) for source in self.sources]
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -903,7 +903,7 @@ class AggregatedSource(CVESource):
 
         for result in results:
             if isinstance(result, Exception):
-                logger.warning(f"[Aggregated] 数据源错误: {result}")
+                logger.warning("[Aggregated] 数据源错误: %s", result)
                 continue
 
             if not isinstance(result, list):

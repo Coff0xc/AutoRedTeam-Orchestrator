@@ -162,7 +162,7 @@ class LDAPiDetector(BaseDetector):
                         break
 
                 except Exception as e:
-                    logger.debug(f"LDAP 注入检测失败: {e}")
+                    logger.debug("LDAP 注入检测失败: %s", e)
 
         self._log_detection_end(url, results)
         return results

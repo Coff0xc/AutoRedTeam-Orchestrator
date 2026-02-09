@@ -82,7 +82,7 @@ class StreamingResultProcessor(Generic[T]):
                         gc.collect()
 
             except Exception as e:
-                logger.warning(f"处理项目失败: {e}")
+                logger.warning("处理项目失败: %s", e)
                 continue
 
         # 处理剩余数据
@@ -104,7 +104,7 @@ class StreamingResultProcessor(Generic[T]):
         for result in self.process_stream(data_source, processor):
             results.append(result)
             if len(results) >= limit:
-                logger.warning(f"结果数量达到限制 {limit}，停止收集")
+                logger.warning("结果数量达到限制 %s，停止收集", limit)
                 break
 
         return results
@@ -396,11 +396,11 @@ class MemoryMonitor:
                         try:
                             callback(usage)
                         except Exception as e:
-                            logger.error(f"内存告警回调失败: {e}")
+                            logger.error("内存告警回调失败: %s", e)
 
                 time.sleep(self.check_interval)
             except Exception as e:
-                logger.error(f"内存监控错误: {e}")
+                logger.error("内存监控错误: %s", e)
                 time.sleep(self.check_interval)
 
     def start(self):
@@ -480,7 +480,7 @@ def memory_efficient(max_items: int = 10000, chunk_size: int = 1000, force_gc: b
                     count = 0
                     for item in result:
                         if count >= max_items:
-                            logger.warning(f"生成器结果达到限制 {max_items}")
+                            logger.warning("生成器结果达到限制 %s", max_items)
                             break
                         yield item
                         count += 1

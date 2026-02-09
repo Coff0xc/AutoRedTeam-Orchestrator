@@ -83,7 +83,7 @@ class TaskScheduler:
         self._condition = threading.Condition(self._lock)
         self._executor_pool: List[threading.Thread] = []
 
-        logger.debug(f"调度器 '{name}' 已初始化")
+        logger.debug("调度器 '%s' 已初始化", name)
 
     def schedule(
         self,
@@ -174,7 +174,7 @@ class TaskScheduler:
                 task = self._task_map[task_id]
                 if task.status == TaskStatus.PENDING:
                     task.status = TaskStatus.CANCELLED
-                    logger.debug(f"任务 '{task.name}' 已取消")
+                    logger.debug("任务 '%s' 已取消", task.name)
                     return True
         return False
 
@@ -229,12 +229,12 @@ class TaskScheduler:
             task.last_run = time.monotonic()
             task.error = None
 
-            logger.debug(f"任务 '{task.name}' 执行成功 (第 {task.run_count} 次)")
+            logger.debug("任务 '%s' 执行成功 (第 %s 次)", task.name, task.run_count)
 
         except Exception as e:
             task.status = TaskStatus.FAILED
             task.error = str(e)
-            logger.warning(f"任务 '{task.name}' 执行失败: {e}")
+            logger.warning("任务 '%s' 执行失败: %s", task.name, e)
 
         # 处理周期任务
         if task.interval is not None and task.status != TaskStatus.CANCELLED:
@@ -247,7 +247,7 @@ class TaskScheduler:
 
     def _scheduler_loop(self) -> None:
         """调度器主循环"""
-        logger.debug(f"调度器 '{self.name}' 主循环已启动")
+        logger.debug("调度器 '%s' 主循环已启动", self.name)
 
         while self._running:
             with self._condition:
@@ -284,7 +284,7 @@ class TaskScheduler:
                         # 等待直到任务到期或有新任务
                         self._condition.wait(timeout=min(wait_time, 1.0))
 
-        logger.debug(f"调度器 '{self.name}' 主循环已停止")
+        logger.debug("调度器 '%s' 主循环已停止", self.name)
 
     def start(self) -> None:
         """启动调度器"""
@@ -297,7 +297,7 @@ class TaskScheduler:
                 target=self._scheduler_loop, name=f"scheduler-{self.name}", daemon=True
             )
             self._thread.start()
-            logger.info(f"调度器 '{self.name}' 已启动")
+            logger.info("调度器 '%s' 已启动", self.name)
 
     def stop(self, wait: bool = True, timeout: float = 5.0) -> None:
         """
@@ -322,7 +322,7 @@ class TaskScheduler:
             for executor in self._executor_pool:
                 executor.join(timeout=timeout / max(1, len(self._executor_pool)))
 
-        logger.info(f"调度器 '{self.name}' 已停止")
+        logger.info("调度器 '%s' 已停止", self.name)
 
     def clear(self) -> int:
         """
@@ -422,7 +422,7 @@ class AsyncTaskScheduler:
             # 任务完成后清理
             task.add_done_callback(lambda t: asyncio.create_task(self._cleanup(task_id)))
 
-        logger.debug(f"异步任务 '{task_name}' 已调度")
+        logger.debug("异步任务 '%s' 已调度", task_name)
         return task_id
 
     async def schedule_periodic(
@@ -469,14 +469,14 @@ class AsyncTaskScheduler:
                 except asyncio.CancelledError:
                     break
                 except Exception as e:
-                    logger.warning(f"周期任务 '{task_name}' 执行失败: {e}")
+                    logger.warning("周期任务 '%s' 执行失败: %s", task_name, e)
                     await asyncio.sleep(interval)
 
         async with self._lock:
             task = asyncio.create_task(periodic_task(), name=task_name)
             self._tasks[task_id] = task
 
-        logger.debug(f"周期异步任务 '{task_name}' 已调度, 间隔: {interval}s")
+        logger.debug("周期异步任务 '%s' 已调度, 间隔: %ss", task_name, interval)
         return task_id
 
     async def _cleanup(self, task_id: str) -> None:

@@ -127,13 +127,13 @@ class DNSTunnel(BaseTunnel):
 
             if success:
                 self._connected = True
-                logger.debug(f"DNS tunnel connected, session: {self._session_id}")
+                logger.debug("DNS tunnel connected, session: %s", self._session_id)
                 return True
 
             return False
 
         except Exception as e:
-            logger.error(f"DNS tunnel connect error: {e}")
+            logger.error("DNS tunnel connect error: %s", e)
             return False
 
     def disconnect(self) -> None:
@@ -183,7 +183,7 @@ class DNSTunnel(BaseTunnel):
                 )
 
                 if not self._send_query(query_name):
-                    logger.warning(f"Failed to send chunk {i}/{total}")
+                    logger.warning("Failed to send chunk %s/%s", i, total)
                     return False
 
                 # 小延迟避免速率限制
@@ -192,7 +192,7 @@ class DNSTunnel(BaseTunnel):
             return True
 
         except Exception as e:
-            logger.error(f"DNS send error: {e}")
+            logger.error("DNS send error: %s", e)
             return False
 
     def receive(self, timeout: Optional[float] = None) -> Optional[bytes]:
@@ -218,7 +218,7 @@ class DNSTunnel(BaseTunnel):
                 return self._receive_raw(query_name)
 
         except Exception as e:
-            logger.debug(f"DNS receive error: {e}")
+            logger.debug("DNS receive error: %s", e)
             return None
 
     # ==================== 内部方法 ====================
@@ -255,7 +255,7 @@ class DNSTunnel(BaseTunnel):
         except dns.resolver.Timeout:
             return True
         except Exception as e:
-            logger.debug(f"DNS query failed: {e}")
+            logger.debug("DNS query failed: %s", e)
             return False
 
     def _send_raw(self, query_name: str) -> bool:
@@ -276,7 +276,7 @@ class DNSTunnel(BaseTunnel):
             return True
 
         except Exception as e:
-            logger.debug(f"Raw DNS send failed: {e}")
+            logger.debug("Raw DNS send failed: %s", e)
             return False
 
     def _receive_dnspython(self, query_name: str) -> Optional[bytes]:
@@ -299,7 +299,7 @@ class DNSTunnel(BaseTunnel):
         except dns.resolver.NoAnswer:
             pass
         except Exception as e:
-            logger.debug(f"DNS receive failed: {e}")
+            logger.debug("DNS receive failed: %s", e)
 
         return None
 
@@ -323,7 +323,7 @@ class DNSTunnel(BaseTunnel):
             sock.close()
 
         except Exception as e:
-            logger.debug(f"Raw DNS receive failed: {e}")
+            logger.debug("Raw DNS receive failed: %s", e)
 
         return None
 
@@ -416,7 +416,7 @@ class DNSTunnel(BaseTunnel):
             return "".join(texts) if texts else None
 
         except Exception as e:
-            logger.debug(f"Parse TXT response failed: {e}")
+            logger.debug("Parse TXT response failed: %s", e)
             return None
 
 

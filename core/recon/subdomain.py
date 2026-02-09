@@ -381,7 +381,7 @@ class SubdomainEnumerator:
         total = len(wordlist)
         processed = 0
 
-        self._logger.info(f"Starting subdomain enumeration for {domain} with {total} words")
+        self._logger.info("Starting subdomain enumeration for %s with %s words", domain, total)
 
         with ThreadPoolExecutor(max_workers=self.threads) as executor:
             futures = {}
@@ -411,7 +411,7 @@ class SubdomainEnumerator:
                                 results.append(result)
 
                 except Exception as e:
-                    self._logger.debug(f"Error checking {subdomain}: {e}")
+                    self._logger.debug("Error checking %s: %s", subdomain, e)
 
                 # 报告进度
                 if self._progress_callback and processed % 100 == 0:
@@ -478,7 +478,7 @@ class SubdomainEnumerator:
                     is_wildcard=is_wildcard,
                 )
         except Exception as e:
-            self._logger.debug(f"DNS resolution failed for {subdomain}: {e}")
+            self._logger.debug("DNS resolution failed for %s: %s", subdomain, e)
 
         return None
 
@@ -497,7 +497,7 @@ class SubdomainEnumerator:
                     is_wildcard=is_wildcard,
                 )
         except Exception as e:
-            self._logger.debug(f"Async DNS resolution failed for {subdomain}: {e}")
+            self._logger.debug("Async DNS resolution failed for %s: %s", subdomain, e)
 
         return None
 
@@ -520,7 +520,7 @@ class SubdomainEnumerator:
         try:
             ips = self._resolver.resolve(wildcard_domain)
             if ips:
-                self._logger.info(f"Wildcard DNS detected for {domain}: {ips}")
+                self._logger.info("Wildcard DNS detected for %s: %s", domain, ips)
                 return set(ips)
         except Exception as exc:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
@@ -555,7 +555,7 @@ class SubdomainEnumerator:
                                     if word and not word.startswith("#"):
                                         words.add(word)
                         except Exception as e:
-                            self._logger.warning(f"Failed to load wordlist: {e}")
+                            self._logger.warning("Failed to load wordlist: %s", e)
 
                 # 添加内置字典
                 words.update(self.COMMON_SUBDOMAINS)

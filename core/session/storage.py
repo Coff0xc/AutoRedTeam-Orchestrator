@@ -49,7 +49,7 @@ class SessionStorage:
         self._contexts_dir.mkdir(parents=True, exist_ok=True)
         self._results_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"会话存储初始化完成: {self.storage_dir}")
+        logger.info("会话存储初始化完成: %s", self.storage_dir)
 
     def _ensure_storage_dir(self) -> None:
         """确保存储目录存在"""
@@ -142,7 +142,7 @@ class SessionStorage:
                 filepath.unlink()
             temp_path.rename(filepath)
 
-            logger.debug(f"会话上下文已保存: {filepath}")
+            logger.debug("会话上下文已保存: %s", filepath)
             return filepath
 
         except (OSError, TypeError) as e:
@@ -170,7 +170,7 @@ class SessionStorage:
             filepath = self._get_safe_path(self._contexts_dir, session_id)
 
             if not filepath.exists():
-                logger.debug(f"会话上下文不存在: {session_id}")
+                logger.debug("会话上下文不存在: %s", session_id)
                 return None
 
             with open(filepath, "r", encoding="utf-8") as f:
@@ -181,14 +181,14 @@ class SessionStorage:
             data.pop("_storage_version", None)
 
             context = ScanContext.from_dict(data)
-            logger.debug(f"会话上下文已加载: {session_id}")
+            logger.debug("会话上下文已加载: %s", session_id)
             return context
 
         except ValueError as e:
-            logger.error(f"无效的会话ID: {e}")
+            logger.error("无效的会话ID: %s", e)
             return None
         except json.JSONDecodeError as e:
-            logger.error(f"会话文件格式错误: {e}")
+            logger.error("会话文件格式错误: %s", e)
             return None
         except (OSError, TypeError, KeyError, AttributeError) as e:
             # OSError: 文件系统错误
@@ -224,7 +224,7 @@ class SessionStorage:
                 filepath.unlink()
             temp_path.rename(filepath)
 
-            logger.debug(f"扫描结果已保存: {filepath}")
+            logger.debug("扫描结果已保存: %s", filepath)
             return filepath
 
         except (OSError, TypeError) as e:
@@ -251,7 +251,7 @@ class SessionStorage:
             filepath = self._get_safe_path(self._results_dir, session_id)
 
             if not filepath.exists():
-                logger.debug(f"扫描结果不存在: {session_id}")
+                logger.debug("扫描结果不存在: %s", session_id)
                 return None
 
             with open(filepath, "r", encoding="utf-8") as f:
@@ -262,14 +262,14 @@ class SessionStorage:
             data.pop("_storage_version", None)
 
             result = ScanResult.from_dict(data)
-            logger.debug(f"扫描结果已加载: {session_id}")
+            logger.debug("扫描结果已加载: %s", session_id)
             return result
 
         except ValueError as e:
-            logger.error(f"无效的会话ID: {e}")
+            logger.error("无效的会话ID: %s", e)
             return None
         except json.JSONDecodeError as e:
-            logger.error(f"结果文件格式错误: {e}")
+            logger.error("结果文件格式错误: %s", e)
             return None
         except (OSError, TypeError, KeyError, AttributeError) as e:
             # OSError: 文件系统错误
@@ -355,21 +355,21 @@ class SessionStorage:
             if context_path.exists():
                 context_path.unlink()
                 deleted = True
-                logger.debug(f"已删除会话上下文: {session_id}")
+                logger.debug("已删除会话上下文: %s", session_id)
 
             # 删除结果文件
             result_path = self._get_safe_path(self._results_dir, session_id)
             if result_path.exists():
                 result_path.unlink()
                 deleted = True
-                logger.debug(f"已删除扫描结果: {session_id}")
+                logger.debug("已删除扫描结果: %s", session_id)
 
             if deleted:
-                logger.info(f"会话已删除: {session_id}")
+                logger.info("会话已删除: %s", session_id)
             return deleted
 
         except ValueError as e:
-            logger.error(f"删除失败 - 无效的会话ID: {e}")
+            logger.error("删除失败 - 无效的会话ID: %s", e)
             return False
         except OSError as e:
             # OSError: 文件删除错误（权限等）
@@ -404,7 +404,7 @@ class SessionStorage:
                 logger.warning(f"清理会话失败 {filepath}: {type(e).__name__}: {e}")
                 continue
 
-        logger.info(f"清理了 {cleaned} 个过期会话")
+        logger.info("清理了 %s 个过期会话", cleaned)
         return cleaned
 
     def get_storage_stats(self) -> Dict[str, Any]:
@@ -465,7 +465,7 @@ class SessionStorage:
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(export_data, f, ensure_ascii=False, indent=2)
 
-        logger.info(f"已导出所有会话数据到: {output_path}")
+        logger.info("已导出所有会话数据到: %s", output_path)
         return output_path
 
     def import_all(self, input_path: Path, overwrite: bool = False) -> int:
@@ -510,5 +510,5 @@ class SessionStorage:
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(result_data, f, ensure_ascii=False, indent=2)
 
-        logger.info(f"已导入 {imported} 个会话")
+        logger.info("已导入 %s 个会话", imported)
         return imported

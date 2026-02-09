@@ -188,7 +188,7 @@ class SecurityHeadersTester(BaseAPITester):
             return True
 
         except Exception as e:
-            logger.error(f"获取响应头失败: {e}")
+            logger.error("获取响应头失败: %s", e)
             return False
 
     def test_hsts(self) -> Optional[APITestResult]:

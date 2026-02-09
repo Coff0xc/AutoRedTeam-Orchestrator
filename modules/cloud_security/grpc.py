@@ -144,7 +144,7 @@ class GRPCTester(BaseCloudTester):
                     return finding
 
         except Exception as e:
-            logger.debug(f"TLS测试失败: {e}")
+            logger.debug("TLS测试失败: %s", e)
 
         # 测试TLS配置
         if self.use_tls:
@@ -242,9 +242,9 @@ class GRPCTester(BaseCloudTester):
             if e.code() == grpc.StatusCode.UNIMPLEMENTED:
                 logger.info("Reflection服务未启用")
             else:
-                logger.debug(f"Reflection测试失败: {e}")
+                logger.debug("Reflection测试失败: %s", e)
         except Exception as e:
-            logger.debug(f"Reflection测试异常: {e}")
+            logger.debug("Reflection测试异常: %s", e)
 
         return None
 
@@ -268,7 +268,7 @@ class GRPCTester(BaseCloudTester):
                 else:
                     self._channel = grpc.insecure_channel(f"{self.host}:{self.port}")
             except Exception as e:
-                logger.debug(f"创建channel失败: {e}")
+                logger.debug("创建channel失败: %s", e)
                 return None
 
         # 尝试无认证调用
@@ -287,10 +287,10 @@ class GRPCTester(BaseCloudTester):
                 except grpc.RpcError as e:
                     if e.code() == grpc.StatusCode.UNAUTHENTICATED:
                         # 需要认证，这是好的
-                        logger.info(f"服务 {service} 要求认证")
+                        logger.info("服务 %s 要求认证", service)
                     elif e.code() == grpc.StatusCode.PERMISSION_DENIED:
                         # 需要授权，这也是好的
-                        logger.info(f"服务 {service} 要求授权")
+                        logger.info("服务 %s 要求授权", service)
                     else:
                         # 其他错误可能意味着无需认证
                         self._create_finding(
@@ -333,7 +333,7 @@ class GRPCTester(BaseCloudTester):
                 pass
 
             except Exception as e:
-                logger.debug(f"元数据测试失败: {e}")
+                logger.debug("元数据测试失败: %s", e)
 
         return None
 
@@ -387,12 +387,12 @@ class GRPCTester(BaseCloudTester):
                             # 这里简化处理
                             pass
                 except (grpc.RpcError, StopIteration, AttributeError) as e:
-                    logger.debug(f"获取服务 {service_name} 的文件描述符失败: {e}")
+                    logger.debug("获取服务 %s 的文件描述符失败: %s", service_name, e)
 
                 services_info.append(service_info)
 
         except Exception as e:
-            logger.error(f"服务枚举失败: {e}")
+            logger.error("服务枚举失败: %s", e)
 
         return services_info
 

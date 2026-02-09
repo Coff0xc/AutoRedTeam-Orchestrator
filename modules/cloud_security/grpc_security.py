@@ -151,7 +151,7 @@ class GRPCSecurityTester:
             return sock
 
         except Exception as e:
-            logger.debug(f"连接失败: {e}")
+            logger.debug("连接失败: %s", e)
             return None
 
     def test_reflection(self, target: str) -> Dict[str, Any]:

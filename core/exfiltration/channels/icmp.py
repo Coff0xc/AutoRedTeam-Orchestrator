@@ -76,7 +76,7 @@ class ICMPExfiltration(BaseExfiltration):
             self.logger.error("Permission denied: root privileges required")
             return False
         except Exception as e:
-            self.logger.error(f"Failed to create ICMP socket: {e}")
+            self.logger.error("Failed to create ICMP socket: %s", e)
             return False
 
     def disconnect(self) -> None:
@@ -113,7 +113,7 @@ class ICMPExfiltration(BaseExfiltration):
             return True
 
         except Exception as e:
-            self.logger.error(f"ICMP send failed: {e}")
+            self.logger.error("ICMP send failed: %s", e)
             return False
 
     def _build_icmp_packet(self, payload: bytes) -> bytes:

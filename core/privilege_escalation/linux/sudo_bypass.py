@@ -141,7 +141,7 @@ class SudoBypass:
                 result = subprocess.run(["sudo", "-l"], capture_output=True, text=True, timeout=15)
 
             if result.returncode != 0:
-                self.logger.warning(f"sudo -l failed: {result.stderr}")
+                self.logger.warning("sudo -l failed: %s", result.stderr)
                 return entries
 
             # 解析输出
@@ -155,7 +155,7 @@ class SudoBypass:
         except subprocess.TimeoutExpired:
             self.logger.warning("sudo -l timed out (password may be required)")
         except Exception as e:
-            self.logger.error(f"Failed to parse sudo -l: {e}")
+            self.logger.error("Failed to parse sudo -l: %s", e)
 
         self._sudo_entries = entries
         return entries
@@ -260,7 +260,7 @@ class SudoBypass:
             else:
                 entry, command, probability = exploitable[0]
 
-        self.logger.info(f"Attempting sudo exploit: {command}")
+        self.logger.info("Attempting sudo exploit: %s", command)
 
         try:
             # 执行利用
@@ -345,7 +345,7 @@ class SudoBypass:
                 }
 
         except Exception as e:
-            self.logger.error(f"Failed to check sudo version: {e}")
+            self.logger.error("Failed to check sudo version: %s", e)
 
         return {
             "version": "unknown",

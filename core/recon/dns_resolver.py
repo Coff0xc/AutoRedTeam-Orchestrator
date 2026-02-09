@@ -172,10 +172,10 @@ class DNSResolver:
             result = socket.gethostbyname_ex(hostname)
             return list(result[2])
         except socket.gaierror as e:
-            self._logger.debug(f"DNS resolution failed for {hostname}: {e}")
+            self._logger.debug("DNS resolution failed for %s: %s", hostname, e)
             return []
         except Exception as e:
-            self._logger.debug(f"DNS error for {hostname}: {e}")
+            self._logger.debug("DNS error for %s: %s", hostname, e)
             return []
 
     async def async_resolve(self, hostname: str) -> List[str]:
@@ -338,7 +338,7 @@ class DNSResolver:
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
             self._logger.debug("External DNS tool not available for MX query")
         except Exception as e:
-            self._logger.debug(f"MX query error: {e}")
+            self._logger.debug("MX query error: %s", e)
 
         return sorted(results, key=lambda x: x[0])
 
@@ -371,7 +371,7 @@ class DNSResolver:
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
             self._logger.debug("External DNS tool not available for NS query")
         except Exception as e:
-            self._logger.debug(f"NS query error: {e}")
+            self._logger.debug("NS query error: %s", e)
 
         return results
 
@@ -406,7 +406,7 @@ class DNSResolver:
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
             self._logger.debug("External DNS tool not available for TXT query")
         except Exception as e:
-            self._logger.debug(f"TXT query error: {e}")
+            self._logger.debug("TXT query error: %s", e)
 
         return results
 

@@ -161,7 +161,7 @@ class SSHLateral(BaseLateralModule):
                 try:
                     self._client.load_host_keys(self.config.ssh_known_hosts_file)
                 except FileNotFoundError:
-                    self.logger.warning(f"已知主机文件不存在: {self.config.ssh_known_hosts_file}")
+                    self.logger.warning("已知主机文件不存在: %s", self.config.ssh_known_hosts_file)
             else:
                 # 尝试加载系统默认的 known_hosts
                 try:
@@ -200,23 +200,23 @@ class SSHLateral(BaseLateralModule):
             self._connect_time = time.time()
 
             self._set_status(LateralStatus.CONNECTED)
-            self.logger.info(f"SSH 连接成功: {self.credentials.username}@{self.target}")
+            self.logger.info("SSH 连接成功: %s@%s", self.credentials.username, self.target)
             return True
 
         except AuthenticationException as e:
-            self.logger.error(f"SSH 认证失败: {e}")
+            self.logger.error("SSH 认证失败: %s", e)
             self._set_status(LateralStatus.FAILED)
             return False
         except SSHException as e:
-            self.logger.error(f"SSH 连接失败: {e}")
+            self.logger.error("SSH 连接失败: %s", e)
             self._set_status(LateralStatus.FAILED)
             return False
         except socket.error as e:
-            self.logger.error(f"网络错误: {e}")
+            self.logger.error("网络错误: %s", e)
             self._set_status(LateralStatus.FAILED)
             return False
         except Exception as e:
-            self.logger.error(f"SSH 错误: {e}")
+            self.logger.error("SSH 错误: %s", e)
             self._set_status(LateralStatus.FAILED)
             return False
 
@@ -264,7 +264,7 @@ class SSHLateral(BaseLateralModule):
             try:
                 self._sftp.close()
             except (SSHException, socket.error, OSError) as e:
-                self.logger.debug(f"关闭 SFTP 时出错: {e}")
+                self.logger.debug("关闭 SFTP 时出错: %s", e)
             finally:
                 self._sftp = None
 
@@ -273,7 +273,7 @@ class SSHLateral(BaseLateralModule):
             try:
                 self._client.close()
             except (SSHException, socket.error, OSError) as e:
-                self.logger.debug(f"关闭 SSH 客户端时出错: {e}")
+                self.logger.debug("关闭 SSH 客户端时出错: %s", e)
             finally:
                 self._client = None
 
@@ -463,7 +463,7 @@ class SSHLateral(BaseLateralModule):
             try:
                 self._sftp = self._client.open_sftp()
             except (SSHException, socket.error) as e:
-                self.logger.error(f"创建 SFTP 失败: {e}")
+                self.logger.error("创建 SFTP 失败: %s", e)
                 return None
         return self._sftp
 
@@ -498,7 +498,7 @@ class SSHLateral(BaseLateralModule):
             sftp.put(local_path, remote_path)
 
             self._set_status(LateralStatus.CONNECTED)
-            self.logger.info(f"上传成功: {local_path} -> {remote_path}")
+            self.logger.info("上传成功: %s -> %s", local_path, remote_path)
 
             return FileTransferResult(
                 success=True,
@@ -567,7 +567,7 @@ class SSHLateral(BaseLateralModule):
             file_size = os.path.getsize(local_path)
 
             self._set_status(LateralStatus.CONNECTED)
-            self.logger.info(f"下载成功: {remote_path} -> {local_path}")
+            self.logger.info("下载成功: %s -> %s", remote_path, local_path)
 
             return FileTransferResult(
                 success=True,
@@ -614,7 +614,7 @@ class SSHLateral(BaseLateralModule):
         try:
             return sftp.listdir(path)
         except (IOError, OSError, SSHException) as e:
-            self.logger.error(f"列出目录失败: {e}")
+            self.logger.error("列出目录失败: %s", e)
             return []
 
     def create_tunnel(self, config: TunnelConfig) -> Optional[TunnelInfo]:
@@ -683,13 +683,13 @@ class SSHLateral(BaseLateralModule):
                         forward_thread.start()
 
                     except SSHException as e:
-                        self.logger.debug(f"转发错误: {e}")
+                        self.logger.debug("转发错误: %s", e)
                         client_sock.close()
 
                 server.close()
 
             except (socket.error, OSError) as e:
-                self.logger.error(f"本地转发错误: {e}")
+                self.logger.error("本地转发错误: %s", e)
 
         thread = threading.Thread(target=forward_handler)
         thread.daemon = True
@@ -724,7 +724,7 @@ class SSHLateral(BaseLateralModule):
             return tunnel_info
 
         except (SSHException, socket.error) as e:
-            self.logger.error(f"远程转发失败: {e}")
+            self.logger.error("远程转发失败: %s", e)
             return None
 
     def _create_socks_proxy(self, config: TunnelConfig) -> Optional[TunnelInfo]:
@@ -743,7 +743,7 @@ class SSHLateral(BaseLateralModule):
                 server.listen(5)
                 server.settimeout(1.0)
 
-                self.logger.info(f"SOCKS5 代理: {config.bind_address}:{config.local_port}")
+                self.logger.info("SOCKS5 代理: %s:%s", config.bind_address, config.local_port)
 
                 while tunnel_info.is_active:
                     try:
@@ -760,7 +760,7 @@ class SSHLateral(BaseLateralModule):
                 server.close()
 
             except (socket.error, OSError) as e:
-                self.logger.error(f"SOCKS 代理错误: {e}")
+                self.logger.error("SOCKS 代理错误: %s", e)
 
         thread = threading.Thread(target=socks_handler)
         thread.daemon = True
@@ -829,7 +829,7 @@ class SSHLateral(BaseLateralModule):
             self._forward_data(client_sock, channel, tunnel_info)
 
         except (socket.error, socket.timeout, struct.error) as e:
-            self.logger.debug(f"SOCKS 客户端错误: {e}")
+            self.logger.debug("SOCKS 客户端错误: %s", e)
         finally:
             try:
                 client_sock.close()
@@ -855,7 +855,7 @@ class SSHLateral(BaseLateralModule):
                     sock.send(data)
 
         except (socket.error, socket.timeout, SSHException) as e:
-            self.logger.debug(f"转发错误: {e}")
+            self.logger.debug("转发错误: %s", e)
         finally:
             try:
                 channel.close()
@@ -1014,7 +1014,7 @@ def ssh_download(
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("=== SSH Lateral Movement Module ===")
-    logger.info(f"paramiko 可用: {HAS_PARAMIKO}")
+    logger.info("paramiko 可用: %s", HAS_PARAMIKO)
     logger.info("使用示例:")
     logger.info("  from core.lateral import SSHLateral, Credentials, ssh_exec")
     logger.info("  result = ssh_exec('192.168.1.100', 'root', 'password', command='id')")

@@ -50,11 +50,11 @@ class DetectorFactory:
             metadata: 额外元信息
         """
         if name in cls._detectors:
-            logger.warning(f"检测器 '{name}' 已存在，将被覆盖")
+            logger.warning("检测器 '%s' 已存在，将被覆盖", name)
 
         cls._detectors[name] = detector_class
         cls._metadata[name] = metadata or {}
-        logger.debug(f"注册检测器: {name}")
+        logger.debug("注册检测器: %s", name)
 
     @classmethod
     def unregister(cls, name: str) -> bool:

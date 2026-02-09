@@ -541,7 +541,7 @@ class WAFDetector:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         except Exception as e:
-            self._logger.debug(f"Request error for {url}: {e}")
+            self._logger.debug("Request error for %s: %s", url, e)
 
         return None
 

@@ -414,7 +414,7 @@ class CompositeTester(BaseAPITester):
                 results = tester.test()
                 self._results.extend(results)
             except Exception as e:
-                logger.error(f"测试器 {tester.name} 执行失败: {e}")
+                logger.error("测试器 %s 执行失败: %s", tester.name, e)
                 self._create_result(
                     vulnerable=False,
                     title=f"测试失败: {tester.name}",

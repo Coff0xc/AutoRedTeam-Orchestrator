@@ -286,7 +286,7 @@ class CookieJar:
                     cookie = Cookie.from_set_cookie(value, domain)
                     self.set(cookie)
                 except ValueError as e:
-                    logger.debug(f"解析 Cookie 失败: {e}")
+                    logger.debug("解析 Cookie 失败: %s", e)
 
     def to_dict(self) -> Dict[str, str]:
         """导出所有 Cookie 为字典"""

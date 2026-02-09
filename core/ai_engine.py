@@ -45,7 +45,7 @@ class AIDecisionEngine:
         self.api_key = self.config.get("api_key") or os.getenv("OPENAI_API_KEY")
         self._client = None
 
-        logger.info(f"AI决策引擎初始化: provider={self.provider}, model={self.model}")
+        logger.info("AI决策引擎初始化: provider=%s, model=%s", self.provider, self.model)
 
     def _get_client(self):
         """获取AI客户端"""
@@ -93,7 +93,7 @@ class AIDecisionEngine:
                 enhanced = self._ai_enhance_analysis(target, context, analysis)
                 analysis["ai_insights"] = enhanced
             except Exception as e:
-                logger.warning(f"AI增强分析失败: {e}")
+                logger.warning("AI增强分析失败: %s", e)
 
         return analysis
 
@@ -689,7 +689,7 @@ class AIDecisionEngine:
                 )
                 return {"insights": response.content[0].text}
         except Exception as e:
-            logger.error(f"AI调用失败: {e}")
+            logger.error("AI调用失败: %s", e)
             return {"error": str(e)}
 
         return {}

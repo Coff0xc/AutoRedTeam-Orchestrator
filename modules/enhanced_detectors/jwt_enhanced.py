@@ -423,7 +423,7 @@ class JWTSecurityTester:
                     break
 
             except Exception as e:
-                logger.debug(f"测试密钥'{secret}'失败: {e}")
+                logger.debug("测试密钥'%s'失败: %s", secret, e)
 
         return result
 
@@ -661,7 +661,7 @@ class JWTSecurityTester:
                     )
 
             except Exception as e:
-                logger.error(f"测试{test_name}失败: {e}")
+                logger.error("测试%s失败: %s", test_name, e)
                 result["tests"][test_name] = {"error": str(e)}
 
         result["summary"]["highest_severity"] = highest_severity
@@ -685,8 +685,8 @@ if __name__ == "__main__":
 
     # 测试解码
     info = tester.decode_jwt(test_token)
-    logger.info(f"Algorithm: {info.algorithm}")
-    logger.info(f"Payload: {info.payload}")
+    logger.info("Algorithm: %s", info.algorithm)
+    logger.info("Payload: %s", info.payload)
 
     # 测试弱密钥
     weak_result = tester.test_weak_secrets(test_token)

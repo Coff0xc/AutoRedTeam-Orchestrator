@@ -54,7 +54,7 @@ class InteractshProvider(OOBProvider):
             self.correlation_id = uuid.uuid4().hex[:16]
             self.session_id = hashlib.md5(str(time.time()).encode()).hexdigest()[:8]
         except Exception as e:
-            logger.error(f"Interactsh初始化失败: {e}")
+            logger.error("Interactsh初始化失败: %s", e)
 
     def generate_payload(self, identifier: str = None) -> Dict[str, str]:
         """生成Interactsh payload"""
@@ -101,7 +101,7 @@ class DNSLogProvider(OOBProvider):
             if resp.status_code == 200:
                 self.domain = resp.text.strip()
         except Exception as e:
-            logger.error(f"获取DNSLog域名失败: {e}")
+            logger.error("获取DNSLog域名失败: %s", e)
             self.domain = None
 
     def generate_payload(self, identifier: str = None) -> Dict[str, str]:
@@ -133,7 +133,7 @@ class DNSLogProvider(OOBProvider):
                     records = [r for r in records if identifier in str(r)]
                 return records
         except Exception as e:
-            logger.error(f"检查DNSLog记录失败: {e}")
+            logger.error("检查DNSLog记录失败: %s", e)
         return []
 
 
@@ -170,7 +170,7 @@ class CustomOOBServer(OOBProvider):
             if resp.status_code == 200:
                 return resp.json().get("interactions", [])
         except Exception as e:
-            logger.error(f"检查OOB记录失败: {e}")
+            logger.error("检查OOB记录失败: %s", e)
         return []
 
 
@@ -196,7 +196,7 @@ class OOBManager:
                 payload = provider.generate_payload(identifier)
                 payloads["providers"][name] = payload
             except Exception as e:
-                logger.error(f"生成{name} payload失败: {e}")
+                logger.error("生成%s payload失败: %s", name, e)
 
         # 根据漏洞类型生成特定payload
         payloads["vuln_payloads"] = self._generate_vuln_specific(identifier, vuln_type)
@@ -278,7 +278,7 @@ class OOBManager:
                         interaction["identifier"] = identifier
                         all_interactions.append(interaction)
                 except Exception as e:
-                    logger.error(f"检查{name}交互失败: {e}")
+                    logger.error("检查%s交互失败: %s", name, e)
 
         self.interactions.extend(all_interactions)
         return all_interactions

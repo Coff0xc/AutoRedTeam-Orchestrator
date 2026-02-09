@@ -284,7 +284,7 @@ class SSTIDetector(BaseDetector):
                     )
 
             except Exception as e:
-                logger.debug(f"SSTI 探测失败: {e}")
+                logger.debug("SSTI 探测失败: %s", e)
 
         return (None, {})
 
@@ -333,7 +333,7 @@ class SSTIDetector(BaseDetector):
                         }
 
             except Exception as e:
-                logger.debug(f"SSTI RCE 检测失败: {e}")
+                logger.debug("SSTI RCE 检测失败: %s", e)
 
         return None
 

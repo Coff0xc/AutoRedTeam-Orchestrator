@@ -121,7 +121,7 @@ class CVEManager:
             同步状态字典
         """
         with self._sync_lock:
-            logger.info(f"[Manager] 开始同步 (days={days})")
+            logger.info("[Manager] 开始同步 (days=%s)", days)
 
             results = {}
             start_time = datetime.now()
@@ -150,7 +150,7 @@ class CVEManager:
                         status="failed",
                         message=str(result),
                     )
-                    logger.error(f"[Manager] {source.name} 同步失败: {result}")
+                    logger.error("[Manager] %s 同步失败: %s", source.name, result)
                 else:
                     status = result
 
@@ -198,7 +198,7 @@ class CVEManager:
             status.status = "failed"
             status.error_count = 1
             status.message = str(e)
-            logger.error(f"[Manager] 同步 {source.name} 失败: {e}")
+            logger.error("[Manager] 同步 %s 失败: %s", source.name, e)
 
         return status
 
@@ -495,39 +495,39 @@ async def _cli_main():
             severity = entry.severity.value.upper()
             cvss = entry.cvss.score if entry.cvss else 0.0
             poc = "✓" if entry.has_poc else "✗"
-            logger.info(f"  [{severity}] {entry.cve_id} (CVSS: {cvss:.1f}) PoC: {poc}")
+            logger.info("  [%s] %s (CVSS: %.1f) PoC: %s", severity, entry.cve_id, cvss, poc)
             logger.info(f"    {entry.description[:80]}...")
 
     elif command == "get":
         cve_id = sys.argv[2] if len(sys.argv) > 2 else ""
         entry = await manager.get_detail(cve_id.upper(), refresh=True)
         if entry:
-            logger.info(f"\n{entry.cve_id}")
+            logger.info("\n%s", entry.cve_id)
             logger.info("=" * 50)
-            logger.info(f"标题: {entry.title}")
+            logger.info("标题: %s", entry.title)
             logger.info(f"严重性: {entry.severity.value.upper()}")
             if entry.cvss:
-                logger.info(f"CVSS: {entry.cvss.score} ({entry.cvss.version})")
+                logger.info("CVSS: %s (%s)", entry.cvss.score, entry.cvss.version)
             logger.info(f"描述: {entry.description[:200]}...")
-            logger.info(f"有 PoC: {'是' if entry.has_poc else '否'}")
+            logger.info("有 PoC: %s", '是' if entry.has_poc else '否')
             if entry.poc_urls:
                 logger.info("PoC 链接:")
                 for url in entry.poc_urls[:3]:
-                    logger.info(f"  - {url}")
+                    logger.info("  - %s", url)
         else:
-            logger.info(f"未找到: {cve_id}")
+            logger.info("未找到: %s", cve_id)
 
     elif command == "stats":
         stats = manager.stats()
         logger.info("\n统计信息:")
-        logger.info(f"  总 CVE 数: {stats.total_count}")
-        logger.info(f"  有 PoC 的: {stats.poc_available_count}")
+        logger.info("  总 CVE 数: %s", stats.total_count)
+        logger.info("  有 PoC 的: %s", stats.poc_available_count)
         logger.info("\n按严重性:")
         for severity, count in stats.by_severity.items():
-            logger.info(f"    {severity}: {count}")
+            logger.info("    %s: %s", severity, count)
         logger.info("\n按来源:")
         for source, count in stats.by_source.items():
-            logger.info(f"    {source}: {count}")
+            logger.info("    %s: %s", source, count)
 
     elif command == "recent":
         limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
@@ -536,7 +536,7 @@ async def _cli_main():
         for entry in entries:
             severity = entry.severity.value.upper()
             cvss = entry.cvss.score if entry.cvss else 0.0
-            logger.info(f"  [{severity}] {entry.cve_id} (CVSS: {cvss:.1f})")
+            logger.info("  [%s] %s (CVSS: %.1f)", severity, entry.cve_id, cvss)
 
     elif command == "poc":
         limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
@@ -545,12 +545,12 @@ async def _cli_main():
         for entry in entries:
             severity = entry.severity.value.upper()
             cvss = entry.cvss.score if entry.cvss else 0.0
-            logger.info(f"  [{severity}] {entry.cve_id} (CVSS: {cvss:.1f})")
+            logger.info("  [%s] %s (CVSS: %.1f)", severity, entry.cve_id, cvss)
             if entry.poc_urls:
                 logger.info(f"    PoC: {entry.poc_urls[0]}")
 
     else:
-        logger.warning(f"未知命令: {command}")
+        logger.warning("未知命令: %s", command)
 
 
 if __name__ == "__main__":

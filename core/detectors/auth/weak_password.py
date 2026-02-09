@@ -304,7 +304,7 @@ class WeakPasswordDetector(BaseDetector):
                 )
 
         except Exception as e:
-            logger.debug(f"凭证测试失败: {e}")
+            logger.debug("凭证测试失败: %s", e)
 
         return None
 
@@ -423,7 +423,7 @@ class WeakPasswordDetector(BaseDetector):
                 return self.http_client.get(url, params=baseline_data, headers=headers)
 
         except Exception as e:
-            logger.debug(f"获取基线响应失败: {e}")
+            logger.debug("获取基线响应失败: %s", e)
             return None
 
     def get_payloads(self) -> List[str]:

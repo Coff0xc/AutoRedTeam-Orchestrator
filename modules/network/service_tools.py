@@ -346,7 +346,7 @@ class LDAPEnumTool(BaseTool):
         cmd.append(search_filter)
 
         try:
-            logger.info(f"执行LDAP枚举: ldapsearch -H ldap://{target}:{port}")
+            logger.info("执行LDAP枚举: ldapsearch -H ldap://%s:%s", target, port)
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             # 解析输出

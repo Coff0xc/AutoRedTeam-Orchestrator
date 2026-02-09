@@ -129,7 +129,7 @@ class SessionManager:
 
             self._sessions[session_id] = context
 
-            logger.info(f"创建会话: {session_id} -> {target}")
+            logger.info("创建会话: %s -> %s", session_id, target)
 
             # 触发回调
             self._trigger_callback("session_created", context)
@@ -226,7 +226,7 @@ class SessionManager:
         with self._session_lock:
             context = self._sessions.get(session_id)
             if not context:
-                logger.warning(f"会话不存在: {session_id}")
+                logger.warning("会话不存在: %s", session_id)
                 return False
 
             # 更新字段
@@ -300,7 +300,7 @@ class SessionManager:
         with self._session_lock:
             context = self._sessions.get(session_id)
             if not context:
-                logger.warning(f"会话不存在: {session_id}")
+                logger.warning("会话不存在: %s", session_id)
                 return None
 
             # 更新状态
@@ -313,7 +313,7 @@ class SessionManager:
 
             self._results[session_id] = result
 
-            logger.info(f"会话完成: {session_id}, 发现 {result.total_vulns} 个漏洞")
+            logger.info("会话完成: %s, 发现 %s 个漏洞", session_id, result.total_vulns)
 
             # 触发回调
             self._trigger_callback("session_completed", context, result)
@@ -457,7 +457,7 @@ class SessionManager:
                 deleted = deleted or storage_deleted
 
             if deleted:
-                logger.info(f"会话已删除: {session_id}")
+                logger.info("会话已删除: %s", session_id)
 
             return deleted
 
@@ -647,7 +647,7 @@ class SessionManager:
                         if result:
                             self._results[session_id] = result
 
-            logger.info(f"从存储加载了 {loaded} 个会话")
+            logger.info("从存储加载了 %s 个会话", loaded)
             return loaded
 
 

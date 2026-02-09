@@ -322,7 +322,7 @@ class AttackChainEngine:
             dep_node = next((n for n in chain.nodes if n.id == dep_id), None)
             # 修复: 依赖节点不存在或未成功都应返回False
             if dep_node is None:
-                logger.warning(f"依赖节点不存在: {dep_id}")
+                logger.warning("依赖节点不存在: %s", dep_id)
                 return False
             if dep_node.status != "success":
                 return False

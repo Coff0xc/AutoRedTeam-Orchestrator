@@ -180,7 +180,7 @@ class SmartCache:
         except ImportError:
             logger.warning("Redis模块未安装，使用本地缓存")
         except Exception as e:
-            logger.warning(f"Redis连接失败: {e}，使用本地缓存")
+            logger.warning("Redis连接失败: %s，使用本地缓存", e)
 
     def _init_caches(self):
         """初始化各类型缓存"""
@@ -207,7 +207,7 @@ class SmartCache:
                             self._caches[cache_type].set(key, entry["value"], entry["ttl"])
             logger.info(f"加载持久化缓存成功")
         except Exception as e:
-            logger.warning(f"加载持久化缓存失败: {e}")
+            logger.warning("加载持久化缓存失败: %s", e)
 
     def _save_persistent(self):
         """保存持久化缓存"""
@@ -230,7 +230,7 @@ class SmartCache:
             with open(self.persist_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, default=str)
         except Exception as e:
-            logger.warning(f"保存持久化缓存失败: {e}")
+            logger.warning("保存持久化缓存失败: %s", e)
 
     def get(self, cache_type: Union[CacheType, str], key: str) -> Optional[Any]:
         """获取缓存 - 支持L1本地+L2 Redis两级缓存"""
@@ -259,7 +259,7 @@ class SmartCache:
                     self._caches[ct].set(key, value)
                     return value
             except Exception as e:
-                logger.debug(f"Redis读取失败: {e}")
+                logger.debug("Redis读取失败: %s", e)
 
         return None
 
@@ -285,7 +285,7 @@ class SmartCache:
                 cache_ttl = int(ttl or self.CACHE_CONFIG.get(ct, {}).get("ttl", 300))
                 self._redis_client.setex(redis_key, cache_ttl, json.dumps(value, default=str))
             except Exception as e:
-                logger.debug(f"Redis写入失败: {e}")
+                logger.debug("Redis写入失败: %s", e)
 
     def delete(self, cache_type: Union[CacheType, str], key: str) -> bool:
         """删除缓存"""
@@ -358,9 +358,9 @@ class SmartCache:
                             self.set(ct, key, value)
                             preheated += 1
                     except Exception as e:
-                        logger.debug(f"预热失败 {ct}:{key}: {e}")
+                        logger.debug("预热失败 %s:%s: %s", ct, key, e)
 
-        logger.info(f"缓存预热完成，加载 {preheated} 条数据")
+        logger.info("缓存预热完成，加载 %s 条数据", preheated)
         return preheated
 
     def batch_get(self, cache_type: str, keys: List[str]) -> Dict[str, Any]:
@@ -388,7 +388,7 @@ class SmartCache:
                         # 回填本地缓存
                         self._caches[cache_type].set(key, parsed)
             except Exception as e:
-                logger.debug(f"Redis批量读取失败: {e}")
+                logger.debug("Redis批量读取失败: %s", e)
 
         return result
 
@@ -407,7 +407,7 @@ class SmartCache:
                     pipe.setex(redis_key, cache_ttl, json.dumps(value, default=str))
                 pipe.execute()
             except Exception as e:
-                logger.debug(f"Redis批量写入失败: {e}")
+                logger.debug("Redis批量写入失败: %s", e)
 
     def get_or_set(
         self, cache_type: str, key: str, loader: Callable, ttl: Optional[float] = None

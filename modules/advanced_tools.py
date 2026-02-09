@@ -17,7 +17,7 @@ try:
 
     HAS_STEALTH = True
 except ImportError as e:
-    logger.warning(f"Stealth module not available: {e}")
+    logger.warning("Stealth module not available: %s", e)
     HAS_STEALTH = False
 
 try:
@@ -25,7 +25,7 @@ try:
 
     HAS_EXPLOIT = True
 except ImportError as e:
-    logger.warning(f"Exploit module not available: {e}")
+    logger.warning("Exploit module not available: %s", e)
     HAS_EXPLOIT = False
 
 

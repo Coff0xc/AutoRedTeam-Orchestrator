@@ -144,7 +144,7 @@ class StandardReconEngine(BaseReconEngine):
         phase_order = self._phase_manager.get_phase_order()
         total_phases = len(phase_order)
 
-        self._logger.info(f"Starting recon for {self.target} with {total_phases} phases")
+        self._logger.info("Starting recon for %s with %s phases", self.target, total_phases)
 
         for idx, phase in enumerate(phase_order):
             if self.is_stopped():
@@ -166,14 +166,14 @@ class StandardReconEngine(BaseReconEngine):
 
                     # 关键阶段失败则中止
                     if not phase_result.success and phase.is_critical:
-                        self._logger.error(f"Critical phase {phase.name} failed, aborting")
+                        self._logger.error("Critical phase %s failed, aborting", phase.name)
                         break
                 else:
                     # 没有处理器，跳过
                     self._add_phase_result(PhaseResult.create_skipped(phase, "No handler"))
 
             except Exception as e:
-                self._logger.error(f"Phase {phase.name} error: {e}")
+                self._logger.error("Phase %s error: %s", phase.name, e)
                 self._add_phase_result(PhaseResult.create_failure(phase, [str(e)]))
                 self._add_error(f"{phase.name}: {str(e)}")
 
@@ -219,7 +219,7 @@ class StandardReconEngine(BaseReconEngine):
             data["port"] = parsed.port
             data["path"] = parsed.path
 
-            self._logger.info(f"Target parsed: {data}")
+            self._logger.info("Target parsed: %s", data)
 
             return PhaseResult.create_success(ReconPhase.INIT, data)
 

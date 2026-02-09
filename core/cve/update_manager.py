@@ -188,10 +188,10 @@ class CVEUpdateManager:
                         cleaned_size += file_size
 
             if cleaned_count > 0:
-                logger.info(f"清理过期缓存: {cleaned_count} 个文件, {cleaned_size / 1024:.1f} KB")
+                logger.info("清理过期缓存: %s 个文件, %.1f KB", cleaned_count, cleaned_size / 1024)
 
         except Exception as e:
-            logger.warning(f"清理缓存文件失败: {e}")
+            logger.warning("清理缓存文件失败: %s", e)
 
     def _cleanup_on_exit(self):
         """程序退出时的清理函数"""
@@ -199,7 +199,7 @@ class CVEUpdateManager:
             # 清理空的缓存目录
             if self.cache_dir.exists() and not any(self.cache_dir.iterdir()):
                 self.cache_dir.rmdir()
-                logger.debug(f"清理空缓存目录: {self.cache_dir}")
+                logger.debug("清理空缓存目录: %s", self.cache_dir)
 
             # 清理临时下载文件
             temp_pattern = "cve_temp_*"
@@ -214,7 +214,7 @@ class CVEUpdateManager:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         except Exception as e:
-            logger.debug(f"退出清理失败 (可忽略): {e}")
+            logger.debug("退出清理失败 (可忽略): %s", e)
 
     def _init_database(self):
         """初始化SQLite数据库"""
@@ -224,9 +224,9 @@ class CVEUpdateManager:
             cursor.executescript(self.DB_SCHEMA)
             conn.commit()
             conn.close()
-            logger.info(f"数据库初始化成功: {self.db_path}")
+            logger.info("数据库初始化成功: %s", self.db_path)
         except Exception as e:
-            logger.error(f"数据库初始化失败: {e}")
+            logger.error("数据库初始化失败: %s", e)
             raise
 
     async def _rate_limit(self, source: str):
@@ -242,7 +242,7 @@ class CVEUpdateManager:
         # 检查是否超过限制
         if len(limiter["requests"]) >= config["requests"]:
             sleep_time = (limiter["requests"][0] - cutoff).total_seconds()
-            logger.warning(f"触发速率限制 [{source}], 等待 {sleep_time:.1f}s")
+            logger.warning("触发速率限制 [%s], 等待 %.1fs", source, sleep_time)
             await asyncio.sleep(sleep_time)
 
         # 记录本次请求
@@ -259,16 +259,16 @@ class CVEUpdateManager:
                 if resp.status == 200:
                     return await resp.json()
                 elif resp.status == 403:
-                    logger.warning(f"API访问受限 [{source}]: {url}")
+                    logger.warning("API访问受限 [%s]: %s", source, url)
                     return None
                 else:
-                    logger.error(f"请求失败 [{source}] {resp.status}: {url}")
+                    logger.error("请求失败 [%s] %s: %s", source, resp.status, url)
                     return None
         except asyncio.TimeoutError:
-            logger.error(f"请求超时 [{source}]: {url}")
+            logger.error("请求超时 [%s]: %s", source, url)
             return None
         except Exception as e:
-            logger.error(f"请求异常 [{source}]: {e}")
+            logger.error("请求异常 [%s]: %s", source, e)
             return None
 
     async def sync_nvd(self, days_back: int = 7) -> Tuple[int, int]:
@@ -281,7 +281,7 @@ class CVEUpdateManager:
         Returns:
             (新增CVE数, 更新CVE数)
         """
-        logger.info(f"开始同步 NVD (最近 {days_back} 天)")
+        logger.info("开始同步 NVD (最近 %s 天)", days_back)
 
         new_count = 0
         updated_count = 0
@@ -391,10 +391,10 @@ class CVEUpdateManager:
                     break
 
                 start_index += results_per_page
-                logger.info(f"NVD: 已处理 {start_index}/{total_results} 条")
+                logger.info("NVD: 已处理 %s/%s 条", start_index, total_results)
 
         self._log_sync("NVD", new_count, updated_count, "SUCCESS")
-        logger.info(f"NVD同步完成: 新增 {new_count}, 更新 {updated_count}")
+        logger.info("NVD同步完成: 新增 %s, 更新 %s", new_count, updated_count)
         return new_count, updated_count
 
     async def sync_nuclei_templates(self) -> Tuple[int, int]:
@@ -484,7 +484,7 @@ class CVEUpdateManager:
             updated_count = len(results) - new_count
 
         self._log_sync("Nuclei", new_count, updated_count, "SUCCESS")
-        logger.info(f"Nuclei同步完成: 新增 {new_count}, 更新 {updated_count}")
+        logger.info("Nuclei同步完成: 新增 %s, 更新 %s", new_count, updated_count)
         return new_count, updated_count
 
     async def sync_exploit_db(self) -> Tuple[int, int]:
@@ -511,7 +511,7 @@ class CVEUpdateManager:
             try:
                 async with session.get(self.EXPLOIT_DB_CSV, timeout=60, ssl=False) as resp:
                     if resp.status != 200:
-                        logger.error(f"Exploit-DB: 下载失败 {resp.status}")
+                        logger.error("Exploit-DB: 下载失败 %s", resp.status)
                         return 0, 0
 
                     csv_content = await resp.text()
@@ -570,15 +570,15 @@ class CVEUpdateManager:
                                     new_count += 1
 
                         except Exception as e:
-                            logger.debug(f"Exploit-DB: 解析行失败 {e}")
+                            logger.debug("Exploit-DB: 解析行失败 %s", e)
                             continue
 
             except Exception as e:
-                logger.error(f"Exploit-DB同步失败: {e}")
+                logger.error("Exploit-DB同步失败: %s", e)
                 return 0, 0
 
         self._log_sync("Exploit-DB", new_count, updated_count, "SUCCESS")
-        logger.info(f"Exploit-DB同步完成: 新增 {new_count}, 更新 {updated_count}")
+        logger.info("Exploit-DB同步完成: 新增 %s, 更新 %s", new_count, updated_count)
         return new_count, updated_count
 
     def _insert_or_update_cve(self, entry: CVEEntry) -> bool:
@@ -649,7 +649,7 @@ class CVEUpdateManager:
                 return True
 
         except Exception as e:
-            logger.error(f"数据库操作失败: {e}")
+            logger.error("数据库操作失败: %s", e)
             return False
 
     def _get_cve(self, cve_id: str) -> Optional[CVEEntry]:
@@ -666,7 +666,7 @@ class CVEUpdateManager:
             return None
 
         except Exception as e:
-            logger.error(f"查询CVE失败: {e}")
+            logger.error("查询CVE失败: %s", e)
             return None
 
     def _log_sync(self, source: str, new_cves: int, updated_cves: int, status: str):
@@ -684,7 +684,7 @@ class CVEUpdateManager:
             conn.commit()
             conn.close()
         except Exception as e:
-            logger.error(f"记录同步历史失败: {e}")
+            logger.error("记录同步历史失败: %s", e)
 
     async def sync_all(self, days_back: int = 7) -> Dict[str, Tuple[int, int]]:
         """
@@ -711,10 +711,10 @@ class CVEUpdateManager:
             try:
                 results[source] = await task
             except Exception as e:
-                logger.error(f"{source} 同步失败: {e}")
+                logger.error("%s 同步失败: %s", source, e)
                 results[source] = (0, 0)
 
-        logger.info(f"全量同步完成: {results}")
+        logger.info("全量同步完成: %s", results)
         return results
 
     def search(
@@ -767,7 +767,7 @@ class CVEUpdateManager:
             return [CVEEntry(*row) for row in rows]
 
         except Exception as e:
-            logger.error(f"搜索失败: {e}")
+            logger.error("搜索失败: %s", e)
             return []
 
     def get_stats(self) -> Dict:
@@ -802,7 +802,7 @@ class CVEUpdateManager:
             return stats
 
         except Exception as e:
-            logger.error(f"获取统计失败: {e}")
+            logger.error("获取统计失败: %s", e)
             return {}
 
 
@@ -825,10 +825,10 @@ async def main():
             results = manager.search(keyword=keyword, poc_only=True)
             logger.info(f"\n找到 {len(results)} 条结果:\n")
             for cve in results[:10]:
-                logger.info(f"[{cve.severity}] {cve.cve_id} (CVSS: {cve.cvss})")
+                logger.info("[%s] %s (CVSS: %s)", cve.severity, cve.cve_id, cve.cvss)
                 logger.info(f"  {cve.description[:100]}...")
                 if cve.poc_path:
-                    logger.info(f"  PoC: {cve.poc_path}")
+                    logger.info("  PoC: %s", cve.poc_path)
                 logger.info("")
         elif command == "stats":
             stats = manager.get_stats()
@@ -837,7 +837,7 @@ async def main():
             logger.info(f"  有PoC: {stats.get('poc_available', 0)}")
             logger.info("\n按严重性:")
             for severity, count in stats.get("by_severity", {}).items():
-                logger.info(f"    {severity}: {count}")
+                logger.info("    %s: %s", severity, count)
     else:
         logger.info("用法:")
         logger.info("  python update_manager.py sync       # 同步所有数据源")

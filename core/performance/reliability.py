@@ -113,7 +113,7 @@ class RetryExecutor:
                 if self.policy.should_retry(None, result):
                     if attempt < self.policy.max_retries:
                         delay = self.policy.get_delay(attempt)
-                        logger.debug(f"结果触发重试，等待 {delay:.2f}s (尝试 {attempt + 1})")
+                        logger.debug("结果触发重试，等待 %.2fs (尝试 %s)", delay, attempt + 1)
                         time.sleep(delay)
                         self._stats["total_retries"] += 1
                         continue
@@ -125,11 +125,11 @@ class RetryExecutor:
                 last_exception = e
                 if attempt < self.policy.max_retries:
                     delay = self.policy.get_delay(attempt)
-                    logger.warning(f"执行失败: {e}，等待 {delay:.2f}s 后重试 (尝试 {attempt + 1})")
+                    logger.warning("执行失败: %s，等待 %.2fs 后重试 (尝试 %s)", e, delay, attempt + 1)
                     time.sleep(delay)
                     self._stats["total_retries"] += 1
                 else:
-                    logger.error(f"重试次数耗尽: {e}")
+                    logger.error("重试次数耗尽: %s", e)
 
         self._stats["failed_calls"] += 1
         if last_exception:
@@ -271,9 +271,9 @@ class CheckpointManager:
                         checkpoint = Checkpoint(**data)
                         self._checkpoints[checkpoint.task_id] = checkpoint
                 except Exception as e:
-                    logger.warning(f"加载检查点失败 {file}: {e}")
+                    logger.warning("加载检查点失败 %s: %s", file, e)
         except Exception as e:
-            logger.error(f"扫描检查点目录失败: {e}")
+            logger.error("扫描检查点目录失败: %s", e)
 
     def create(
         self, task_id: str, task_type: str, total: int, metadata: Optional[Dict] = None
@@ -335,7 +335,7 @@ class CheckpointManager:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(asdict(checkpoint), f, indent=2, default=str)
         except Exception as e:
-            logger.error(f"保存检查点失败: {e}")
+            logger.error("保存检查点失败: %s", e)
 
     def get(self, task_id: str) -> Optional[Checkpoint]:
         """获取检查点"""
@@ -507,7 +507,7 @@ class FaultRecovery:
                 raise
 
             elif action == RecoveryAction.SKIP:
-                logger.warning(f"跳过故障: {e}")
+                logger.warning("跳过故障: %s", e)
                 record.recovered = True
                 return fallback_value
 
@@ -519,12 +519,12 @@ class FaultRecovery:
                         record.recovered = True
                         return result
                     except Exception as fallback_error:
-                        logger.error(f"降级处理失败: {fallback_error}")
+                        logger.error("降级处理失败: %s", fallback_error)
                         raise e
                 raise
 
             elif action == RecoveryAction.ABORT:
-                logger.error(f"致命错误，中止执行: {e}")
+                logger.error("致命错误，中止执行: %s", e)
                 raise
 
             raise
@@ -662,7 +662,7 @@ class RecoverableTask:
         existing = self.checkpoint_manager.get(self.task_id)
         if existing:
             self._checkpoint = existing
-            logger.info(f"恢复任务 {self.task_id}，进度: {existing.progress}/{existing.total}")
+            logger.info("恢复任务 %s，进度: %s/%s", self.task_id, existing.progress, existing.total)
         else:
             self._checkpoint = self.checkpoint_manager.create(
                 self.task_id, self.task_type, self.total

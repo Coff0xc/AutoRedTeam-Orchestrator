@@ -383,7 +383,7 @@ class AdaptiveRateLimiter:
         self._metrics = AdaptiveMetrics()
         self._lock = threading.Lock()
 
-        logger.debug(f"自适应限流器已初始化: rate={initial_rate}, range=[{min_rate}, {max_rate}]")
+        logger.debug("自适应限流器已初始化: rate=%s, range=[%s, %s]", initial_rate, min_rate, max_rate)
 
     def _adjust_rate(self, new_rate: float) -> None:
         """调整速率"""
@@ -398,7 +398,7 @@ class AdaptiveRateLimiter:
             self._current_rate = new_rate
             self._bucket = TokenBucket(rate=new_rate, capacity=new_rate * 2)
             self._metrics.last_adjustment_time = now
-            logger.debug(f"限流速率调整: {old_rate:.2f} -> {new_rate:.2f}")
+            logger.debug("限流速率调整: %.2f -> %.2f", old_rate, new_rate)
 
     def record_success(self) -> None:
         """记录成功，可能提高速率"""
