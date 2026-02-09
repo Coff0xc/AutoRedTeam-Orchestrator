@@ -127,11 +127,11 @@ class AdaptiveConcurrencyController:
         if error_rate > 0.3:
             # 错误率过高，降低并发
             self.current = max(self.min, int(self.current * 0.7))
-            logger.debug(f"高错误率({error_rate:.1%})，降低并发至 {self.current}")
+            logger.debug("高错误率(%.1f%%)，降低并发至 %s", error_rate * 100, self.current)
         elif error_rate < 0.05 and avg_time < 1.0:
             # 表现良好，提高并发
             self.current = min(self.max, int(self.current * 1.2))
-            logger.debug(f"性能良好，提升并发至 {self.current}")
+            logger.debug("性能良好，提升并发至 %s", self.current)
 
         # 重置计数器
         self._error_count = 0

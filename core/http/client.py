@@ -61,7 +61,7 @@ from .exceptions import (
     TimeoutError,
     exception_from_status_code,
 )
-from .middleware import MiddlewareChain, RequestContext, ResponseContext
+from .middleware import MiddlewareChain, RequestContext, ResponseContext, SSRFProtectionMiddleware
 
 
 @dataclass
@@ -151,7 +151,11 @@ class HTTPClient:
     """统一 HTTP 客户端 - 支持同步和异步"""
 
     def __init__(
-        self, config: Optional[HTTPConfig] = None, middlewares: Optional[List[Any]] = None
+        self,
+        config: Optional[HTTPConfig] = None,
+        middlewares: Optional[List[Any]] = None,
+        ssrf_protection: bool = True,
+        allow_private: bool = False,
     ):
         """
         初始化 HTTP 客户端
@@ -159,9 +163,15 @@ class HTTPClient:
         Args:
             config: HTTP 配置
             middlewares: 中间件列表
+            ssrf_protection: 是否启用 SSRF 防护 (默认启用)
+            allow_private: 是否允许访问私有网络地址 (仅在 ssrf_protection=True 时生效)
         """
         self.config = config or HTTPConfig()
         self.middleware_chain = MiddlewareChain()
+
+        # SSRF 防护作为第一个中间件
+        if ssrf_protection:
+            self.middleware_chain.add(SSRFProtectionMiddleware(allow_private=allow_private))
 
         # 添加中间件
         if middlewares:

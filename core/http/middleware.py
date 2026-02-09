@@ -6,7 +6,9 @@ HTTP 中间件系统
 """
 
 import asyncio
+import ipaddress
 import logging
+import threading
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -131,6 +133,14 @@ class AsyncMiddleware(ABC):
 class LoggingMiddleware(Middleware):
     """日志中间件 - 记录请求和响应"""
 
+    SENSITIVE_HEADERS = {
+        "authorization",
+        "cookie",
+        "x-api-key",
+        "x-auth-token",
+        "proxy-authorization",
+    }
+
     def __init__(
         self,
         log_requests: bool = True,
@@ -159,7 +169,11 @@ class LoggingMiddleware(Middleware):
         if self.log_requests:
             msg = f"[HTTP] {request.method} {request.url}"
             if self.log_headers:
-                msg += f" Headers: {request.headers}"
+                safe_headers = {
+                    k: "[REDACTED]" if k.lower() in self.SENSITIVE_HEADERS else v
+                    for k, v in request.headers.items()
+                }
+                msg += f" Headers: {safe_headers}"
             if self.log_body and request.data:
                 body_preview = str(request.data)[:200]
                 msg += f" Body: {body_preview}..."
@@ -232,6 +246,9 @@ class RetryMiddleware(Middleware):
                 except ValueError:
                     pass
 
+            MAX_RETRY_AFTER = 300  # 5 minutes max
+            delay = min(delay, MAX_RETRY_AFTER)
+
             logger.info(
                 f"[Retry] {request.method} {request.url} "
                 f"(状态码 {response.status_code}, 第 {request.attempt} 次重试, "
@@ -267,6 +284,82 @@ class RetryMiddleware(Middleware):
         return None
 
 
+class SSRFProtectionMiddleware(Middleware):
+    """SSRF 防护中间件 - 阻止对内部网络的请求"""
+
+    # Private/internal IP ranges
+    BLOCKED_RANGES = [
+        ipaddress.ip_network("10.0.0.0/8"),
+        ipaddress.ip_network("172.16.0.0/12"),
+        ipaddress.ip_network("192.168.0.0/16"),
+        ipaddress.ip_network("127.0.0.0/8"),
+        ipaddress.ip_network("169.254.0.0/16"),  # Link-local / cloud metadata
+        ipaddress.ip_network("::1/128"),
+        ipaddress.ip_network("fc00::/7"),  # IPv6 private
+        ipaddress.ip_network("fe80::/10"),  # IPv6 link-local
+    ]
+
+    # Cloud metadata endpoints
+    BLOCKED_HOSTS = {
+        "metadata.google.internal",
+        "metadata.google.com",
+    }
+
+    def __init__(self, allow_private: bool = False):
+        self.allow_private = allow_private
+
+    def _is_blocked(self, url: str) -> tuple[bool, str]:
+        """Check if URL targets a blocked address"""
+        import socket
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return False, ""
+
+        # Check blocked hostnames
+        if hostname.lower() in self.BLOCKED_HOSTS:
+            return True, f"Blocked cloud metadata host: {hostname}"
+
+        # Try to check if hostname is a literal IP
+        try:
+            addr = ipaddress.ip_address(hostname)
+            for network in self.BLOCKED_RANGES:
+                if addr in network:
+                    return True, f"Blocked private/internal IP: {hostname}"
+        except ValueError:
+            # Not a literal IP - resolve DNS to prevent rebinding attacks
+            try:
+                resolved_ips = socket.getaddrinfo(hostname, None)
+                for family, _, _, _, sockaddr in resolved_ips:
+                    ip_str = sockaddr[0]
+                    try:
+                        addr = ipaddress.ip_address(ip_str)
+                        for network in self.BLOCKED_RANGES:
+                            if addr in network:
+                                return True, f"Blocked hostname {hostname} resolves to private IP: {ip_str}"
+                    except ValueError:
+                        continue
+            except socket.gaierror:
+                pass  # DNS resolution failed, allow request to proceed (will fail naturally)
+
+        return False, ""
+
+    def process_request(self, request: RequestContext) -> RequestContext:
+        if self.allow_private:
+            return request
+        blocked, reason = self._is_blocked(request.url)
+        if blocked:
+            raise ValueError(f"[SSRF Protection] {reason}")
+        return request
+
+    def process_response(
+        self, response: ResponseContext, request: RequestContext
+    ) -> ResponseContext:
+        return response
+
+
 class RateLimitMiddleware(Middleware):
     """限流中间件 - 控制请求速率"""
 
@@ -285,8 +378,8 @@ class RateLimitMiddleware(Middleware):
         self._interval = 1.0 / requests_per_second
         self._last_request: Dict[str, float] = defaultdict(float)
         self._tokens: Dict[str, float] = defaultdict(lambda: burst)
-        # 同步中间件不需要异步锁
-        self._lock = None
+        # 线程安全锁
+        self._lock = threading.Lock()
 
     def _get_key(self, url: str) -> str:
         """获取限流键"""
@@ -298,22 +391,23 @@ class RateLimitMiddleware(Middleware):
         return "__global__"
 
     def process_request(self, request: RequestContext) -> RequestContext:
-        key = self._get_key(request.url)
-        now = time.time()
+        with self._lock:
+            key = self._get_key(request.url)
+            now = time.time()
 
-        # 令牌桶算法
-        elapsed = now - self._last_request[key]
-        self._tokens[key] = min(self.burst, self._tokens[key] + elapsed * self.requests_per_second)
-        self._last_request[key] = now
+            # 令牌桶算法
+            elapsed = now - self._last_request[key]
+            self._tokens[key] = min(self.burst, self._tokens[key] + elapsed * self.requests_per_second)
+            self._last_request[key] = now
 
-        if self._tokens[key] < 1.0:
-            # 需要等待
-            wait_time = (1.0 - self._tokens[key]) / self.requests_per_second
-            logger.debug(f"[RateLimit] 等待 {wait_time:.3f}s ({key})")
-            time.sleep(wait_time)
-            self._tokens[key] = 0
-        else:
-            self._tokens[key] -= 1.0
+            if self._tokens[key] < 1.0:
+                # 需要等待
+                wait_time = (1.0 - self._tokens[key]) / self.requests_per_second
+                logger.debug(f"[RateLimit] 等待 {wait_time:.3f}s ({key})")
+                time.sleep(wait_time)
+                self._tokens[key] = 0
+            else:
+                self._tokens[key] -= 1.0
 
         return request
 
@@ -327,8 +421,10 @@ class RateLimitMiddleware(Middleware):
             if retry_after:
                 try:
                     wait_time = float(retry_after)
-                    logger.info(f"[RateLimit] 收到 429, 等待 {wait_time}s ({key})")
-                    time.sleep(wait_time)
+                    wait_time = min(wait_time, 300)  # Cap at 5 minutes
+                    with self._lock:
+                        logger.info(f"[RateLimit] 收到 429, 等待 {wait_time}s ({key})")
+                        time.sleep(wait_time)
                 except ValueError:
                     pass
         return response
@@ -384,6 +480,10 @@ class AsyncRetryMiddleware(AsyncMiddleware):
                     delay = max(delay, float(retry_after))
                 except ValueError:
                     pass
+
+            # Cap Retry-After to prevent DoS from malicious servers
+            MAX_RETRY_AFTER = 300  # 5 minutes
+            delay = min(delay, MAX_RETRY_AFTER)
 
             logger.info(
                 f"[Retry] {request.method} {request.url} "
@@ -468,7 +568,7 @@ class AsyncRateLimitMiddleware(AsyncMiddleware):
             retry_after = response.headers.get("Retry-After")
             if retry_after:
                 try:
-                    wait_time = float(retry_after)
+                    wait_time = min(float(retry_after), 300)  # Cap at 5 minutes
                     key = self._get_key(request.url)
                     logger.info(f"[RateLimit] 收到 429, 等待 {wait_time}s ({key})")
                     await asyncio.sleep(wait_time)
@@ -725,6 +825,7 @@ __all__ = [
     "AsyncMiddleware",
     "RequestContext",
     "ResponseContext",
+    "SSRFProtectionMiddleware",
     "LoggingMiddleware",
     "RetryMiddleware",
     "AsyncRetryMiddleware",

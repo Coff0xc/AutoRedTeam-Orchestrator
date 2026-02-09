@@ -452,11 +452,24 @@ def _validate_target_auto(
     if validate_domain(target):
         return True
 
-    # 如果都不匹配，允许通过（可能是主机名）
-    # 但要确保不包含危险字符
+    # 如果都不匹配，检查是否包含危险字符
+    # 同时阻止明显的内部网络目标
     dangerous_chars = [";", "|", "&", "$", "`", "\n", "\r", ">", "<", '"', "'"]
     for char in dangerous_chars:
         if char in target:
+            return False
+
+    # 阻止常见的内部/云元数据主机名
+    internal_patterns = [
+        "localhost", "metadata.google", "169.254.169.254",
+        "metadata.aws", "metadata.azure",
+        "internal", ".local", "127.0.0.1",
+    ]
+    target_lower = target.lower()
+    for pattern in internal_patterns:
+        if pattern in target_lower:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"目标可能指向内部网络: {target}")
             return False
 
     return True

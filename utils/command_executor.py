@@ -71,12 +71,25 @@ DANGEROUS_COMMANDS: Set[str] = {
     "sudoers",
 }
 
-# 禁止的命令 (完全阻止执行)
+# 禁止的命令 (完全阻止执行) - 保留用于向后兼容
 BLOCKED_COMMANDS: Set[str] = {
     ":(){ :|:& };:",  # Fork bomb
     ">/dev/sda",
     "mkfs.ext4",
 }
+
+# 禁止的命令模式 (完全阻止执行)
+BLOCKED_PATTERNS: List[re.Pattern] = [
+    re.compile(r":\(\)\s*\{.*\}.*:"),  # Fork bomb variants
+    re.compile(r">\s*/dev/sd[a-z]"),  # Direct disk write
+    re.compile(r"mkfs\.\w+\s+/dev/"),  # Format disk
+    re.compile(r"dd\s+.*if=/dev/zero\s+.*of=/dev/"),  # DD zero to disk
+    re.compile(r"rm\s+(-[rfRF]+\s+)?/\s*$"),  # rm -rf / (root deletion)
+    re.compile(r"rm\s+(-[rfRF]+\s+)?/\*"),  # rm -rf /*
+    re.compile(r"chmod\s+(-R\s+)?777\s+/\s*$"),  # chmod 777 / (root)
+    re.compile(r">\s*/dev/null\s*<\s*/dev/"),  # Redirect attacks
+    re.compile(r"mv\s+/\s+/dev/null"),  # Move root to /dev/null
+]
 
 # Shell 元字符 (用于检测潜在的命令注入)
 SHELL_METACHARACTERS = re.compile(r'[;&|`$(){}[\]<>\\\'"]')
@@ -467,11 +480,16 @@ def validate_command(cmd: List[str]) -> tuple[bool, List[str]]:
 
     base_cmd = cmd[0].split("/")[-1].split("\\")[-1]  # 获取命令名
 
-    # 检查是否为阻止的命令
+    # 检查是否为阻止的命令 (精确匹配 - 向后兼容)
     cmd_str = " ".join(cmd)
     for blocked in BLOCKED_COMMANDS:
         if blocked in cmd_str:
             return False, [f"命令被阻止: 包含危险模式 '{blocked}'"]
+
+    # 检查阻止的命令模式 (正则匹配)
+    for pattern in BLOCKED_PATTERNS:
+        if pattern.search(cmd_str):
+            return False, [f"命令被阻止: 匹配危险模式 '{pattern.pattern}'"]
 
     # 检查是否为危险命令
     if base_cmd in DANGEROUS_COMMANDS:

@@ -21,9 +21,11 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 # ============ Runtime Stage ============
 FROM python:3.10-slim
 
+ARG APP_VERSION=3.0.2
+
 LABEL maintainer="coff0xc"
 LABEL description="AI-driven automated penetration testing framework based on MCP"
-LABEL version="3.0.2"
+LABEL version="${APP_VERSION}"
 LABEL org.opencontainers.image.source="https://github.com/Coff0xc/AutoRedTeam-Orchestrator"
 LABEL org.opencontainers.image.description="AI-driven automated penetration testing framework with 101 MCP tools"
 LABEL org.opencontainers.image.licenses="MIT"
@@ -40,9 +42,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
+
 # Copy Python packages from builder
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
+COPY --from=builder /root/.local /home/appuser/.local
+ENV PATH=/home/appuser/.local/bin:$PATH
 
 # Copy application code
 COPY core/ ./core/
@@ -57,7 +62,8 @@ COPY mcp_stdio_server.py .
 COPY VERSION .
 
 # Create necessary directories
-RUN mkdir -p /app/data /app/logs /app/reports
+RUN mkdir -p /app/data /app/logs /app/reports && \
+    chown -R appuser:appuser /app
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -66,6 +72,13 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 # Expose volume mount points
 VOLUME ["/app/config", "/app/data", "/app/logs", "/app/reports"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import mcp_stdio_server; print('ok')" || exit 1
+
+# Run as non-root user
+USER appuser
 
 # Default command
 CMD ["python", "mcp_stdio_server.py"]

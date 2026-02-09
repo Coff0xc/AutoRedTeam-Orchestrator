@@ -317,8 +317,9 @@ class TestHandlersIntegration:
         # 执行注册
         register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
-        # 验证没有异常抛出
-        assert True
+        # 验证 MCP mock 被使用且没有错误日志
+        assert mock_mcp is not None, "MCP mock should be initialized"
+        assert mock_logger.error.call_count == 0, "No errors should be logged during registration"
 
 
 class TestHandlersErrorMessages:

@@ -24,6 +24,8 @@
 
 import hashlib
 import hmac
+import os
+import re
 import secrets
 import string
 from typing import Optional, Union
@@ -162,6 +164,11 @@ def hash_file(filepath: str, algorithm: str = "sha256", chunk_size: int = 8192) 
     Returns:
         文件哈希值
     """
+    # 路径安全检查
+    filepath = os.path.normpath(filepath)
+    if ".." in filepath.split(os.sep):
+        raise ValueError(f"Path traversal detected: {filepath}")
+
     hasher = hashlib.new(algorithm)
 
     with open(filepath, "rb") as f:
@@ -602,9 +609,6 @@ def password_strength(password: str) -> dict:
 
     return {"score": score, "max_score": 9, "strength": strength, "feedback": feedback}
 
-
-# 导入re模块用于密码强度评估
-import re
 
 __all__ = [
     # 哈希

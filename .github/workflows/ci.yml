@@ -28,8 +28,19 @@ jobs:
       - name: Check import sorting with isort
         run: isort --check-only --profile black core/ modules/ utils/ handlers/
 
-      - name: Lint with flake8
+      - name: Lint with flake8 (strict)
+        continue-on-error: true  # TODO: Fix existing F401/F841/E722 violations then remove this
+        run: flake8 --max-line-length 100 --ignore=E501,W503,E402,E203,W504 --extend-ignore=F811,F541,F821,W291,W293,E741,E713,E226,E231 core/ modules/ utils/ handlers/
+
+      - name: Lint with flake8 (baseline)
         run: flake8 --max-line-length 100 --ignore=E501,W503,E402,E203,W504 --extend-ignore=E722,F401,F841,F811,F541,F821,W291,W293,E741,E713,E226,E231 core/ modules/ utils/ handlers/
+
+      - name: Install mypy
+        run: pip install mypy
+
+      - name: Type check with mypy
+        continue-on-error: true  # Gradually enforce type checking
+        run: mypy --python-version 3.10 --ignore-missing-imports --no-strict-optional core/result.py core/container.py core/mcts_planner.py
 
   security:
     runs-on: ubuntu-latest
@@ -58,6 +69,11 @@ jobs:
         continue-on-error: true  # langchain 0.1.x has known CVEs; upgrade to 0.2+ is a breaking change
         run: pip-audit -r requirements.txt
 
+      - name: Check for hardcoded secrets
+        run: |
+          pip install detect-secrets
+          detect-secrets scan core/ modules/ utils/ handlers/ --list-all-secrets || true
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -76,7 +92,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
-          pip install pytest-asyncio pytest-timeout
+          pip install pytest-asyncio pytest-timeout pytest-cov
       - name: Check syntax
         run: python -m py_compile mcp_stdio_server.py
       - name: Run unit tests (fast)
@@ -84,6 +100,10 @@ jobs:
           pytest tests/ \
             --verbose \
             --tb=short \
+            --cov=core --cov=handlers --cov=utils \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term-missing \
+            --cov-fail-under=20 \
             --ignore=tests/test_performance_integration.py \
             --ignore=tests/test_core_c2.py \
             --ignore=tests/test_core_concurrency.py \
@@ -107,6 +127,12 @@ jobs:
             -m "not slow and not integration and not network" \
             --timeout=30 \
             --maxfail=10
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.10'
+        with:
+          name: coverage-report
+          path: coverage.xml
 
   build:
     runs-on: ubuntu-latest

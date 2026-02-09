@@ -935,7 +935,11 @@ class AsyncTool(BaseTool):
                     future = pool.submit(asyncio.run, self.async_execute(**kwargs))
                     return future.result(timeout=self.metadata.timeout)
             else:
-                return loop.run_until_complete(self.async_execute(**kwargs))
+                loop = asyncio.new_event_loop()
+                try:
+                    return loop.run_until_complete(self.async_execute(**kwargs))
+                finally:
+                    loop.close()
         except Exception as e:
             return ToolResult.fail(error=str(e))
 
