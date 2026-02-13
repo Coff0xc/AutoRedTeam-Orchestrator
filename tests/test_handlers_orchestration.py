@@ -273,7 +273,7 @@ class TestPentestPhaseTool:
 
         with patch('core.orchestrator.AutoPentestOrchestrator') as MockOrch, \
              patch('core.orchestrator.OrchestratorConfig'), \
-             patch('core.orchestrator.PentestPhase') as MockPhase:
+             patch('core.orchestrator.PentestPhase'):
             orch_instance = MagicMock()
             orch_instance.execute_phase = AsyncMock(return_value=mock_phase_result)
             orch_instance.state = mock_state
@@ -688,12 +688,6 @@ class TestVerifyAndExploitTool:
         """测试验证通过并成功利用"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        mock_verification = {
-            'verified': True,
-            'method_used': 'oob',
-            'confidence': 0.95,
-        }
-
         mock_exploit_result = MagicMock()
         mock_exploit_result.success = True
         mock_exploit_result.status = MagicMock(value='success')
@@ -716,8 +710,12 @@ class TestVerifyAndExploitTool:
 
         with patch('core.exploit.ExploitEngine') as MockEngine, \
              patch('modules.vuln_verifier.VulnerabilityVerifier') as MockVerifier:
+            mock_vr = MagicMock()
+            mock_vr.is_vulnerable = True
+            mock_vr.verification_method = 'oob'
+            mock_vr.confidence = 'high'
             verifier = MagicMock()
-            verifier.verify = AsyncMock(return_value=mock_verification)
+            verifier.batch_verify = MagicMock(return_value=[mock_vr])
             MockVerifier.return_value = verifier
 
             engine = MagicMock()
@@ -730,18 +728,12 @@ class TestVerifyAndExploitTool:
 
             assert result['success'] is True
             assert result['verified'] is True
-            assert result['verification_confidence'] == 0.95
+            assert result['verification_confidence'] == 'high'
 
     @pytest.mark.asyncio
     async def test_verify_failed(self):
         """测试验证失败（可能是误报）"""
         registered_tools, _, _ = _make_mcp_and_register()
-
-        mock_verification = {
-            'verified': False,
-            'method_used': 'statistical',
-            'confidence': 0.2,
-        }
 
         detection = {
             'vulnerable': True,
@@ -750,8 +742,12 @@ class TestVerifyAndExploitTool:
         }
 
         with patch('modules.vuln_verifier.VulnerabilityVerifier') as MockVerifier:
+            mock_vr = MagicMock()
+            mock_vr.is_vulnerable = False
+            mock_vr.verification_method = 'statistical'
+            mock_vr.confidence = 'low'
             verifier = MagicMock()
-            verifier.verify = AsyncMock(return_value=mock_verification)
+            verifier.batch_verify = MagicMock(return_value=[mock_vr])
             MockVerifier.return_value = verifier
 
             result = await registered_tools['verify_and_exploit'](

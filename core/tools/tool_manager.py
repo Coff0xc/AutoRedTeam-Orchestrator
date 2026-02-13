@@ -404,6 +404,16 @@ _DENIED_ARG_PREFIXES: Dict[str, List[str]] = {
 }
 
 
+def _match_arg_prefix(arg: str, prefix: str) -> bool:
+    """参数前缀匹配：短前缀(<=2字符)要求精确匹配或后跟数字/=，长前缀允许前缀匹配"""
+    if arg == prefix:
+        return True
+    if len(prefix) <= 2:
+        # 短前缀：后面必须跟数字或 = （如 -p80, -T4, -p=80）
+        return len(arg) > len(prefix) and (arg[len(prefix)].isdigit() or arg[len(prefix)] == "=")
+    return arg.startswith(prefix)
+
+
 def validate_extra_args(tool_name: str, args: List[str]) -> List[str]:
     """验证并过滤额外参数，仅保留白名单内的安全参数
 
@@ -424,12 +434,11 @@ def validate_extra_args(tool_name: str, args: List[str]) -> List[str]:
     safe_args: List[str] = []
     for arg in args:
         # 检查是否命中拒绝列表
-        if denied and any(arg == d or arg.startswith(d + "=") or arg.startswith(d + " ")
-                         for d in denied):
+        if denied and any(arg == d or arg.startswith(d + "=") for d in denied):
             logger.warning("工具 %s 拒绝高危参数: %s", tool_name, arg)
             continue
-        # 检查是否匹配白名单前缀
-        if any(arg == a or arg.startswith(a) for a in allowed):
+        # 检查是否匹配白名单
+        if any(_match_arg_prefix(arg, a) for a in allowed):
             safe_args.append(arg)
         else:
             logger.warning("工具 %s 拒绝未授权参数: %s", tool_name, arg)

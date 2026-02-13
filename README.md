@@ -1259,7 +1259,7 @@ REDTEAM_MASTER_KEY=
 AUTOREDTEAM_API_KEY=
 
 # 授权模式: strict, permissive, disabled
-AUTOREDTEAM_AUTH_MODE=permissive
+AUTOREDTEAM_AUTH_MODE=strict  # 可选: strict(默认)|permissive|disabled
 
 # ========== API 密钥 ==========
 # AI 分析

@@ -291,7 +291,10 @@ if _env_mode == "strict":
     _auth_config["mode"] = AuthMode.STRICT
 elif _env_mode == "disabled":
     _auth_config["mode"] = AuthMode.DISABLED
-else:
+elif _env_mode == "permissive":
     _auth_config["mode"] = AuthMode.PERMISSIVE
+else:
+    logger.warning("未知授权模式 '%s'，回退到 STRICT", _env_mode)
+    _auth_config["mode"] = AuthMode.STRICT
 
 logger.info("MCP授权中间件初始化完成，模式: %s", _auth_config["mode"].value)

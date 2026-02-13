@@ -17,7 +17,7 @@ from utils.validators import (
 )
 
 # 危险字符: 命令分隔符、重定向、子shell、引号、换行、空字节
-_DANGEROUS_CHARS = re.compile(r'[;\|\$\`\&\>\<\(\)\{\}\[\]\\\'\"\n\r\x00\t]')
+_DANGEROUS_CHARS = re.compile(r'[;\|\$\`\&\>\<\(\)\{\}\[\]\\\'\"\n\r\x00\t\x0b\x0c]')
 
 
 def validate_domain(domain: str) -> Tuple[bool, Optional[str]]:

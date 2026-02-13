@@ -497,7 +497,7 @@ def register_orchestration_tools(mcp, counter, logger):
         from core.exploit import exploit_with_retry as _exploit_with_retry
 
         result = await _exploit_with_retry(
-            detection_result=detection_result, max_retries=max_retries, targets=targets
+            detection=detection_result, max_retries=max_retries, targets=targets
         )
 
         return {
@@ -553,11 +553,16 @@ def register_orchestration_tools(mcp, counter, logger):
 
         # 第一步：验证漏洞
         verifier = VulnerabilityVerifier()
-        verification_result = await verifier.verify(
-            detection_result=wrapped, method=verification_method
-        )
+        verification_results = verifier.batch_verify([detection_result])  # pylint: disable=no-member
 
-        if not verification_result.get("verified", False):
+        verified = any(r.is_vulnerable for r in verification_results)
+        verification_result = {
+            "verified": verified,
+            "method_used": verification_results[0].verification_method if verification_results else verification_method,
+            "confidence": verification_results[0].confidence if verification_results else "low",
+        }
+
+        if not verified:
             return {
                 "success": False,
                 "verified": False,
@@ -616,7 +621,7 @@ def register_orchestration_tools(mcp, counter, logger):
         from core.feedback import FailureAnalyzer, StrategyRegistry
 
         analyzer = FailureAnalyzer()
-        analysis = analyzer.analyze(result=failed_result, context=context or {})
+        analysis = analyzer.analyze(context={"failed_result": failed_result, **(context or {})})
 
         # 获取推荐的调整策略
         registry = StrategyRegistry()

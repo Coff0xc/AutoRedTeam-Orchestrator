@@ -1028,7 +1028,7 @@ for match in similar:
 # ========== Sicherheit ==========
 REDTEAM_MASTER_KEY=
 AUTOREDTEAM_API_KEY=
-AUTOREDTEAM_AUTH_MODE=permissive
+AUTOREDTEAM_AUTH_MODE=strict  # 可选: strict(默认)|permissive|disabled
 
 # ========== API-Schlüssel ==========
 OPENAI_API_KEY=ihr_schluessel
