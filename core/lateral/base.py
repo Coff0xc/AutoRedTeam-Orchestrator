@@ -538,15 +538,16 @@ if __name__ == "__main__":
         ntlm_hash="aad3b435b51404eeaad3b435b51404ee:8846f7eaee8fb117ad06bdd830b7586c",
         domain="WORKGROUP",
     )
-    logger.info("Credentials: %s", creds)
+    # 凭证信息降级为 debug，hash 脱敏处理
+    logger.debug("Credentials: [已脱敏]")
     logger.info("  Method: %s", creds.method.value)
-    logger.info("  LM Hash: %s", creds.lm_hash)
-    logger.info("  NT Hash: %s", creds.nt_hash)
+    logger.debug("  LM Hash: %s", creds.lm_hash[:8] + "..." if creds.lm_hash else "N/A")
+    logger.debug("  NT Hash: %s", creds.nt_hash[:8] + "..." if creds.nt_hash else "N/A")
 
     # 测试 ExecutionResult
     result = ExecutionResult(success=True, output="NT AUTHORITY\\SYSTEM", exit_code=0, duration=0.5)
-    logger.info(f"ExecutionResult: {result.to_dict()}")
+    logger.info("ExecutionResult: %s", result.to_dict())
 
     # 测试 LateralConfig
     config = LateralConfig(timeout=60.0, smb_share="C$")
-    logger.info(f"LateralConfig: {config.to_dict()}")
+    logger.info("LateralConfig: %s", config.to_dict())

@@ -690,4 +690,7 @@ if __name__ == "__main__":
 
     # 测试弱密钥
     weak_result = tester.test_weak_secrets(test_token)
-    logger.info(f"Weak secret found: {weak_result.get('found_secret', 'None')}")
+    # 弱密钥脱敏：只显示前4位
+    _secret = weak_result.get('found_secret', 'None')
+    _masked = _secret[:4] + "***" if _secret and _secret != 'None' else 'None'
+    logger.info("Weak secret found: %s", _masked)

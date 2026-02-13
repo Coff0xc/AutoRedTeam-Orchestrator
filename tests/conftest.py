@@ -18,6 +18,19 @@ import pytest
 import asyncio
 import json
 
+from core.security.mcp_auth_middleware import AuthMode, _auth_config
+
+
+# ==================== 全局 Auth 禁用 ====================
+
+@pytest.fixture(autouse=True, scope="session")
+def disable_auth_for_tests():
+    """测试期间禁用 auth 检查，避免 STRICT 模式阻断测试"""
+    original_mode = _auth_config["mode"]
+    _auth_config["mode"] = AuthMode.DISABLED
+    yield
+    _auth_config["mode"] = original_mode
+
 
 # ==================== Pytest-asyncio 配置 ====================
 pytest_plugins = ('pytest_asyncio',)

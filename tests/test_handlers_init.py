@@ -32,7 +32,7 @@ class TestHandlersInit:
             'register_report_tools',
             'register_ai_tools',
             'register_misc_tools',
-            'register_external_tools_handlers',
+            'register_external_tools',
         ]
 
         assert len(__all__) == len(expected_exports)
@@ -57,7 +57,7 @@ class TestHandlersInit:
             register_report_tools,
             register_ai_tools,
             register_misc_tools,
-            register_external_tools_handlers,
+            register_external_tools,
         )
 
         # 验证所有函数都是可调用的
@@ -76,7 +76,7 @@ class TestHandlersInit:
         assert callable(register_report_tools)
         assert callable(register_ai_tools)
         assert callable(register_misc_tools)
-        assert callable(register_external_tools_handlers)
+        assert callable(register_external_tools)
 
 
 class TestRegisterAllHandlers:
@@ -385,8 +385,9 @@ class TestHandlersErrorMessages:
         with patch('handlers.register_api_security_tools', side_effect=ValueError("custom error")):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
-            warning_call = mock_logger.warning.call_args_list[0][0][0]
-            assert "API安全工具注册失败" in warning_call
+            args = mock_logger.warning.call_args_list[0][0]
+            warning_call = args[0] % args[1:] if len(args) > 1 else args[0]
+            assert "注册失败" in warning_call
             assert "未预期错误" in warning_call
             assert "ValueError" in warning_call
             assert "custom error" in warning_call

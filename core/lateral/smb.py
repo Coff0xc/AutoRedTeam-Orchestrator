@@ -209,13 +209,16 @@ class SMBLateral(BaseLateralModule):
                 self._authenticated = True
                 self._use_impacket = False
                 self.logger.info(
-                    f"纯 Python SMB 认证成功: {self.credentials.username}@{self.target}"
+                    "纯 Python SMB 认证成功: %s@%s", self.credentials.username, self.target
                 )
                 return True
 
             sock.close()
             return False
 
+        except NotImplementedError as e:
+            self.logger.warning("纯 Python SMB 不支持此认证方式: %s", e)
+            return False
         except (socket.error, socket.timeout, OSError) as e:
             self.logger.debug("纯 Python SMB 连接失败: %s", e)
             return False
@@ -263,10 +266,13 @@ class SMBLateral(BaseLateralModule):
         return True
 
     def _build_session_setup_pth(self) -> bytes:
-        """构建 Pass-the-Hash 认证请求 (简化版)"""
-        # 完整的 NTLMSSP 实现需要更多代码
-        # 生产环境应使用 impacket
-        return self._build_session_setup_password()
+        """构建 Pass-the-Hash 认证请求
+
+        纯 Python 模式下不支持 PTH，需要 impacket 的完整 NTLMSSP 实现。
+        """
+        raise NotImplementedError(
+            "Pass-the-Hash requires impacket library. Install with: pip install impacket"
+        )
 
     def _build_session_setup_password(self) -> bytes:
         """构建密码认证请求 (简化版)"""

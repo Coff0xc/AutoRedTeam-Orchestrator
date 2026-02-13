@@ -56,11 +56,11 @@ class TestInputValidator:
     # --- validate_target ---
 
     def test_validate_ipv4(self, validator):
-        result = validator.validate_target("192.168.1.1")
+        result = validator.validate_target("192.168.1.1", allow_private=True)
         assert result.valid is True
 
     def test_validate_ipv6(self, validator):
-        result = validator.validate_target("::1")
+        result = validator.validate_target("::1", allow_private=True)
         assert result.valid is True
 
     def test_validate_domain(self, validator):
@@ -349,7 +349,7 @@ class TestMCPSecurityMiddleware:
         )
 
     def test_validate_target(self, security):
-        result = security.validate_target("192.168.1.1")
+        result = security.validate_target("192.168.1.1", allow_private=True)
         assert result.valid is True
 
     def test_validate_port(self, security):

@@ -34,7 +34,7 @@ class AuthMode(Enum):
 
 # 全局配置
 _auth_config = {
-    "mode": AuthMode.PERMISSIVE,  # 默认宽松模式
+    "mode": AuthMode.STRICT,  # 默认严格模式
     "manager": None,
     "audit_enabled": True,
 }
@@ -286,7 +286,7 @@ def require_critical_auth(func):
 
 
 # 初始化时检查环境变量设置的授权模式
-_env_mode = os.getenv("AUTOREDTEAM_AUTH_MODE", "permissive").lower()
+_env_mode = os.getenv("AUTOREDTEAM_AUTH_MODE", "strict").lower()
 if _env_mode == "strict":
     _auth_config["mode"] = AuthMode.STRICT
 elif _env_mode == "disabled":
@@ -294,4 +294,4 @@ elif _env_mode == "disabled":
 else:
     _auth_config["mode"] = AuthMode.PERMISSIVE
 
-logger.info(f"MCP授权中间件初始化完成，模式: {_auth_config['mode'].value}")
+logger.info("MCP授权中间件初始化完成，模式: %s", _auth_config["mode"].value)

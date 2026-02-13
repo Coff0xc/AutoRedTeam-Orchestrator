@@ -370,6 +370,72 @@ class ResultParser:
         return result
 
 
+# 各工具允许的安全参数前缀白名单
+_ALLOWED_ARG_PREFIXES: Dict[str, List[str]] = {
+    "nmap": [
+        "-p", "-sV", "-sC", "-sS", "-sT", "-sU", "-O", "-A", "-T",
+        "--open", "--top-ports", "-Pn", "-n", "--rate", "--min-rate", "--max-rate",
+    ],
+    "nuclei": [
+        "-severity", "-tags", "-type", "--rate-limit", "-c", "-timeout", "-retries", "-rl",
+    ],
+    "sqlmap": [
+        "--level", "--risk", "--threads", "--timeout", "--retries",
+        "--delay", "--technique", "--dbms", "-p",
+    ],
+    "ffuf": [
+        "-mc", "-ms", "-fc", "-fs", "-t", "-rate", "-timeout", "-e", "-recursion-depth",
+    ],
+    "masscan": [
+        "-p", "--rate", "--wait", "--retries", "--open",
+    ],
+}
+
+# 各工具明确拒绝的高危参数前缀
+_DENIED_ARG_PREFIXES: Dict[str, List[str]] = {
+    "nmap": ["--script", "-oN", "-oX", "-oG", "-iL"],
+    "nuclei": ["-t", "-w", "-l", "-target", "-u"],
+    "sqlmap": [
+        "--os-shell", "--os-cmd", "--os-pwn", "--file-read",
+        "--file-write", "--file-dest", "--sql-shell", "--eval",
+    ],
+    "ffuf": ["-request-file", "-o", "-of"],
+    "masscan": ["--echo", "-oL", "-oJ", "-oG", "-oX", "-iL", "--adapter"],
+}
+
+
+def validate_extra_args(tool_name: str, args: List[str]) -> List[str]:
+    """验证并过滤额外参数，仅保留白名单内的安全参数
+
+    Args:
+        tool_name: 工具名称
+        args: 用户传入的额外参数列表
+
+    Returns:
+        过滤后的安全参数列表
+    """
+    allowed = _ALLOWED_ARG_PREFIXES.get(tool_name)
+    denied = _DENIED_ARG_PREFIXES.get(tool_name)
+    if allowed is None:
+        # 未知工具，拒绝所有额外参数
+        logger.warning("工具 %s 无白名单配置，拒绝所有额外参数", tool_name)
+        return []
+
+    safe_args: List[str] = []
+    for arg in args:
+        # 检查是否命中拒绝列表
+        if denied and any(arg == d or arg.startswith(d + "=") or arg.startswith(d + " ")
+                         for d in denied):
+            logger.warning("工具 %s 拒绝高危参数: %s", tool_name, arg)
+            continue
+        # 检查是否匹配白名单前缀
+        if any(arg == a or arg.startswith(a) for a in allowed):
+            safe_args.append(arg)
+        else:
+            logger.warning("工具 %s 拒绝未授权参数: %s", tool_name, arg)
+    return safe_args
+
+
 class ToolManager:
     """外部工具管理器"""
 
@@ -687,7 +753,7 @@ class ToolManager:
             else:
                 full_cmd = cmd
 
-            logger.info(f"执行: {' '.join(full_cmd)}")
+            logger.info("执行: %s", ' '.join(full_cmd))
 
             process = await asyncio.create_subprocess_exec(
                 *full_cmd,
@@ -797,9 +863,9 @@ class ToolManager:
         else:
             cmd.append(target)
 
-        # 添加额外参数
+        # 添加额外参数（白名单过滤）
         if extra_args:
-            cmd.extend(extra_args)
+            cmd.extend(validate_extra_args(info.name, extra_args))
 
         return cmd, metadata
 
