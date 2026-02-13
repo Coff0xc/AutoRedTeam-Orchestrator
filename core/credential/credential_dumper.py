@@ -820,5 +820,6 @@ if __name__ == "__main__":
     # 只测试安全的提取方法
     results = dumper.dump_all(["env", "ssh"])
 
-    logger.info(f"Total credentials found: {len(dumper.credentials)}")
-    logger.info(dumper.export_json())
+    logger.info("Total credentials found: %s", len(dumper.credentials))
+    # 凭证详情降级为 debug，避免日志泄露敏感信息
+    logger.debug("Credentials exported (debug only)")

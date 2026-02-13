@@ -27,6 +27,7 @@ import ipaddress
 import logging
 import os
 import re
+import socket
 import threading
 import time
 from collections import defaultdict
@@ -129,7 +130,7 @@ class InputValidator:
         self,
         target: str,
         allowed_types: Optional[List[str]] = None,
-        allow_private: bool = True,
+        allow_private: bool = False,
     ) -> ValidationResult:
         """验证扫描目标
 
@@ -446,7 +447,25 @@ class InputValidator:
                             errors=["URL 主机为私有 IP 地址"],
                         )
                 except ValueError:
-                    pass  # 非 IP 地址的域名，正常放行
+                    # hostname 是域名，解析 DNS 检查是否指向私有 IP（防止 DNS rebinding）
+                    try:
+                        addrinfo = socket.getaddrinfo(hostname, None)
+                        for family, _, _, _, sockaddr in addrinfo:
+                            resolved_ip = ipaddress.ip_address(sockaddr[0])
+                            if self._is_private_ip(resolved_ip):
+                                return ValidationResult(
+                                    valid=False,
+                                    errors=[
+                                        f"URL 域名 {hostname} 解析到私有 IP 地址 {sockaddr[0]}"
+                                    ],
+                                )
+                    except socket.gaierror:
+                        # fail-close: DNS 解析失败时拒绝请求，防止绕过 SSRF 检查
+                        logger.warning("SSRF 检查: 无法解析域名 %s，拒绝请求", hostname)
+                        return ValidationResult(
+                            valid=False,
+                            errors=[f"无法解析域名 {hostname}，SSRF 安全检查未通过"],
+                        )
 
         return ValidationResult(valid=True)
 
