@@ -4,9 +4,8 @@ Handlers 模块初始化单元测试
 测试 handlers/__init__.py 中的注册入口和异常处理
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
-from typing import Dict, Any
+from contextlib import ExitStack
 
 
 class TestHandlersInit:
@@ -283,25 +282,26 @@ class TestHandlersIntegration:
                 registered_handlers.append(name)
             return register
 
-        with patch('handlers.register_recon_tools', side_effect=mock_register_func('recon')):
-            with patch('handlers.register_detector_tools', side_effect=mock_register_func('detector')):
-                with patch('handlers.register_cve_tools', side_effect=mock_register_func('cve')):
-                    with patch('handlers.register_api_security_tools', side_effect=mock_register_func('api_security')):
-                        with patch('handlers.register_cloud_security_tools', side_effect=mock_register_func('cloud_security')):
-                            with patch('handlers.register_supply_chain_tools', side_effect=mock_register_func('supply_chain')):
-                                with patch('handlers.register_redteam_tools', side_effect=mock_register_func('redteam')):
-                                    with patch('handlers.register_orchestration_tools', side_effect=mock_register_func('orchestration')):
-                                        with patch('handlers.register_session_tools', side_effect=mock_register_func('session')):
-                                            with patch('handlers.register_report_tools', side_effect=mock_register_func('report')):
-                                                with patch('handlers.register_ai_tools', side_effect=mock_register_func('ai')):
-                                                    with patch('handlers.register_misc_tools', side_effect=mock_register_func('misc')):
-                                                        register_all_handlers(mock_mcp, mock_counter, mock_logger)
+        all_handlers = [
+            'register_recon_tools', 'register_detector_tools', 'register_cve_tools',
+            'register_api_security_tools', 'register_cloud_security_tools',
+            'register_supply_chain_tools', 'register_redteam_tools',
+            'register_orchestration_tools', 'register_lateral_tools',
+            'register_persistence_tools', 'register_ad_tools',
+            'register_session_tools', 'register_report_tools',
+            'register_ai_tools', 'register_misc_tools', 'register_external_tools',
+        ]
+        with ExitStack() as stack:
+            for h in all_handlers:
+                name = h.replace('register_', '').replace('_tools', '')
+                stack.enter_context(patch(f'handlers.{h}', side_effect=mock_register_func(name)))
+            register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
-                                                        # 验证所有处理器都被注册
-                                                        assert len(registered_handlers) == 16
-                                                        assert 'recon' in registered_handlers
-                                                        assert 'detector' in registered_handlers
-                                                        assert 'redteam' in registered_handlers
+        # 验证所有处理器都被注册
+        assert len(registered_handlers) == 16
+        assert 'recon' in registered_handlers
+        assert 'detector' in registered_handlers
+        assert 'redteam' in registered_handlers
 
     def test_handlers_with_real_mcp_mock(self):
         """测试使用真实的 MCP mock 对象"""
@@ -336,8 +336,9 @@ class TestHandlersErrorMessages:
         with patch('handlers.register_recon_tools', side_effect=ImportError("specific module error")):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
-            # 获取警告消息
-            warning_call = mock_logger.warning.call_args_list[0][0][0]
+            # 获取警告消息（lazy format 需格式化）
+            args = mock_logger.warning.call_args_list[0][0]
+            warning_call = args[0] % args[1:] if len(args) > 1 else args[0]
             assert "侦察工具注册失败" in warning_call
             assert "模块导入错误" in warning_call
             assert "specific module error" in warning_call
@@ -353,7 +354,8 @@ class TestHandlersErrorMessages:
         with patch('handlers.register_detector_tools', side_effect=AttributeError("missing attribute")):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
-            warning_call = mock_logger.warning.call_args_list[0][0][0]
+            args = mock_logger.warning.call_args_list[0][0]
+            warning_call = args[0] % args[1:] if len(args) > 1 else args[0]
             assert "漏洞检测工具注册失败" in warning_call
             assert "属性错误" in warning_call
             assert "missing attribute" in warning_call
@@ -369,7 +371,8 @@ class TestHandlersErrorMessages:
         with patch('handlers.register_cve_tools', side_effect=TypeError("wrong type")):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
-            warning_call = mock_logger.warning.call_args_list[0][0][0]
+            args = mock_logger.warning.call_args_list[0][0]
+            warning_call = args[0] % args[1:] if len(args) > 1 else args[0]
             assert "CVE工具注册失败" in warning_call
             assert "类型错误" in warning_call
             assert "wrong type" in warning_call

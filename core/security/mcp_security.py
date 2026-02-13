@@ -34,7 +34,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -415,13 +415,16 @@ class InputValidator:
         return "unknown"
 
     def _is_private_ip(self, ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
-        """检查是否为私有 IP"""
+        """检查是否为私有 IP（含 IPv4-mapped IPv6 地址）"""
+        # 处理 IPv4-mapped IPv6 地址（如 ::ffff:127.0.0.1）
+        if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+            ip = ip.ipv4_mapped
         for network in self.PRIVATE_IP_RANGES:
             if ip in network:
                 return True
         return False
 
-    def _validate_url(self, url: str, allow_private: bool = True) -> ValidationResult:
+    def _validate_url(self, url: str, allow_private: bool = False) -> ValidationResult:
         """验证 URL（含 SSRF 检查）"""
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https"):
