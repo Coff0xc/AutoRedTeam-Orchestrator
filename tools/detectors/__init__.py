@@ -291,7 +291,7 @@ try:
 
 except ImportError as e:
     # core.detectors 不可用时，保留原始实现
-    logger.warning(f"core.detectors 不可用，使用原始实现: {e}")
+    logger.warning("core.detectors 不可用，使用原始实现: %s", e)
 
     # 从原始模块导入
     from .access import IDORDetector, OpenRedirectDetector

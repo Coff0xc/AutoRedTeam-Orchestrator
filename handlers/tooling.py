@@ -11,6 +11,6 @@ from typing import Any, Callable
 from utils.mcp_tooling import build_tool_decorator
 
 
-def tool(mcp) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+def tool(mcp, **kwargs) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """返回包装后的 MCP 工具装饰器"""
-    return build_tool_decorator(mcp)
+    return build_tool_decorator(mcp, **kwargs)

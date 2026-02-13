@@ -202,7 +202,7 @@ class NucleiTemplateScanTool(BaseTool):
         cmd = ["nuclei", "-u", target, "-t", template_path, "-json", "-silent"]
 
         try:
-            logger.info(f"执行Nuclei模板扫描: {' '.join(cmd)}")
+            logger.info("执行Nuclei模板扫描: %s", ' '.join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             vulnerabilities = []
@@ -302,7 +302,7 @@ class NucleiWorkflowTool(BaseTool):
         ]
 
         try:
-            logger.info(f"执行Nuclei工作流: {' '.join(cmd)}")
+            logger.info("执行Nuclei工作流: %s", ' '.join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             vulnerabilities = []

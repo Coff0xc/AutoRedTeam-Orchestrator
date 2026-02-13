@@ -68,7 +68,7 @@ async def web_discover(
         return result.to_dict()
 
     except ImportError as e:
-        logger.error(f"模块导入失败: {e}")
+        logger.error("模块导入失败: %s", e)
         return {
             "success": False,
             "target": url,
@@ -77,7 +77,7 @@ async def web_discover(
             "injection_points": [],
         }
     except Exception as e:
-        logger.error(f"攻面发现失败: {e}")
+        logger.error("攻面发现失败: %s", e)
         return {
             "success": False,
             "target": url,
@@ -187,7 +187,7 @@ async def web_scan(
     try:
         # 1. 攻面发现（如果未提供注入点）
         if injection_points is None:
-            logger.info(f"[*] 开始攻面发现: {url}")
+            logger.info("[*] 开始攻面发现: %s", url)
             discovery_result = await web_discover(
                 url,
                 max_pages=max_pages,
@@ -208,7 +208,7 @@ async def web_scan(
             result["coverage"] = {t: "no_injection_points" for t in scan_types}
             return result
 
-        logger.info(f"[*] 发现 {len(injection_points)} 个注入点，开始扫描...")
+        logger.info("[*] 发现 %s 个注入点，开始扫描...", len(injection_points))
 
         # 2. 执行扫描
         findings = []
@@ -225,13 +225,13 @@ async def web_scan(
                 findings.extend(type_findings)
                 coverage[scan_type] = f"completed ({len(type_findings)} findings)"
             except Exception as e:
-                logger.warning(f"扫描类型 {scan_type} 失败: {e}")
+                logger.warning("扫描类型 %s 失败: %s", scan_type, e)
                 coverage[scan_type] = f"failed: {e}"
                 result["errors"].append(f"{scan_type}: {e}")
 
         # 3. 可选验证
         if verify_findings and findings:
-            logger.info(f"[*] 验证 {len(findings)} 个发现...")
+            logger.info("[*] 验证 %s 个发现...", len(findings))
             findings = await _verify_findings(findings, timeout=timeout)
 
         result["findings"] = findings
@@ -239,7 +239,7 @@ async def web_scan(
 
         # 4. 高级扫描（可选）
         if advanced_scans:
-            logger.info(f"[*] 执行高级扫描: {advanced_scans}")
+            logger.info("[*] 执行高级扫描: %s", advanced_scans)
             adv_findings, adv_coverage = await _run_advanced_scans(
                 url, advanced_scans, timeout=timeout
             )
@@ -249,7 +249,7 @@ async def web_scan(
         result["success"] = True
 
     except Exception as e:
-        logger.error(f"Web 扫描失败: {e}")
+        logger.error("Web 扫描失败: %s", e)
         result["errors"].append(str(e))
 
     finally:
@@ -285,7 +285,7 @@ async def _run_scanner(
 
         scanners_available = True
     except ImportError as e:
-        logger.warning(f"vuln_tools 导入失败: {e}，使用内置扫描")
+        logger.warning("vuln_tools 导入失败: %s，使用内置扫描", e)
         scanners_available = False
         return findings
 
@@ -449,7 +449,7 @@ async def _run_scanner(
                             )
 
             except Exception as e:
-                logger.debug(f"扫描 {url}/{param} 失败: {e}")
+                logger.debug("扫描 %s/%s 失败: %s", url, param, e)
 
             return point_findings
 
@@ -565,7 +565,7 @@ async def _run_advanced_scans(
             coverage[scan_type] = f"skipped (import error: {e})"
         except Exception as e:
             coverage[scan_type] = f"failed: {e}"
-            logger.warning(f"高级扫描 {scan_type} 失败: {e}")
+            logger.warning("高级扫描 %s 失败: %s", scan_type, e)
 
     return findings, coverage
 
@@ -650,7 +650,7 @@ async def _verify_findings(
                         finding["verification_note"] = result.get("recommendation", "")
 
                 except Exception as e:
-                    logger.debug(f"统计验证失败: {e}")
+                    logger.debug("统计验证失败: %s", e)
                     finding["verified"] = False
                     finding["verification_method"] = "error"
                     finding["verification_status"] = "verification_error"

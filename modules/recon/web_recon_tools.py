@@ -48,7 +48,7 @@ class WhatWebTool(BaseTool):
         cmd.extend(["--log-json=-", target])
 
         try:
-            logger.info(f"执行WhatWeb: {' '.join(cmd)}")
+            logger.info("执行WhatWeb: %s", ' '.join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             # 解析JSON输出
@@ -214,7 +214,7 @@ class WafDetectTool(BaseTool):
             cmd.append("-a")
 
         try:
-            logger.info(f"执行wafw00f: {' '.join(cmd)}")
+            logger.info("执行wafw00f: %s", ' '.join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             # 解析输出
@@ -290,7 +290,7 @@ class HttpxProbeTool(BaseTool):
             cmd.append("-tech-detect")
 
         try:
-            logger.info(f"执行httpx: {' '.join(cmd)}")
+            logger.info("执行httpx: %s", ' '.join(cmd))
             result = subprocess.run(
                 cmd, input=target_input, capture_output=True, text=True, timeout=self.timeout
             )

@@ -437,7 +437,7 @@ class CVEUpdateManager:
                 if item["path"].startswith("cves/") and item["path"].endswith(".yaml")
             ]
 
-            logger.info(f"Nuclei Templates: 发现 {len(cve_files)} 个CVE模板")
+            logger.info("Nuclei Templates: 发现 %s 个CVE模板", len(cve_files))
 
             # 批量处理CVE文件 (限制并发)
             semaphore = asyncio.Semaphore(10)
@@ -823,18 +823,18 @@ async def main():
         elif command == "search":
             keyword = sys.argv[2] if len(sys.argv) > 2 else ""
             results = manager.search(keyword=keyword, poc_only=True)
-            logger.info(f"\n找到 {len(results)} 条结果:\n")
+            logger.info("\n找到 %s 条结果:\n", len(results))
             for cve in results[:10]:
                 logger.info("[%s] %s (CVSS: %s)", cve.severity, cve.cve_id, cve.cvss)
-                logger.info(f"  {cve.description[:100]}...")
+                logger.info("  %s...", cve.description[:100])
                 if cve.poc_path:
                     logger.info("  PoC: %s", cve.poc_path)
                 logger.info("")
         elif command == "stats":
             stats = manager.get_stats()
             logger.info("\n数据库统计:")
-            logger.info(f"  总CVE数: {stats.get('total_cves', 0)}")
-            logger.info(f"  有PoC: {stats.get('poc_available', 0)}")
+            logger.info("  总CVE数: %s", stats.get('total_cves', 0))
+            logger.info("  有PoC: %s", stats.get('poc_available', 0))
             logger.info("\n按严重性:")
             for severity, count in stats.get("by_severity", {}).items():
                 logger.info("    %s: %s", severity, count)

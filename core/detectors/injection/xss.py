@@ -277,7 +277,7 @@ class XSSDetector(BaseDetector):
                     except Exception as e:
                         # 捕获其他未预期异常，保证检测流程继续
                         # 注意：这里使用宽泛捕获是为了单个 payload 测试失败不影响整体检测
-                        logger.warning(f"反射型 XSS 检测未预期错误: {type(e).__name__}: {e}")
+                        logger.warning("反射型 XSS 检测未预期错误: %s: %s", type(e).__name__, e)
 
                 # 如果已发现该参数存在漏洞，跳出
                 if any(r.param == param_name for r in results):
@@ -345,7 +345,7 @@ class XSSDetector(BaseDetector):
         except Exception as e:
             # 捕获其他未预期异常
             # 注意：DOM XSS 检测失败不应影响其他检测
-            logger.warning(f"DOM XSS 检测未预期错误: {type(e).__name__}: {e}")
+            logger.warning("DOM XSS 检测未预期错误: %s: %s", type(e).__name__, e)
 
         return results
 

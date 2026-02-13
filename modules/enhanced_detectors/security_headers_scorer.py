@@ -577,8 +577,8 @@ if __name__ == "__main__":
 
     # 分析
     result = scorer.analyze(test_url)
-    logger.info(f"Score: {result.get('score')}/{result.get('max_score')}")
-    logger.info(f"Grade: {result.get('grade')}")
+    logger.info("Score: %s/%s", result.get('score'), result.get('max_score'))
+    logger.info("Grade: %s", result.get('grade'))
 
     # 生成报告
     # report = scorer.generate_report(test_url)

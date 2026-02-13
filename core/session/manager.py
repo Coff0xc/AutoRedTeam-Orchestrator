@@ -187,7 +187,7 @@ class SessionManager:
                 cleaned += 1
 
         if cleaned > 0:
-            logger.info(f"自动清理了 {cleaned} 个过期会话，当前会话数: {len(self._sessions)}")
+            logger.info("自动清理了 %s 个过期会话，当前会话数: %s", cleaned, len(self._sessions))
 
         return cleaned
 
@@ -488,7 +488,7 @@ class SessionManager:
                 self.delete_session(session_id, delete_storage=False)
 
             if expired_ids:
-                logger.info(f"清理了 {len(expired_ids)} 个过期会话")
+                logger.info("清理了 %s 个过期会话", len(expired_ids))
 
             return len(expired_ids)
 
@@ -567,7 +567,7 @@ class SessionManager:
             except Exception as e:
                 # 注意：此处使用泛化异常是有意的
                 # 回调函数可能抛出任何类型的异常，不应影响其他回调的执行
-                logger.error(f"回调执行失败 [{event}]: {type(e).__name__}: {e}")
+                logger.error("回调执行失败 [%s]: %s: %s", event, type(e).__name__, e)
 
     # ========== 持久化操作 ==========
 
@@ -600,7 +600,7 @@ class SessionManager:
                 # OSError: 文件系统错误
                 # TypeError: 序列化错误
                 # ValueError: 数据验证错误
-                logger.error(f"保存会话失败: {type(e).__name__}: {e}")
+                logger.error("保存会话失败: %s: %s", type(e).__name__, e)
                 return False
 
     def load_session(self, session_id: str) -> Optional[ScanContext]:
@@ -687,6 +687,8 @@ def reset_session_manager() -> None:
             with _session_manager._session_lock:
                 _session_manager._sessions.clear()
                 _session_manager._results.clear()
-            _session_manager._initialized = False
-            SessionManager._instance = None
+            # 在类锁内原子地重置单例状态，避免与 __new__ 的竞态
+            with SessionManager._lock:
+                _session_manager._initialized = False
+                SessionManager._instance = None
             _session_manager = None

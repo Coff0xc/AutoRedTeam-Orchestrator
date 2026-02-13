@@ -35,7 +35,7 @@ class DetectorFactory:
             aliases: 别名列表
         """
         cls._registry[name] = detector_class
-        logger.debug(f"注册检测器: {name} -> {detector_class.__name__}")
+        logger.debug("注册检测器: %s -> %s", name, detector_class.__name__)
 
         # 注册别名
         if aliases:
@@ -69,7 +69,7 @@ class DetectorFactory:
         try:
             return detector_class(**kwargs)
         except Exception as e:
-            logger.error(f"创建检测器失败 {name}: {e}")
+            logger.error("创建检测器失败 %s: %s", name, e)
             raise
 
     @classmethod
@@ -122,7 +122,7 @@ class DetectorFactory:
             try:
                 instances[name] = cls.create(name, **kwargs)
             except Exception as e:
-                logger.error(f"创建检测器失败 {name}: {e}")
+                logger.error("创建检测器失败 %s: %s", name, e)
         return instances
 
 
@@ -197,10 +197,10 @@ def auto_register_detectors():
 
         DetectorFactory.register("open_redirect", OpenRedirectDetector, aliases=["redirect"])
 
-        logger.info(f"已注册 {len(DetectorFactory.list_detectors())} 个检测器")
+        logger.info("已注册 %s 个检测器", len(DetectorFactory.list_detectors()))
 
     except ImportError as e:
-        logger.warning(f"部分检测器注册失败: {e}")
+        logger.warning("部分检测器注册失败: %s", e)
 
 
 # 初始化时自动注册

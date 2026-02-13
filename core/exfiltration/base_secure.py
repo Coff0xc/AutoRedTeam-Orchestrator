@@ -264,7 +264,7 @@ class SecureFileExfiltrator(ABC):
 
         except (FileNotFoundError, PermissionError, IsADirectoryError, ValueError) as e:
             # 预期的错误，记录警告
-            logger.warning(f"File access failed: {validated_path}, error: {type(e).__name__}")
+            logger.warning("File access failed: %s, error: %s", validated_path, type(e).__name__)
             return ExfilResult(
                 success=False, channel=self.channel, error="Access denied"  # 不泄露具体原因
             )

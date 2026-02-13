@@ -403,7 +403,7 @@ if __name__ == "__main__":
 
     # 测试正常执行
     result = run_monitored_scan(["echo", "Hello from monitored scan!"], "echo", "test", timeout=10)
-    logger.info(f"结果: {result['success']}")
+    logger.info("结果: %s", result['success'])
 
     # 测试超时
     terminal.info("测试超时场景...")

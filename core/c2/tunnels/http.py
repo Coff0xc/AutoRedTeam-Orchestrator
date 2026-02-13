@@ -172,7 +172,7 @@ class HTTPTunnel(BaseTunnel):
             if response and self._is_success(response):
                 return True
 
-            logger.warning(f"Send failed: {self._get_status(response)}")
+            logger.warning("Send failed: %s", self._get_status(response))
             return False
 
         except Exception as e:

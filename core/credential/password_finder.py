@@ -761,7 +761,7 @@ if __name__ == "__main__":
 
     logger.info("=== Summary ===")
     summary = finder.get_summary()
-    logger.info(f"Total findings: {summary['total_findings']}")
-    logger.info(f"By type: {summary['by_type']}")
-    logger.info(f"By confidence: {summary['by_confidence']}")
-    logger.info(f"Files affected: {len(summary['files_affected'])}")
+    logger.info("Total findings: %s", summary['total_findings'])
+    logger.info("By type: %s", summary['by_type'])
+    logger.info("By confidence: %s", summary['by_confidence'])
+    logger.info("Files affected: %s", len(summary['files_affected']))

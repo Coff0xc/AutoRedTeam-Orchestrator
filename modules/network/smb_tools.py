@@ -63,7 +63,7 @@ class SMBEnumTool(BaseTool):
         cmd.append(target)
 
         try:
-            logger.info(f"执行Enum4linux: {' '.join(cmd)}")
+            logger.info("执行Enum4linux: %s", ' '.join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             parsed = self._parse_output(result.stdout)

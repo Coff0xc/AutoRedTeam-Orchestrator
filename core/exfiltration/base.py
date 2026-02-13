@@ -595,7 +595,7 @@ class BaseExfiltration(ABC):
                 raise
 
         except Exception as e:
-            self.logger.error(f"File read error: {str(e)}")
+            self.logger.error("File read error: %s", str(e))
             return ExfilResult(success=False, channel=self.channel, error="Access denied")
 
     def _chunk_data(self, data: bytes) -> Generator[bytes, None, None]:

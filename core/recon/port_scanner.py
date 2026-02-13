@@ -340,7 +340,7 @@ class PortScanner:
         port_list = self._parse_ports(ports)
         results: List[PortInfo] = []
 
-        self._logger.info(f"Scanning {host} ports: {len(port_list)} ports with {threads} threads")
+        self._logger.info("Scanning %s ports: %s ports with %s threads", host, len(port_list), threads)
 
         with ThreadPoolExecutor(max_workers=threads) as executor:
             futures = {executor.submit(self._scan_port, host, port): port for port in port_list}
@@ -376,7 +376,7 @@ class PortScanner:
         semaphore = asyncio.Semaphore(concurrency)
         results: List[PortInfo] = []
 
-        self._logger.info(f"Async scanning {host} ports: {len(port_list)} ports")
+        self._logger.info("Async scanning %s ports: %s ports", host, len(port_list))
 
         async def scan_with_limit(port: int) -> Optional[PortInfo]:
             async with semaphore:

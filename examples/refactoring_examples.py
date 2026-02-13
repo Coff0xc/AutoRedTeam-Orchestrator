@@ -333,7 +333,7 @@ async def main():
         print("="*60)
 
     except Exception as e:
-        logger.error(f"示例执行失败: {e}", exc_info=True)
+        logger.error("示例执行失败: %s", e, exc_info=True)
 
 
 if __name__ == "__main__":

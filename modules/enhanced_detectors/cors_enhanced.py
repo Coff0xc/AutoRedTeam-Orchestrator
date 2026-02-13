@@ -536,7 +536,7 @@ if __name__ == "__main__":
 
     # 测试单个Origin
     result = tester.test_single_origin(test_url, "https://evil.com")
-    logger.info(f"Single test vulnerable: {result.get('vulnerable')}")
+    logger.info("Single test vulnerable: %s", result.get('vulnerable'))
 
     # 完整扫描
     # full_result = tester.test_all_bypasses(test_url)

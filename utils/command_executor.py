@@ -494,7 +494,7 @@ def validate_command(cmd: List[str]) -> tuple[bool, List[str]]:
     # 检查是否为危险命令
     if base_cmd in DANGEROUS_COMMANDS:
         warnings.append(f"危险命令警告: '{base_cmd}' 可能造成系统损坏")
-        logger.warning(f"执行危险命令: {cmd_str}")
+        logger.warning("执行危险命令: %s", cmd_str)
 
     # 检查参数中的 shell 元字符
     for arg in cmd[1:]:
@@ -574,6 +574,6 @@ def safe_execute(
     result["warnings"] = warnings + result.get("warnings", [])
 
     # 记录审计日志
-    logger.info(f"命令执行: {' '.join(cmd)} -> {'成功' if result['success'] else '失败'}")
+    logger.info("命令执行: %s -> %s", ' '.join(cmd), '成功' if result['success'] else '失败')
 
     return result

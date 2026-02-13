@@ -4,6 +4,7 @@
 
 from typing import TYPE_CHECKING
 
+from modules.recon.cdn_bypass import CDNDetectTool, HistoricalDNSTool, RealIPFinderTool
 from modules.recon.dns_tools import DNSEnumTool, DNSReconTool, DnsxTool
 from modules.recon.nmap_tools import (
     NmapOSScanTool,
@@ -44,6 +45,10 @@ def register_recon_tools(server: "MCPServer"):
         WhatWebTool(),
         WapalyzerTool(),
         WafDetectTool(),
+        # CDN识别与真实IP发现
+        CDNDetectTool(),
+        RealIPFinderTool(),
+        HistoricalDNSTool(),
     ]
 
     for tool in tools:
@@ -57,4 +62,7 @@ __all__ = [
     "DNSEnumTool",
     "WhoisLookupTool",
     "WhatWebTool",
+    "CDNDetectTool",
+    "RealIPFinderTool",
+    "HistoricalDNSTool",
 ]

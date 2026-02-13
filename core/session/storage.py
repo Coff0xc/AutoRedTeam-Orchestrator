@@ -151,7 +151,7 @@ class SessionStorage:
             # 清理临时文件
             if temp_path.exists():
                 temp_path.unlink()
-            logger.error(f"保存会话上下文失败: {type(e).__name__}: {e}")
+            logger.error("保存会话上下文失败: %s: %s", type(e).__name__, e)
             raise
 
     def load_context(self, session_id: str) -> Optional["ScanContext"]:
@@ -193,7 +193,7 @@ class SessionStorage:
         except (OSError, TypeError, KeyError, AttributeError) as e:
             # OSError: 文件系统错误
             # TypeError/KeyError/AttributeError: 数据结构问题
-            logger.error(f"加载会话上下文失败: {type(e).__name__}: {e}")
+            logger.error("加载会话上下文失败: %s: %s", type(e).__name__, e)
             return None
 
     def save_result(self, result: "ScanResult") -> Path:
@@ -232,7 +232,7 @@ class SessionStorage:
             # TypeError: 序列化不可序列化的对象
             if temp_path.exists():
                 temp_path.unlink()
-            logger.error(f"保存扫描结果失败: {type(e).__name__}: {e}")
+            logger.error("保存扫描结果失败: %s: %s", type(e).__name__, e)
             raise
 
     def load_result(self, session_id: str) -> Optional["ScanResult"]:
@@ -274,7 +274,7 @@ class SessionStorage:
         except (OSError, TypeError, KeyError, AttributeError) as e:
             # OSError: 文件系统错误
             # TypeError/KeyError/AttributeError: 数据结构问题
-            logger.error(f"加载扫描结果失败: {type(e).__name__}: {e}")
+            logger.error("加载扫描结果失败: %s: %s", type(e).__name__, e)
             return None
 
     def list_sessions(self) -> List[Dict[str, Any]]:
@@ -319,7 +319,7 @@ class SessionStorage:
                 # OSError: 文件读取错误
                 # json.JSONDecodeError: JSON解析错误
                 # KeyError/TypeError: 数据结构问题
-                logger.warning(f"读取会话文件失败 {filepath}: {type(e).__name__}: {e}")
+                logger.warning("读取会话文件失败 %s: %s: %s", filepath, type(e).__name__, e)
                 continue
 
         # 按保存时间排序，最新的在前
@@ -373,7 +373,7 @@ class SessionStorage:
             return False
         except OSError as e:
             # OSError: 文件删除错误（权限等）
-            logger.error(f"删除会话失败: {type(e).__name__}: {e}")
+            logger.error("删除会话失败: %s: %s", type(e).__name__, e)
             return False
 
     def cleanup_old_sessions(self, max_age_days: int = 30) -> int:
@@ -401,7 +401,7 @@ class SessionStorage:
             except (OSError, ValueError) as e:
                 # OSError: 文件操作错误
                 # ValueError: 无效的会话ID
-                logger.warning(f"清理会话失败 {filepath}: {type(e).__name__}: {e}")
+                logger.warning("清理会话失败 %s: %s: %s", filepath, type(e).__name__, e)
                 continue
 
         logger.info("清理了 %s 个过期会话", cleaned)

@@ -293,5 +293,5 @@ def register_enhanced_detector_tools(mcp):
 
     registered_tools.append("security_headers_report")
 
-    logger.info(f"已注册 {len(registered_tools)} 个增强检测器工具")
+    logger.info("已注册 %s 个增强检测器工具", len(registered_tools))
     return registered_tools

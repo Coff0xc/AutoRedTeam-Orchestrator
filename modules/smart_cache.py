@@ -205,7 +205,7 @@ class SmartCache:
                         # 检查是否过期
                         if time.time() - entry["created_at"] < entry["ttl"]:
                             self._caches[cache_type].set(key, entry["value"], entry["ttl"])
-            logger.info(f"加载持久化缓存成功")
+            logger.info("加载持久化缓存成功")
         except Exception as e:
             logger.warning("加载持久化缓存失败: %s", e)
 

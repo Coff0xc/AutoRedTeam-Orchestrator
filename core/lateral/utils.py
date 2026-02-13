@@ -551,7 +551,7 @@ def format_result(result: ExecutionResult, verbose: bool = False) -> str:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logger.info("=== Lateral Movement Utilities ===")
-    logger.info(f"本地平台: {get_local_platform().value}")
+    logger.info("本地平台: %s", get_local_platform().value)
 
     logger.info("常见横向移动端口:")
     for port, (name, desc) in COMMON_PORTS.items():

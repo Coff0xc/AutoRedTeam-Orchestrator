@@ -373,7 +373,7 @@ class BaseDetector(ABC):
         except Exception as e:
             # 捕获所有其他异常以保证检测器稳定性
             # 注意：这里使用宽泛捕获是为了防止单个请求失败导致整个检测中断
-            logger.warning(f"[{self.name}] 未预期的请求错误 {url}: {type(e).__name__}: {e}")
+            logger.warning("[%s] 未预期的请求错误 %s: %s: %s", self.name, url, type(e).__name__, e)
             return None
 
     # ==================== 上下文管理器支持 ====================
@@ -579,11 +579,11 @@ class CompositeDetector(BaseDetector):
                 logger.warning("[%s] HTTP 错误: %s", detector.name, e)
             except (ValueError, TypeError, KeyError) as e:
                 # 数据处理错误 - 可能是响应格式问题
-                logger.error(f"[{detector.name}] 数据处理错误: {type(e).__name__}: {e}")
+                logger.error("[%s] 数据处理错误: %s: %s", detector.name, type(e).__name__, e)
             except Exception as e:
                 # 捕获所有其他异常以保证组合检测器的稳定性
                 # 注意：单个检测器失败不应影响其他检测器的执行
-                logger.error(f"[{detector.name}] 未预期的检测失败: {type(e).__name__}: {e}")
+                logger.error("[%s] 未预期的检测失败: %s: %s", detector.name, type(e).__name__, e)
 
         self._log_detection_end(url, all_results)
         return all_results
@@ -618,7 +618,7 @@ class CompositeDetector(BaseDetector):
                 logger.warning("[%s] HTTP 错误: %s", detector_name, results)
             elif isinstance(results, (ValueError, TypeError, KeyError)):
                 # 数据处理错误
-                logger.error(f"[{detector_name}] 数据处理错误: {type(results).__name__}: {results}")
+                logger.error("[%s] 数据处理错误: %s: %s", detector_name, type(results).__name__, results)
             elif isinstance(results, Exception):
                 # 其他未预期的异常
                 logger.error(

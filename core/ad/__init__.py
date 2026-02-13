@@ -6,6 +6,7 @@ ATT&CK Tactics: TA0006 (Credential Access), TA0007 (Discovery)
 提供完整的AD渗透能力:
 - AD枚举 (用户/组/计算机/SPN/GPO/信任)
 - Kerberos攻击 (AS-REP Roasting/Kerberoasting/密码喷洒)
+- 高级Kerberos攻击 (Golden/Silver Ticket, Pass-the-Ticket)
 """
 
 from .ad_enum import (
@@ -26,6 +27,13 @@ from .kerberos_attack import (
     KerberosTicket,
     kerberos_attack,
 )
+from .kerberos_attacks import (
+    KerberosAttacks,
+    TicketInfo,
+    ASREPInfo,
+    AttackResult as ImpacketAttackResult,
+    kerberos_attacks,
+)
 
 __all__ = [
     # AD Enumeration
@@ -35,7 +43,7 @@ __all__ = [
     "EnumResult",
     "SimpleLDAPClient",
     "ad_enumerate",
-    # Kerberos Attack
+    # Kerberos Attack (Pure Python)
     "KerberosAttacker",
     "KerberosClient",
     "KerberosTicket",
@@ -44,4 +52,10 @@ __all__ = [
     "KerberosEncType",
     "KerberosErrorCode",
     "kerberos_attack",
+    # Kerberos Attacks (impacket-based)
+    "KerberosAttacks",
+    "TicketInfo",
+    "ASREPInfo",
+    "ImpacketAttackResult",
+    "kerberos_attacks",
 ]

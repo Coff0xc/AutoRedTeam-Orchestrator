@@ -417,7 +417,7 @@ class SubdomainEnumerator:
                 if self._progress_callback and processed % 100 == 0:
                     self._progress_callback(processed, total, subdomain)
 
-        self._logger.info(f"Found {len(results)} subdomains for {domain}")
+        self._logger.info("Found %s subdomains for %s", len(results), domain)
         return sorted(results, key=lambda x: x.subdomain)
 
     async def async_enumerate(

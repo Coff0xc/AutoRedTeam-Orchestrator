@@ -98,7 +98,7 @@ def register_all_tools():
     register_all_handlers(mcp, _counter, logger)
 
     logger.info("=" * 60)
-    logger.info(f"工具注册完成: {_counter.summary()}")
+    logger.info("工具注册完成: %s", _counter.summary())
     logger.info("=" * 60)
 
 

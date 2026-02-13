@@ -416,7 +416,7 @@ if __name__ == "__main__":
 
     # 测试单个包
     vulns = scanner.check_osv("requests", "2.25.0", "PyPI")
-    logger.info(f"requests 2.25.0 漏洞数: {len(vulns)}")
+    logger.info("requests 2.25.0 漏洞数: %s", len(vulns))
 
     for v in vulns:
         logger.info("  - %s: %s", v.vuln_id, v.title)

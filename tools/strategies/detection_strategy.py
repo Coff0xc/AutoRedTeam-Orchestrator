@@ -65,7 +65,7 @@ class QuickScanStrategy(DetectionStrategy):
         return "quick_scan"
 
     def execute(self, detector, context: DetectionContext) -> Dict[str, Any]:
-        logger.info(f"执行快速扫描策略: {context.url}")
+        logger.info("执行快速扫描策略: %s", context.url)
 
         # 限制参数数量
         test_params = context.params[:3] if context.params else ["id", "page", "q"]
@@ -113,7 +113,7 @@ class DeepScanStrategy(DetectionStrategy):
         return "deep_scan"
 
     def execute(self, detector, context: DetectionContext) -> Dict[str, Any]:
-        logger.info(f"执行深度扫描策略: {context.url}")
+        logger.info("执行深度扫描策略: %s", context.url)
 
         # 测试所有参数
         test_params = context.params or detector.DEFAULT_PARAMS
@@ -158,7 +158,7 @@ class SmartScanStrategy(DetectionStrategy):
         return "smart_scan"
 
     def execute(self, detector, context: DetectionContext) -> Dict[str, Any]:
-        logger.info(f"执行智能扫描策略: {context.url}")
+        logger.info("执行智能扫描策略: %s", context.url)
 
         # 阶段1: 快速探测
         baseline = detector.get_baseline(context.url)
@@ -257,7 +257,7 @@ class TargetedScanStrategy(DetectionStrategy):
         return "targeted_scan"
 
     def execute(self, detector, context: DetectionContext) -> Dict[str, Any]:
-        logger.info(f"执行定向扫描策略: {context.url} - {self.target_categories}")
+        logger.info("执行定向扫描策略: %s - %s", context.url, self.target_categories)
 
         # 只获取目标类别的 Payload
         all_payloads = detector.get_payloads()

@@ -133,7 +133,7 @@ class AttackChainEngine:
         chain.nodes = nodes
 
         self.chains[chain_id] = chain
-        logger.info(f"创建攻击链: {chain_id}, 节点数: {len(nodes)}")
+        logger.info("创建攻击链: %s, 节点数: %s", chain_id, len(nodes))
 
         return chain
 
@@ -295,7 +295,7 @@ class AttackChainEngine:
             except Exception as e:
                 node.status = "failed"
                 node.result = {"error": str(e)}
-                logger.error(f"节点执行失败: {node.id}, {str(e)}")
+                logger.error("节点执行失败: %s, %s", node.id, e)
 
             node.finished_at = datetime.now()
             results.append(

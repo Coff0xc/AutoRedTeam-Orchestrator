@@ -463,14 +463,14 @@ def memory_efficient(max_items: int = 10000, chunk_size: int = 1000, force_gc: b
 
             # 处理列表结果
             if isinstance(result, list) and len(result) > max_items:
-                logger.warning(f"结果数量 {len(result)} 超过限制 {max_items}，已截断")
+                logger.warning("结果数量 %s 超过限制 %s，已截断", len(result), max_items)
                 result = result[:max_items]
 
             # 处理字典中的列表
             elif isinstance(result, dict):
                 for key, value in result.items():
                     if isinstance(value, list) and len(value) > max_items:
-                        logger.warning(f"字段 {key} 结果数量 {len(value)} 超过限制，已截断")
+                        logger.warning("字段 %s 结果数量 %s 超过限制，已截断", key, len(value))
                         result[key] = value[:max_items]
 
             # 处理生成器
