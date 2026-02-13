@@ -38,11 +38,11 @@ def _wrap_tool_func(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-def build_tool_decorator(mcp) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+def build_tool_decorator(mcp, **kwargs) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Return a tool decorator that normalizes results to ToolResult.to_dict()."""
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        return mcp.tool()(_wrap_tool_func(func))
+        return mcp.tool(**kwargs)(_wrap_tool_func(func))
 
     return decorator
 

@@ -308,7 +308,7 @@ if __name__ == "__main__":
 
     # 统计信息
     stats = aggregator.get_statistics()
-    logger.info(f"统计: {json.dumps(stats, indent=2, ensure_ascii=False)}")
+    logger.info("统计: %s", json.dumps(stats, indent=2, ensure_ascii=False))
 
     # 导出
     aggregator.export_json("results.json")

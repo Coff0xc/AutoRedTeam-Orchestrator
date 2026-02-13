@@ -306,7 +306,7 @@ class BasePrivilegeEscalation(ABC):
                     return result
 
             except Exception as e:
-                self.logger.warning(f"Method {vector.get('method')} failed: {e}")
+                self.logger.warning("Method %s failed: %s", vector.get('method'), e)
                 continue
 
         self._set_status(EscalationStatus.FAILED)

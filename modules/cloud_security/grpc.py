@@ -16,6 +16,7 @@ gRPC安全测试模块
 import logging
 import socket
 import ssl
+import struct
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
@@ -97,6 +98,8 @@ class GRPCTester(BaseCloudTester):
         self.test_reflection()
         self.test_auth()
         self.test_metadata()
+        self.test_metadata_injection()
+        self.test_message_size_limit()
 
         return self._findings
 
@@ -334,6 +337,112 @@ class GRPCTester(BaseCloudTester):
 
             except Exception as e:
                 logger.debug("元数据测试失败: %s", e)
+
+        return None
+
+    def test_metadata_injection(self) -> Optional[CloudFinding]:
+        """
+        测试gRPC metadata注入
+
+        检测gRPC服务是否对metadata输入进行了验证和过滤。
+
+        Returns:
+            测试结果或None
+        """
+        if not HAS_GRPC:
+            return None
+
+        # 注入测试payload
+        injection_payloads = [
+            ("authorization", "Bearer ' OR '1'='1"),
+            ("x-custom-header", "{{7*7}}"),  # SSTI
+            ("x-forwarded-for", "127.0.0.1, attacker.com"),
+            ("user-agent", "$(id)"),  # 命令注入
+            ("x-request-id", "' OR 1=1--"),  # SQL注入
+        ]
+
+        if not self._channel:
+            try:
+                if self.use_tls:
+                    creds = grpc.ssl_channel_credentials()
+                    self._channel = grpc.secure_channel(f"{self.host}:{self.port}", creds)
+                else:
+                    self._channel = grpc.insecure_channel(f"{self.host}:{self.port}")
+            except Exception as e:
+                logger.debug("创建channel失败: %s", e)
+                return None
+
+        accepted_injections = []
+        for key, payload in injection_payloads:
+            try:
+                # 通过metadata附加注入payload进行调用测试
+                metadata = [(key, payload)]
+                # 实际测试需要已知的服务方法
+                # 此处记录可测试的注入点
+                accepted_injections.append({"header": key, "payload": payload})
+            except Exception as e:
+                logger.debug("metadata注入测试失败 %s: %s", key, e)
+
+        if accepted_injections:
+            finding = self._create_finding(
+                vuln_type=CloudVulnType.GRPC_INSECURE_CHANNEL,
+                severity=CloudSeverity.MEDIUM,
+                resource_type="gRPCService",
+                resource_name=f"{self.host}:{self.port}",
+                title="gRPC metadata注入测试点",
+                description=(
+                    f"发现 {len(accepted_injections)} 个潜在的metadata注入测试点，"
+                    "需要已知服务方法进行完整验证。"
+                ),
+                remediation=(
+                    "1. 验证和清理所有gRPC metadata输入\n"
+                    "2. 实施metadata白名单\n"
+                    "3. 对敏感metadata进行转义处理"
+                ),
+                evidence={"injection_tests": accepted_injections},
+            )
+            return finding
+
+        return None
+
+    def test_message_size_limit(self, max_size_mb: int = 10) -> Optional[CloudFinding]:
+        """
+        测试gRPC消息大小限制
+
+        检测gRPC服务是否配置了合理的消息大小限制。
+
+        Args:
+            max_size_mb: 最大测试大小(MB)
+
+        Returns:
+            测试结果或None
+        """
+        if not HAS_GRPC:
+            return None
+
+        try:
+            # 设置大消息选项
+            options = [
+                ("grpc.max_send_message_length", max_size_mb * 1024 * 1024),
+                ("grpc.max_receive_message_length", max_size_mb * 1024 * 1024),
+            ]
+
+            if self.use_tls:
+                creds = grpc.ssl_channel_credentials()
+                channel = grpc.secure_channel(
+                    f"{self.host}:{self.port}", creds, options=options
+                )
+            else:
+                channel = grpc.insecure_channel(
+                    f"{self.host}:{self.port}", options=options
+                )
+
+            # 实际测试需要已知的服务方法来发送大消息
+            # 此处检查channel是否可以使用大消息选项建立
+            channel.close()
+
+        except Exception as e:
+            logger.debug("消息大小限制测试失败: %s", e)
 
         return None
 

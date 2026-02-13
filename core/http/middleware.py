@@ -403,7 +403,7 @@ class RateLimitMiddleware(Middleware):
             if self._tokens[key] < 1.0:
                 # 需要等待
                 wait_time = (1.0 - self._tokens[key]) / self.requests_per_second
-                logger.debug(f"[RateLimit] 等待 {wait_time:.3f}s ({key})")
+                logger.debug("[RateLimit] 等待 %.3fs (%s)", wait_time, key)
                 time.sleep(wait_time)
                 self._tokens[key] = 0
             else:
@@ -423,7 +423,7 @@ class RateLimitMiddleware(Middleware):
                     wait_time = float(retry_after)
                     wait_time = min(wait_time, 300)  # Cap at 5 minutes
                     with self._lock:
-                        logger.info(f"[RateLimit] 收到 429, 等待 {wait_time}s ({key})")
+                        logger.info("[RateLimit] 收到 429, 等待 %ss (%s)", wait_time, key)
                         time.sleep(wait_time)
                 except ValueError:
                     pass
@@ -553,7 +553,7 @@ class AsyncRateLimitMiddleware(AsyncMiddleware):
 
             if self._tokens[key] < 1.0:
                 wait_time = (1.0 - self._tokens[key]) / self.requests_per_second
-                logger.debug(f"[RateLimit] 等待 {wait_time:.3f}s ({key})")
+                logger.debug("[RateLimit] 等待 %.3fs (%s)", wait_time, key)
                 await asyncio.sleep(wait_time)
                 self._tokens[key] = 0
             else:
@@ -570,7 +570,7 @@ class AsyncRateLimitMiddleware(AsyncMiddleware):
                 try:
                     wait_time = min(float(retry_after), 300)  # Cap at 5 minutes
                     key = self._get_key(request.url)
-                    logger.info(f"[RateLimit] 收到 429, 等待 {wait_time}s ({key})")
+                    logger.info("[RateLimit] 收到 429, 等待 %ss (%s)", wait_time, key)
                     await asyncio.sleep(wait_time)
                 except ValueError:
                     pass

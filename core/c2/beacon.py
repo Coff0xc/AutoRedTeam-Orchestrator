@@ -854,7 +854,7 @@ class BeaconServer:
                 for beacon_id in stale_ids:
                     self.results.pop(beacon_id, None)
 
-            logger.info(f"清理了 {len(stale_ids)} 个过期 Beacon")
+            logger.info("清理了 %s 个过期 Beacon", len(stale_ids))
 
         return len(stale_ids)
 

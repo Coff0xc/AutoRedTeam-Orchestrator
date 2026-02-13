@@ -488,10 +488,14 @@ if __name__ == "__main__":
     logger.info("Browser Profile:")
     logger.info("  Type: %s", spoofer.profile.browser_type.value)
     logger.info("  Version: %s", spoofer.profile.version)
-    logger.info(f"  User-Agent: {spoofer.profile.user_agent[:60]}...")
+    logger.info("  User-Agent: %s...", spoofer.profile.user_agent[:60])
 
     logger.info("Headers:")
     for k, v in spoofer.get_headers().items():
-        logger.info(f"  {k}: {v[:50]}..." if len(str(v)) > 50 else f"  {k}: {v}")
+        v_str = str(v)
+        if len(v_str) > 50:
+            logger.info("  %s: %s...", k, v_str[:50])
+        else:
+            logger.info("  %s: %s", k, v)
 
-    logger.info(f"JA3 Fingerprint: {spoofer.ja3_spoofer.get_ja3_fingerprint()[:50]}...")
+    logger.info("JA3 Fingerprint: %s...", spoofer.ja3_spoofer.get_ja3_fingerprint()[:50])

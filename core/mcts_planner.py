@@ -75,6 +75,10 @@ class AttackState:
     """攻击状态
 
     记录渗透测试过程中的完整状态信息
+
+    性能优化:
+    - 使用 _hash_cache 缓存哈希值，避免重复计算
+    - clone() 使用浅拷贝 + 写时复制策略
     """
 
     target: str
@@ -86,21 +90,32 @@ class AttackState:
     access_level: int = 0  # 0=none, 1=user, 2=root/admin
     completed_actions: Set[str] = field(default_factory=set)
     findings: List[Dict[str, Any]] = field(default_factory=list)
+    _hash_cache: Optional[str] = field(default=None, repr=False, compare=False)
 
     def add_open_port(self, port: int, service: str = "unknown"):
         """添加发现的端口"""
+        self._invalidate_hash()
         self.open_ports[port] = service
 
     def add_vulnerability(self, vuln: Dict[str, Any]):
         """添加发现的漏洞"""
+        self._invalidate_hash()
         self.vulnerabilities.append(vuln)
 
     def add_credential(self, cred: Dict[str, Any]):
         """添加获取的凭证"""
+        self._invalidate_hash()
         self.credentials.append(cred)
 
+    def _invalidate_hash(self):
+        """使哈希缓存失效"""
+        self._hash_cache = None
+
     def state_hash(self) -> str:
-        """计算状态哈希（用于去重和缓存）"""
+        """计算状态哈希（带缓存）"""
+        if self._hash_cache is not None:
+            return self._hash_cache
+        # 使用更快的哈希算法
         state_str = (
             f"{self.target}|{self.target_type}|"
             f"{sorted(self.open_ports.items())}|"
@@ -109,20 +124,26 @@ class AttackState:
             f"{self.access_level}|"
             f"{sorted(self.completed_actions)}"
         )
-        return hashlib.sha256(state_str.encode()).hexdigest()[:16]
+        self._hash_cache = hashlib.md5(state_str.encode()).hexdigest()[:12]
+        return self._hash_cache
 
     def clone(self) -> "AttackState":
-        """深拷贝状态"""
+        """浅拷贝状态（写时复制优化）
+
+        对于 Simulation 阶段，大部分字段不会被修改，
+        使用浅拷贝 + 按需深拷贝可显著提升性能。
+        """
         new_state = AttackState(
             target=self.target,
             target_type=self.target_type,
-            open_ports=dict(self.open_ports),
-            technologies=list(self.technologies),
-            vulnerabilities=[dict(v) for v in self.vulnerabilities],
-            credentials=[dict(c) for c in self.credentials],
+            open_ports=self.open_ports.copy(),  # 浅拷贝 dict
+            technologies=self.technologies,  # 共享引用（只读）
+            vulnerabilities=self.vulnerabilities.copy(),  # 浅拷贝 list
+            credentials=self.credentials.copy(),
             access_level=self.access_level,
-            completed_actions=set(self.completed_actions),
-            findings=[dict(f) for f in self.findings],
+            completed_actions=self.completed_actions.copy(),
+            findings=self.findings.copy(),  # 修复: 浅拷贝避免共享污染
+            _hash_cache=None,
         )
         return new_state
 
@@ -469,6 +490,7 @@ class MCTSPlanner:
         exploration_weight: UCB1 探索权重 (默认 sqrt(2))
         max_depth: 最大搜索深度
         seed: 随机种子（用于可复现性）
+        use_transposition: 是否使用转置表缓存
     """
 
     def __init__(
@@ -476,12 +498,15 @@ class MCTSPlanner:
         exploration_weight: float = DEFAULT_EXPLORATION_WEIGHT,
         max_depth: int = 10,
         seed: Optional[int] = None,
+        use_transposition: bool = True,
     ):
         self.exploration_weight = exploration_weight
         self.max_depth = max_depth
         self.action_generator = ActionGenerator()
         self.simulator = AttackSimulator(seed=seed)
         self._rng = random.Random(seed)
+        self._use_transposition = use_transposition
+        self._transposition_table: Dict[str, float] = {}  # state_hash -> reward
 
     def plan(
         self,
@@ -500,6 +525,7 @@ class MCTSPlanner:
         logger.debug("MCTS规划开始: %d次迭代, 最大深度=%d", iterations, self.max_depth)
 
         root = MCTSNode(state=initial_state)
+        self._transposition_table.clear()  # 每次规划清空缓存
 
         for i in range(iterations):
             node = self._select(root)
@@ -565,11 +591,17 @@ class MCTSPlanner:
         return child
 
     def _simulate(self, node: MCTSNode) -> float:
-        """Simulation 阶段：随机模拟到终态"""
+        """Simulation 阶段：随机模拟到终态（带转置表缓存）"""
         state = node.state.clone()
         depth = 0
 
         while not state.is_terminal() and depth < self.max_depth:
+            # 转置表缓存查询
+            if self._use_transposition:
+                state_hash = state.state_hash()
+                if state_hash in self._transposition_table:
+                    return self._transposition_table[state_hash]
+
             actions = self.action_generator.generate(state)
             if not actions:
                 break
@@ -581,7 +613,13 @@ class MCTSPlanner:
             state = self.simulator.simulate_action(state, action)
             depth += 1
 
-        return state.reward()
+        reward = state.reward()
+
+        # 缓存结果
+        if self._use_transposition:
+            self._transposition_table[state.state_hash()] = reward
+
+        return reward
 
     def _backpropagate(self, node: MCTSNode, reward: float):
         """Backpropagation 阶段：反向传播奖励"""

@@ -480,5 +480,5 @@ if __name__ == "__main__":
     scanner = CICDSecurityScanner(path)
     result = scanner.scan_all()
 
-    logger.info(f"发现问题数: {result['total_findings']}")
-    logger.info(f"严重性分布: {result['by_severity']}")
+    logger.info("发现问题数: %s", result['total_findings'])
+    logger.info("严重性分布: %s", result['by_severity'])

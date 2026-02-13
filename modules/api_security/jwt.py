@@ -564,7 +564,7 @@ class JWTTester(BaseAPITester):
         try:
             parts = token.split(".")
             if len(parts) != 3:
-                logger.warning(f"无效的JWT格式，期望3部分，实际{len(parts)}部分")
+                logger.warning("无效的JWT格式，期望3部分，实际%s部分", len(parts))
                 return None
 
             # 解码header

@@ -14,6 +14,7 @@
     - 减少代码重复
 """
 
+from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
 # 授权中间件
@@ -24,6 +25,23 @@ from core.security import (
 
 from .error_handling import ErrorCategory, handle_errors, validate_inputs
 from .tooling import tool
+
+
+# ==================== 共享数据类 ====================
+
+
+@dataclass
+class DetectionResultWrapper:
+    """将漏洞检测结果 dict 转换为类似对象以兼容 ExploitEngine"""
+
+    vulnerable: bool
+    vuln_type: str
+    url: str
+    param: str = ""
+    payload: str = ""
+    evidence: str = ""
+    extra: dict = None
+
 
 # ==================== 自定义上下文提取器 ====================
 
@@ -248,20 +266,7 @@ def register_orchestration_tools(mcp, counter, logger):
         Returns:
             利用结果
         """
-        from dataclasses import dataclass
-
         from core.exploit import ExploitEngine
-
-        # 将 dict 转换为类似对象以兼容 ExploitEngine
-        @dataclass
-        class DetectionResultWrapper:
-            vulnerable: bool
-            vuln_type: str
-            url: str
-            param: str = ""
-            payload: str = ""
-            evidence: str = ""
-            extra: dict = None
 
         wrapped = DetectionResultWrapper(
             vulnerable=detection_result.get("vulnerable", False),
@@ -533,20 +538,8 @@ def register_orchestration_tools(mcp, counter, logger):
         Returns:
             验证和利用结果
         """
-        from dataclasses import dataclass
-
         from core.exploit import ExploitEngine
         from modules.vuln_verifier import VulnerabilityVerifier
-
-        @dataclass
-        class DetectionResultWrapper:
-            vulnerable: bool
-            vuln_type: str
-            url: str
-            param: str = ""
-            payload: str = ""
-            evidence: str = ""
-            extra: dict = None
 
         wrapped = DetectionResultWrapper(
             vulnerable=detection_result.get("vulnerable", False),

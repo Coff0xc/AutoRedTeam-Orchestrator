@@ -321,7 +321,7 @@ class SQLiDetector(BaseDetector):
         except Exception as e:
             # 捕获其他未预期异常，保证检测流程继续
             # 注意：这里使用宽泛捕获是为了单个 payload 测试失败不影响整体检测
-            logger.warning(f"错误型注入检测未预期错误: {type(e).__name__}: {e}")
+            logger.warning("错误型注入检测未预期错误: %s: %s", type(e).__name__, e)
 
         return None
 
@@ -418,7 +418,7 @@ class SQLiDetector(BaseDetector):
         except Exception as e:
             # 捕获其他未预期异常
             # 注意：这里使用宽泛捕获是为了单个 payload 测试失败不影响整体检测
-            logger.warning(f"时间盲注检测未预期错误: {type(e).__name__}: {e}")
+            logger.warning("时间盲注检测未预期错误: %s: %s", type(e).__name__, e)
 
         return None
 
@@ -525,7 +525,7 @@ class SQLiDetector(BaseDetector):
             except Exception as e:
                 # 捕获其他未预期异常
                 # 注意：这里使用宽泛捕获是为了单个 payload 测试失败不影响整体检测
-                logger.warning(f"布尔盲注检测未预期错误: {type(e).__name__}: {e}")
+                logger.warning("布尔盲注检测未预期错误: %s: %s", type(e).__name__, e)
 
         return None
 
@@ -584,7 +584,7 @@ class SQLiDetector(BaseDetector):
         except Exception as e:
             # 捕获其他未预期异常
             # 注意：基线响应获取失败不应中断整个检测流程
-            logger.warning(f"获取基线响应未预期错误 {url}: {type(e).__name__}: {e}")
+            logger.warning("获取基线响应未预期错误 %s: %s: %s", url, type(e).__name__, e)
             return None
 
     def _should_skip_param(self, param_name: str) -> bool:
@@ -711,5 +711,5 @@ class SQLiDetector(BaseDetector):
             logger.debug("SQL注入验证失败: %s", e)
             return False
         except Exception as e:
-            logger.debug(f"SQL注入验证未预期错误: {type(e).__name__}: {e}")
+            logger.debug("SQL注入验证未预期错误: %s: %s", type(e).__name__, e)
             return False

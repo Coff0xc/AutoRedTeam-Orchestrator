@@ -839,7 +839,7 @@ class HTTPClient:
                 if hasattr(self._sync_client, "close"):
                     self._sync_client.close()
             except Exception as e:
-                logger.warning(f"关闭同步客户端失败: {e}")
+                logger.warning("关闭同步客户端失败: %s", e)
             finally:
                 self._sync_client = None
 
@@ -852,7 +852,7 @@ class HTTPClient:
                 elif hasattr(self._async_client, "close"):
                     await self._async_client.close()
             except Exception as e:
-                logger.warning(f"关闭异步客户端失败: {e}")
+                logger.warning("关闭异步客户端失败: %s", e)
             finally:
                 self._async_client = None
 

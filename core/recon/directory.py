@@ -435,7 +435,7 @@ class DirectoryScanner:
                 if self._progress_callback and processed % 50 == 0:
                     self._progress_callback(processed, total, path)
 
-        self._logger.info(f"Found {len(results)} paths for {base_url}")
+        self._logger.info("Found %s paths for %s", len(results), base_url)
         return sorted(results, key=lambda x: x.path)
 
     async def async_scan(

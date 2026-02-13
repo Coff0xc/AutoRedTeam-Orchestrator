@@ -533,8 +533,8 @@ if __name__ == "__main__":
 
     # 检测生态系统
     ecosystems = generator.detect_ecosystems()
-    logger.info(f"检测到的生态系统: {[e.value for e in ecosystems]}")
+    logger.info("检测到的生态系统: %s", [e.value for e in ecosystems])
 
     # 生成SBOM
     sbom = generator.generate(SBOMFormat.SIMPLE)
-    logger.info(f"依赖总数: {sbom['total']}")
+    logger.info("依赖总数: %s", sbom['total'])

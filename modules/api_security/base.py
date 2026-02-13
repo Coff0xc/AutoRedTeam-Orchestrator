@@ -432,7 +432,7 @@ class CompositeTester(BaseAPITester):
 
         for i, results in enumerate(results_list):
             if isinstance(results, Exception):
-                logger.error(f"测试器 {self._testers[i].name} 执行失败: {results}")
+                logger.error("测试器 %s 执行失败: %s", self._testers[i].name, results)
             else:
                 self._results.extend(results)
 

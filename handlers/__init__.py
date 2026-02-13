@@ -27,7 +27,7 @@ from .api_security_handlers import register_api_security_tools
 from .cloud_security_handlers import register_cloud_security_tools
 from .cve_handlers import register_cve_tools
 from .detector_handlers import register_detector_tools
-from .external_tools_handlers import register_external_tools_handlers
+from .external_tools_handlers import register_external_tools
 from .lateral_handlers import register_lateral_tools
 from .misc_handlers import register_misc_tools
 from .orchestration_handlers import register_orchestration_tools
@@ -54,7 +54,7 @@ __all__ = [
     "register_report_tools",
     "register_ai_tools",
     "register_misc_tools",
-    "register_external_tools_handlers",
+    "register_external_tools",
 ]
 
 
@@ -82,7 +82,7 @@ def register_all_handlers(mcp, counter, logger):
         ("报告工具", register_report_tools),
         ("AI辅助工具", register_ai_tools),
         ("杂项工具", register_misc_tools),
-        ("外部工具集成", register_external_tools_handlers),
+        ("外部工具集成", register_external_tools),
     ]
 
     for name, register_func in handlers:
@@ -100,4 +100,4 @@ def register_all_handlers(mcp, counter, logger):
         except Exception as e:
             # 兜底: 注册过程可能涉及第三方库的各种异常，
             # 为保证其他模块正常注册，此处捕获所有异常
-            logger.warning(f"{name}注册失败 - 未预期错误: {type(e).__name__}: {e}")
+            logger.warning("%s注册失败 - 未预期错误: %s: %s", name, type(e).__name__, e)

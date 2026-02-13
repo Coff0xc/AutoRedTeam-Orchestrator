@@ -222,7 +222,7 @@ class SecretsManager:
             decrypted_data = self.cipher.decrypt(encrypted_data)
             self.secrets = json.loads(decrypted_data.decode())
 
-            logger.info(f"加载了 {len(self.secrets)} 个敏感信息")
+            logger.info("加载了 %s 个敏感信息", len(self.secrets))
 
         except Exception as e:
             logger.error("加载敏感信息失败: %s", e)

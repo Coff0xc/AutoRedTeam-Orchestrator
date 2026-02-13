@@ -69,7 +69,7 @@ class AutoWorkflow:
             workflow_result["recommendations"] = attack_plan.get("recommendations", [])
 
         except Exception as e:
-            logger.error(f"工作流执行失败: {str(e)}")
+            logger.error("工作流执行失败: %s", str(e))
             workflow_result["error"] = str(e)
 
         workflow_result["end_time"] = datetime.now().isoformat()
@@ -180,7 +180,7 @@ class AutoWorkflow:
             phase_result["status"] = "completed"
 
         except Exception as e:
-            logger.error(f"信息收集失败: {str(e)}")
+            logger.error("信息收集失败: %s", str(e))
             phase_result["status"] = "failed"
             phase_result["error"] = str(e)
 
@@ -244,7 +244,7 @@ class AutoWorkflow:
             phase_result["status"] = "completed"
 
         except Exception as e:
-            logger.error(f"漏洞扫描失败: {str(e)}")
+            logger.error("漏洞扫描失败: %s", str(e))
             phase_result["status"] = "failed"
             phase_result["error"] = str(e)
 

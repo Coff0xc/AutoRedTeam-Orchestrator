@@ -37,9 +37,15 @@ class InMemoryGraphStore:
     适用于单次会话或小规模数据。
     """
 
+    MAX_ENTITIES = 50000
+    MAX_RELATIONS = 100000
+
     def __init__(self):
         self._entities: Dict[str, KnowledgeEntity] = {}
         self._relations: Dict[str, KnowledgeRelation] = {}
+        # 插入顺序记录，用于淘汰最旧条目
+        self._entity_order: deque = deque()
+        self._relation_order: deque = deque()
         # 索引：type -> entity_ids
         self._type_index: Dict[EntityType, Set[str]] = defaultdict(set)
         # 索引：source_id -> relation_ids
@@ -51,10 +57,38 @@ class InMemoryGraphStore:
         # 线程锁
         self._lock = threading.RLock()
 
+    def _evict_oldest_entities(self, count: int) -> None:
+        """淘汰最旧的实体条目（需在锁内调用）"""
+        evicted = 0
+        while self._entity_order and evicted < count:
+            oldest_id = self._entity_order.popleft()
+            if oldest_id in self._entities:
+                self.delete_entity(oldest_id)
+                evicted += 1
+
+    def _evict_oldest_relations(self, count: int) -> None:
+        """淘汰最旧的关系条目（需在锁内调用）"""
+        evicted = 0
+        while self._relation_order and evicted < count:
+            oldest_id = self._relation_order.popleft()
+            if oldest_id in self._relations:
+                self._delete_relation(oldest_id)
+                evicted += 1
+
     def add_entity(self, entity: KnowledgeEntity) -> str:
         """添加实体"""
         with self._lock:
+            # 检查是否达到上限，淘汰最旧的 10% 条目
+            if len(self._entities) >= self.MAX_ENTITIES and entity.id not in self._entities:
+                evict_count = self.MAX_ENTITIES // 10
+                logger.warning(
+                    "实体数达到上限 %d，淘汰最旧的 %d 个条目",
+                    self.MAX_ENTITIES, evict_count,
+                )
+                self._evict_oldest_entities(evict_count)
+
             self._entities[entity.id] = entity
+            self._entity_order.append(entity.id)
             self._type_index[entity.type].add(entity.id)
 
             # 建立属性索引
@@ -119,7 +153,18 @@ class InMemoryGraphStore:
                 raise ValueError("源实体不存在: %s" % relation.source_id)
             if relation.target_id not in self._entities:
                 raise ValueError("目标实体不存在: %s" % relation.target_id)
+
+            # 检查是否达到上限，淘汰最旧的 10% 条目
+            if len(self._relations) >= self.MAX_RELATIONS and relation.id not in self._relations:
+                evict_count = self.MAX_RELATIONS // 10
+                logger.warning(
+                    "关系数达到上限 %d，淘汰最旧的 %d 个条目",
+                    self.MAX_RELATIONS, evict_count,
+                )
+                self._evict_oldest_relations(evict_count)
+
             self._relations[relation.id] = relation
+            self._relation_order.append(relation.id)
             self._outgoing_index[relation.source_id].add(relation.id)
             self._incoming_index[relation.target_id].add(relation.id)
             return relation.id
@@ -283,6 +328,8 @@ class InMemoryGraphStore:
         """清空所有数据"""
         self._entities.clear()
         self._relations.clear()
+        self._entity_order.clear()
+        self._relation_order.clear()
         self._type_index.clear()
         self._outgoing_index.clear()
         self._incoming_index.clear()

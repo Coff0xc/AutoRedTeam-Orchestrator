@@ -64,29 +64,31 @@ class CVEManager:
             nvd_api_key: NVD API Key
             github_token: GitHub Token
         """
-        if self._initialized:
-            return
+        # 在类锁内检查 _initialized，防止 TOCTOU 竞态
+        with self._lock:
+            if self._initialized:
+                return
 
-        # 从环境变量获取 API Key
-        self._nvd_api_key = nvd_api_key or os.environ.get("NVD_API_KEY")
-        self._github_token = github_token or os.environ.get("GITHUB_TOKEN")
+            # 从环境变量获取 API Key
+            self._nvd_api_key = nvd_api_key or os.environ.get("NVD_API_KEY")
+            self._github_token = github_token or os.environ.get("GITHUB_TOKEN")
 
-        # 初始化存储
-        self._storage = get_storage(db_path)
+            # 初始化存储
+            self._storage = get_storage(db_path)
 
-        # 初始化数据源
-        self._sources: List[CVESource] = []
-        self._aggregated_source: Optional[AggregatedSource] = None
-        self._init_sources()
+            # 初始化数据源
+            self._sources: List[CVESource] = []
+            self._aggregated_source: Optional[AggregatedSource] = None
+            self._init_sources()
 
-        # 初始化搜索引擎
-        self._search_engine = CVESearchEngine(self._storage)
+            # 初始化搜索引擎
+            self._search_engine = CVESearchEngine(self._storage)
 
-        # 同步锁
-        self._sync_lock = threading.Lock()
+            # 同步锁
+            self._sync_lock = threading.Lock()
 
-        self._initialized = True
-        logger.info("[Manager] CVE 管理器初始化完成")
+            self._initialized = True
+            logger.info("[Manager] CVE 管理器初始化完成")
 
     def _init_sources(self):
         """初始化数据源"""
@@ -105,7 +107,7 @@ class CVEManager:
         # 聚合数据源
         self._aggregated_source = AggregatedSource(self._sources)
 
-        logger.info(f"[Manager] 初始化 {len(self._sources)} 个数据源")
+        logger.info("[Manager] 初始化 %s 个数据源", len(self._sources))
 
     async def sync(
         self, days: int = 7, sources: Optional[List[str]] = None
@@ -490,13 +492,13 @@ async def _cli_main():
     elif command == "search":
         keyword = sys.argv[2] if len(sys.argv) > 2 else ""
         entries = manager.search(keyword=keyword, limit=10)
-        logger.info(f"\n搜索结果 ({len(entries)} 条):")
+        logger.info("\n搜索结果 (%s 条):", len(entries))
         for entry in entries:
             severity = entry.severity.value.upper()
             cvss = entry.cvss.score if entry.cvss else 0.0
             poc = "✓" if entry.has_poc else "✗"
             logger.info("  [%s] %s (CVSS: %.1f) PoC: %s", severity, entry.cve_id, cvss, poc)
-            logger.info(f"    {entry.description[:80]}...")
+            logger.info("    %s...", entry.description[:80])
 
     elif command == "get":
         cve_id = sys.argv[2] if len(sys.argv) > 2 else ""
@@ -505,10 +507,10 @@ async def _cli_main():
             logger.info("\n%s", entry.cve_id)
             logger.info("=" * 50)
             logger.info("标题: %s", entry.title)
-            logger.info(f"严重性: {entry.severity.value.upper()}")
+            logger.info("严重性: %s", entry.severity.value.upper())
             if entry.cvss:
                 logger.info("CVSS: %s (%s)", entry.cvss.score, entry.cvss.version)
-            logger.info(f"描述: {entry.description[:200]}...")
+            logger.info("描述: %s...", entry.description[:200])
             logger.info("有 PoC: %s", '是' if entry.has_poc else '否')
             if entry.poc_urls:
                 logger.info("PoC 链接:")
@@ -532,7 +534,7 @@ async def _cli_main():
     elif command == "recent":
         limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
         entries = manager.get_recent(limit=limit)
-        logger.info(f"\n最近的 CVE ({len(entries)} 条):")
+        logger.info("\n最近的 CVE (%s 条):", len(entries))
         for entry in entries:
             severity = entry.severity.value.upper()
             cvss = entry.cvss.score if entry.cvss else 0.0
@@ -541,13 +543,13 @@ async def _cli_main():
     elif command == "poc":
         limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
         entries = manager.get_with_poc(limit=limit)
-        logger.info(f"\n有 PoC 的 CVE ({len(entries)} 条):")
+        logger.info("\n有 PoC 的 CVE (%s 条):", len(entries))
         for entry in entries:
             severity = entry.severity.value.upper()
             cvss = entry.cvss.score if entry.cvss else 0.0
             logger.info("  [%s] %s (CVSS: %.1f)", severity, entry.cve_id, cvss)
             if entry.poc_urls:
-                logger.info(f"    PoC: {entry.poc_urls[0]}")
+                logger.info("    PoC: %s", entry.poc_urls[0])
 
     else:
         logger.warning("未知命令: %s", command)

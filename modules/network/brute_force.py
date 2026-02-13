@@ -136,7 +136,7 @@ class HydraTool(BaseTool):
             cmd.append(service)
 
         try:
-            logger.info(f"执行Hydra: {sanitize_cmd_for_log(cmd)}")
+            logger.info("执行Hydra: %s", sanitize_cmd_for_log(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             # 解析结果
@@ -245,7 +245,7 @@ class MedusaTool(BaseTool):
             cmd.append("-f")
 
         try:
-            logger.info(f"执行Medusa: {sanitize_cmd_for_log(cmd)}")
+            logger.info("执行Medusa: %s", sanitize_cmd_for_log(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             credentials = self._parse_output(result.stdout)
@@ -359,7 +359,7 @@ class CrackMapExecTool(BaseTool):
             cmd.append("--lsa")
 
         try:
-            logger.info(f"执行CrackMapExec: {sanitize_cmd_for_log(cmd)}")
+            logger.info("执行CrackMapExec: %s", sanitize_cmd_for_log(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             # 解析结果

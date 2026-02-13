@@ -1314,5 +1314,5 @@ def register_redteam_tools(mcp):
 
     registered_tools.append("ad_spn_scan")
 
-    logger.info(f"已注册 {len(registered_tools)} 个 Red Team 工具")
+    logger.info("已注册 %s 个 Red Team 工具", len(registered_tools))
     return registered_tools

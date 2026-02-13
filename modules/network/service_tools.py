@@ -117,7 +117,7 @@ class SSHAuditTool(BaseTool):
         cmd = ["ssh-audit", "-j", f"{target}:{port}"]
 
         try:
-            logger.info(f"执行SSH审计: {' '.join(cmd)}")
+            logger.info("执行SSH审计: %s", ' '.join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             try:
@@ -192,7 +192,7 @@ class RDPCheckTool(BaseTool):
         ]
 
         try:
-            logger.info(f"执行RDP检测: {' '.join(cmd)}")
+            logger.info("执行RDP检测: %s", ' '.join(cmd))
             nmap_result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             output = nmap_result.stdout
@@ -261,7 +261,7 @@ class SNMPWalkTool(BaseTool):
             cmd.append(oid)
 
         try:
-            logger.info(f"执行SNMPWalk: {' '.join(cmd)}")
+            logger.info("执行SNMPWalk: %s", ' '.join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             # 解析输出

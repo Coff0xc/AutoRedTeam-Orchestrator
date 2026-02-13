@@ -78,7 +78,7 @@ class SmartPayloadSelector:
                     data = json.load(f)
                     for key, value in data.items():
                         self.stats[key] = PayloadStats.from_dict(value)
-                logger.debug(f"Loaded {len(self.stats)} payload stats from {self.stats_file}")
+                logger.debug("Loaded %s payload stats from %s", len(self.stats), self.stats_file)
             except Exception as e:
                 logger.warning("加载 Payload 统计失败: %s", e)
 

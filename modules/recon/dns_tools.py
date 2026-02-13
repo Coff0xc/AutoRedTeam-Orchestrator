@@ -5,7 +5,6 @@ DNS枚举和侦察工具集
 
 import json
 import logging
-import re
 import subprocess
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
@@ -20,16 +19,14 @@ except ImportError:
     DNS_AVAILABLE = False
 
 from core.registry import BaseTool, ToolCategory, ToolParameter
+from shared.validators import validate_domain as _validate_domain
 
 logger = logging.getLogger(__name__)
-
-# 域名验证正则表达式 - 防止命令注入
-DOMAIN_PATTERN = re.compile(r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$")
 
 
 def validate_domain(domain: str) -> bool:
     """
-    验证域名格式，防止命令注入
+    验证域名格式，防止命令注入（委托给shared.validators）
 
     Args:
         domain: 待验证的域名
@@ -37,20 +34,10 @@ def validate_domain(domain: str) -> bool:
     Returns:
         域名是否有效
     """
-    if not domain or not isinstance(domain, str):
+    if not isinstance(domain, str):
         return False
-    # 检查长度
-    if len(domain) > 253:
-        return False
-    # 检查格式
-    if not DOMAIN_PATTERN.match(domain):
-        return False
-    # 检查危险字符
-    dangerous_chars = [";", "|", "&", "$", "`", "\n", "\r", ">", "<", "'", '"', "\\"]
-    for char in dangerous_chars:
-        if char in domain:
-            return False
-    return True
+    valid, _ = _validate_domain(domain)
+    return valid
 
 
 @dataclass
@@ -179,7 +166,7 @@ class DNSReconTool(BaseTool):
         cmd = ["dnsrecon", "-d", domain, "-t", scan_type, "--threads", str(threads), "-j", "-"]
 
         try:
-            logger.info(f"执行DNSRecon: {' '.join(cmd)}")
+            logger.info("执行DNSRecon: %s", ' '.join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             try:
@@ -260,7 +247,7 @@ class DnsxTool(BaseTool):
             cmd.append("-wd")
 
         try:
-            logger.info(f"执行Dnsx: {' '.join(cmd)}")
+            logger.info("执行Dnsx: %s", ' '.join(cmd))
             result = subprocess.run(
                 cmd, input=domain_input, capture_output=True, text=True, timeout=self.timeout
             )

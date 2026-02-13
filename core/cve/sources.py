@@ -301,7 +301,7 @@ class NVDSource(CVESource):
             start_index += results_per_page
             logger.debug("[NVD] 进度: %s/%s", start_index, total_results)
 
-        logger.info(f"[NVD] 获取完成: {len(entries)} 条")
+        logger.info("[NVD] 获取完成: %s 条", len(entries))
         return entries
 
     async def search(self, keyword: str, limit: int = 100) -> List[CVEEntry]:
@@ -324,7 +324,7 @@ class NVDSource(CVESource):
                 if entry:
                     entries.append(entry)
 
-        logger.info(f"[NVD] 搜索完成: {len(entries)} 条")
+        logger.info("[NVD] 搜索完成: %s 条", len(entries))
         return entries
 
     async def get_detail(self, cve_id: str) -> Optional[CVEEntry]:
@@ -551,7 +551,7 @@ class NucleiSource(CVESource):
             and item.get("path", "").endswith(".yaml")
         ]
 
-        logger.info(f"[Nuclei] 发现 {len(cve_files)} 个 CVE 模板")
+        logger.info("[Nuclei] 发现 %s 个 CVE 模板", len(cve_files))
 
         # 解析 CVE ID 和基本信息
         for file_info in cve_files:
@@ -577,7 +577,7 @@ class NucleiSource(CVESource):
                 )
                 entries.append(entry)
 
-        logger.info(f"[Nuclei] 获取完成: {len(entries)} 条")
+        logger.info("[Nuclei] 获取完成: %s 条", len(entries))
         return entries
 
     async def search(self, keyword: str, limit: int = 100) -> List[CVEEntry]:
@@ -616,7 +616,7 @@ class NucleiSource(CVESource):
                     )
                     entries.append(entry)
 
-        logger.info(f"[Nuclei] 搜索完成: {len(entries)} 条")
+        logger.info("[Nuclei] 搜索完成: %s 条", len(entries))
         return entries
 
     async def get_detail(self, cve_id: str) -> Optional[CVEEntry]:
@@ -701,7 +701,7 @@ class ExploitDBSource(CVESource):
                 continue
 
         self._cache_loaded = True
-        logger.info(f"[ExploitDB] 加载完成: {len(self._cache)} 条")
+        logger.info("[ExploitDB] 加载完成: %s 条", len(self._cache))
 
     async def fetch_recent(self, days: int = 7) -> List[CVEEntry]:
         """获取最近的 Exploit"""
@@ -789,7 +789,7 @@ class GitHubPoCSource(CVESource):
                     )
                     entries.append(entry)
 
-        logger.info(f"[GitHub PoC] 获取完成: {len(entries)} 条")
+        logger.info("[GitHub PoC] 获取完成: %s 条", len(entries))
         return entries
 
     async def search(self, keyword: str, limit: int = 100) -> List[CVEEntry]:
@@ -829,7 +829,7 @@ class GitHubPoCSource(CVESource):
                     )
                     entries.append(entry)
 
-        logger.info(f"[GitHub PoC] 搜索完成: {len(entries)} 条")
+        logger.info("[GitHub PoC] 搜索完成: %s 条", len(entries))
         return entries
 
     async def get_detail(self, cve_id: str) -> Optional[CVEEntry]:
@@ -855,7 +855,7 @@ class AggregatedSource(CVESource):
 
     async def fetch_recent(self, days: int = 7) -> List[CVEEntry]:
         """从所有源获取最近的 CVE 并去重合并"""
-        logger.info(f"[Aggregated] 从 {len(self.sources)} 个源获取数据...")
+        logger.info("[Aggregated] 从 %s 个源获取数据...", len(self.sources))
 
         tasks = [source.fetch_recent(days) for source in self.sources]
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -923,7 +923,7 @@ class AggregatedSource(CVESource):
         entries = list(cve_map.values())
         entries.sort(key=lambda x: x.published_date or datetime.min, reverse=True)
 
-        logger.info(f"[Aggregated] 合并完成: {len(entries)} 条 (去重后)")
+        logger.info("[Aggregated] 合并完成: %s 条 (去重后)", len(entries))
         return entries
 
 

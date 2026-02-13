@@ -710,4 +710,4 @@ if __name__ == "__main__":
     logger.info("Available methods:")
     for m in list_linux_persistence_methods():
         root = "[Root]" if m["root_required"] else "[User]"
-        logger.info(f"  {root} {m['method']}: {m['description']} (stealth: {m['stealth']})")
+        logger.info("  %s %s: %s (stealth: %s)", root, m['method'], m['description'], m['stealth'])

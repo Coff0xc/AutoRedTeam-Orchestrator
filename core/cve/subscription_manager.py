@@ -444,7 +444,7 @@ class SubscriptionManager:
                     # 更新最后通知时间
                     self._update_last_notified(sub.id)
 
-            logger.info(f"订阅检查完成: {len(matches)} 个订阅匹配到新CVE")
+            logger.info("订阅检查完成: %s 个订阅匹配到新CVE", len(matches))
             return matches
 
         except Exception as e:

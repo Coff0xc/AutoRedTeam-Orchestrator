@@ -241,7 +241,7 @@ class ProxyChain:
                 {"index": i, "url": proxy.url, "valid": is_valid, "response_time": response_time}
             )
 
-        logger.info(f"[{self.name}] Verified {results['valid']}/{results['total']} proxies")
+        logger.info("[%s] Verified %s/%s proxies", self.name, results['valid'], results['total'])
         return results
 
     def request_through_chain(
@@ -693,12 +693,12 @@ if __name__ == "__main__":
     chain.add_proxy("http://127.0.0.1:8080")
     chain.add_proxy("socks5://127.0.0.1:1080")
 
-    logger.info(f"Proxy chain: {chain.get_chain()}")
+    logger.info("Proxy chain: %s", chain.get_chain())
 
     # 3. 验证代理
     logger.info("Verifying proxies...")
     result = chain.verify_all(timeout=5)
-    logger.info(f"Verification result: {json.dumps(result, indent=2)}")
+    logger.info("Verification result: %s", json.dumps(result, indent=2))
 
     # 4. 获取状态
     logger.info("Chain status:")

@@ -299,7 +299,7 @@ class AutoPentestOrchestrator:
 
     def _report_progress(self, phase: PentestPhase, status: str) -> None:
         """报告进度 - 使用脱敏数据"""
-        self.logger.info(f"[{self.state.session_id[:8]}] {phase.value}: {status}")
+        self.logger.info("[%s] %s: %s", self.state.session_id[:8], phase.value, status)
 
         if self._progress_callback:
             try:

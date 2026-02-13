@@ -490,7 +490,7 @@ class AuthManager:
                 )
                 self.keys[api_key.key_id] = api_key
 
-            logger.info(f"加载了 {len(self.keys)} 个API密钥")
+            logger.info("加载了 %s 个API密钥", len(self.keys))
 
         except Exception as e:
             logger.error("加载密钥失败: %s", e)

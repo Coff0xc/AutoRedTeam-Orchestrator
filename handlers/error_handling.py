@@ -469,7 +469,7 @@ def _validate_target_auto(
     for pattern in internal_patterns:
         if pattern in target_lower:
             logger = logging.getLogger(__name__)
-            logger.warning(f"目标可能指向内部网络: {target}")
+            logger.warning("目标可能指向内部网络: %s", target)
             return False
 
     return True
@@ -757,20 +757,20 @@ def _handle_external_tool_exception(
     if isinstance(exc, subprocess.TimeoutExpired):
         error_msg = "工具执行超时"
         hint = "可尝试减少扫描范围或增加超时时间"
-        logger.warning(f"{tool_name}: {error_msg}")
+        logger.warning("%s: %s", tool_name, error_msg)
     elif isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
         error_msg = "操作超时"
-        logger.warning(f"{tool_name}: {error_msg}")
+        logger.warning("%s: %s", tool_name, error_msg)
     elif isinstance(exc, (ConnectionError, OSError)):
-        logger.warning(f"{tool_name}: 连接/IO错误 - {error_msg}")
+        logger.warning("%s: 连接/IO错误 - %s", tool_name, error_msg)
     elif isinstance(exc, (ImportError, ModuleNotFoundError)):
-        logger.warning(f"{tool_name}: 模块导入失败 - {error_msg}")
+        logger.warning("%s: 模块导入失败 - %s", tool_name, error_msg)
     elif isinstance(exc, FileNotFoundError):
-        logger.warning(f"{tool_name}: 工具未找到 - {error_msg}")
+        logger.warning("%s: 工具未找到 - %s", tool_name, error_msg)
     elif isinstance(exc, PermissionError):
-        logger.warning(f"{tool_name}: 权限不足 - {error_msg}")
+        logger.warning("%s: 权限不足 - %s", tool_name, error_msg)
     else:
-        logger.error(f"{tool_name}: 执行失败 - [{error_type}] {error_msg}")
+        logger.error("%s: 执行失败 - [%s] %s", tool_name, error_type, error_msg)
 
     # 提取上下文
     context: Dict[str, Any] = {}
@@ -780,7 +780,7 @@ def _handle_external_tool_exception(
             if extracted:
                 context.update(extracted)
         except Exception as ctx_err:
-            logger.debug(f"Context extraction failed: {ctx_err}")
+            logger.debug("Context extraction failed: %s", ctx_err)
 
     # 构建响应
     response: Dict[str, Any] = {

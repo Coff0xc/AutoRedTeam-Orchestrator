@@ -459,7 +459,7 @@ class ProxyPool:
 
         path = Path(filepath)
         path.write_text("\n".join(proxies), encoding="utf-8")
-        logger.info(f"Saved {len(proxies)} proxies to {filepath}")
+        logger.info("Saved %s proxies to %s", len(proxies), filepath)
 
     async def validate_all_async(self, concurrency: int = 10) -> int:
         """异步验证所有代理"""
@@ -484,7 +484,7 @@ class ProxyPool:
 
         await asyncio.gather(*[check_proxy(p) for p in proxies])
 
-        logger.info(f"Validated {len(proxies)} proxies, {valid_count} valid")
+        logger.info("Validated %s proxies, %s valid", len(proxies), valid_count)
         return valid_count
 
     def validate_all_sync(self) -> int:
@@ -502,7 +502,7 @@ class ProxyPool:
             if is_valid:
                 valid_count += 1
 
-        logger.info(f"Validated {len(proxies)} proxies, {valid_count} valid")
+        logger.info("Validated %s proxies, %s valid", len(proxies), valid_count)
         return valid_count
 
     def get_stats(self) -> Dict[str, Any]:
@@ -666,7 +666,7 @@ if __name__ == "__main__":
     pool.add_proxy("socks5://127.0.0.1:1080")
 
     logger.info("Total proxies: %s", pool.count)
-    logger.info(f"Stats: {pool.get_stats()}")
+    logger.info("Stats: %s", pool.get_stats())
 
     # 获取代理
     proxy = pool.get_proxy()
