@@ -6,9 +6,11 @@ AI决策引擎 - 智能分析和攻击规划
 import json
 import logging
 import os
+import re
+import threading
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -38,39 +40,50 @@ class AttackVector:
 class AIDecisionEngine:
     """AI决策引擎"""
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
         self.provider = self.config.get("provider", "openai")
         self.model = self.config.get("model", "gpt-4")
-        self.api_key = self.config.get("api_key") or os.getenv("OPENAI_API_KEY")
+        env_key_map = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
+        self.api_key = self.config.get("api_key") or os.getenv(
+            env_key_map.get(self.provider, "")
+        )
         self._client = None
+        self._client_lock = threading.Lock()
 
         logger.info("AI决策引擎初始化: provider=%s, model=%s", self.provider, self.model)
 
     def _get_client(self):
-        """获取AI客户端"""
+        """获取AI客户端（线程安全，double-check locking）"""
         if self._client is None:
-            if self.provider == "openai":
-                try:
-                    from openai import OpenAI
-
-                    self._client = OpenAI(api_key=self.api_key)
-                except ImportError:
-                    logger.warning("OpenAI库未安装，使用本地规则引擎")
-                    self._client = "local"
-            elif self.provider == "anthropic":
-                try:
-                    from anthropic import Anthropic
-
-                    self._client = Anthropic(api_key=self.api_key)
-                except ImportError:
-                    logger.warning("Anthropic库未安装，使用本地规则引擎")
-                    self._client = "local"
-            else:
-                self._client = "local"
+            with self._client_lock:
+                if self._client is None:
+                    self._client = self._create_provider_client()
         return self._client
 
-    def analyze_target(self, target: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+    def _create_provider_client(self):
+        """根据 provider 创建对应的 AI 客户端，失败时降级为 local"""
+        provider_map = {
+            "openai": ("openai", "OpenAI"),
+            "anthropic": ("anthropic", "Anthropic"),
+        }
+        spec = provider_map.get(self.provider)
+        if spec is None:
+            return "local"
+
+        module_name, class_name = spec
+        if not self.api_key:
+            logger.warning("未配置%s API Key，使用本地规则引擎", class_name)
+            return "local"
+        try:
+            mod = __import__(module_name, fromlist=[class_name])
+            cls = getattr(mod, class_name)
+            return cls(api_key=self.api_key)
+        except ImportError:
+            logger.warning("%s库未安装，使用本地规则引擎", class_name)
+            return "local"
+
+    def analyze_target(self, target: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """分析目标"""
         context = context or {}
 
@@ -141,8 +154,6 @@ class AIDecisionEngine:
 
     def _identify_target_type(self, target: str) -> str:
         """识别目标类型"""
-        import re
-
         # IP地址
         ip_pattern = r"^(\d{1,3}\.){3}\d{1,3}$"
         if re.match(ip_pattern, target):
@@ -246,7 +257,7 @@ class AIDecisionEngine:
         ports: List[int],
         services: List[str],
         technologies: List[str],
-        vulnerabilities: List[Dict],
+        vulnerabilities: List[Dict[str, Any]],
     ) -> List[AttackVector]:
         """生成攻击向量"""
         vectors = []
@@ -631,8 +642,6 @@ class AIDecisionEngine:
         Returns:
             清理后的字符串
         """
-        import re
-
         # 移除控制字符（保留常规空格）
         text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
         # 移除换行符（防止 prompt 注入换行分割）
@@ -644,7 +653,9 @@ class AIDecisionEngine:
         """AI增强分析"""
         client = self._get_client()
 
-        # 清理输入防止 prompt 注入
+        # 清理输入防止 prompt 注入（基础防护: 控制字符/换行/截断）
+        # NOTE: 作为红队工具，target 本身可能包含恶意内容，此处仅做格式层面清理，
+        # 不防御语义级 prompt 注入（如"忽略以上指令"），因为 AI 输出仅用于分析建议
         safe_target = self._sanitize_input(target, max_length=200)
         safe_context = self._sanitize_input(
             json.dumps(context, ensure_ascii=False), max_length=2000
