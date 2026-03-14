@@ -6,9 +6,8 @@ This is a critical e2e test that catches import errors, registration failures,
 and other catastrophic issues.
 """
 
-import importlib
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -59,10 +58,11 @@ class TestMCPServerSmoke:
         """Test that ToolResult can be created"""
         try:
             from core import ToolResult
-            result = ToolResult.success(data={"test": True})
-            assert result is not None
+            result = ToolResult.ok(data={"test": True})
         except Exception as e:
             pytest.fail(f"Failed to create ToolResult: {e}")
+        assert isinstance(result, ToolResult)
+        assert result.to_dict()["success"] is True
 
     @pytest.mark.integration
     def test_register_all_handlers_with_mock_mcp(self):
@@ -103,7 +103,7 @@ class TestMCPServerSmoke:
             "VERSION"
         )
         assert os.path.exists(version_path), "VERSION file should exist"
-        with open(version_path) as f:
+        with open(version_path, encoding='utf-8') as f:
             version = f.read().strip()
         # Basic semver format check
         parts = version.split(".")

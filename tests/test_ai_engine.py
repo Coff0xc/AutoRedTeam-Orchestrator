@@ -6,8 +6,6 @@ AI 决策引擎测试
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, Any
 
 from core.ai_engine import (
     AIDecisionEngine,
@@ -486,8 +484,36 @@ class TestAIDecisionEngineWithProvider:
 
         # 应该返回客户端（实际 OpenAI 实例或 "local" 回退）
         assert client is not None
-        # 如果 openai 库未安装，会回退到 "local"
-        # 如果已安装，会是 OpenAI 客户端实例
+        assert client == "local" or type(client).__name__ == "OpenAI"
+
+    def test_get_client_no_api_key_falls_back_to_local(self):
+        """测试无 API Key 时 _get_client() 应返回 'local'"""
+        engine = AIDecisionEngine({"provider": "openai"})
+        assert engine._get_client() == "local"
+
+    def test_get_client_anthropic_no_api_key_falls_back_to_local(self):
+        """测试 Anthropic 无 API Key 时降级为 local"""
+        engine = AIDecisionEngine({"provider": "anthropic"})
+        assert engine._get_client() == "local"
+
+    def test_get_client_is_thread_safe(self):
+        """测试 _get_client() 在并发调用下结果一致"""
+        import threading
+
+        engine = AIDecisionEngine({"provider": "openai"})
+        results = []
+
+        def get_client():
+            results.append(engine._get_client())
+
+        threads = [threading.Thread(target=get_client) for _ in range(20)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert all(r == "local" for r in results)
+        assert len(results) == 20
 
     def test_analyze_target_without_ai_still_works(self):
         """测试没有 AI 时分析仍然工作"""
