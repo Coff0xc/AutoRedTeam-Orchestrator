@@ -53,7 +53,7 @@ class TestReconResult:
 
         result = ReconResult(target="https://example.com")
 
-        if hasattr(result, 'to_dict'):
+        if hasattr(result, "to_dict"):
             result_dict = result.to_dict()
             assert isinstance(result_dict, dict)
 
@@ -89,11 +89,11 @@ class TestReconPhase:
 
         assert ReconPhase is not None
         # 检查常见阶段
-        if hasattr(ReconPhase, 'DNS'):
+        if hasattr(ReconPhase, "DNS"):
             assert ReconPhase.DNS is not None
-        if hasattr(ReconPhase, 'PORT_SCAN'):
+        if hasattr(ReconPhase, "PORT_SCAN"):
             assert ReconPhase.PORT_SCAN is not None
-        if hasattr(ReconPhase, 'FINGERPRINT'):
+        if hasattr(ReconPhase, "FINGERPRINT"):
             assert ReconPhase.FINGERPRINT is not None
 
 
@@ -219,7 +219,7 @@ class TestReconPhases:
         from core.recon.phases import ReconPhase
 
         assert ReconPhase is not None
-        assert hasattr(ReconPhase, '__members__')
+        assert hasattr(ReconPhase, "__members__")
 
 
 class TestReconBase:

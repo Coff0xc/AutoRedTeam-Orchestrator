@@ -134,7 +134,7 @@ class TestTokenBucket:
         assert limiter.acquire() is True
 
         # 立即再次获取应该失败（非阻塞模式）
-        if hasattr(limiter, 'try_acquire'):
+        if hasattr(limiter, "try_acquire"):
             result = limiter.try_acquire()  # noqa: F841
             # 可能成功也可能失败，取决于实现
 
@@ -232,11 +232,11 @@ class TestCircuitState:
 
         assert CircuitState is not None
         # 检查常见状态
-        if hasattr(CircuitState, 'CLOSED'):
+        if hasattr(CircuitState, "CLOSED"):
             assert CircuitState.CLOSED is not None
-        if hasattr(CircuitState, 'OPEN'):
+        if hasattr(CircuitState, "OPEN"):
             assert CircuitState.OPEN is not None
-        if hasattr(CircuitState, 'HALF_OPEN'):
+        if hasattr(CircuitState, "HALF_OPEN"):
             assert CircuitState.HALF_OPEN is not None
 
 
@@ -311,7 +311,7 @@ class TestGetSemaphore:
         """测试获取命名信号量"""
         from core.concurrency import get_semaphore
 
-        sem = get_semaphore('test_resource', value=10)
+        sem = get_semaphore("test_resource", value=10)
 
         assert sem is not None
 
@@ -430,7 +430,7 @@ class TestMetricsCollector:
 
         collector = get_collector()
 
-        if hasattr(collector, 'summary'):
+        if hasattr(collector, "summary"):
             summary = collector.summary()
             assert summary is not None
 
@@ -464,7 +464,7 @@ class TestCounter:
 
         counter = Counter(name="test_counter")
 
-        if hasattr(counter, 'inc'):
+        if hasattr(counter, "inc"):
             counter.inc()
             counter.inc(5)
 
@@ -486,7 +486,7 @@ class TestGauge:
 
         gauge = Gauge(name="test_gauge")
 
-        if hasattr(gauge, 'set'):
+        if hasattr(gauge, "set"):
             gauge.set(100)
 
 
@@ -507,7 +507,7 @@ class TestHistogram:
 
         histogram = Histogram(name="test_histogram")
 
-        if hasattr(histogram, 'observe'):
+        if hasattr(histogram, "observe"):
             histogram.observe(0.5)
             histogram.observe(1.0)
 
@@ -531,7 +531,7 @@ class TestTrackRequest:
         """测试请求追踪上下文"""
         from core.concurrency import track_request
 
-        with track_request('test_api'):
+        with track_request("test_api"):
             # 模拟 API 调用
             time.sleep(0.01)
 
@@ -543,7 +543,7 @@ class TestTrackDecorator:
         """测试追踪装饰器"""
         from core.concurrency import track
 
-        @track('test_function')
+        @track("test_function")
         def tracked_function():
             return "result"
 

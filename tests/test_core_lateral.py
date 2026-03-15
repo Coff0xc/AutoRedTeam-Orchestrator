@@ -17,11 +17,7 @@ class TestCredentials:
         """测试密码凭证"""
         from core.lateral.base import AuthMethod, Credentials
 
-        creds = Credentials(
-            username="admin",
-            password="password123",
-            domain="WORKGROUP"
-        )
+        creds = Credentials(username="admin", password="password123", domain="WORKGROUP")
 
         assert creds.username == "admin"
         assert creds.password == "password123"
@@ -34,7 +30,7 @@ class TestCredentials:
 
         creds = Credentials(
             username="admin",
-            ntlm_hash="aad3b435b51404eeaad3b435b51404ee:8846f7eaee8fb117ad06bdd830b7586c"
+            ntlm_hash="aad3b435b51404eeaad3b435b51404ee:8846f7eaee8fb117ad06bdd830b7586c",
         )
 
         assert creds.method == AuthMethod.HASH
@@ -45,10 +41,7 @@ class TestCredentials:
         """测试 SSH 密钥凭证"""
         from core.lateral.base import AuthMethod, Credentials
 
-        creds = Credentials(
-            username="root",
-            ssh_key="/path/to/key"
-        )
+        creds = Credentials(username="root", ssh_key="/path/to/key")
 
         assert creds.method == AuthMethod.KEY
         assert creds.ssh_key == "/path/to/key"
@@ -57,10 +50,7 @@ class TestCredentials:
         """测试完整用户名"""
         from core.lateral.base import Credentials
 
-        creds = Credentials(
-            username="admin",
-            domain="CORP"
-        )
+        creds = Credentials(username="admin", domain="CORP")
 
         assert creds.full_username == "CORP\\admin"
 
@@ -68,10 +58,7 @@ class TestCredentials:
         """测试凭证转字典"""
         from core.lateral.base import Credentials
 
-        creds = Credentials(
-            username="admin",
-            password="password123"
-        )
+        creds = Credentials(username="admin", password="password123")
 
         creds_dict = creds.to_dict()
 
@@ -88,10 +75,7 @@ class TestExecutionResult:
         from core.lateral.base import ExecutionResult
 
         result = ExecutionResult(
-            success=True,
-            output="NT AUTHORITY\\SYSTEM",
-            exit_code=0,
-            duration=0.5
+            success=True, output="NT AUTHORITY\\SYSTEM", exit_code=0, duration=0.5
         )
 
         assert result.success is True
@@ -103,11 +87,7 @@ class TestExecutionResult:
         """测试失败结果"""
         from core.lateral.base import ExecutionResult
 
-        result = ExecutionResult(
-            success=False,
-            error="Access denied",
-            exit_code=1
-        )
+        result = ExecutionResult(success=False, error="Access denied", exit_code=1)
 
         assert result.success is False
         assert result.error == "Access denied"
@@ -117,11 +97,7 @@ class TestExecutionResult:
         """测试结果转字典"""
         from core.lateral.base import ExecutionResult
 
-        result = ExecutionResult(
-            success=True,
-            output="test",
-            duration=1.0
-        )
+        result = ExecutionResult(success=True, output="test", duration=1.0)
 
         result_dict = result.to_dict()
 
@@ -141,7 +117,7 @@ class TestFileTransferResult:
             source="/local/file.txt",
             destination="C:\\remote\\file.txt",
             size=1024,
-            duration=2.0
+            duration=2.0,
         )
 
         assert result.success is True
@@ -155,7 +131,7 @@ class TestFileTransferResult:
             success=False,
             source="C:\\remote\\file.txt",
             destination="/local/file.txt",
-            error="File not found"
+            error="File not found",
         )
 
         assert result.success is False
@@ -180,11 +156,7 @@ class TestLateralConfig:
         """测试自定义配置"""
         from core.lateral.base import LateralConfig
 
-        config = LateralConfig(
-            timeout=60.0,
-            smb_port=4445,
-            ssh_port=2222
-        )
+        config = LateralConfig(timeout=60.0, smb_port=4445, ssh_port=2222)
 
         assert config.timeout == 60.0
         assert config.smb_port == 4445
@@ -194,21 +166,18 @@ class TestLateralConfig:
         """测试 SSH 主机密钥策略配置"""
         from core.lateral.base import LateralConfig
 
-        config = LateralConfig(ssh_host_key_policy='reject')
+        config = LateralConfig(ssh_host_key_policy="reject")
 
-        assert config.ssh_host_key_policy == 'reject'
+        assert config.ssh_host_key_policy == "reject"
 
     def test_winrm_ssl_config(self):
         """测试 WinRM SSL 配置"""
         from core.lateral.base import LateralConfig
 
-        config = LateralConfig(
-            winrm_use_ssl=True,
-            winrm_cert_validation='validate'
-        )
+        config = LateralConfig(winrm_use_ssl=True, winrm_cert_validation="validate")
 
         assert config.winrm_use_ssl is True
-        assert config.winrm_cert_validation == 'validate'
+        assert config.winrm_cert_validation == "validate"
 
 
 class TestLateralStatus:
@@ -218,10 +187,10 @@ class TestLateralStatus:
         """测试状态值"""
         from core.lateral.base import LateralStatus
 
-        assert LateralStatus.IDLE.value == 'idle'
-        assert LateralStatus.CONNECTED.value == 'connected'
-        assert LateralStatus.EXECUTING.value == 'executing'
-        assert LateralStatus.FAILED.value == 'failed'
+        assert LateralStatus.IDLE.value == "idle"
+        assert LateralStatus.CONNECTED.value == "connected"
+        assert LateralStatus.EXECUTING.value == "executing"
+        assert LateralStatus.FAILED.value == "failed"
 
 
 class TestAuthMethod:
@@ -231,10 +200,10 @@ class TestAuthMethod:
         """测试认证方式"""
         from core.lateral.base import AuthMethod
 
-        assert AuthMethod.PASSWORD.value == 'password'
-        assert AuthMethod.HASH.value == 'hash'
-        assert AuthMethod.KEY.value == 'key'
-        assert AuthMethod.TICKET.value == 'ticket'
+        assert AuthMethod.PASSWORD.value == "password"
+        assert AuthMethod.HASH.value == "hash"
+        assert AuthMethod.KEY.value == "key"
+        assert AuthMethod.TICKET.value == "ticket"
 
 
 class TestExecutionMethod:
@@ -244,11 +213,11 @@ class TestExecutionMethod:
         """测试执行方式"""
         from core.lateral.base import ExecutionMethod
 
-        assert ExecutionMethod.SMBEXEC.value == 'smbexec'
-        assert ExecutionMethod.PSEXEC.value == 'psexec'
-        assert ExecutionMethod.WMIEXEC.value == 'wmiexec'
-        assert ExecutionMethod.WINRM.value == 'winrm'
-        assert ExecutionMethod.SSH.value == 'ssh'
+        assert ExecutionMethod.SMBEXEC.value == "smbexec"
+        assert ExecutionMethod.PSEXEC.value == "psexec"
+        assert ExecutionMethod.WMIEXEC.value == "wmiexec"
+        assert ExecutionMethod.WINRM.value == "winrm"
+        assert ExecutionMethod.SSH.value == "ssh"
 
 
 class TestEnsureCredentials:
@@ -267,10 +236,7 @@ class TestEnsureCredentials:
         """测试字典转 Credentials"""
         from core.lateral.base import Credentials, ensure_credentials
 
-        creds_dict = {
-            "username": "admin",
-            "password": "pass123"
-        }
+        creds_dict = {"username": "admin", "password": "pass123"}
 
         result = ensure_credentials(creds_dict)
 
@@ -330,12 +296,14 @@ class TestSMBLateral:
     def test_smb_module_exists(self):
         """测试 SMB 模块存在"""
         from core.lateral import smb
+
         assert smb is not None
 
     def test_smb_lateral_class(self):
         """测试 SMBLateral 类"""
         try:
             from core.lateral.smb import SMBLateral
+
             assert SMBLateral is not None
         except ImportError:
             pytest.skip("SMBLateral not available")
@@ -347,14 +315,16 @@ class TestSSHLateral:
     def test_ssh_module_exists(self):
         """测试 SSH 模块存在"""
         from core.lateral import ssh
+
         assert ssh is not None
 
     def test_ssh_lateral_class(self):
         """测试 SSHLateral 类"""
         try:
             from core.lateral.ssh import SSHLateral
+
             assert SSHLateral is not None
-            assert SSHLateral.name == 'ssh'
+            assert SSHLateral.name == "ssh"
             assert SSHLateral.default_port == 22
         except ImportError:
             pytest.skip("SSHLateral not available")
@@ -366,14 +336,16 @@ class TestWinRMLateral:
     def test_winrm_module_exists(self):
         """测试 WinRM 模块存在"""
         from core.lateral import winrm
+
         assert winrm is not None
 
     def test_winrm_lateral_class(self):
         """测试 WinRMLateral 类"""
         try:
             from core.lateral.winrm import WinRMLateral
+
             assert WinRMLateral is not None
-            assert WinRMLateral.name == 'winrm'
+            assert WinRMLateral.name == "winrm"
         except ImportError:
             pytest.skip("WinRMLateral not available")
 
@@ -384,14 +356,16 @@ class TestPsExecLateral:
     def test_psexec_module_exists(self):
         """测试 PsExec 模块存在"""
         from core.lateral import psexec
+
         assert psexec is not None
 
     def test_psexec_lateral_class(self):
         """测试 PsExecLateral 类"""
         try:
             from core.lateral.psexec import PsExecLateral
+
             assert PsExecLateral is not None
-            assert PsExecLateral.name == 'psexec'
+            assert PsExecLateral.name == "psexec"
             assert PsExecLateral.default_port == 445
             assert PsExecLateral.supports_file_transfer is True
         except ImportError:
@@ -404,6 +378,7 @@ class TestWMILateral:
     def test_wmi_module_exists(self):
         """测试 WMI 模块存在"""
         from core.lateral import wmi
+
         assert wmi is not None
 
 

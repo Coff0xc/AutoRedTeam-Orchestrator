@@ -186,7 +186,8 @@ class TestMCTSNode:
 
     def test_ucb1_unvisited(self, root_node):
         child = MCTSNode(
-            state=root_node.state, parent=root_node,
+            state=root_node.state,
+            parent=root_node,
             action=Action(ActionType.PORT_SCAN, "scan", "nmap"),
         )
         root_node.children.append(child)
@@ -196,7 +197,8 @@ class TestMCTSNode:
         root_node.visits = 10
 
         child = MCTSNode(
-            state=root_node.state, parent=root_node,
+            state=root_node.state,
+            parent=root_node,
             action=Action(ActionType.PORT_SCAN, "scan", "nmap"),
         )
         child.visits = 5
@@ -212,13 +214,19 @@ class TestMCTSNode:
     def test_best_child(self, root_node):
         root_node.visits = 10
 
-        c1 = MCTSNode(state=root_node.state, parent=root_node,
-                      action=Action(ActionType.PORT_SCAN, "scan1", "nmap"))
+        c1 = MCTSNode(
+            state=root_node.state,
+            parent=root_node,
+            action=Action(ActionType.PORT_SCAN, "scan1", "nmap"),
+        )
         c1.visits = 5
         c1.total_reward = 1.0
 
-        c2 = MCTSNode(state=root_node.state, parent=root_node,
-                      action=Action(ActionType.VULN_SCAN, "scan2", "nuclei"))
+        c2 = MCTSNode(
+            state=root_node.state,
+            parent=root_node,
+            action=Action(ActionType.VULN_SCAN, "scan2", "nuclei"),
+        )
         c2.visits = 3
         c2.total_reward = 2.0
 
@@ -227,12 +235,18 @@ class TestMCTSNode:
         assert best.action.name == "scan2"  # 更高的 average reward
 
     def test_best_action_child(self, root_node):
-        c1 = MCTSNode(state=root_node.state, parent=root_node,
-                      action=Action(ActionType.PORT_SCAN, "scan1", "nmap"))
+        c1 = MCTSNode(
+            state=root_node.state,
+            parent=root_node,
+            action=Action(ActionType.PORT_SCAN, "scan1", "nmap"),
+        )
         c1.visits = 10
 
-        c2 = MCTSNode(state=root_node.state, parent=root_node,
-                      action=Action(ActionType.VULN_SCAN, "scan2", "nuclei"))
+        c2 = MCTSNode(
+            state=root_node.state,
+            parent=root_node,
+            action=Action(ActionType.VULN_SCAN, "scan2", "nuclei"),
+        )
         c2.visits = 3
 
         root_node.children = [c1, c2]
@@ -247,9 +261,7 @@ class TestMCTSNode:
         assert root_node.is_fully_expanded is True
 
     def test_is_fully_expanded_with_actions(self, root_node):
-        root_node._untried_actions = [
-            Action(ActionType.PORT_SCAN, "scan", "nmap")
-        ]
+        root_node._untried_actions = [Action(ActionType.PORT_SCAN, "scan", "nmap")]
         assert root_node.is_fully_expanded is False
 
     def test_is_terminal(self):
@@ -337,7 +349,11 @@ class TestActionGenerator:
     def test_generate_empty_terminal(self, gen):
         state = AttackState(target="192.168.1.1", target_type="ip", access_level=2)
         state.completed_actions = {
-            "port_scan", "service_detect", "privesc", "credential_dump", "lateral_move"
+            "port_scan",
+            "service_detect",
+            "privesc",
+            "credential_dump",
+            "lateral_move",
         }
         actions = gen.generate(state)
         # 终态仍可能有一些未完成的动作，但不会崩溃
@@ -554,9 +570,7 @@ class TestMCTSIntegration:
         assert len(actions2) > 0
 
         # 第二轮不应该再推荐端口扫描
-        port_scan_actions = [
-            a for a in actions2 if a["type"] == "port_scan"
-        ]
+        port_scan_actions = [a for a in actions2 if a["type"] == "port_scan"]
         assert len(port_scan_actions) == 0
 
     def test_convergence(self):

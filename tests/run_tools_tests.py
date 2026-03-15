@@ -16,10 +16,7 @@ from pathlib import Path
 def run_tests(verbose=False, coverage=False):
     """运行测试"""
     # 测试文件
-    test_files = [
-        "tests/test_tools_detectors_base.py",
-        "tests/test_tools_pentest_tools.py"
-    ]
+    test_files = ["tests/test_tools_detectors_base.py", "tests/test_tools_pentest_tools.py"]
 
     # 构建命令
     cmd = ["python", "-m", "pytest"]
@@ -32,11 +29,7 @@ def run_tests(verbose=False, coverage=False):
         cmd.append("-q")
 
     if coverage:
-        cmd.extend([
-            "--cov=tools",
-            "--cov-report=term-missing",
-            "--cov-report=html"
-        ])
+        cmd.extend(["--cov=tools", "--cov-report=term-missing", "--cov-report=html"])
 
     # 禁用默认的 addopts
     cmd.extend(["-o", "addopts="])

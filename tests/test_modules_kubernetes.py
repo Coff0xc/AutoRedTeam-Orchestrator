@@ -20,38 +20,38 @@ class TestKubernetesTesterInit:
         """测试默认初始化"""
         tester = KubernetesTester()
 
-        assert tester.namespace == 'default'
+        assert tester.namespace == "default"
         assert tester.kubeconfig is None
         assert tester.context is None
 
     def test_init_with_config(self):
         """测试带配置的初始化"""
         config = {
-            'kubeconfig': '/path/to/kubeconfig',
-            'namespace': 'production',
-            'context': 'my-cluster'
+            "kubeconfig": "/path/to/kubeconfig",
+            "namespace": "production",
+            "context": "my-cluster",
         }
         tester = KubernetesTester(config)
 
-        assert tester.kubeconfig == '/path/to/kubeconfig'
-        assert tester.namespace == 'production'
-        assert tester.context == 'my-cluster'
+        assert tester.kubeconfig == "/path/to/kubeconfig"
+        assert tester.namespace == "production"
+        assert tester.context == "my-cluster"
 
     def test_dangerous_capabilities_defined(self):
         """测试危险能力列表已定义"""
         tester = KubernetesTester()
 
-        assert 'SYS_ADMIN' in tester.DANGEROUS_CAPABILITIES
-        assert 'NET_ADMIN' in tester.DANGEROUS_CAPABILITIES
+        assert "SYS_ADMIN" in tester.DANGEROUS_CAPABILITIES
+        assert "NET_ADMIN" in tester.DANGEROUS_CAPABILITIES
         assert len(tester.DANGEROUS_CAPABILITIES) > 0
 
     def test_sensitive_paths_defined(self):
         """测试敏感路径已定义"""
         tester = KubernetesTester()
 
-        assert '/' in tester.SENSITIVE_PATHS
-        assert '/var/run/docker.sock' in tester.SENSITIVE_PATHS
-        assert tester.SENSITIVE_PATHS['/'] == CloudSeverity.CRITICAL
+        assert "/" in tester.SENSITIVE_PATHS
+        assert "/var/run/docker.sock" in tester.SENSITIVE_PATHS
+        assert tester.SENSITIVE_PATHS["/"] == CloudSeverity.CRITICAL
 
 
 class TestCheckKubectl:
@@ -65,7 +65,7 @@ class TestCheckKubectl:
         mock_result = Mock()
         mock_result.returncode = 0
 
-        with patch('subprocess.run', return_value=mock_result):
+        with patch("subprocess.run", return_value=mock_result):
             result = tester._check_kubectl()
 
         assert result is True
@@ -78,7 +78,7 @@ class TestCheckKubectl:
         mock_result = Mock()
         mock_result.returncode = 1
 
-        with patch('subprocess.run', return_value=mock_result):
+        with patch("subprocess.run", return_value=mock_result):
             result = tester._check_kubectl()
 
         assert result is False
@@ -88,7 +88,7 @@ class TestCheckKubectl:
         tester = KubernetesTester()
 
         # Mock subprocess - 抛出异常
-        with patch('subprocess.run', side_effect=FileNotFoundError("kubectl not found")):
+        with patch("subprocess.run", side_effect=FileNotFoundError("kubectl not found")):
             result = tester._check_kubectl()
 
         assert result is False
@@ -106,8 +106,8 @@ class TestRunKubectl:
         mock_result.returncode = 0
         mock_result.stdout = '{"items": []}'
 
-        with patch('subprocess.run', return_value=mock_result):
-            success, output = tester._run_kubectl(['get', 'pods', '-o', 'json'])
+        with patch("subprocess.run", return_value=mock_result):
+            success, output = tester._run_kubectl(["get", "pods", "-o", "json"])
 
         assert success is True
         assert output == '{"items": []}'
@@ -119,27 +119,27 @@ class TestRunKubectl:
         # Mock subprocess - 失败
         mock_result = Mock()
         mock_result.returncode = 1
-        mock_result.stderr = 'Error: connection refused'
+        mock_result.stderr = "Error: connection refused"
 
-        with patch('subprocess.run', return_value=mock_result):
-            success, output = tester._run_kubectl(['get', 'pods'])
+        with patch("subprocess.run", return_value=mock_result):
+            success, output = tester._run_kubectl(["get", "pods"])
 
         assert success is False
 
     def test_run_kubectl_with_namespace(self):
         """测试带命名空间的 kubectl 命令"""
-        tester = KubernetesTester(config={'namespace': 'production'})
+        tester = KubernetesTester(config={"namespace": "production"})
 
         mock_result = Mock()
         mock_result.returncode = 0
-        mock_result.stdout = '{}'
+        mock_result.stdout = "{}"
 
-        with patch('subprocess.run', return_value=mock_result) as mock_run:
-            tester._run_kubectl(['get', 'pods'])
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            tester._run_kubectl(["get", "pods"])
 
         # 验证命令包含 namespace 参数
         call_args = mock_run.call_args[0][0]
-        assert '-n' in call_args or '--namespace' in call_args
+        assert "-n" in call_args or "--namespace" in call_args
 
 
 class TestCheckPrivilegedContainers:
@@ -155,24 +155,19 @@ class TestCheckPrivilegedContainers:
                 {
                     "metadata": {"name": "privileged-pod", "namespace": "default"},
                     "spec": {
-                        "containers": [
-                            {
-                                "name": "nginx",
-                                "securityContext": {"privileged": True}
-                            }
-                        ]
-                    }
+                        "containers": [{"name": "nginx", "securityContext": {"privileged": True}}]
+                    },
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(pods_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(pods_json))):
             finding = tester.check_privileged_containers()
 
         assert finding is not None
         assert finding.vulnerable is True
         assert finding.severity == CloudSeverity.CRITICAL
-        assert 'privileged-pod' in str(finding.evidence)
+        assert "privileged-pod" in str(finding.evidence)
 
     def test_no_privileged_containers(self):
         """测试没有特权容器"""
@@ -184,18 +179,13 @@ class TestCheckPrivilegedContainers:
                 {
                     "metadata": {"name": "normal-pod", "namespace": "default"},
                     "spec": {
-                        "containers": [
-                            {
-                                "name": "nginx",
-                                "securityContext": {"privileged": False}
-                            }
-                        ]
-                    }
+                        "containers": [{"name": "nginx", "securityContext": {"privileged": False}}]
+                    },
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(pods_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(pods_json))):
             finding = tester.check_privileged_containers()
 
         assert finding is None
@@ -209,14 +199,12 @@ class TestCheckPrivilegedContainers:
             "items": [
                 {
                     "metadata": {"name": "pod", "namespace": "default"},
-                    "spec": {
-                        "containers": [{"name": "nginx"}]
-                    }
+                    "spec": {"containers": [{"name": "nginx"}]},
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(pods_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(pods_json))):
             finding = tester.check_privileged_containers()
 
         # 没有 securityContext 不应该报告为特权容器
@@ -237,23 +225,20 @@ class TestCheckHostPathMounts:
                     "metadata": {"name": "dangerous-pod", "namespace": "default"},
                     "spec": {
                         "volumes": [
-                            {
-                                "name": "docker-sock",
-                                "hostPath": {"path": "/var/run/docker.sock"}
-                            }
+                            {"name": "docker-sock", "hostPath": {"path": "/var/run/docker.sock"}}
                         ]
-                    }
+                    },
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(pods_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(pods_json))):
             finding = tester.check_host_path_mounts()
 
         assert finding is not None
         assert finding.vulnerable is True
         assert finding.severity == CloudSeverity.CRITICAL
-        assert '/var/run/docker.sock' in str(finding.evidence)
+        assert "/var/run/docker.sock" in str(finding.evidence)
 
     def test_root_path_mounted(self):
         """测试检测到根路径挂载"""
@@ -264,19 +249,12 @@ class TestCheckHostPathMounts:
             "items": [
                 {
                     "metadata": {"name": "root-mount-pod", "namespace": "default"},
-                    "spec": {
-                        "volumes": [
-                            {
-                                "name": "root",
-                                "hostPath": {"path": "/"}
-                            }
-                        ]
-                    }
+                    "spec": {"volumes": [{"name": "root", "hostPath": {"path": "/"}}]},
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(pods_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(pods_json))):
             finding = tester.check_host_path_mounts()
 
         assert finding is not None
@@ -291,16 +269,12 @@ class TestCheckHostPathMounts:
             "items": [
                 {
                     "metadata": {"name": "safe-pod", "namespace": "default"},
-                    "spec": {
-                        "volumes": [
-                            {"name": "cache", "emptyDir": {}}
-                        ]
-                    }
+                    "spec": {"volumes": [{"name": "cache", "emptyDir": {}}]},
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(pods_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(pods_json))):
             finding = tester.check_host_path_mounts()
 
         assert finding is None
@@ -323,23 +297,21 @@ class TestCheckDangerousCapabilities:
                             {
                                 "name": "nginx",
                                 "securityContext": {
-                                    "capabilities": {
-                                        "add": ["SYS_ADMIN", "NET_ADMIN"]
-                                    }
-                                }
+                                    "capabilities": {"add": ["SYS_ADMIN", "NET_ADMIN"]}
+                                },
                             }
                         ]
-                    }
+                    },
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(pods_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(pods_json))):
             finding = tester.check_dangerous_capabilities()
 
         assert finding is not None
         assert finding.vulnerable is True
-        assert 'SYS_ADMIN' in str(finding.evidence)
+        assert "SYS_ADMIN" in str(finding.evidence)
 
     def test_safe_capabilities(self):
         """测试安全的能力"""
@@ -354,19 +326,15 @@ class TestCheckDangerousCapabilities:
                         "containers": [
                             {
                                 "name": "nginx",
-                                "securityContext": {
-                                    "capabilities": {
-                                        "add": ["CHOWN", "SETUID"]
-                                    }
-                                }
+                                "securityContext": {"capabilities": {"add": ["CHOWN", "SETUID"]}},
                             }
                         ]
-                    }
+                    },
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(pods_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(pods_json))):
             finding = tester.check_dangerous_capabilities()
 
         # 安全能力不应该报告
@@ -386,22 +354,18 @@ class TestCheckRBACPermissions:
                 {
                     "metadata": {"name": "admin-role", "namespace": "default"},
                     "rules": [
-                        {
-                            "apiGroups": [""],
-                            "resources": ["secrets", "pods/exec"],
-                            "verbs": ["*"]
-                        }
-                    ]
+                        {"apiGroups": [""], "resources": ["secrets", "pods/exec"], "verbs": ["*"]}
+                    ],
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(roles_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(roles_json))):
             finding = tester.check_rbac_permissions()
 
         assert finding is not None
         assert finding.vulnerable is True
-        assert 'secrets' in str(finding.evidence) or 'pods/exec' in str(finding.evidence)
+        assert "secrets" in str(finding.evidence) or "pods/exec" in str(finding.evidence)
 
     def test_safe_rbac(self):
         """测试安全的 RBAC 权限"""
@@ -416,14 +380,14 @@ class TestCheckRBACPermissions:
                         {
                             "apiGroups": [""],
                             "resources": ["pods", "services"],
-                            "verbs": ["get", "list", "watch"]
+                            "verbs": ["get", "list", "watch"],
                         }
-                    ]
+                    ],
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(roles_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(roles_json))):
             finding = tester.check_rbac_permissions()
 
         # 只读权限不应该报告
@@ -440,7 +404,7 @@ class TestCheckNetworkPolicies:
         # Mock kubectl 输出 - 无网络策略
         netpol_json = {"items": []}
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(netpol_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(netpol_json))):
             finding = tester.check_network_policies()
 
         assert finding is not None
@@ -456,15 +420,12 @@ class TestCheckNetworkPolicies:
             "items": [
                 {
                     "metadata": {"name": "deny-all", "namespace": "default"},
-                    "spec": {
-                        "podSelector": {},
-                        "policyTypes": ["Ingress", "Egress"]
-                    }
+                    "spec": {"podSelector": {}, "policyTypes": ["Ingress", "Egress"]},
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(netpol_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(netpol_json))):
             finding = tester.check_network_policies()
 
         # 有网络策略不应该报告
@@ -491,26 +452,23 @@ class TestCheckSecretsInEnv:
                                     {
                                         "name": "DB_PASSWORD",
                                         "valueFrom": {
-                                            "secretKeyRef": {
-                                                "name": "db-secret",
-                                                "key": "password"
-                                            }
-                                        }
+                                            "secretKeyRef": {"name": "db-secret", "key": "password"}
+                                        },
                                     }
-                                ]
+                                ],
                             }
                         ]
-                    }
+                    },
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(pods_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(pods_json))):
             finding = tester.check_secrets_in_env()
 
         if finding:
             assert finding.vulnerable is True
-            assert 'db-secret' in str(finding.evidence)
+            assert "db-secret" in str(finding.evidence)
 
     def test_no_secrets_in_env(self):
         """测试环境变量中没有 Secrets"""
@@ -523,19 +481,14 @@ class TestCheckSecretsInEnv:
                     "metadata": {"name": "app-pod", "namespace": "default"},
                     "spec": {
                         "containers": [
-                            {
-                                "name": "app",
-                                "env": [
-                                    {"name": "APP_ENV", "value": "production"}
-                                ]
-                            }
+                            {"name": "app", "env": [{"name": "APP_ENV", "value": "production"}]}
                         ]
-                    }
+                    },
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(pods_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(pods_json))):
             finding = tester.check_secrets_in_env()
 
         assert finding is None
@@ -553,14 +506,12 @@ class TestCheckHostNetwork:
             "items": [
                 {
                     "metadata": {"name": "host-net-pod", "namespace": "default"},
-                    "spec": {
-                        "hostNetwork": True
-                    }
+                    "spec": {"hostNetwork": True},
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(pods_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(pods_json))):
             finding = tester.check_host_network()
 
         assert finding is not None
@@ -576,14 +527,12 @@ class TestCheckHostNetwork:
             "items": [
                 {
                     "metadata": {"name": "normal-pod", "namespace": "default"},
-                    "spec": {
-                        "hostNetwork": False
-                    }
+                    "spec": {"hostNetwork": False},
                 }
             ]
         }
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(pods_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(pods_json))):
             finding = tester.check_host_network()
 
         assert finding is None
@@ -596,7 +545,7 @@ class TestFullScan:
         """测试 kubectl 不可用时的完整扫描"""
         tester = KubernetesTester()
 
-        with patch.object(tester, '_check_kubectl', return_value=False):
+        with patch.object(tester, "_check_kubectl", return_value=False):
             findings = tester.scan()
 
         # kubectl 不可用应该返回空列表
@@ -607,21 +556,24 @@ class TestFullScan:
         tester = KubernetesTester()
 
         # Mock kubectl 可用
-        with patch.object(tester, '_check_kubectl', return_value=True):
+        with patch.object(tester, "_check_kubectl", return_value=True):
             # Mock 所有检查方法
-            with patch.object(tester, 'check_privileged_containers', return_value=None):
-                with patch.object(tester, 'check_host_path_mounts', return_value=None):
-                    with patch.object(tester, 'check_dangerous_capabilities', return_value=None):
-                        with patch.object(tester, 'check_service_account_tokens',
-                                          return_value=None):
-                            with patch.object(tester, 'check_rbac_permissions',
-                                              return_value=None):
-                                with patch.object(tester, 'check_network_policies',
-                                                  return_value=None):
-                                    with patch.object(tester, 'check_secrets_in_env',
-                                                      return_value=None):
-                                        with patch.object(tester, 'check_host_network',
-                                                          return_value=None):
+            with patch.object(tester, "check_privileged_containers", return_value=None):
+                with patch.object(tester, "check_host_path_mounts", return_value=None):
+                    with patch.object(tester, "check_dangerous_capabilities", return_value=None):
+                        with patch.object(
+                            tester, "check_service_account_tokens", return_value=None
+                        ):
+                            with patch.object(tester, "check_rbac_permissions", return_value=None):
+                                with patch.object(
+                                    tester, "check_network_policies", return_value=None
+                                ):
+                                    with patch.object(
+                                        tester, "check_secrets_in_env", return_value=None
+                                    ):
+                                        with patch.object(
+                                            tester, "check_host_network", return_value=None
+                                        ):
                                             findings = tester.scan()
 
         # 应该执行所有检查
@@ -648,11 +600,11 @@ spec:
       privileged: true
 """
 
-        if hasattr(tester, 'scan_manifest'):
-            with patch('builtins.open', create=True) as mock_open:
+        if hasattr(tester, "scan_manifest"):
+            with patch("builtins.open", create=True) as mock_open:
                 mock_open.return_value.__enter__.return_value.read.return_value = manifest_content
 
-                findings = tester.scan_manifest('/path/to/manifest.yaml')
+                findings = tester.scan_manifest("/path/to/manifest.yaml")
 
             if findings:
                 assert any(f.vulnerable for f in findings)
@@ -676,11 +628,11 @@ spec:
       readOnlyRootFilesystem: true
 """
 
-        if hasattr(tester, 'scan_manifest'):
-            with patch('builtins.open', create=True) as mock_open:
+        if hasattr(tester, "scan_manifest"):
+            with patch("builtins.open", create=True) as mock_open:
                 mock_open.return_value.__enter__.return_value.read.return_value = manifest_content
 
-                findings = tester.scan_manifest('/path/to/manifest.yaml')
+                findings = tester.scan_manifest("/path/to/manifest.yaml")
 
             # 安全清单应该没有或很少漏洞
             if findings:
@@ -698,7 +650,7 @@ class TestEdgeCases:
         # Mock kubectl 输出 - 空列表
         empty_json = {"items": []}
 
-        with patch.object(tester, '_run_kubectl', return_value=(True, json.dumps(empty_json))):
+        with patch.object(tester, "_run_kubectl", return_value=(True, json.dumps(empty_json))):
             finding = tester.check_privileged_containers()
 
         assert finding is None
@@ -708,7 +660,7 @@ class TestEdgeCases:
         tester = KubernetesTester()
 
         # Mock kubectl 输出 - 无效 JSON
-        with patch.object(tester, '_run_kubectl', return_value=(True, "invalid json")):
+        with patch.object(tester, "_run_kubectl", return_value=(True, "invalid json")):
             finding = tester.check_privileged_containers()
 
         # 应该正确处理错误
@@ -719,17 +671,17 @@ class TestEdgeCases:
         tester = KubernetesTester()
 
         # Mock subprocess 超时
-        with patch('subprocess.run', side_effect=subprocess.TimeoutExpired('kubectl', 30)):
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("kubectl", 30)):
             result = tester._check_kubectl()
 
         assert result is False
 
     def test_multiple_namespaces(self):
         """测试多命名空间扫描"""
-        tester = KubernetesTester(config={'namespace': 'production'})
+        tester = KubernetesTester(config={"namespace": "production"})
 
-        assert tester.namespace == 'production'
+        assert tester.namespace == "production"
 
         # 切换命名空间
-        tester.namespace = 'staging'
-        assert tester.namespace == 'staging'
+        tester.namespace = "staging"
+        assert tester.namespace == "staging"

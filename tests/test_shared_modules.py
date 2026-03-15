@@ -119,6 +119,7 @@ class TestSubprocessRunner:
         runner = SubprocessRunner(timeout=5.0)
         # 使用跨平台命令
         import platform
+
         if platform.system() == "Windows":
             result = runner.run(["cmd", "/c", "echo", "hello"])
         else:
@@ -130,7 +131,7 @@ class TestSubprocessRunner:
         result = runner.run(
             ["nonexistent_tool_xyz", "--version"],
             tool_name="nonexistent_tool",
-            install_cmd="pip install nonexistent"
+            install_cmd="pip install nonexistent",
         )
         assert result.success is False
         assert "未安装" in result.error
@@ -138,6 +139,7 @@ class TestSubprocessRunner:
     def test_run_timeout(self):
         runner = SubprocessRunner()
         import platform
+
         if platform.system() != "Windows":
             result = runner.run(["sleep", "10"], timeout=0.1, tool_name="sleep")
             assert result.success is False
@@ -147,6 +149,7 @@ class TestSubprocessRunner:
     async def test_async_run(self):
         runner = SubprocessRunner(timeout=5.0)
         import platform
+
         if platform.system() == "Windows":
             result = await runner.async_run(["cmd", "/c", "echo", "async"])
         else:

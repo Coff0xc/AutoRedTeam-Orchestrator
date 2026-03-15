@@ -192,7 +192,8 @@ class TestAdvancedVerifier:
                 return (
                     "<html><table><tr><td>User1</td></tr>"
                     "<tr><td>User2</td></tr><tr><td>Admin</td></tr></table></html>",
-                    200, 0.1
+                    200,
+                    0.1,
                 )
             return "<html><div>Empty result set</div></html>", 200, 0.1
 
@@ -213,6 +214,7 @@ class TestAdvancedVerifier:
 
     def test_statistical_confirm_same_responses(self, verifier):
         """相同响应应判定为误报"""
+
         def mock_request(url, payload):
             return "<html>Same content</html>", 200, 0.1
 
@@ -227,6 +229,7 @@ class TestAdvancedVerifier:
 
     def test_statistical_confirm_baseline_failure(self, verifier):
         """基线请求失败"""
+
         def mock_request(url, payload):
             raise Exception("Connection error")
 
@@ -240,6 +243,7 @@ class TestAdvancedVerifier:
 
     def test_statistical_confirm_status_diff(self, verifier):
         """状态码差异应增加置信度"""
+
         def mock_request(url, payload):
             if payload and "attack" in payload:
                 return "Error", 500, 0.1
@@ -258,13 +262,15 @@ class TestAdvancedVerifier:
 
     def test_boolean_blind_confirm_true_vuln(self, verifier):
         """布尔盲注确认 - 真实漏洞"""
+
         def mock_request(url, payload):
             # true 条件返回完全不同的内容（模拟真实 SQL 注入）
             if "1=1" in payload or "'a'='a'" in payload or "OR" in payload.upper():
                 return (
                     "<html><h1>Welcome Admin</h1><div class='user-data'>"
                     "<table><tr><td>Secret Data</td></tr></table></div></html>",
-                    200, 0.1
+                    200,
+                    0.1,
                 )
             # false 条件返回空结果
             if "1=2" in payload or "'a'='b'" in payload or "AND" in payload.upper():
@@ -285,6 +291,7 @@ class TestAdvancedVerifier:
 
     def test_boolean_blind_confirm_no_diff(self, verifier):
         """布尔盲注 - 无差异（误报）"""
+
         def mock_request(url, payload):
             return "<html>Same response</html>", 200, 0.1
 
@@ -310,6 +317,7 @@ class TestAdvancedVerifier:
 
     def test_time_based_confirm_real_delay(self, verifier):
         """时间盲注确认 - 真实延迟"""
+
         def mock_request(url, payload):
             if payload and "SLEEP" in payload.upper():
                 return "", 200, 5.2  # 模拟 5 秒延迟
@@ -328,6 +336,7 @@ class TestAdvancedVerifier:
 
     def test_time_based_confirm_no_delay(self, verifier):
         """时间盲注 - 无延迟（误报）"""
+
         def mock_request(url, payload):
             return "", 200, 0.1
 
@@ -437,6 +446,7 @@ class TestAdvancedVerifier:
 
     def test_multi_method_verify_sqli(self, verifier):
         """多方法验证 SQLi"""
+
         def mock_request(url, payload):
             if payload and "OR" in payload:
                 return "<html>Vulnerable</html>", 200, 0.1
@@ -584,10 +594,12 @@ class TestAdvancedVerifierIntegration:
         )
 
         # 3. 聚合结果
-        aggregated = verifier.aggregate_results({
-            "statistical": stat_result,
-            "boolean_blind": bool_result,
-        })
+        aggregated = verifier.aggregate_results(
+            {
+                "statistical": stat_result,
+                "boolean_blind": bool_result,
+            }
+        )
 
         # 验证结果
         assert aggregated.status in [

@@ -77,11 +77,7 @@ class TestAIDecisionEngine:
     @pytest.fixture
     def engine_with_openai_config(self):
         """创建带 OpenAI 配置的引擎"""
-        return AIDecisionEngine({
-            "provider": "openai",
-            "model": "gpt-4",
-            "api_key": "test-key"
-        })
+        return AIDecisionEngine({"provider": "openai", "model": "gpt-4", "api_key": "test-key"})
 
     # ==================== 目标类型识别测试 ====================
 
@@ -280,10 +276,7 @@ class TestAIDecisionEngine:
 
     def test_estimate_time_many_vectors(self, engine):
         """测试大量向量的时间估算"""
-        vectors = [
-            AttackVector(f"Test{i}", "desc", RiskLevel.LOW, [], [], 0.5)
-            for i in range(20)
-        ]
+        vectors = [AttackVector(f"Test{i}", "desc", RiskLevel.LOW, [], [], 0.5) for i in range(20)]
 
         time_str = engine._estimate_time(vectors)
         assert "小时" in time_str  # 20 * 15 + 30 = 330 分钟 > 5 小时
@@ -299,7 +292,7 @@ class TestAIDecisionEngine:
                 "services": ["ssh", "http"],
                 "technologies": [],
                 "vulnerabilities": [],
-            }
+            },
         )
 
         assert "target" in plan
@@ -315,10 +308,8 @@ class TestAIDecisionEngine:
                 "ports": [443],
                 "services": ["https"],
                 "technologies": ["Apache", "PHP"],
-                "vulnerabilities": [
-                    {"id": "CVE-2021-41773", "severity": "critical"}
-                ],
-            }
+                "vulnerabilities": [{"id": "CVE-2021-41773", "severity": "critical"}],
+            },
         )
 
         # 计划应该包含利用 CVE 的向量
@@ -382,10 +373,7 @@ class TestAIDecisionEngine:
 
     def test_analyze_target_with_context(self, engine):
         """测试带上下文的目标分析"""
-        context = {
-            "scope": "internal",
-            "previous_findings": ["open_port_22"]
-        }
+        context = {"scope": "internal", "previous_findings": ["open_port_22"]}
 
         analysis = engine.analyze_target("192.168.1.1", context)
 
@@ -396,20 +384,24 @@ class TestAIDecisionEngine:
 
     def test_suggest_tool_recon_ip(self, engine):
         """测试侦察阶段 IP 目标工具建议"""
-        tool = engine.suggest_tool({
-            "phase": "recon",
-            "target_type": "ip",
-        })
+        tool = engine.suggest_tool(
+            {
+                "phase": "recon",
+                "target_type": "ip",
+            }
+        )
 
         assert tool is not None
         assert isinstance(tool, str)
 
     def test_suggest_tool_exploit_url(self, engine):
         """测试利用阶段 URL 目标工具建议"""
-        tool = engine.suggest_tool({
-            "phase": "exploit",
-            "target_type": "url",
-        })
+        tool = engine.suggest_tool(
+            {
+                "phase": "exploit",
+                "target_type": "url",
+            }
+        )
 
         assert tool is not None
 
@@ -417,9 +409,7 @@ class TestAIDecisionEngine:
 
     def test_create_attack_phases_basic(self, engine):
         """测试攻击阶段创建"""
-        vectors = [
-            AttackVector("Test", "desc", RiskLevel.HIGH, ["tool1"], [], 0.8)
-        ]
+        vectors = [AttackVector("Test", "desc", RiskLevel.HIGH, ["tool1"], [], 0.8)]
 
         phases = engine._create_attack_phases(vectors, {"ports": [80]})
 
@@ -474,10 +464,7 @@ class TestAIDecisionEngineWithProvider:
 
     def test_get_client_openai_provider(self):
         """测试 OpenAI 提供者配置"""
-        engine = AIDecisionEngine({
-            "provider": "openai",
-            "api_key": "test-key"
-        })
+        engine = AIDecisionEngine({"provider": "openai", "api_key": "test-key"})
 
         # 触发客户端创建
         client = engine._get_client()
@@ -570,10 +557,7 @@ class TestAIDecisionEngineEdgeCases:
             except Exception as e:
                 errors.append(e)
 
-        threads = [
-            threading.Thread(target=analyze, args=(f"192.168.1.{i}",))
-            for i in range(10)
-        ]
+        threads = [threading.Thread(target=analyze, args=(f"192.168.1.{i}",)) for i in range(10)]
 
         for t in threads:
             t.start()

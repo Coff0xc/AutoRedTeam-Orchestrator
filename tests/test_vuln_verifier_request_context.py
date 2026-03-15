@@ -11,7 +11,7 @@ def test_prepare_request_get_merges_params():
         param="q",
         payload="x",
         method="GET",
-        params={"id": "2"}
+        params={"id": "2"},
     )
 
     assert body is None
@@ -26,11 +26,7 @@ def test_prepare_request_get_merges_params():
 def test_prepare_request_post_form_injects_param():
     verifier = VulnerabilityVerifier()
     url, body, headers = verifier._prepare_request(
-        url="https://example.com/api",
-        param="id",
-        payload="1",
-        method="POST",
-        data={"q": "test"}
+        url="https://example.com/api", param="id", payload="1", method="POST", data={"q": "test"}
     )
 
     assert url == "https://example.com/api"
@@ -46,7 +42,7 @@ def test_prepare_request_post_json_injects_param():
         param="id",
         payload="1",
         method="POST",
-        json_data={"q": "test"}
+        json_data={"q": "test"},
     )
 
     assert url == "https://example.com/api"

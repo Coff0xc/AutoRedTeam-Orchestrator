@@ -19,20 +19,22 @@ class TestPrivilegeLevel:
 
     def test_privilege_levels_exist(self):
         """测试所有权限级别都存在"""
-        assert PrivilegeLevel.LOW.value == 'low'
-        assert PrivilegeLevel.MEDIUM.value == 'medium'
-        assert PrivilegeLevel.HIGH.value == 'high'
-        assert PrivilegeLevel.SYSTEM.value == 'system'
+        assert PrivilegeLevel.LOW.value == "low"
+        assert PrivilegeLevel.MEDIUM.value == "medium"
+        assert PrivilegeLevel.HIGH.value == "high"
+        assert PrivilegeLevel.SYSTEM.value == "system"
 
     def test_privilege_level_comparison(self):
         """测试权限级别可以通过值比较"""
         levels = [
-            PrivilegeLevel.LOW, PrivilegeLevel.MEDIUM,
-            PrivilegeLevel.HIGH, PrivilegeLevel.SYSTEM
+            PrivilegeLevel.LOW,
+            PrivilegeLevel.MEDIUM,
+            PrivilegeLevel.HIGH,
+            PrivilegeLevel.SYSTEM,
         ]
         values = [level.value for level in levels]
-        assert 'low' in values
-        assert 'system' in values
+        assert "low" in values
+        assert "system" in values
 
 
 class TestEscalationMethod:
@@ -40,10 +42,10 @@ class TestEscalationMethod:
 
     def test_escalation_methods_exist(self):
         """测试所有提权方法都存在"""
-        assert EscalationMethod.UAC_BYPASS.value == 'uac_bypass'
-        assert EscalationMethod.TOKEN_IMPERSONATION.value == 'token_impersonation'
-        assert EscalationMethod.SUID.value == 'suid'
-        assert EscalationMethod.SUDO.value == 'sudo'
+        assert EscalationMethod.UAC_BYPASS.value == "uac_bypass"
+        assert EscalationMethod.TOKEN_IMPERSONATION.value == "token_impersonation"
+        assert EscalationMethod.SUID.value == "suid"
+        assert EscalationMethod.SUDO.value == "sudo"
 
     def test_all_methods_have_values(self):
         """测试所有方法都有值"""
@@ -62,7 +64,7 @@ class TestEscalationResult:
             method=EscalationMethod.UAC_BYPASS,
             from_level=PrivilegeLevel.MEDIUM,
             to_level=PrivilegeLevel.HIGH,
-            output="Elevated successfully"
+            output="Elevated successfully",
         )
 
         assert result.success is True
@@ -79,7 +81,7 @@ class TestEscalationResult:
             method=EscalationMethod.SUID,
             from_level=PrivilegeLevel.LOW,
             to_level=PrivilegeLevel.LOW,
-            error="No SUID binary found"
+            error="No SUID binary found",
         )
 
         assert result.success is False
@@ -94,17 +96,17 @@ class TestEscalationResult:
             from_level=PrivilegeLevel.MEDIUM,
             to_level=PrivilegeLevel.HIGH,
             output="Test output",
-            duration=1.5
+            duration=1.5,
         )
 
         d = result.to_dict()
 
-        assert d['success'] is True
-        assert d['method'] == 'uac_bypass'
-        assert d['from_level'] == 'medium'
-        assert d['to_level'] == 'high'
-        assert d['output'] == "Test output"
-        assert d['duration'] == 1.5
+        assert d["success"] is True
+        assert d["method"] == "uac_bypass"
+        assert d["from_level"] == "medium"
+        assert d["to_level"] == "high"
+        assert d["output"] == "Test output"
+        assert d["duration"] == 1.5
 
 
 class TestEscalationConfig:
@@ -125,7 +127,7 @@ class TestEscalationConfig:
             timeout=120.0,
             cleanup=False,
             stealth=True,
-            methods=[EscalationMethod.UAC_BYPASS, EscalationMethod.TOKEN_IMPERSONATION]
+            methods=[EscalationMethod.UAC_BYPASS, EscalationMethod.TOKEN_IMPERSONATION],
         )
 
         assert config.timeout == 120.0
@@ -144,12 +146,12 @@ class TestEscalationVector:
             name="python3",
             description="Python SUID binary",
             success_probability=0.8,
-            detected_info={'risk_level': 'medium'}
+            detected_info={"risk_level": "medium"},
         )
 
         assert vector.method == EscalationMethod.SUID
         assert vector.name == "python3"
-        assert vector.detected_info.get('risk_level') == "medium"
+        assert vector.detected_info.get("risk_level") == "medium"
         assert vector.success_probability == 0.8
 
     def test_vector_to_dict(self):
@@ -158,15 +160,15 @@ class TestEscalationVector:
             method=EscalationMethod.SUDO,
             name="sudo -l entry",
             description="NOPASSWD entry found",
-            detected_info={'binary': '/usr/bin/vim', 'nopasswd': True}
+            detected_info={"binary": "/usr/bin/vim", "nopasswd": True},
         )
 
         d = vector.to_dict()
 
-        assert d['method'] == 'sudo'
-        assert d['name'] == "sudo -l entry"
-        assert 'binary' in d['detected_info']
+        assert d["method"] == "sudo"
+        assert d["name"] == "sudo -l entry"
+        assert "binary" in d["detected_info"]
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

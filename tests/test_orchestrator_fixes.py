@@ -33,6 +33,7 @@ class TestURLNormalization:
             @property
             def phase(self):
                 from core.orchestrator.state import PentestPhase
+
                 return PentestPhase.RECON
 
             async def execute(self):
@@ -56,6 +57,7 @@ class TestURLNormalization:
             @property
             def phase(self):
                 from core.orchestrator.state import PentestPhase
+
                 return PentestPhase.RECON
 
             async def execute(self):
@@ -78,6 +80,7 @@ class TestURLNormalization:
             @property
             def phase(self):
                 from core.orchestrator.state import PentestPhase
+
                 return PentestPhase.RECON
 
             async def execute(self):
@@ -100,6 +103,7 @@ class TestURLNormalization:
             @property
             def phase(self):
                 from core.orchestrator.state import PentestPhase
+
                 return PentestPhase.RECON
 
             async def execute(self):
@@ -127,7 +131,7 @@ class TestVulnScanTargetNormalization:
         # 创建状态，使用无协议域名
         state = MagicMock(spec=PentestState)
         state.target = "example.com"  # 无协议
-        state.recon_data = {'directories': []}
+        state.recon_data = {"directories": []}
         state.is_phase_completed = lambda p: p == PentestPhase.RECON
 
         executor = VulnScanPhaseExecutor(state, {})
@@ -144,7 +148,7 @@ class TestVulnScanTargetNormalization:
 
         state = MagicMock(spec=PentestState)
         state.target = "example.com"
-        state.recon_data = {'directories': ['admin', 'api/v1']}
+        state.recon_data = {"directories": ["admin", "api/v1"]}
         state.is_phase_completed = lambda p: p == PentestPhase.RECON
 
         executor = VulnScanPhaseExecutor(state, {})
@@ -165,29 +169,23 @@ class TestConfigPriority:
         from core.orchestrator.state import PentestPhase
 
         # 全局配置
-        global_config = OrchestratorConfig(
-            quick_mode=False,
-            timeout=3600
-        )
+        global_config = OrchestratorConfig(quick_mode=False, timeout=3600)
 
-        orchestrator = AutoPentestOrchestrator(
-            target="https://example.com",
-            config=global_config
-        )
+        orchestrator = AutoPentestOrchestrator(target="https://example.com", config=global_config)
 
         # 模拟阶段执行器
-        with patch('core.orchestrator.orchestrator.PHASE_EXECUTORS') as mock_executors:
+        with patch("core.orchestrator.orchestrator.PHASE_EXECUTORS") as mock_executors:
             mock_executor_class = MagicMock()
             mock_executor_instance = MagicMock()
             mock_executor_instance.can_execute.return_value = True
-            mock_executor_instance.execute = AsyncMock(return_value=MagicMock(
-                success=True, to_dict=lambda: {'test': True}, errors=[]
-            ))
+            mock_executor_instance.execute = AsyncMock(
+                return_value=MagicMock(success=True, to_dict=lambda: {"test": True}, errors=[])
+            )
             mock_executor_class.return_value = mock_executor_instance
             mock_executors.get.return_value = mock_executor_class
 
             # 传入阶段特定配置
-            phase_config = {'quick_mode': True, 'custom_option': 'value'}
+            phase_config = {"quick_mode": True, "custom_option": "value"}
             await orchestrator.execute_phase(PentestPhase.RECON, config=phase_config)
 
             # 验证传给执行器的配置
@@ -195,9 +193,9 @@ class TestConfigPriority:
             actual_config = call_args[0][1]  # 第二个参数是 config
 
             # 阶段配置应该覆盖全局配置
-            assert actual_config['quick_mode'] is True  # 阶段配置
-            assert actual_config['custom_option'] == 'value'  # 阶段配置
-            assert actual_config['timeout'] == 3600  # 全局配置
+            assert actual_config["quick_mode"] is True  # 阶段配置
+            assert actual_config["custom_option"] == "value"  # 阶段配置
+            assert actual_config["timeout"] == 3600  # 全局配置
 
 
 class TestExfiltrateConfig:
@@ -215,12 +213,12 @@ class TestExfiltrateConfig:
         state.is_phase_completed = lambda p: True
 
         # skip_exfiltrate=True (默认)
-        executor = ExfiltratePhaseExecutor(state, {'skip_exfiltrate': True})
+        executor = ExfiltratePhaseExecutor(state, {"skip_exfiltrate": True})
         result = await executor.execute()
 
         assert result.success is True
-        assert result.data.get('skipped') is True
-        assert 'skip_exfiltrate' in result.data.get('reason', '')
+        assert result.data.get("skipped") is True
+        assert "skip_exfiltrate" in result.data.get("reason", "")
 
     @pytest.mark.asyncio
     async def test_exfiltrate_runs_when_not_skipped(self):
@@ -229,20 +227,20 @@ class TestExfiltrateConfig:
         from core.orchestrator.state import PentestState
 
         state = MagicMock(spec=PentestState)
-        state.recon_data = {'sensitive_files': ['backup.sql']}
-        state.credentials = [{'username': 'admin'}]
+        state.recon_data = {"sensitive_files": ["backup.sql"]}
+        state.credentials = [{"username": "admin"}]
         state.is_phase_completed = lambda p: True
 
         # skip_exfiltrate=False
-        executor = ExfiltratePhaseExecutor(state, {'skip_exfiltrate': False})
+        executor = ExfiltratePhaseExecutor(state, {"skip_exfiltrate": False})
         result = await executor.execute()
 
         assert result.success is True
         # 不应该跳过
-        assert result.data.get('skipped') is not True
+        assert result.data.get("skipped") is not True
         # 应该有外泄评估数据
-        assert 'sensitive_files_count' in result.data
-        assert result.data['sensitive_files_count'] == 1
+        assert "sensitive_files_count" in result.data
+        assert result.data["sensitive_files_count"] == 1
 
     @pytest.mark.asyncio
     async def test_exfiltrate_skips_when_no_data(self):
@@ -251,16 +249,16 @@ class TestExfiltrateConfig:
         from core.orchestrator.state import PentestState
 
         state = MagicMock(spec=PentestState)
-        state.recon_data = {'sensitive_files': []}
+        state.recon_data = {"sensitive_files": []}
         state.credentials = []
         state.is_phase_completed = lambda p: True
 
-        executor = ExfiltratePhaseExecutor(state, {'skip_exfiltrate': False})
+        executor = ExfiltratePhaseExecutor(state, {"skip_exfiltrate": False})
         result = await executor.execute()
 
         assert result.success is True
-        assert result.data.get('skipped') is True
-        assert '无敏感数据' in result.data.get('reason', '')
+        assert result.data.get("skipped") is True
+        assert "无敏感数据" in result.data.get("reason", "")
 
 
 class TestLegacyToolsDeprecation:

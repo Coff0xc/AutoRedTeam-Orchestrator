@@ -117,9 +117,7 @@ class TestInputValidator:
         assert result.valid is False
 
     def test_validate_type_restriction(self, validator):
-        result = validator.validate_target(
-            "192.168.1.1", allowed_types=["domain"]
-        )
+        result = validator.validate_target("192.168.1.1", allowed_types=["domain"])
         assert result.valid is False
         assert "不允许的目标类型" in result.errors[0]
 
@@ -213,9 +211,7 @@ class TestInputValidator:
         assert len(result) == 100
 
     def test_sanitize_allowed_chars(self, validator):
-        result = validator.sanitize_string(
-            "abc123!@#", allowed_chars="a-zA-Z0-9"
-        )
+        result = validator.sanitize_string("abc123!@#", allowed_chars="a-zA-Z0-9")
         assert result == "abc123"
 
 
@@ -227,11 +223,13 @@ class TestRateLimiter:
 
     @pytest.fixture
     def limiter(self):
-        return RateLimiter(RateLimitConfig(
-            requests_per_minute=5,
-            requests_per_hour=100,
-            burst_limit=3,
-        ))
+        return RateLimiter(
+            RateLimitConfig(
+                requests_per_minute=5,
+                requests_per_hour=100,
+                burst_limit=3,
+            )
+        )
 
     def test_allow_first_request(self, limiter):
         allowed, reason = limiter.check("test")
@@ -262,11 +260,13 @@ class TestRateLimiter:
         assert remaining["hour"] == 99  # 100 - 1
 
     def test_minute_limit(self):
-        limiter = RateLimiter(RateLimitConfig(
-            requests_per_minute=3,
-            requests_per_hour=1000,
-            burst_limit=100,  # 高突发限制，只测每分钟限制
-        ))
+        limiter = RateLimiter(
+            RateLimitConfig(
+                requests_per_minute=3,
+                requests_per_hour=1000,
+                burst_limit=100,  # 高突发限制，只测每分钟限制
+            )
+        )
 
         for _ in range(3):
             allowed, _ = limiter.check("test")
@@ -394,10 +394,12 @@ class TestThreadSafety:
     """线程安全测试"""
 
     def test_concurrent_rate_limiting(self):
-        limiter = RateLimiter(RateLimitConfig(
-            requests_per_minute=100,
-            burst_limit=50,
-        ))
+        limiter = RateLimiter(
+            RateLimitConfig(
+                requests_per_minute=100,
+                burst_limit=50,
+            )
+        )
 
         results = []
 

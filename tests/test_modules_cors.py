@@ -26,15 +26,15 @@ class TestCORSTesterInit:
     def test_init_with_config(self):
         """测试带配置的初始化"""
         config = {
-            'legitimate_origin': 'https://trusted.com',
-            'test_methods': ['GET', 'POST'],
-            'custom_origins': ['https://custom-evil.com']
+            "legitimate_origin": "https://trusted.com",
+            "test_methods": ["GET", "POST"],
+            "custom_origins": ["https://custom-evil.com"],
         }
         tester = CORSTester("https://api.example.com/data", config)
 
-        assert tester.legitimate_origin == 'https://trusted.com'
-        assert tester.test_methods == ['GET', 'POST']
-        assert 'https://custom-evil.com' in tester.custom_origins
+        assert tester.legitimate_origin == "https://trusted.com"
+        assert tester.test_methods == ["GET", "POST"]
+        assert "https://custom-evil.com" in tester.custom_origins
 
     def test_init_http_target(self):
         """测试 HTTP 目标"""
@@ -52,13 +52,9 @@ class TestCORSWildcardOrigin:
         tester = CORSTester("https://api.example.com/data")
 
         # Mock HTTP 响应
-        mock_response = {
-            'acao': '*',
-            'acac': '',
-            'status_code': 200
-        }
+        mock_response = {"acao": "*", "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', return_value=mock_response):
+        with patch.object(tester, "_send_cors_request", return_value=mock_response):
             result = tester.test_wildcard_origin()
 
         assert result is not None
@@ -71,13 +67,9 @@ class TestCORSWildcardOrigin:
         tester = CORSTester("https://api.example.com/data")
 
         # Mock HTTP 响应
-        mock_response = {
-            'acao': '*',
-            'acac': 'true',
-            'status_code': 200
-        }
+        mock_response = {"acao": "*", "acac": "true", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', return_value=mock_response):
+        with patch.object(tester, "_send_cors_request", return_value=mock_response):
             result = tester.test_wildcard_origin()
 
         assert result is not None
@@ -90,13 +82,9 @@ class TestCORSWildcardOrigin:
         tester = CORSTester("https://api.example.com/data")
 
         # Mock HTTP 响应
-        mock_response = {
-            'acao': 'https://trusted.com',
-            'acac': 'true',
-            'status_code': 200
-        }
+        mock_response = {"acao": "https://trusted.com", "acac": "true", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', return_value=mock_response):
+        with patch.object(tester, "_send_cors_request", return_value=mock_response):
             result = tester.test_wildcard_origin()
 
         assert result is None
@@ -105,7 +93,7 @@ class TestCORSWildcardOrigin:
         """测试无响应"""
         tester = CORSTester("https://api.example.com/data")
 
-        with patch.object(tester, '_send_cors_request', return_value=None):
+        with patch.object(tester, "_send_cors_request", return_value=None):
             result = tester.test_wildcard_origin()
 
         assert result is None
@@ -119,13 +107,9 @@ class TestCORSNullOrigin:
         tester = CORSTester("https://api.example.com/data")
 
         # Mock HTTP 响应
-        mock_response = {
-            'acao': 'null',
-            'acac': '',
-            'status_code': 200
-        }
+        mock_response = {"acao": "null", "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', return_value=mock_response):
+        with patch.object(tester, "_send_cors_request", return_value=mock_response):
             result = tester.test_null_origin()
 
         assert result is not None
@@ -138,13 +122,9 @@ class TestCORSNullOrigin:
         tester = CORSTester("https://api.example.com/data")
 
         # Mock HTTP 响应
-        mock_response = {
-            'acao': 'null',
-            'acac': 'true',
-            'status_code': 200
-        }
+        mock_response = {"acao": "null", "acac": "true", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', return_value=mock_response):
+        with patch.object(tester, "_send_cors_request", return_value=mock_response):
             result = tester.test_null_origin()
 
         assert result is not None
@@ -156,13 +136,9 @@ class TestCORSNullOrigin:
         tester = CORSTester("https://api.example.com/data")
 
         # Mock HTTP 响应
-        mock_response = {
-            'acao': 'https://trusted.com',
-            'acac': '',
-            'status_code': 200
-        }
+        mock_response = {"acao": "https://trusted.com", "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', return_value=mock_response):
+        with patch.object(tester, "_send_cors_request", return_value=mock_response):
             result = tester.test_null_origin()
 
         assert result is None
@@ -177,20 +153,16 @@ class TestCORSOriginReflection:
 
         # Mock HTTP 响应 - 反射所有 Origin
         def mock_send_cors(origin):
-            return {
-                'acao': origin,
-                'acac': '',
-                'status_code': 200
-            }
+            return {"acao": origin, "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', side_effect=mock_send_cors):
+        with patch.object(tester, "_send_cors_request", side_effect=mock_send_cors):
             result = tester.test_origin_reflection()
 
         assert result is not None
         assert result.vulnerable is True
         assert result.vuln_type == APIVulnType.CORS_ORIGIN_REFLECTION
         assert result.severity == Severity.HIGH
-        assert result.evidence['total_reflected'] > 0
+        assert result.evidence["total_reflected"] > 0
 
     def test_origin_reflection_with_credentials(self):
         """测试 Origin 反射带凭证"""
@@ -198,19 +170,15 @@ class TestCORSOriginReflection:
 
         # Mock HTTP 响应 - 反射 Origin 并允许凭证
         def mock_send_cors(origin):
-            return {
-                'acao': origin,
-                'acac': 'true',
-                'status_code': 200
-            }
+            return {"acao": origin, "acac": "true", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', side_effect=mock_send_cors):
+        with patch.object(tester, "_send_cors_request", side_effect=mock_send_cors):
             result = tester.test_origin_reflection()
 
         assert result is not None
         assert result.vulnerable is True
         assert result.severity == Severity.CRITICAL
-        assert result.evidence['credentials_allowed'] is True
+        assert result.evidence["credentials_allowed"] is True
 
     def test_no_origin_reflection(self):
         """测试没有 Origin 反射"""
@@ -218,13 +186,9 @@ class TestCORSOriginReflection:
 
         # Mock HTTP 响应 - 固定 Origin
         def mock_send_cors(origin):
-            return {
-                'acao': 'https://trusted.com',
-                'acac': '',
-                'status_code': 200
-            }
+            return {"acao": "https://trusted.com", "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', side_effect=mock_send_cors):
+        with patch.object(tester, "_send_cors_request", side_effect=mock_send_cors):
             result = tester.test_origin_reflection()
 
         assert result is None
@@ -238,25 +202,17 @@ class TestCORSOriginReflection:
 
         def mock_send_cors(origin):
             nonlocal reflected_count
-            if 'evil.com' in origin:
+            if "evil.com" in origin:
                 reflected_count += 1
-                return {
-                    'acao': origin,
-                    'acac': '',
-                    'status_code': 200
-                }
-            return {
-                'acao': 'https://trusted.com',
-                'acac': '',
-                'status_code': 200
-            }
+                return {"acao": origin, "acac": "", "status_code": 200}
+            return {"acao": "https://trusted.com", "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', side_effect=mock_send_cors):
+        with patch.object(tester, "_send_cors_request", side_effect=mock_send_cors):
             result = tester.test_origin_reflection()
 
         if result:
             assert result.vulnerable is True
-            assert result.evidence['total_reflected'] > 0
+            assert result.evidence["total_reflected"] > 0
 
 
 class TestCORSSubdomainBypass:
@@ -268,26 +224,18 @@ class TestCORSSubdomainBypass:
 
         # Mock HTTP 响应 - 接受恶意子域名
         def mock_send_cors(origin):
-            if 'evil' in origin or '@' in origin:
-                return {
-                    'acao': origin,
-                    'acac': '',
-                    'status_code': 200
-                }
-            return {
-                'acao': 'https://api.example.com',
-                'acac': '',
-                'status_code': 200
-            }
+            if "evil" in origin or "@" in origin:
+                return {"acao": origin, "acac": "", "status_code": 200}
+            return {"acao": "https://api.example.com", "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', side_effect=mock_send_cors):
+        with patch.object(tester, "_send_cors_request", side_effect=mock_send_cors):
             result = tester.test_subdomain_bypass()
 
         assert result is not None
         assert result.vulnerable is True
         assert result.vuln_type == APIVulnType.CORS_SUBDOMAIN_BYPASS
         assert result.severity == Severity.HIGH
-        assert len(result.evidence['successful_bypasses']) > 0
+        assert len(result.evidence["successful_bypasses"]) > 0
 
     def test_no_subdomain_bypass(self):
         """测试没有子域名绕过"""
@@ -295,18 +243,11 @@ class TestCORSSubdomainBypass:
 
         # Mock HTTP 响应 - 严格验证
         def mock_send_cors(origin):
-            if origin == 'https://api.example.com':
-                return {
-                    'acao': origin,
-                    'acac': '',
-                    'status_code': 200
-                }
-            return {
-                'acao': '',
-                'status_code': 403
-            }
+            if origin == "https://api.example.com":
+                return {"acao": origin, "acac": "", "status_code": 200}
+            return {"acao": "", "status_code": 403}
 
-        with patch.object(tester, '_send_cors_request', side_effect=mock_send_cors):
+        with patch.object(tester, "_send_cors_request", side_effect=mock_send_cors):
             result = tester.test_subdomain_bypass()
 
         assert result is None
@@ -320,21 +261,13 @@ class TestCORSPreflightBypass:
         tester = CORSTester("https://api.example.com/data")
 
         # Mock Preflight 响应
-        preflight_response = {
-            'acao': 'https://trusted.com',
-            'acac': '',
-            'status_code': 200
-        }
+        preflight_response = {"acao": "https://trusted.com", "acac": "", "status_code": 200}
 
         # Mock 实际请求响应
-        actual_response = {
-            'acao': 'https://evil.com',
-            'acac': '',
-            'status_code': 200
-        }
+        actual_response = {"acao": "https://evil.com", "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_preflight_request', return_value=preflight_response):
-            with patch.object(tester, '_send_cors_request', return_value=actual_response):
+        with patch.object(tester, "_send_preflight_request", return_value=preflight_response):
+            with patch.object(tester, "_send_cors_request", return_value=actual_response):
                 result = tester.test_preflight_bypass()
 
         assert result is not None
@@ -347,14 +280,10 @@ class TestCORSPreflightBypass:
         tester = CORSTester("https://api.example.com/data")
 
         # Mock 一致的响应
-        consistent_response = {
-            'acao': 'https://trusted.com',
-            'acac': '',
-            'status_code': 200
-        }
+        consistent_response = {"acao": "https://trusted.com", "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_preflight_request', return_value=consistent_response):
-            with patch.object(tester, '_send_cors_request', return_value=consistent_response):
+        with patch.object(tester, "_send_preflight_request", return_value=consistent_response):
+            with patch.object(tester, "_send_cors_request", return_value=consistent_response):
                 result = tester.test_preflight_bypass()
 
         assert result is None
@@ -363,8 +292,8 @@ class TestCORSPreflightBypass:
         """测试 Preflight 无响应"""
         tester = CORSTester("https://api.example.com/data")
 
-        with patch.object(tester, '_send_preflight_request', return_value=None):
-            with patch.object(tester, '_send_cors_request', return_value=None):
+        with patch.object(tester, "_send_preflight_request", return_value=None):
+            with patch.object(tester, "_send_cors_request", return_value=None):
                 result = tester.test_preflight_bypass()
 
         assert result is None
@@ -379,19 +308,15 @@ class TestCORSMethodOverride:
 
         # Mock HTTP 响应 - 接受方法覆盖
         def mock_send_override(origin, method, header):
-            return {
-                'acao': origin,
-                'acam': 'GET, POST',  # 不包含 PUT/DELETE
-                'status_code': 200
-            }
+            return {"acao": origin, "acam": "GET, POST", "status_code": 200}  # 不包含 PUT/DELETE
 
-        with patch.object(tester, '_send_method_override_request', side_effect=mock_send_override):
+        with patch.object(tester, "_send_method_override_request", side_effect=mock_send_override):
             result = tester.test_method_override()
 
         assert result is not None
         assert result.vulnerable is True
         assert result.vuln_type == APIVulnType.CORS_MISCONFIGURATION
-        assert len(result.evidence['vulnerable_methods']) > 0
+        assert len(result.evidence["vulnerable_methods"]) > 0
 
     def test_no_method_override(self):
         """测试没有方法覆盖"""
@@ -399,13 +324,9 @@ class TestCORSMethodOverride:
 
         # Mock HTTP 响应 - 拒绝方法覆盖
         def mock_send_override(origin, method, header):
-            return {
-                'acao': '',
-                'acam': '',
-                'status_code': 403
-            }
+            return {"acao": "", "acam": "", "status_code": 403}
 
-        with patch.object(tester, '_send_method_override_request', side_effect=mock_send_override):
+        with patch.object(tester, "_send_method_override_request", side_effect=mock_send_override):
             result = tester.test_method_override()
 
         assert result is None
@@ -419,17 +340,13 @@ class TestCORSFullScan:
         tester = CORSTester("https://api.example.com/data")
 
         # Mock 所有请求返回安全响应
-        safe_response = {
-            'acao': 'https://trusted.com',
-            'acac': '',
-            'status_code': 200
-        }
+        safe_response = {"acao": "https://trusted.com", "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', return_value=safe_response):
-            with patch.object(tester, '_send_preflight_request',
-                              return_value=safe_response):
-                with patch.object(tester, '_send_method_override_request',
-                                  return_value=safe_response):
+        with patch.object(tester, "_send_cors_request", return_value=safe_response):
+            with patch.object(tester, "_send_preflight_request", return_value=safe_response):
+                with patch.object(
+                    tester, "_send_method_override_request", return_value=safe_response
+                ):
                     results = tester.test()
 
         # 应该执行多个测试
@@ -440,18 +357,14 @@ class TestCORSFullScan:
         tester = CORSTester("https://api.example.com/data")
 
         # Mock 响应 - 反射所有 Origin
-        def mock_send_cors(origin, method='GET', with_credentials=False):
-            return {
-                'acao': origin,
-                'acac': 'true',
-                'status_code': 200
-            }
+        def mock_send_cors(origin, method="GET", with_credentials=False):
+            return {"acao": origin, "acac": "true", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', side_effect=mock_send_cors):
-            with patch.object(tester, '_send_preflight_request',
-                              side_effect=lambda o: mock_send_cors(o)):
-                with patch.object(tester, '_send_method_override_request',
-                                  return_value=None):
+        with patch.object(tester, "_send_cors_request", side_effect=mock_send_cors):
+            with patch.object(
+                tester, "_send_preflight_request", side_effect=lambda o: mock_send_cors(o)
+            ):
+                with patch.object(tester, "_send_method_override_request", return_value=None):
                     results = tester.test()
 
         # 应该发现多个漏洞
@@ -462,17 +375,13 @@ class TestCORSFullScan:
         """测试获取扫描摘要"""
         tester = CORSTester("https://api.example.com/data")
 
-        safe_response = {
-            'acao': 'https://trusted.com',
-            'acac': '',
-            'status_code': 200
-        }
+        safe_response = {"acao": "https://trusted.com", "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', return_value=safe_response):
-            with patch.object(tester, '_send_preflight_request',
-                              return_value=safe_response):
-                with patch.object(tester, '_send_method_override_request',
-                                  return_value=safe_response):
+        with patch.object(tester, "_send_cors_request", return_value=safe_response):
+            with patch.object(tester, "_send_preflight_request", return_value=safe_response):
+                with patch.object(
+                    tester, "_send_method_override_request", return_value=safe_response
+                ):
                     tester.test()
 
         summary = tester.get_summary()
@@ -492,20 +401,20 @@ class TestCORSHelperMethods:
         # Mock HTTP 响应对象
         mock_response = Mock()
         mock_response.headers = {
-            'access-control-allow-origin': 'https://example.com',
-            'access-control-allow-credentials': 'true',
-            'access-control-allow-methods': 'GET, POST',
-            'access-control-allow-headers': 'Content-Type',
+            "access-control-allow-origin": "https://example.com",
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "GET, POST",
+            "access-control-allow-headers": "Content-Type",
         }
         mock_response.status_code = 200
 
         headers = tester._extract_cors_headers(mock_response)
 
-        assert headers['acao'] == 'https://example.com'
-        assert headers['acac'] == 'true'
-        assert headers['acam'] == 'GET, POST'
-        assert headers['acah'] == 'Content-Type'
-        assert headers['status_code'] == 200
+        assert headers["acao"] == "https://example.com"
+        assert headers["acac"] == "true"
+        assert headers["acam"] == "GET, POST"
+        assert headers["acah"] == "Content-Type"
+        assert headers["status_code"] == 200
 
     def test_extract_cors_headers_missing(self):
         """测试提取缺失的 CORS 头"""
@@ -518,18 +427,18 @@ class TestCORSHelperMethods:
 
         headers = tester._extract_cors_headers(mock_response)
 
-        assert 'acao' not in headers or headers.get('acao') == ''
-        assert headers['status_code'] == 200
+        assert "acao" not in headers or headers.get("acao") == ""
+        assert headers["status_code"] == 200
 
     def test_send_cors_request_exception(self):
         """测试发送 CORS 请求异常处理"""
         tester = CORSTester("https://api.example.com/data")
 
         # Mock HTTP 客户端抛出异常
-        with patch.object(tester, '_get_http_client') as mock_client:
+        with patch.object(tester, "_get_http_client") as mock_client:
             mock_client.return_value.get.side_effect = Exception("Connection error")
 
-            result = tester._send_cors_request('https://evil.com')
+            result = tester._send_cors_request("https://evil.com")
 
         assert result is None
 
@@ -539,17 +448,17 @@ class TestQuickCORSTest:
 
     def test_quick_cors_test(self):
         """测试快速测试函数"""
-        with patch('modules.api_security.cors.CORSTester') as MockTester:
+        with patch("modules.api_security.cors.CORSTester") as MockTester:
             mock_instance = MockTester.return_value
             mock_instance.test.return_value = []
             mock_instance.get_summary.return_value = MagicMock(
-                to_dict=lambda: {'total_tests': 7, 'vulnerable_count': 0}
+                to_dict=lambda: {"total_tests": 7, "vulnerable_count": 0}
             )
 
             result = quick_cors_test("https://api.example.com/data")
 
         assert isinstance(result, dict)
-        assert 'total_tests' in result
+        assert "total_tests" in result
 
 
 class TestCORSEdgeCases:
@@ -559,13 +468,9 @@ class TestCORSEdgeCases:
         """测试空 Origin"""
         tester = CORSTester("https://api.example.com/data")
 
-        mock_response = {
-            'acao': '',
-            'acac': '',
-            'status_code': 200
-        }
+        mock_response = {"acao": "", "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', return_value=mock_response):
+        with patch.object(tester, "_send_cors_request", return_value=mock_response):
             result = tester.test_wildcard_origin()
 
         assert result is None
@@ -576,13 +481,9 @@ class TestCORSEdgeCases:
 
         # Mock 响应 - 反射但改变大小写
         def mock_send_cors(origin):
-            return {
-                'acao': origin.upper(),
-                'acac': '',
-                'status_code': 200
-            }
+            return {"acao": origin.upper(), "acac": "", "status_code": 200}
 
-        with patch.object(tester, '_send_cors_request', side_effect=mock_send_cors):
+        with patch.object(tester, "_send_cors_request", side_effect=mock_send_cors):
             result = tester.test_origin_reflection()
 
         # 大小写不匹配不应该算作反射
@@ -595,11 +496,11 @@ class TestCORSEdgeCases:
         # 大多数 HTTP 库会合并或只取第一个
         mock_response = Mock()
         mock_response.headers = {
-            'access-control-allow-origin': 'https://trusted.com, https://evil.com'
+            "access-control-allow-origin": "https://trusted.com, https://evil.com"
         }
         mock_response.status_code = 200
 
         headers = tester._extract_cors_headers(mock_response)
 
         # 应该提取到值（具体行为取决于 HTTP 库）
-        assert 'acao' in headers
+        assert "acao" in headers

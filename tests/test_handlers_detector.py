@@ -25,7 +25,7 @@ class TestDetectorHandlersRegistration:
         register_detector_tools(mock_mcp, mock_counter, mock_logger)
 
         # 验证 counter.add 被调用
-        mock_counter.add.assert_called_once_with('detector', 11)
+        mock_counter.add.assert_called_once_with("detector", 11)
 
         # 验证 logger.info 被调用
         mock_logger.info.assert_called_once()
@@ -53,6 +53,7 @@ class TestVulnScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -61,10 +62,10 @@ class TestVulnScanTool:
         # 模拟漏洞结果
         mock_vuln = MagicMock()
         mock_vuln.vulnerable = True
-        mock_vuln.vuln_type = 'sqli'
+        mock_vuln.vuln_type = "sqli"
         mock_vuln.severity = MagicMock()
-        mock_vuln.severity.value = 'high'
-        mock_vuln.param = 'id'
+        mock_vuln.severity.value = "high"
+        mock_vuln.param = "id"
         mock_vuln.payload = "1' OR '1'='1"
         mock_vuln.evidence = "SQL syntax error detected" * 10  # 长证据
         mock_vuln.remediation = "Use parameterized queries"
@@ -73,20 +74,19 @@ class TestVulnScanTool:
         mock_composite = MagicMock()
         mock_composite.async_detect = AsyncMock(return_value=[mock_vuln])
 
-        with patch('core.detectors.DetectorPresets') as mock_presets:
+        with patch("core.detectors.DetectorPresets") as mock_presets:
             mock_presets.owasp_top10.return_value = mock_composite
 
-            result = await registered_tools['vuln_scan'](
-                url="https://example.com/page?id=1",
-                params={"id": "1"}
+            result = await registered_tools["vuln_scan"](
+                url="https://example.com/page?id=1", params={"id": "1"}
             )
 
-            assert result['success'] is True
-            assert result['data']['total_vulns'] == 1
-            assert len(result['data']['vulnerabilities']) == 1
-            assert result['data']['vulnerabilities'][0]['type'] == 'sqli'
-            assert result['data']['vulnerabilities'][0]['severity'] == 'high'
-            assert len(result['data']['vulnerabilities'][0]['evidence']) <= 200  # 截断验证
+            assert result["success"] is True
+            assert result["data"]["total_vulns"] == 1
+            assert len(result["data"]["vulnerabilities"]) == 1
+            assert result["data"]["vulnerabilities"][0]["type"] == "sqli"
+            assert result["data"]["vulnerabilities"][0]["severity"] == "high"
+            assert len(result["data"]["vulnerabilities"][0]["evidence"]) <= 200  # 截断验证
 
     @pytest.mark.asyncio
     async def test_vuln_scan_with_custom_detectors(self):
@@ -103,6 +103,7 @@ class TestVulnScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -111,18 +112,17 @@ class TestVulnScanTool:
         mock_composite = MagicMock()
         mock_composite.async_detect = AsyncMock(return_value=[])
 
-        with patch('core.detectors.DetectorFactory') as mock_factory:
+        with patch("core.detectors.DetectorFactory") as mock_factory:
             mock_factory.create_composite.return_value = mock_composite
 
-            result = await registered_tools['vuln_scan'](
-                url="https://example.com",
-                detectors=['sqli', 'xss']
+            result = await registered_tools["vuln_scan"](
+                url="https://example.com", detectors=["sqli", "xss"]
             )
 
-            assert result['success'] is True
-            assert result['data']['total_vulns'] == 0
-            assert result['data']['detectors_used'] == ['sqli', 'xss']
-            mock_factory.create_composite.assert_called_once_with(['sqli', 'xss'])
+            assert result["success"] is True
+            assert result["data"]["total_vulns"] == 0
+            assert result["data"]["detectors_used"] == ["sqli", "xss"]
+            mock_factory.create_composite.assert_called_once_with(["sqli", "xss"])
 
     @pytest.mark.asyncio
     async def test_vuln_scan_exception(self):
@@ -139,21 +139,20 @@ class TestVulnScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
         register_detector_tools(mock_mcp, mock_counter, mock_logger)
 
-        with patch('core.detectors.DetectorPresets') as mock_presets:
+        with patch("core.detectors.DetectorPresets") as mock_presets:
             mock_presets.owasp_top10.side_effect = Exception("Network timeout")
 
-            result = await registered_tools['vuln_scan'](
-                url="https://example.com"
-            )
+            result = await registered_tools["vuln_scan"](url="https://example.com")
 
-            assert result['success'] is False
-            assert 'error' in result
-            assert "Network timeout" in result['error']
+            assert result["success"] is False
+            assert "error" in result
+            assert "Network timeout" in result["error"]
 
 
 class TestSQLiScanTool:
@@ -174,6 +173,7 @@ class TestSQLiScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -182,28 +182,26 @@ class TestSQLiScanTool:
         # 模拟SQL注入结果
         mock_result = MagicMock()
         mock_result.vulnerable = True
-        mock_result.param = 'id'
+        mock_result.param = "id"
         mock_result.payload = "1' OR '1'='1"
-        mock_result.injection_type = 'boolean_blind'
+        mock_result.injection_type = "boolean_blind"
         mock_result.evidence = "Different response detected"
 
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
 
-        with patch('core.detectors.SQLiDetector') as mock_detector_class:
+        with patch("core.detectors.SQLiDetector") as mock_detector_class:
             mock_detector_class.return_value = mock_detector
 
-            result = await registered_tools['sqli_scan'](
-                url="https://example.com/page",
-                params={"id": "1"},
-                method="GET"
+            result = await registered_tools["sqli_scan"](
+                url="https://example.com/page", params={"id": "1"}, method="GET"
             )
 
-            assert result['success'] is True
-            assert result['data']['vulnerable'] is True
-            assert len(result['data']['findings']) == 1
-            assert result['data']['findings'][0]['param'] == 'id'
-            assert result['data']['findings'][0]['type'] == 'boolean_blind'
+            assert result["success"] is True
+            assert result["data"]["vulnerable"] is True
+            assert len(result["data"]["findings"]) == 1
+            assert result["data"]["findings"][0]["param"] == "id"
+            assert result["data"]["findings"][0]["type"] == "boolean_blind"
 
     @pytest.mark.asyncio
     async def test_sqli_scan_not_vulnerable(self):
@@ -220,6 +218,7 @@ class TestSQLiScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -231,16 +230,14 @@ class TestSQLiScanTool:
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
 
-        with patch('core.detectors.SQLiDetector') as mock_detector_class:
+        with patch("core.detectors.SQLiDetector") as mock_detector_class:
             mock_detector_class.return_value = mock_detector
 
-            result = await registered_tools['sqli_scan'](
-                url="https://example.com/page"
-            )
+            result = await registered_tools["sqli_scan"](url="https://example.com/page")
 
-            assert result['success'] is True
-            assert result['data']['vulnerable'] is False
-            assert len(result['data']['findings']) == 0
+            assert result["success"] is True
+            assert result["data"]["vulnerable"] is False
+            assert len(result["data"]["findings"]) == 0
 
 
 class TestXSSScanTool:
@@ -261,6 +258,7 @@ class TestXSSScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -268,25 +266,24 @@ class TestXSSScanTool:
 
         mock_result = MagicMock()
         mock_result.vulnerable = True
-        mock_result.param = 'search'
-        mock_result.payload = '<script>alert(1)</script>'
-        mock_result.context = 'html'
-        mock_result.evidence = 'Payload reflected in response'
+        mock_result.param = "search"
+        mock_result.payload = "<script>alert(1)</script>"
+        mock_result.context = "html"
+        mock_result.evidence = "Payload reflected in response"
 
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
 
-        with patch('core.detectors.XSSDetector') as mock_detector_class:
+        with patch("core.detectors.XSSDetector") as mock_detector_class:
             mock_detector_class.return_value = mock_detector
 
-            result = await registered_tools['xss_scan'](
-                url="https://example.com/search",
-                params={"search": "test"}
+            result = await registered_tools["xss_scan"](
+                url="https://example.com/search", params={"search": "test"}
             )
 
-            assert result['success'] is True
-            assert result['data']['vulnerable'] is True
-            assert result['data']['findings'][0]['context'] == 'html'
+            assert result["success"] is True
+            assert result["data"]["vulnerable"] is True
+            assert result["data"]["findings"][0]["context"] == "html"
 
 
 class TestSSRFScanTool:
@@ -307,6 +304,7 @@ class TestSSRFScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -315,25 +313,24 @@ class TestSSRFScanTool:
         mock_result = MagicMock()
         mock_result.vulnerable = True
         mock_result.to_dict.return_value = {
-            'param': 'url',
-            'payload': 'http://169.254.169.254/latest/meta-data/',
-            'evidence': 'AWS metadata accessible'
+            "param": "url",
+            "payload": "http://169.254.169.254/latest/meta-data/",
+            "evidence": "AWS metadata accessible",
         }
 
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
 
-        with patch('core.detectors.SSRFDetector') as mock_detector_class:
+        with patch("core.detectors.SSRFDetector") as mock_detector_class:
             mock_detector_class.return_value = mock_detector
 
-            result = await registered_tools['ssrf_scan'](
-                url="https://example.com/fetch",
-                params={"url": "http://example.com"}
+            result = await registered_tools["ssrf_scan"](
+                url="https://example.com/fetch", params={"url": "http://example.com"}
             )
 
-            assert result['success'] is True
-            assert result['data']['vulnerable'] is True
-            assert len(result['data']['findings']) == 1
+            assert result["success"] is True
+            assert result["data"]["vulnerable"] is True
+            assert len(result["data"]["findings"]) == 1
 
 
 class TestRCEScanTool:
@@ -354,6 +351,7 @@ class TestRCEScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -362,23 +360,21 @@ class TestRCEScanTool:
         mock_result = MagicMock()
         mock_result.vulnerable = True
         mock_result.to_dict.return_value = {
-            'param': 'cmd',
-            'payload': '; whoami',
-            'evidence': 'Command output detected'
+            "param": "cmd",
+            "payload": "; whoami",
+            "evidence": "Command output detected",
         }
 
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
 
-        with patch('core.detectors.RCEDetector') as mock_detector_class:
+        with patch("core.detectors.RCEDetector") as mock_detector_class:
             mock_detector_class.return_value = mock_detector
 
-            result = await registered_tools['rce_scan'](
-                url="https://example.com/exec"
-            )
+            result = await registered_tools["rce_scan"](url="https://example.com/exec")
 
-            assert result['success'] is True
-            assert result['data']['vulnerable'] is True
+            assert result["success"] is True
+            assert result["data"]["vulnerable"] is True
 
 
 class TestPathTraversalScanTool:
@@ -399,6 +395,7 @@ class TestPathTraversalScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -407,23 +404,23 @@ class TestPathTraversalScanTool:
         mock_result = MagicMock()
         mock_result.vulnerable = True
         mock_result.to_dict.return_value = {
-            'param': 'file',
-            'payload': '../../../etc/passwd',
-            'evidence': 'root:x:0:0:root'
+            "param": "file",
+            "payload": "../../../etc/passwd",
+            "evidence": "root:x:0:0:root",
         }
 
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
 
-        with patch('core.detectors.PathTraversalDetector') as mock_detector_class:
+        with patch("core.detectors.PathTraversalDetector") as mock_detector_class:
             mock_detector_class.return_value = mock_detector
 
-            result = await registered_tools['path_traversal_scan'](
+            result = await registered_tools["path_traversal_scan"](
                 url="https://example.com/download"
             )
 
-            assert result['success'] is True
-            assert result['data']['vulnerable'] is True
+            assert result["success"] is True
+            assert result["data"]["vulnerable"] is True
 
 
 class TestSSTIScanTool:
@@ -444,6 +441,7 @@ class TestSSTIScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -452,23 +450,21 @@ class TestSSTIScanTool:
         mock_result = MagicMock()
         mock_result.vulnerable = True
         mock_result.to_dict.return_value = {
-            'param': 'template',
-            'payload': '{{7*7}}',
-            'evidence': '49'
+            "param": "template",
+            "payload": "{{7*7}}",
+            "evidence": "49",
         }
 
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
 
-        with patch('core.detectors.SSTIDetector') as mock_detector_class:
+        with patch("core.detectors.SSTIDetector") as mock_detector_class:
             mock_detector_class.return_value = mock_detector
 
-            result = await registered_tools['ssti_scan'](
-                url="https://example.com/render"
-            )
+            result = await registered_tools["ssti_scan"](url="https://example.com/render")
 
-            assert result['success'] is True
-            assert result['data']['vulnerable'] is True
+            assert result["success"] is True
+            assert result["data"]["vulnerable"] is True
 
 
 class TestXXEScanTool:
@@ -489,6 +485,7 @@ class TestXXEScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -496,24 +493,20 @@ class TestXXEScanTool:
 
         mock_result = MagicMock()
         mock_result.vulnerable = True
-        mock_result.to_dict.return_value = {
-            'type': 'xxe',
-            'evidence': 'External entity processed'
-        }
+        mock_result.to_dict.return_value = {"type": "xxe", "evidence": "External entity processed"}
 
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
 
-        with patch('core.detectors.XXEDetector') as mock_detector_class:
+        with patch("core.detectors.XXEDetector") as mock_detector_class:
             mock_detector_class.return_value = mock_detector
 
-            result = await registered_tools['xxe_scan'](
-                url="https://example.com/xml",
-                content_type="application/xml"
+            result = await registered_tools["xxe_scan"](
+                url="https://example.com/xml", content_type="application/xml"
             )
 
-            assert result['success'] is True
-            assert result['data']['vulnerable'] is True
+            assert result["success"] is True
+            assert result["data"]["vulnerable"] is True
 
 
 class TestIDORScanTool:
@@ -534,6 +527,7 @@ class TestIDORScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -542,25 +536,23 @@ class TestIDORScanTool:
         mock_result = MagicMock()
         mock_result.vulnerable = True
         mock_result.to_dict.return_value = {
-            'param': 'id',
-            'test_id': '2',
-            'evidence': 'Unauthorized access to user 2 data'
+            "param": "id",
+            "test_id": "2",
+            "evidence": "Unauthorized access to user 2 data",
         }
 
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
 
-        with patch('core.detectors.IDORDetector') as mock_detector_class:
+        with patch("core.detectors.IDORDetector") as mock_detector_class:
             mock_detector_class.return_value = mock_detector
 
-            result = await registered_tools['idor_scan'](
-                url="https://example.com/user/profile",
-                id_param="id",
-                test_ids=["1", "2", "3"]
+            result = await registered_tools["idor_scan"](
+                url="https://example.com/user/profile", id_param="id", test_ids=["1", "2", "3"]
             )
 
-            assert result['success'] is True
-            assert result['data']['vulnerable'] is True
+            assert result["success"] is True
+            assert result["data"]["vulnerable"] is True
 
 
 class TestCORSScanTool:
@@ -581,6 +573,7 @@ class TestCORSScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -589,22 +582,20 @@ class TestCORSScanTool:
         mock_result = MagicMock()
         mock_result.vulnerable = True
         mock_result.to_dict.return_value = {
-            'issue': 'wildcard_origin',
-            'evidence': 'Access-Control-Allow-Origin: *'
+            "issue": "wildcard_origin",
+            "evidence": "Access-Control-Allow-Origin: *",
         }
 
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
 
-        with patch('core.detectors.CORSDetector') as mock_detector_class:
+        with patch("core.detectors.CORSDetector") as mock_detector_class:
             mock_detector_class.return_value = mock_detector
 
-            result = await registered_tools['cors_scan'](
-                url="https://example.com/api"
-            )
+            result = await registered_tools["cors_scan"](url="https://example.com/api")
 
-            assert result['success'] is True
-            assert result['data']['vulnerable'] is True
+            assert result["success"] is True
+            assert result["data"]["vulnerable"] is True
 
 
 class TestSecurityHeadersScanTool:
@@ -625,6 +616,7 @@ class TestSecurityHeadersScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -632,21 +624,19 @@ class TestSecurityHeadersScanTool:
 
         mock_result = MagicMock()
         mock_result.to_dict.return_value = {
-            'header': 'X-Frame-Options',
-            'present': False,
-            'recommendation': 'Add X-Frame-Options: DENY'
+            "header": "X-Frame-Options",
+            "present": False,
+            "recommendation": "Add X-Frame-Options: DENY",
         }
 
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
 
-        with patch('core.detectors.SecurityHeadersDetector') as mock_detector_class:
+        with patch("core.detectors.SecurityHeadersDetector") as mock_detector_class:
             mock_detector_class.return_value = mock_detector
 
-            result = await registered_tools['security_headers_scan'](
-                url="https://example.com"
-            )
+            result = await registered_tools["security_headers_scan"](url="https://example.com")
 
-            assert result['success'] is True
-            assert 'findings' in result['data']
-            assert len(result['data']['findings']) == 1
+            assert result["success"] is True
+            assert "findings" in result["data"]
+            assert len(result["data"]["findings"]) == 1

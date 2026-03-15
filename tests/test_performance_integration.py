@@ -69,7 +69,7 @@ class TestConcurrencyModule:
         assert collector is not None
 
         # 测试请求追踪
-        with track_request('test_operation'):
+        with track_request("test_operation"):
             time.sleep(0.01)
 
         # summary() 返回字符串格式报告
@@ -136,7 +136,7 @@ class TestPortScanner:
         result = await scanner.scan_host("example.com", [80])
         # result 是 HostResult 对象，不是 dict
         assert result is not None
-        assert hasattr(result, 'host') or hasattr(result, 'error') or isinstance(result, dict)
+        assert hasattr(result, "host") or hasattr(result, "error") or isinstance(result, dict)
 
 
 class TestIntegration:
@@ -183,7 +183,7 @@ class TestIntegration:
         collector = get_collector()
 
         # 执行一些操作
-        with track_request('test_report_op'):
+        with track_request("test_report_op"):
             time.sleep(0.01)
 
         # 生成摘要 (可能是字符串或字典)
@@ -192,7 +192,7 @@ class TestIntegration:
 
         # 保存报告
         with tempfile.NamedTemporaryFile(
-            mode='w', suffix='.json', delete=False, encoding='utf-8'
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
         ) as f:
             if isinstance(summary, dict):
                 json.dump(summary, f, indent=2, default=str)
@@ -228,8 +228,8 @@ def test_module_versions():
     import core.concurrency as concurrency_module
     import core.recon as recon_module
 
-    assert hasattr(recon_module, '__version__')
-    assert hasattr(concurrency_module, '__version__')
+    assert hasattr(recon_module, "__version__")
+    assert hasattr(concurrency_module, "__version__")
 
 
 if __name__ == "__main__":

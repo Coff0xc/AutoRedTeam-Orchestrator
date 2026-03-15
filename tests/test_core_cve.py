@@ -60,7 +60,7 @@ class TestCVEManager:
 
         manager = CVEManager()
 
-        if hasattr(manager, 'search'):
+        if hasattr(manager, "search"):
             # 搜索可能返回空结果，但不应该抛出异常
             results = manager.search("Log4j")
             assert isinstance(results, (list, dict, type(None)))
@@ -156,7 +156,7 @@ class TestPoCEngine:
 
         engine = PoCEngine()
 
-        if hasattr(engine, 'list_templates'):
+        if hasattr(engine, "list_templates"):
             templates = engine.list_templates()
             assert isinstance(templates, (list, dict))
 

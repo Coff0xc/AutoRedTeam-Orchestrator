@@ -285,6 +285,7 @@ class TestDependencyInjection:
 
     def test_nested_injection(self, container):
         """嵌套依赖注入"""
+
         class OuterService:
             def __init__(self, user_service: UserService):
                 self.user_service = user_service

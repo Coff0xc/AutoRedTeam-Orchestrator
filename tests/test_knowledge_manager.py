@@ -82,9 +82,7 @@ class TestKnowledgeEntity:
         assert entity.properties["target_type"] == "ip"
 
     def test_defaults(self):
-        entity = KnowledgeEntity(
-            id="e_002", type=EntityType.SERVICE, name="http:80"
-        )
+        entity = KnowledgeEntity(id="e_002", type=EntityType.SERVICE, name="http:80")
         assert entity.properties == {}
         assert entity.metadata == {}
         assert entity.embeddings is None
@@ -250,9 +248,7 @@ class TestSimilarityMatch:
 
     def test_creation(self):
         entity = KnowledgeEntity(id="e1", type=EntityType.TARGET, name="t1")
-        match = SimilarityMatch(
-            entity=entity, score=0.85, matched_properties=["subnet"]
-        )
+        match = SimilarityMatch(entity=entity, score=0.85, matched_properties=["subnet"])
         assert match.score == 0.85
         assert "subnet" in match.matched_properties
 
@@ -271,15 +267,21 @@ class TestInMemoryGraphStore:
     def populated_store(self, store):
         """预填充的图存储"""
         e1 = KnowledgeEntity(
-            id="t1", type=EntityType.TARGET, name="192.168.1.1",
+            id="t1",
+            type=EntityType.TARGET,
+            name="192.168.1.1",
             properties={"target_type": "ip"},
         )
         e2 = KnowledgeEntity(
-            id="s1", type=EntityType.SERVICE, name="http:80",
+            id="s1",
+            type=EntityType.SERVICE,
+            name="http:80",
             properties={"port": 80, "service": "http"},
         )
         e3 = KnowledgeEntity(
-            id="v1", type=EntityType.VULNERABILITY, name="SQLi",
+            id="v1",
+            type=EntityType.VULNERABILITY,
+            name="SQLi",
             properties={"severity": "critical"},
         )
         store.add_entity(e1)
@@ -287,11 +289,15 @@ class TestInMemoryGraphStore:
         store.add_entity(e3)
 
         r1 = KnowledgeRelation(
-            id="r1", source_id="t1", target_id="s1",
+            id="r1",
+            source_id="t1",
+            target_id="s1",
             relation_type=RelationType.HOSTS,
         )
         r2 = KnowledgeRelation(
-            id="r2", source_id="s1", target_id="v1",
+            id="r2",
+            source_id="s1",
+            target_id="v1",
             relation_type=RelationType.HAS_VULNERABILITY,
         )
         store.add_relation(r1)
@@ -301,9 +307,7 @@ class TestInMemoryGraphStore:
     # --- 实体操作 ---
 
     def test_add_and_get_entity(self, store):
-        entity = KnowledgeEntity(
-            id="e1", type=EntityType.TARGET, name="test"
-        )
+        entity = KnowledgeEntity(id="e1", type=EntityType.TARGET, name="test")
         store.add_entity(entity)
         retrieved = store.get_entity("e1")
         assert retrieved is not None
@@ -314,7 +318,9 @@ class TestInMemoryGraphStore:
 
     def test_update_entity(self, store):
         entity = KnowledgeEntity(
-            id="e1", type=EntityType.TARGET, name="test",
+            id="e1",
+            type=EntityType.TARGET,
+            name="test",
             properties={"status": "pending"},
         )
         store.add_entity(entity)
@@ -355,7 +361,9 @@ class TestInMemoryGraphStore:
         store.add_entity(entity_b)
 
         rel = KnowledgeRelation(
-            id="r1", source_id="a", target_id="b",
+            id="r1",
+            source_id="a",
+            target_id="b",
             relation_type=RelationType.HOSTS,
         )
         store.add_relation(rel)
@@ -374,9 +382,7 @@ class TestInMemoryGraphStore:
         assert targets[0].id == "t1"
 
     def test_find_entities_by_property(self, populated_store):
-        results = populated_store.find_entities(
-            properties={"severity": "critical"}
-        )
+        results = populated_store.find_entities(properties={"severity": "critical"})
         assert len(results) == 1
         assert results[0].id == "v1"
 
@@ -388,9 +394,7 @@ class TestInMemoryGraphStore:
         assert len(results) == 1
 
     def test_find_entities_no_match(self, populated_store):
-        results = populated_store.find_entities(
-            properties={"severity": "low"}
-        )
+        results = populated_store.find_entities(properties={"severity": "low"})
         assert len(results) == 0
 
     def test_find_entities_all(self, populated_store):
@@ -412,9 +416,7 @@ class TestInMemoryGraphStore:
         assert rels[0].relation_type == RelationType.HAS_VULNERABILITY
 
     def test_find_relations_by_type(self, populated_store):
-        rels = populated_store.find_relations(
-            relation_type=RelationType.HOSTS
-        )
+        rels = populated_store.find_relations(relation_type=RelationType.HOSTS)
         assert len(rels) == 1
 
     def test_find_relations_all(self, populated_store):
@@ -447,8 +449,11 @@ class TestInMemoryGraphStore:
         store.add_entity(e2)
 
         rel = KnowledgeRelation(
-            id="r1", source_id="a", target_id="b",
-            relation_type=RelationType.HOSTS, confidence=0.3,
+            id="r1",
+            source_id="a",
+            target_id="b",
+            relation_type=RelationType.HOSTS,
+            confidence=0.3,
         )
         store.add_relation(rel)
 
@@ -480,7 +485,8 @@ class TestInMemoryGraphStore:
 
     def test_get_neighbors_with_type_filter(self, populated_store):
         neighbors = populated_store.get_neighbors(
-            "s1", direction="both",
+            "s1",
+            direction="both",
             relation_type=RelationType.HOSTS,
         )
         assert len(neighbors) == 1
@@ -532,7 +538,8 @@ class TestKnowledgeManager:
 
     def test_store_target_with_properties(self, km):
         tid = km.store_target(
-            "example.com", "domain",
+            "example.com",
+            "domain",
             properties={"scope": "external"},
         )
         entity = km.get_entity(tid)
@@ -592,38 +599,46 @@ class TestKnowledgeManager:
     # --- 通用发现存储 ---
 
     def test_store_finding_vulnerability(self, km):
-        fid = km.store_finding({
-            "type": "vulnerability",
-            "name": "SSRF",
-            "severity": "high",
-        })
+        fid = km.store_finding(
+            {
+                "type": "vulnerability",
+                "name": "SSRF",
+                "severity": "high",
+            }
+        )
         entity = km.get_entity(fid)
         assert entity.type == EntityType.VULNERABILITY
 
     def test_store_finding_open_port(self, km):
-        fid = km.store_finding({
-            "type": "open_port",
-            "port": 443,
-            "service": "https",
-        })
+        fid = km.store_finding(
+            {
+                "type": "open_port",
+                "port": 443,
+                "service": "https",
+            }
+        )
         entity = km.get_entity(fid)
         assert entity.type == EntityType.SERVICE
         assert entity.properties["port"] == 443
 
     def test_store_finding_credential(self, km):
-        fid = km.store_finding({
-            "type": "credential",
-            "source": "config_file",
-        })
+        fid = km.store_finding(
+            {
+                "type": "credential",
+                "source": "config_file",
+            }
+        )
         entity = km.get_entity(fid)
         assert entity.type == EntityType.CREDENTIAL
 
     def test_store_finding_generic(self, km):
-        fid = km.store_finding({
-            "type": "information",
-            "title": "Server header",
-            "value": "Apache/2.4",
-        })
+        fid = km.store_finding(
+            {
+                "type": "information",
+                "title": "Server header",
+                "value": "Apache/2.4",
+            }
+        )
         entity = km.get_entity(fid)
         assert entity.type == EntityType.FINDING
 
@@ -841,7 +856,8 @@ class TestKnowledgeManager:
 
         # 4. 获取凭证
         km.store_credential(
-            tid, "password",
+            tid,
+            "password",
             properties={"username": "root", "hash": "abc123"},
         )
 

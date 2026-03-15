@@ -41,7 +41,7 @@ class TestTarget:
 
         target = Target(url="https://example.com")
 
-        if hasattr(target, 'to_dict'):
+        if hasattr(target, "to_dict"):
             target_dict = target.to_dict()
             assert isinstance(target_dict, dict)
             assert "url" in target_dict
@@ -56,9 +56,9 @@ class TestTargetType:
 
         assert TargetType.URL is not None
         # 检查其他可能的类型
-        if hasattr(TargetType, 'IP'):
+        if hasattr(TargetType, "IP"):
             assert TargetType.IP is not None
-        if hasattr(TargetType, 'DOMAIN'):
+        if hasattr(TargetType, "DOMAIN"):
             assert TargetType.DOMAIN is not None
 
 
@@ -71,11 +71,11 @@ class TestTargetStatus:
 
         assert TargetStatus is not None
         # 检查常见状态
-        if hasattr(TargetStatus, 'PENDING'):
+        if hasattr(TargetStatus, "PENDING"):
             assert TargetStatus.PENDING is not None
-        if hasattr(TargetStatus, 'SCANNING'):
+        if hasattr(TargetStatus, "SCANNING"):
             assert TargetStatus.SCANNING is not None
-        if hasattr(TargetStatus, 'COMPLETED'):
+        if hasattr(TargetStatus, "COMPLETED"):
             assert TargetStatus.COMPLETED is not None
 
 
@@ -99,7 +99,7 @@ class TestScanContext:
         target = Target(url="https://example.com")
         context = ScanContext(target=target)
 
-        assert hasattr(context, 'session_id')
+        assert hasattr(context, "session_id")
         assert context.session_id is not None
 
     def test_context_phase(self):
@@ -109,7 +109,7 @@ class TestScanContext:
         target = Target(url="https://example.com")
         context = ScanContext(target=target)
 
-        assert hasattr(context, 'phase') or hasattr(context, 'current_phase')
+        assert hasattr(context, "phase") or hasattr(context, "current_phase")
 
 
 class TestScanPhase:
@@ -121,9 +121,9 @@ class TestScanPhase:
 
         assert ScanPhase is not None
         # 检查常见阶段
-        if hasattr(ScanPhase, 'RECON'):
+        if hasattr(ScanPhase, "RECON"):
             assert ScanPhase.RECON is not None
-        if hasattr(ScanPhase, 'VULN_SCAN'):
+        if hasattr(ScanPhase, "VULN_SCAN"):
             assert ScanPhase.VULN_SCAN is not None
 
 
@@ -150,7 +150,7 @@ class TestVulnerability:
             title="反射型 XSS",
             url="https://example.com/search?q=test",
             param="q",
-            payload="<script>alert(1)</script>"
+            payload="<script>alert(1)</script>",
         )
 
         assert vuln is not None
@@ -164,10 +164,10 @@ class TestVulnerability:
             vuln_type=VulnType.SQLI,
             severity=Severity.CRITICAL,
             title="SQL 注入",
-            url="https://example.com/user?id=1"
+            url="https://example.com/user?id=1",
         )
 
-        if hasattr(vuln, 'to_dict'):
+        if hasattr(vuln, "to_dict"):
             vuln_dict = vuln.to_dict()
             assert isinstance(vuln_dict, dict)
 
@@ -202,11 +202,11 @@ class TestVulnType:
 
         assert VulnType is not None
         # 检查常见类型
-        if hasattr(VulnType, 'XSS'):
+        if hasattr(VulnType, "XSS"):
             assert VulnType.XSS is not None
-        if hasattr(VulnType, 'SQLI'):
+        if hasattr(VulnType, "SQLI"):
             assert VulnType.SQLI is not None
-        if hasattr(VulnType, 'RCE'):
+        if hasattr(VulnType, "RCE"):
             assert VulnType.RCE is not None
 
 
@@ -217,10 +217,7 @@ class TestScanResult:
         """测试扫描结果创建"""
         from core.session import ScanResult
 
-        result = ScanResult(
-            session_id="test-session-123",
-            target_url="https://example.com"
-        )
+        result = ScanResult(session_id="test-session-123", target_url="https://example.com")
 
         assert result is not None
         assert result.session_id == "test-session-123"
@@ -229,23 +226,17 @@ class TestScanResult:
         """测试结果中的漏洞列表"""
         from core.session import ScanResult
 
-        result = ScanResult(
-            session_id="test-session-123",
-            target_url="https://example.com"
-        )
+        result = ScanResult(session_id="test-session-123", target_url="https://example.com")
 
-        assert hasattr(result, 'vulnerabilities')
+        assert hasattr(result, "vulnerabilities")
 
     def test_result_to_json(self):
         """测试结果转 JSON"""
         from core.session import ScanResult
 
-        result = ScanResult(
-            session_id="test-session-123",
-            target_url="https://example.com"
-        )
+        result = ScanResult(session_id="test-session-123", target_url="https://example.com")
 
-        if hasattr(result, 'to_json'):
+        if hasattr(result, "to_json"):
             json_str = result.to_json()
             assert isinstance(json_str, str)
 
@@ -286,7 +277,7 @@ class TestSessionManager:
         context = manager.create_session("https://example.com")
 
         assert context is not None
-        assert hasattr(context, 'session_id')
+        assert hasattr(context, "session_id")
 
         reset_session_manager()
 
@@ -366,10 +357,7 @@ class TestAuthContext:
         """测试认证上下文创建"""
         from core.session import AuthContext
 
-        auth = AuthContext(
-            username="admin",
-            password="password123"
-        )
+        auth = AuthContext(username="admin", password="password123")
 
         assert auth is not None
         assert auth.username == "admin"
@@ -378,9 +366,7 @@ class TestAuthContext:
         """测试 Token 认证"""
         from core.session import AuthContext
 
-        auth = AuthContext(
-            token="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-        )
+        auth = AuthContext(token="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
 
         assert auth is not None
         assert auth.token is not None
@@ -405,19 +391,16 @@ class TestSessionStorage:
 
         storage = SessionStorage()
 
-        result = ScanResult(
-            session_id="test-123",
-            target_url="https://example.com"
-        )
+        result = ScanResult(session_id="test-123", target_url="https://example.com")
 
         # 使用临时目录
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = os.path.join(tmpdir, "test_session.json")
 
-            if hasattr(storage, 'save'):
+            if hasattr(storage, "save"):
                 storage.save(result, filepath)
 
-                if hasattr(storage, 'load'):
+                if hasattr(storage, "load"):
                     loaded = storage.load(filepath)
                     assert loaded is not None
 
