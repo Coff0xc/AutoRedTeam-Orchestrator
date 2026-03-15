@@ -4,9 +4,10 @@ utils 模块单元测试
 测试工具函数的核心功能
 """
 
-import pytest
-import tempfile
 import os
+import tempfile
+
+import pytest
 
 
 class TestLogger:
@@ -114,8 +115,9 @@ class TestAsyncUtils:
     @pytest.mark.asyncio
     async def test_async_timeout(self):
         """测试异步超时"""
-        from utils.async_utils import async_timeout
         import asyncio
+
+        from utils.async_utils import async_timeout
 
         @async_timeout(timeout=1.0)
         async def slow_function():
@@ -128,8 +130,9 @@ class TestAsyncUtils:
     @pytest.mark.asyncio
     async def test_gather_with_concurrency(self):
         """测试并发收集"""
-        from utils.async_utils import gather_with_concurrency
         import asyncio
+
+        from utils.async_utils import gather_with_concurrency
 
         async def task(n):
             await asyncio.sleep(0.01)
@@ -230,7 +233,7 @@ class TestCrypto:
 
     def test_encrypt_decrypt(self):
         """测试加密解密"""
-        from utils.crypto import encrypt_data, decrypt_data
+        from utils.crypto import decrypt_data, encrypt_data
 
         plaintext = b"secret message"
         key = b"0123456789abcdef"  # 16 bytes for AES-128
@@ -247,7 +250,7 @@ class TestEncoding:
 
     def test_base64_encode_decode(self):
         """测试 Base64 编解码"""
-        from utils.encoding import base64_encode, base64_decode
+        from utils.encoding import base64_decode, base64_encode
 
         data = b"test data"
 
@@ -258,7 +261,7 @@ class TestEncoding:
 
     def test_url_encode_decode(self):
         """测试 URL 编解码"""
-        from utils.encoding import url_encode, url_decode
+        from utils.encoding import url_decode, url_encode
 
         data = "test data with spaces & special chars"
 
@@ -269,7 +272,7 @@ class TestEncoding:
 
     def test_hex_encode_decode(self):
         """测试十六进制编解码"""
-        from utils.encoding import hex_encode, hex_decode
+        from utils.encoding import hex_decode, hex_encode
 
         data = b"test data"
 
@@ -300,7 +303,7 @@ class TestConfig:
 
     def test_config_set(self):
         """测试设置配置项"""
-        from utils.config import set_config, get_config
+        from utils.config import get_config, set_config
 
         set_config("test_key", "test_value")
         value = get_config("test_key")
@@ -411,8 +414,9 @@ class TestDecorators:
 
     def test_timeout_decorator(self):
         """测试超时装饰器"""
-        from utils.decorators import timeout
         import time
+
+        from utils.decorators import timeout
 
         @timeout(seconds=2)
         def slow_function():

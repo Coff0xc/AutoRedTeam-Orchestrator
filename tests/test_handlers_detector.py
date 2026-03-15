@@ -4,8 +4,9 @@
 测试 handlers/detector_handlers.py 中的工具注册和执行
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 
 class TestDetectorHandlersRegistration:

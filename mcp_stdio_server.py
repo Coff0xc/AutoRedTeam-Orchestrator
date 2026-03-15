@@ -20,17 +20,17 @@ AI驱动的自动化渗透测试框架 - MCP协议服务端
 
 from __future__ import annotations
 
-import sys
-import os
 import logging
+import os
+import sys
 
 # 确保项目根目录在路径中
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
 
 from mcp.server.fastmcp import FastMCP
-from utils.logger import configure_root_logger
 
+from utils.logger import configure_root_logger
 
 # ==================== 日志配置 ====================
 

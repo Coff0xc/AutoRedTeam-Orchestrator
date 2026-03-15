@@ -33,12 +33,10 @@ logger = logging.getLogger(__name__)
 
 # 导入共享常量
 try:
-    from core.constants.kubernetes import (
-        DANGEROUS_CAPABILITIES as _DANGEROUS_CAPS,
-        DANGEROUS_VERBS as _DANGEROUS_VERBS,
-        SENSITIVE_MOUNT_PATHS as _SENSITIVE_PATHS,
-        SENSITIVE_RESOURCES as _SENSITIVE_RESOURCES,
-    )
+    from core.constants.kubernetes import DANGEROUS_CAPABILITIES as _DANGEROUS_CAPS
+    from core.constants.kubernetes import DANGEROUS_VERBS as _DANGEROUS_VERBS
+    from core.constants.kubernetes import SENSITIVE_MOUNT_PATHS as _SENSITIVE_PATHS
+    from core.constants.kubernetes import SENSITIVE_RESOURCES as _SENSITIVE_RESOURCES
 
     _HAS_CONSTANTS = True
 except ImportError:

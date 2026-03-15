@@ -19,7 +19,7 @@ try:
 except ImportError:
     DNS_AVAILABLE = False
 
-from core.registry import BaseTool, ToolCategory, ToolMetadata, ToolParameter, ParamType
+from core.registry import BaseTool, ParamType, ToolCategory, ToolMetadata, ToolParameter
 from core.result import ToolResult
 from shared.validators import validate_domain as _validate_domain
 
@@ -389,8 +389,9 @@ class RealIPFinderTool(BaseTool):
     def _get_favicon_hash(self, domain: str, timeout: int) -> Optional[str]:
         """获取favicon的MMH3 hash (用于Shodan搜索)"""
         try:
-            import mmh3
             import base64
+
+            import mmh3
 
             with httpx.Client(timeout=timeout, verify=False, follow_redirects=True) as client:
                 for path in ["/favicon.ico", "/assets/favicon.ico", "/static/favicon.ico"]:

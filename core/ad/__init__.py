@@ -28,10 +28,12 @@ from .kerberos_attack import (
     kerberos_attack,
 )
 from .kerberos_attacks import (
+    ASREPInfo,
+)
+from .kerberos_attacks import AttackResult as ImpacketAttackResult
+from .kerberos_attacks import (
     KerberosAttacks,
     TicketInfo,
-    ASREPInfo,
-    AttackResult as ImpacketAttackResult,
     kerberos_attacks,
 )
 

@@ -6,22 +6,23 @@ Pytest 配置文件
 
 import sys
 from pathlib import Path
+from typing import Any, Dict, Generator, Optional
 from unittest.mock import AsyncMock, MagicMock
-from typing import Generator, Any, Dict, Optional
 
 # 添加项目根目录到 Python 路径
 PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import pytest
 import asyncio
 import json
 
+import pytest
+
 from core.security.mcp_auth_middleware import AuthMode, _auth_config
 
-
 # ==================== 全局 Auth 禁用 ====================
+
 
 @pytest.fixture(autouse=True, scope="session")
 def disable_auth_for_tests():
@@ -33,10 +34,11 @@ def disable_auth_for_tests():
 
 
 # ==================== Pytest-asyncio 配置 ====================
-pytest_plugins = ('pytest_asyncio',)
+pytest_plugins = ("pytest_asyncio",)
 
 
 # ==================== Fixtures ====================
+
 
 @pytest.fixture(scope="session")
 def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
@@ -70,6 +72,7 @@ def sample_ip() -> str:
 @pytest.fixture
 def mock_http_response():
     """提供模拟 HTTP 响应工厂"""
+
     class MockResponse:
         def __init__(
             self,
@@ -101,6 +104,7 @@ def mock_http_response():
 @pytest.fixture
 def mock_async_http_response():
     """提供异步 HTTP 响应工厂"""
+
     class AsyncMockResponse:
         def __init__(
             self,
@@ -184,6 +188,7 @@ def temp_dir(tmp_path):
 
 # ==================== 漏洞检测 Fixtures ====================
 
+
 @pytest.fixture
 def sqli_params() -> Dict[str, str]:
     """SQL 注入测试参数"""
@@ -199,6 +204,7 @@ def xss_params() -> Dict[str, str]:
 @pytest.fixture
 def vuln_detection_result():
     """漏洞检测结果工厂"""
+
     def _create(
         vulnerable: bool = True,
         vuln_type: str = "sqli",
@@ -215,10 +221,12 @@ def vuln_detection_result():
             "payload": "1' OR '1'='1",
             "evidence": "SQL syntax error",
         }
+
     return _create
 
 
 # ==================== Session Fixtures ====================
+
 
 @pytest.fixture
 def mock_scan_session():
@@ -235,6 +243,7 @@ def mock_scan_session():
 
 # ==================== 标记注册 ====================
 
+
 def pytest_configure(config):
     """注册自定义标记"""
     config.addinivalue_line("markers", "slow: 标记慢速测试")
@@ -246,6 +255,7 @@ def pytest_configure(config):
 
 
 # ==================== Pytest Hooks ====================
+
 
 def pytest_collection_modifyitems(config, items):
     """自动标记测试"""
@@ -265,6 +275,7 @@ def pytest_runtest_setup(item):
     """测试运行前检查"""
     # 检查是否有 network 标记但环境变量禁用网络测试
     import os
+
     if item.get_closest_marker("network"):
         if os.environ.get("SKIP_NETWORK_TESTS", "").lower() == "true":
             pytest.skip("Network tests are disabled")

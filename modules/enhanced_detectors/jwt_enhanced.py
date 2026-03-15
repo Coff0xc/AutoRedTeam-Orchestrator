@@ -29,11 +29,9 @@ except ImportError:
 
 # 导入共享常量
 try:
-    from core.constants import (
-        KID_INJECTION_PAYLOADS as _KID_PAYLOADS,
-        NONE_ALGORITHM_VARIANTS as _NONE_VARIANTS,
-        WEAK_SECRETS as _WEAK_SECRETS,
-    )
+    from core.constants import KID_INJECTION_PAYLOADS as _KID_PAYLOADS
+    from core.constants import NONE_ALGORITHM_VARIANTS as _NONE_VARIANTS
+    from core.constants import WEAK_SECRETS as _WEAK_SECRETS
 
     _HAS_CONSTANTS = True
 except ImportError:

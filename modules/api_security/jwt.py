@@ -43,10 +43,8 @@ except ImportError:
 
 # 导入共享常量
 try:
-    from core.constants import (
-        KID_INJECTION_PAYLOADS as _KID_PAYLOADS,
-        WEAK_SECRETS as _WEAK_SECRETS,
-    )
+    from core.constants import KID_INJECTION_PAYLOADS as _KID_PAYLOADS
+    from core.constants import WEAK_SECRETS as _WEAK_SECRETS
 
     _HAS_CONSTANTS = True
 except ImportError:

@@ -3,7 +3,7 @@
 DNS 外泄编码与切分测试
 """
 
-from core.exfiltration.base import ExfilConfig, ExfilChannel
+from core.exfiltration.base import ExfilChannel, ExfilConfig
 from core.exfiltration.channels.dns import DNSExfiltration, DNSExfiltrationTXT
 
 

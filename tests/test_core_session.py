@@ -142,7 +142,7 @@ class TestVulnerability:
 
     def test_vulnerability_creation(self):
         """测试漏洞创建"""
-        from core.session import Vulnerability, Severity, VulnType
+        from core.session import Severity, Vulnerability, VulnType
 
         vuln = Vulnerability(
             vuln_type=VulnType.XSS,
@@ -158,7 +158,7 @@ class TestVulnerability:
 
     def test_vulnerability_to_dict(self):
         """测试漏洞转字典"""
-        from core.session import Vulnerability, Severity, VulnType
+        from core.session import Severity, Vulnerability, VulnType
 
         vuln = Vulnerability(
             vuln_type=VulnType.SQLI,
@@ -398,9 +398,10 @@ class TestSessionStorage:
 
     def test_storage_save_load(self):
         """测试存储保存和加载"""
-        from core.session import SessionStorage, ScanResult
-        import tempfile
         import os
+        import tempfile
+
+        from core.session import ScanResult, SessionStorage
 
         storage = SessionStorage()
 

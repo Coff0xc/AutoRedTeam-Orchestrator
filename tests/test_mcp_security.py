@@ -5,8 +5,9 @@ MCP 安全中间件测试
 测试 core/security/mcp_security.py 的所有核心功能
 """
 
-import pytest
 import threading
+
+import pytest
 
 from core.security.mcp_security import (
     InputValidator,
@@ -17,7 +18,6 @@ from core.security.mcp_security import (
     RiskLevel,
     ValidationResult,
 )
-
 
 # ==================== ValidationResult 测试 ====================
 

@@ -30,7 +30,7 @@ try:
     from impacket.krb5 import constants
     from impacket.krb5.asn1 import TGS_REP
     from impacket.krb5.ccache import CCache
-    from impacket.krb5.kerberosv5 import getKerberosTGT, getKerberosTGS
+    from impacket.krb5.kerberosv5 import getKerberosTGS, getKerberosTGT
     from impacket.krb5.types import KerberosTime, Principal
 
     IMPACKET_AVAILABLE = True
@@ -298,7 +298,7 @@ class KerberosAttacks:
         Returns:
             AttackResult包含可破解的hash
         """
-        from impacket.krb5.asn1 import AS_REQ, AS_REP, seq_set, seq_set_iter
+        from impacket.krb5.asn1 import AS_REP, AS_REQ, seq_set, seq_set_iter
         from impacket.krb5.kerberosv5 import sendReceive
         from pyasn1.codec.der import decoder, encoder
 

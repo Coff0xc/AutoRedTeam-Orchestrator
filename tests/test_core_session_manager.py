@@ -10,18 +10,20 @@ test_core_session_manager.py - 会话管理器单元测试
 - 持久化存储
 """
 
-import pytest
-import threading
 import tempfile
-from unittest.mock import Mock
+import threading
 from pathlib import Path
+from unittest.mock import Mock
+
+import pytest
+
+from core.session.context import ContextStatus, ScanPhase
 
 # 导入被测试的模块
 from core.session.manager import SessionManager
-from core.session.context import ScanPhase, ContextStatus
-
 
 # ============== 测试夹具 ==============
+
 
 @pytest.fixture
 def temp_storage_dir():
@@ -41,6 +43,7 @@ def clean_manager():
 
 
 # ============== SessionManager 单例测试 ==============
+
 
 class TestSessionManagerSingleton:
     """SessionManager 单例模式测试"""
@@ -83,16 +86,17 @@ class TestSessionManagerSingleton:
 
 # ============== 会话创建测试 ==============
 
+
 class TestSessionCreation:
     """会话创建测试"""
 
     def test_create_session_basic(self, clean_manager):
         """测试基本会话创建"""
         manager = SessionManager()
-        context = manager.create_session('https://example.com')
+        context = manager.create_session("https://example.com")
 
         assert context is not None
-        assert context.target.url == 'https://example.com'
+        assert context.target.url == "https://example.com"
         assert context.status == ContextStatus.CREATED
         assert context.session_id is not None
 
@@ -100,33 +104,33 @@ class TestSessionCreation:
         """测试带配置的会话创建"""
         manager = SessionManager()
         config = {
-            'timeout': 60,
-            'max_threads': 10,
+            "timeout": 60,
+            "max_threads": 10,
         }
-        context = manager.create_session('https://example.com', config=config)
+        context = manager.create_session("https://example.com", config=config)
 
-        assert context.config['timeout'] == 60
-        assert context.config['max_threads'] == 10
+        assert context.config["timeout"] == 60
+        assert context.config["max_threads"] == 10
 
     def test_create_session_with_custom_id(self, clean_manager):
         """测试使用自定义会话ID"""
         manager = SessionManager()
-        custom_id = 'test-session-123'
-        context = manager.create_session('https://example.com', session_id=custom_id)
+        custom_id = "test-session-123"
+        context = manager.create_session("https://example.com", session_id=custom_id)
 
         assert context.session_id == custom_id
 
     def test_create_session_duplicate_id(self, clean_manager):
         """测试重复的会话ID"""
         manager = SessionManager()
-        session_id = 'duplicate-id'
+        session_id = "duplicate-id"
 
         # 第一次创建成功
-        context1 = manager.create_session('https://example.com', session_id=session_id)
+        context1 = manager.create_session("https://example.com", session_id=session_id)
         assert context1.session_id == session_id
 
         # 第二次创建应该失败或返回新ID
-        context2 = manager.create_session('https://example.com', session_id=session_id)
+        context2 = manager.create_session("https://example.com", session_id=session_id)
         # 根据实现，可能抛出异常或生成新ID
         assert context2 is not None
 
@@ -135,9 +139,9 @@ class TestSessionCreation:
         manager = SessionManager()
 
         contexts = [
-            manager.create_session('https://example1.com'),
-            manager.create_session('https://example2.com'),
-            manager.create_session('https://example3.com'),
+            manager.create_session("https://example1.com"),
+            manager.create_session("https://example2.com"),
+            manager.create_session("https://example3.com"),
         ]
 
         assert len(contexts) == 3
@@ -148,13 +152,14 @@ class TestSessionCreation:
 
 # ============== 会话获取测试 ==============
 
+
 class TestSessionRetrieval:
     """会话获取测试"""
 
     def test_get_session_exists(self, clean_manager):
         """测试获取存在的会话"""
         manager = SessionManager()
-        context = manager.create_session('https://example.com')
+        context = manager.create_session("https://example.com")
         session_id = context.session_id
 
         retrieved = manager.get_session(session_id)
@@ -166,7 +171,7 @@ class TestSessionRetrieval:
     def test_get_session_not_exists(self, clean_manager):
         """测试获取不存在的会话"""
         manager = SessionManager()
-        retrieved = manager.get_session('nonexistent-id')
+        retrieved = manager.get_session("nonexistent-id")
 
         assert retrieved is None
 
@@ -175,9 +180,9 @@ class TestSessionRetrieval:
         manager = SessionManager()
 
         # 创建多个会话
-        manager.create_session('https://example1.com')
-        manager.create_session('https://example2.com')
-        manager.create_session('https://example3.com')
+        manager.create_session("https://example1.com")
+        manager.create_session("https://example2.com")
+        manager.create_session("https://example3.com")
 
         sessions = manager.list_sessions()
 
@@ -193,13 +198,14 @@ class TestSessionRetrieval:
 
 # ============== 会话更新测试 ==============
 
+
 class TestSessionUpdate:
     """会话更新测试"""
 
     def test_update_session_status(self, clean_manager):
         """测试更新会话状态"""
         manager = SessionManager()
-        context = manager.create_session('https://example.com')
+        context = manager.create_session("https://example.com")
         session_id = context.session_id
 
         # 更新状态
@@ -212,7 +218,7 @@ class TestSessionUpdate:
     def test_update_session_phase(self, clean_manager):
         """测试更新会话阶段"""
         manager = SessionManager()
-        context = manager.create_session('https://example.com')
+        context = manager.create_session("https://example.com")
         session_id = context.session_id
 
         # 更新阶段
@@ -225,14 +231,14 @@ class TestSessionUpdate:
     def test_update_session_not_exists(self, clean_manager):
         """测试更新不存在的会话"""
         manager = SessionManager()
-        success = manager.update_session('nonexistent-id', status=ContextStatus.RUNNING)
+        success = manager.update_session("nonexistent-id", status=ContextStatus.RUNNING)
 
         assert success is False
 
     def test_update_session_multiple_fields(self, clean_manager):
         """测试同时更新多个字段"""
         manager = SessionManager()
-        context = manager.create_session('https://example.com')
+        context = manager.create_session("https://example.com")
         session_id = context.session_id
 
         success = manager.update_session(
@@ -249,13 +255,14 @@ class TestSessionUpdate:
 
 # ============== 会话删除测试 ==============
 
+
 class TestSessionDeletion:
     """会话删除测试"""
 
     def test_delete_session_exists(self, clean_manager):
         """测试删除存在的会话"""
         manager = SessionManager()
-        context = manager.create_session('https://example.com')
+        context = manager.create_session("https://example.com")
         session_id = context.session_id
 
         success = manager.delete_session(session_id)
@@ -266,7 +273,7 @@ class TestSessionDeletion:
     def test_delete_session_not_exists(self, clean_manager):
         """测试删除不存在的会话"""
         manager = SessionManager()
-        success = manager.delete_session('nonexistent-id')
+        success = manager.delete_session("nonexistent-id")
 
         assert success is False
 
@@ -275,9 +282,9 @@ class TestSessionDeletion:
         manager = SessionManager()
 
         # 创建多个会话
-        manager.create_session('https://example1.com')
-        manager.create_session('https://example2.com')
-        manager.create_session('https://example3.com')
+        manager.create_session("https://example1.com")
+        manager.create_session("https://example2.com")
+        manager.create_session("https://example3.com")
 
         count = manager.delete_all_sessions()
 
@@ -287,6 +294,7 @@ class TestSessionDeletion:
 
 # ============== 事件回调测试 ==============
 
+
 class TestEventCallbacks:
     """事件回调测试"""
 
@@ -295,10 +303,10 @@ class TestEventCallbacks:
         manager = SessionManager()
         callback = Mock()
 
-        manager.register_callback('session_created', callback)
+        manager.register_callback("session_created", callback)
 
         # 创建会话应该触发回调
-        manager.create_session('https://example.com')
+        manager.create_session("https://example.com")
 
         callback.assert_called_once()
 
@@ -308,10 +316,10 @@ class TestEventCallbacks:
         callback1 = Mock()
         callback2 = Mock()
 
-        manager.register_callback('session_created', callback1)
-        manager.register_callback('session_created', callback2)
+        manager.register_callback("session_created", callback1)
+        manager.register_callback("session_created", callback2)
 
-        manager.create_session('https://example.com')
+        manager.create_session("https://example.com")
 
         callback1.assert_called_once()
         callback2.assert_called_once()
@@ -321,10 +329,10 @@ class TestEventCallbacks:
         manager = SessionManager()
         callback = Mock()
 
-        manager.register_callback('session_created', callback)
-        manager.unregister_callback('session_created', callback)
+        manager.register_callback("session_created", callback)
+        manager.unregister_callback("session_created", callback)
 
-        manager.create_session('https://example.com')
+        manager.create_session("https://example.com")
 
         # 回调不应该被调用
         callback.assert_not_called()
@@ -334,16 +342,17 @@ class TestEventCallbacks:
         manager = SessionManager()
 
         def bad_callback(context):
-            raise RuntimeError('Callback error')
+            raise RuntimeError("Callback error")
 
-        manager.register_callback('session_created', bad_callback)
+        manager.register_callback("session_created", bad_callback)
 
         # 不应该因为回调异常而崩溃
-        context = manager.create_session('https://example.com')
+        context = manager.create_session("https://example.com")
         assert context is not None
 
 
 # ============== 持久化存储测试 ==============
+
 
 class TestPersistence:
     """持久化存储测试"""
@@ -351,38 +360,38 @@ class TestPersistence:
     def test_auto_save_enabled(self, clean_manager, temp_storage_dir):
         """测试自动保存"""
         manager = SessionManager(storage_dir=temp_storage_dir, auto_save=True)
-        manager.create_session('https://example.com')
+        manager.create_session("https://example.com")
 
         # 检查文件是否创建
-        session_files = list(Path(temp_storage_dir).glob('*.json'))
+        session_files = list(Path(temp_storage_dir).glob("*.json"))
         assert len(session_files) > 0
 
     def test_auto_save_disabled(self, clean_manager, temp_storage_dir):
         """测试禁用自动保存"""
         manager = SessionManager(storage_dir=temp_storage_dir, auto_save=False)
-        manager.create_session('https://example.com')
+        manager.create_session("https://example.com")
 
         # 不应该自动创建文件
-        session_files = list(Path(temp_storage_dir).glob('*.json'))
+        session_files = list(Path(temp_storage_dir).glob("*.json"))
         assert len(session_files) == 0
 
     def test_manual_save(self, clean_manager, temp_storage_dir):
         """测试手动保存"""
         manager = SessionManager(storage_dir=temp_storage_dir, auto_save=False)
-        context = manager.create_session('https://example.com')
+        context = manager.create_session("https://example.com")
 
         # 手动保存
         manager.save_session(context.session_id)
 
         # 检查文件是否创建
-        session_files = list(Path(temp_storage_dir).glob('*.json'))
+        session_files = list(Path(temp_storage_dir).glob("*.json"))
         assert len(session_files) > 0
 
     def test_load_session(self, clean_manager, temp_storage_dir):
         """测试加载会话"""
         # 创建并保存会话
         manager1 = SessionManager(storage_dir=temp_storage_dir, auto_save=True)
-        context = manager1.create_session('https://example.com')
+        context = manager1.create_session("https://example.com")
         session_id = context.session_id
 
         # 重新创建管理器并加载
@@ -396,6 +405,7 @@ class TestPersistence:
 
 # ============== 线程安全测试 ==============
 
+
 class TestThreadSafety:
     """线程安全测试"""
 
@@ -407,7 +417,7 @@ class TestThreadSafety:
 
         def create_session(index):
             try:
-                context = manager.create_session(f'https://example{index}.com')
+                context = manager.create_session(f"https://example{index}.com")
                 contexts.append(context)
             except Exception as e:
                 errors.append(e)
@@ -431,7 +441,7 @@ class TestThreadSafety:
     def test_concurrent_session_update(self, clean_manager):
         """测试并发更新会话"""
         manager = SessionManager()
-        context = manager.create_session('https://example.com')
+        context = manager.create_session("https://example.com")
         session_id = context.session_id
 
         results = []
@@ -454,7 +464,7 @@ class TestThreadSafety:
     def test_concurrent_read_write(self, clean_manager):
         """测试并发读写"""
         manager = SessionManager()
-        context = manager.create_session('https://example.com')
+        context = manager.create_session("https://example.com")
         session_id = context.session_id
 
         read_results = []
@@ -489,6 +499,7 @@ class TestThreadSafety:
 
 # ============== 边界条件测试 ==============
 
+
 class TestEdgeCases:
     """边界条件测试"""
 
@@ -497,7 +508,7 @@ class TestEdgeCases:
         manager = SessionManager()
 
         # 空字符串目标
-        context = manager.create_session('')
+        context = manager.create_session("")
         assert context is not None
 
     def test_invalid_target(self, clean_manager):
@@ -505,21 +516,21 @@ class TestEdgeCases:
         manager = SessionManager()
 
         # 无效 URL
-        context = manager.create_session('not-a-url')
+        context = manager.create_session("not-a-url")
         assert context is not None
 
     def test_unicode_target(self, clean_manager):
         """测试 Unicode 目标"""
         manager = SessionManager()
-        context = manager.create_session('https://例え.jp')
+        context = manager.create_session("https://例え.jp")
 
         assert context is not None
-        assert '例え.jp' in context.target.url
+        assert "例え.jp" in context.target.url
 
     def test_very_long_target(self, clean_manager):
         """测试超长目标"""
         manager = SessionManager()
-        long_url = 'https://example.com/' + 'a' * 10000
+        long_url = "https://example.com/" + "a" * 10000
         context = manager.create_session(long_url)
 
         assert context is not None
@@ -527,13 +538,14 @@ class TestEdgeCases:
     def test_none_config(self, clean_manager):
         """测试 None 配置"""
         manager = SessionManager()
-        context = manager.create_session('https://example.com', config=None)
+        context = manager.create_session("https://example.com", config=None)
 
         assert context is not None
         assert context.config is not None
 
 
 # ============== 集成测试 ==============
+
 
 class TestIntegration:
     """集成测试"""
@@ -543,7 +555,7 @@ class TestIntegration:
         manager = SessionManager()
 
         # 1. 创建会话
-        context = manager.create_session('https://example.com')
+        context = manager.create_session("https://example.com")
         session_id = context.session_id
         assert context.status == ContextStatus.CREATED
 
@@ -570,7 +582,7 @@ class TestIntegration:
         # 创建多个会话
         sessions = []
         for i in range(5):
-            context = manager.create_session(f'https://example{i}.com')
+            context = manager.create_session(f"https://example{i}.com")
             sessions.append(context.session_id)
 
         # 验证所有会话都存在
@@ -588,5 +600,5 @@ class TestIntegration:
         assert len(manager.list_sessions()) == 3
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

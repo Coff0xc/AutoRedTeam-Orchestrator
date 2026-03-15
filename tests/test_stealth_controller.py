@@ -1,12 +1,13 @@
+from urllib.parse import parse_qsl, urlsplit
+
 import pytest
-from urllib.parse import urlsplit, parse_qsl
 
 from core.stealth.controller import (
+    DomainFronting,
     RequestContext,
     StealthConfig,
     StealthLevel,
     TrafficObfuscation,
-    DomainFronting,
 )
 
 

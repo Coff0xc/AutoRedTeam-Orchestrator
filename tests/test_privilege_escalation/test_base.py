@@ -4,12 +4,13 @@
 """
 
 import pytest
+
 from core.privilege_escalation.base import (
-    PrivilegeLevel,
+    EscalationConfig,
     EscalationMethod,
     EscalationResult,
-    EscalationConfig,
     EscalationVector,
+    PrivilegeLevel,
 )
 
 

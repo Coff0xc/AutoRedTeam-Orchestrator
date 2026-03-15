@@ -7,8 +7,8 @@ CORS 安全测试模块单元测试
 
 from unittest.mock import MagicMock, Mock, patch
 
-from modules.api_security.cors import CORSTester, quick_cors_test
 from modules.api_security.base import APIVulnType, Severity
+from modules.api_security.cors import CORSTester, quick_cors_test
 
 
 class TestCORSTesterInit:

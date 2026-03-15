@@ -12,7 +12,7 @@ Usage:
     km.store_finding({"type": "vulnerability", "name": "SQLi", "severity": "critical"})
 """
 
-from .manager import KnowledgeManager, InMemoryGraphStore
+from .manager import InMemoryGraphStore, KnowledgeManager
 from .models import (
     AttackPath,
     EntityType,

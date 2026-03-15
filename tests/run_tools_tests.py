@@ -8,8 +8,8 @@
     python run_tools_tests.py --cov        # 生成覆盖率报告
 """
 
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 

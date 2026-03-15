@@ -8,11 +8,7 @@
 import json
 from unittest.mock import Mock, patch
 
-from modules.supply_chain.dependency_scanner import (
-    DependencyScanner,
-    DependencyVuln,
-    VulnSeverity
-)
+from modules.supply_chain.dependency_scanner import DependencyScanner, DependencyVuln, VulnSeverity
 
 
 class TestVulnSeverity:

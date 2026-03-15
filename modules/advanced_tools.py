@@ -57,8 +57,7 @@ async def stealth_request(
     if not HAS_STEALTH:
         return {"error": "Stealth module not available"}
 
-    from core.stealth import BrowserType, FingerprintSpoofer
-    from core.stealth import MutationConfig, TrafficMutator
+    from core.stealth import BrowserType, FingerprintSpoofer, MutationConfig, TrafficMutator
 
     # 配置
     config = MutationConfig()

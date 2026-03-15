@@ -12,8 +12,8 @@ import json
 import time
 from unittest.mock import MagicMock, patch
 
-from modules.api_security.jwt import JWTTester, decode_jwt, quick_jwt_test
 from modules.api_security.base import APIVulnType, Severity
+from modules.api_security.jwt import JWTTester, decode_jwt, quick_jwt_test
 
 
 class TestJWTDecoding:
