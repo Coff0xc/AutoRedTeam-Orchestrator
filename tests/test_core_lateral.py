@@ -15,7 +15,7 @@ class TestCredentials:
 
     def test_password_credentials(self):
         """测试密码凭证"""
-        from core.lateral.base import Credentials, AuthMethod
+        from core.lateral.base import AuthMethod, Credentials
 
         creds = Credentials(
             username="admin",
@@ -30,7 +30,7 @@ class TestCredentials:
 
     def test_hash_credentials(self):
         """测试 Hash 凭证"""
-        from core.lateral.base import Credentials, AuthMethod
+        from core.lateral.base import AuthMethod, Credentials
 
         creds = Credentials(
             username="admin",
@@ -43,7 +43,7 @@ class TestCredentials:
 
     def test_ssh_key_credentials(self):
         """测试 SSH 密钥凭证"""
-        from core.lateral.base import Credentials, AuthMethod
+        from core.lateral.base import AuthMethod, Credentials
 
         creds = Credentials(
             username="root",

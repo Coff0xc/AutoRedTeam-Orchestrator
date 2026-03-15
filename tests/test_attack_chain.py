@@ -5,15 +5,16 @@
 测试 core/attack_chain.py 的所有核心功能
 """
 
-import pytest
-from unittest.mock import Mock
 from datetime import datetime
+from unittest.mock import Mock
+
+import pytest
 
 from core.attack_chain import (
-    AttackPhase,
-    AttackNode,
     AttackChain,
     AttackChainEngine,
+    AttackNode,
+    AttackPhase,
 )
 
 

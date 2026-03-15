@@ -4,19 +4,18 @@
 """
 
 import pytest
-from core.exceptions import (
-    # 权限提升异常
-    PrivilegeEscalationError,
-    EscalationVectorNotFound,
-    InsufficientPrivilege,
-    UACBypassFailed,
-    TokenManipulationError,
-    # 数据外泄异常
-    ExfiltrationError,
+
+from core.exceptions import (  # 权限提升异常; 数据外泄异常
     ChannelBlocked,
-    DataTooLarge,
     ChannelConnectionError,
+    DataTooLarge,
     EncryptionRequired,
+    EscalationVectorNotFound,
+    ExfiltrationError,
+    InsufficientPrivilege,
+    PrivilegeEscalationError,
+    TokenManipulationError,
+    UACBypassFailed,
 )
 
 

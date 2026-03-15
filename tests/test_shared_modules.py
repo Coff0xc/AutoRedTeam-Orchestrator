@@ -5,7 +5,8 @@ shared 模块测试
 """
 
 import pytest
-from shared import ToolResult, validate_domain, validate_ip, validate_url, validate_port
+
+from shared import ToolResult, validate_domain, validate_ip, validate_port, validate_url
 from shared.subprocess_runner import SubprocessRunner, get_subprocess_runner
 
 

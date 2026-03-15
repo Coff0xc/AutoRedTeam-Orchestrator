@@ -8,7 +8,8 @@ MCTS 性能优化测试
 """
 
 import time
-from core.mcts_planner import MCTSPlanner, AttackState
+
+from core.mcts_planner import AttackState, MCTSPlanner
 
 
 class TestAttackStateOptimization:

@@ -4,10 +4,10 @@ CVE工具处理器单元测试
 测试 handlers/cve_handlers.py 中的 8 个工具注册和执行
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from typing import Dict, Any
+from typing import Any, Dict
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 
 # ==================== 辅助函数 ====================
 

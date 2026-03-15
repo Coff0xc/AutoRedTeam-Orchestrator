@@ -9,8 +9,8 @@ import pytest
 
 from core.ai_engine import (
     AIDecisionEngine,
-    RiskLevel,
     AttackVector,
+    RiskLevel,
 )
 
 

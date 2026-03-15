@@ -4,13 +4,14 @@
 """
 
 import pytest
+
 from core.exfiltration.base import (
-    ExfilChannel,
-    ExfilStatus,
     EncryptionType,
+    ExfilChannel,
     ExfilConfig,
     ExfilProgress,
     ExfilResult,
+    ExfilStatus,
 )
 
 

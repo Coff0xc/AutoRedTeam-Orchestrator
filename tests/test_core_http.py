@@ -4,8 +4,9 @@ core.http 模块单元测试
 测试 HTTP 客户端的核心功能
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 
 class TestHTTPConfig:
@@ -192,7 +193,7 @@ class TestHTTPExceptions:
 
     def test_exception_from_status_code(self):
         """测试状态码异常映射"""
-        from core.http import exception_from_status_code, ClientError, ServerError
+        from core.http import ClientError, ServerError, exception_from_status_code
 
         # 4xx 应该返回 ClientError
         error_400 = exception_from_status_code(400)
@@ -222,7 +223,7 @@ class TestMiddleware:
 
     def test_middleware_chain(self):
         """测试中间件链"""
-        from core.http import MiddlewareChain, LoggingMiddleware
+        from core.http import LoggingMiddleware, MiddlewareChain
 
         chain = MiddlewareChain()
         chain.add(LoggingMiddleware())

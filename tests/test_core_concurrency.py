@@ -11,19 +11,21 @@ test_core_concurrency.py - 并发控制模块单元测试
 - 性能测试
 """
 
-import pytest
+import asyncio
 import threading
 import time
-import asyncio
+
+import pytest
+
+from core.concurrency.circuit_breaker import CircuitBreaker, CircuitState
+from core.concurrency.pool import DynamicThreadPool
 
 # 导入被测试的模块
-from core.concurrency.rate_limiter import TokenBucket, SlidingWindowRateLimiter
-from core.concurrency.pool import DynamicThreadPool
-from core.concurrency.circuit_breaker import CircuitBreaker, CircuitState
+from core.concurrency.rate_limiter import SlidingWindowRateLimiter, TokenBucket
 from core.concurrency.semaphore import AsyncSemaphore
 
-
 # ============== TokenBucket 令牌桶测试 ==============
+
 
 class TestTokenBucket:
     """TokenBucket 令牌桶限流器测试"""
@@ -45,15 +47,15 @@ class TestTokenBucket:
 
     def test_init_invalid_rate(self):
         """测试无效速率"""
-        with pytest.raises(ValueError, match='rate 必须大于 0'):
+        with pytest.raises(ValueError, match="rate 必须大于 0"):
             TokenBucket(rate=0)
 
-        with pytest.raises(ValueError, match='rate 必须大于 0'):
+        with pytest.raises(ValueError, match="rate 必须大于 0"):
             TokenBucket(rate=-1)
 
     def test_init_invalid_capacity(self):
         """测试无效容量"""
-        with pytest.raises(ValueError, match='capacity 不能小于 rate'):
+        with pytest.raises(ValueError, match="capacity 不能小于 rate"):
             TokenBucket(rate=10.0, capacity=5.0)
 
     def test_try_acquire_success(self):
@@ -141,6 +143,7 @@ class TestTokenBucket:
 
 # ============== SlidingWindowRateLimiter 滑动窗口测试 ==============
 
+
 class TestSlidingWindowRateLimiter:
     """SlidingWindowRateLimiter 滑动窗口限流器测试"""
 
@@ -211,6 +214,7 @@ class TestSlidingWindowRateLimiter:
 
 
 # ============== DynamicThreadPool 动态线程池测试 ==============
+
 
 class TestDynamicThreadPool:
     """DynamicThreadPool 动态线程池测试"""
@@ -295,20 +299,20 @@ class TestDynamicThreadPool:
 
         metrics = pool.get_metrics()
 
-        assert metrics['submitted_tasks'] == 10
-        assert metrics['completed_tasks'] == 10
-        assert metrics['success_rate'] == 1.0
+        assert metrics["submitted_tasks"] == 10
+        assert metrics["completed_tasks"] == 10
+        assert metrics["success_rate"] == 1.0
 
     def test_task_exception_handling(self):
         """测试任务异常处理"""
         pool = DynamicThreadPool(min_workers=2, max_workers=5)
 
         def failing_task():
-            raise ValueError('Task failed')
+            raise ValueError("Task failed")
 
         future = pool.submit(failing_task)
 
-        with pytest.raises(ValueError, match='Task failed'):
+        with pytest.raises(ValueError, match="Task failed"):
             future.result()
 
         # 线程池应该继续工作
@@ -317,6 +321,7 @@ class TestDynamicThreadPool:
 
 
 # ============== CircuitBreaker 熔断器测试 ==============
+
 
 class TestCircuitBreaker:
     """CircuitBreaker 熔断器测试"""
@@ -337,11 +342,11 @@ class TestCircuitBreaker:
         breaker = CircuitBreaker(failure_threshold=3)
 
         def success_func():
-            return 'success'
+            return "success"
 
         result = breaker.call(success_func)
 
-        assert result == 'success'
+        assert result == "success"
         assert breaker.state == CircuitState.CLOSED
 
     def test_call_failure(self):
@@ -349,7 +354,7 @@ class TestCircuitBreaker:
         breaker = CircuitBreaker(failure_threshold=3)
 
         def failing_func():
-            raise RuntimeError('Failed')
+            raise RuntimeError("Failed")
 
         # 前3次失败应该被记录
         for _ in range(3):
@@ -364,7 +369,7 @@ class TestCircuitBreaker:
         breaker = CircuitBreaker(failure_threshold=2, timeout=1.0)
 
         def failing_func():
-            raise RuntimeError('Failed')
+            raise RuntimeError("Failed")
 
         # 触发熔断
         for _ in range(2):
@@ -375,14 +380,14 @@ class TestCircuitBreaker:
 
         # 开路状态应该直接拒绝调用
         with pytest.raises(Exception):  # 应该抛出熔断异常
-            breaker.call(lambda: 'test')
+            breaker.call(lambda: "test")
 
     def test_half_open_state(self):
         """测试半开状态"""
         breaker = CircuitBreaker(failure_threshold=2, timeout=0.1)
 
         def failing_func():
-            raise RuntimeError('Failed')
+            raise RuntimeError("Failed")
 
         # 触发熔断
         for _ in range(2):
@@ -397,11 +402,11 @@ class TestCircuitBreaker:
         # 应该进入半开状态
         # 下一次调用会测试服务是否恢复
         def success_func():
-            return 'recovered'
+            return "recovered"
 
         result = breaker.call(success_func)
 
-        assert result == 'recovered'
+        assert result == "recovered"
         assert breaker.state == CircuitState.CLOSED
 
     def test_decorator(self):
@@ -411,7 +416,7 @@ class TestCircuitBreaker:
         @breaker.decorator
         def protected_func(x):
             if x < 0:
-                raise ValueError('Negative value')
+                raise ValueError("Negative value")
             return x * 2
 
         # 成功调用
@@ -427,6 +432,7 @@ class TestCircuitBreaker:
 
 
 # ============== AsyncSemaphore 异步信号量测试 ==============
+
 
 class TestAsyncSemaphore:
     """AsyncSemaphore 异步信号量测试"""
@@ -518,6 +524,7 @@ class TestAsyncSemaphore:
 
 # ============== 集成测试 ==============
 
+
 class TestIntegration:
     """集成测试"""
 
@@ -549,8 +556,8 @@ class TestIntegration:
         def protected_task():
             call_count[0] += 1
             if call_count[0] <= 3:
-                raise RuntimeError('Service unavailable')
-            return 'success'
+                raise RuntimeError("Service unavailable")
+            return "success"
 
         # 提交多个任务
         futures = []
@@ -591,6 +598,7 @@ class TestIntegration:
 
 # ============== 性能测试 ==============
 
+
 class TestPerformance:
     """性能测试"""
 
@@ -623,5 +631,5 @@ class TestPerformance:
         assert elapsed < 5.0
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

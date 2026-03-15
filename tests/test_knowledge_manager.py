@@ -5,22 +5,22 @@
 测试 core/knowledge/ 的所有核心功能
 """
 
-import pytest
 from datetime import datetime
 
+import pytest
+
 from core.knowledge import (
-    KnowledgeManager,
+    AttackPath,
+    EntityType,
     InMemoryGraphStore,
     KnowledgeEntity,
+    KnowledgeManager,
     KnowledgeRelation,
-    EntityType,
+    QueryResult,
     RelationType,
     Severity,
-    AttackPath,
-    QueryResult,
     SimilarityMatch,
 )
-
 
 # ==================== 数据模型测试 ====================
 

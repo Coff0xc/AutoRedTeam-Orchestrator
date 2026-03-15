@@ -4,8 +4,8 @@ Handlers 模块初始化单元测试
 测试 handlers/__init__.py 中的注册入口和异常处理
 """
 
-from unittest.mock import MagicMock, patch
 from contextlib import ExitStack
+from unittest.mock import MagicMock, patch
 
 
 class TestHandlersInit:
@@ -41,22 +41,22 @@ class TestHandlersInit:
     def test_import_register_functions(self):
         """测试导入所有注册函数"""
         from handlers import (
-            register_recon_tools,
-            register_detector_tools,
-            register_cve_tools,
+            register_ad_tools,
+            register_ai_tools,
             register_api_security_tools,
             register_cloud_security_tools,
-            register_supply_chain_tools,
-            register_redteam_tools,
-            register_orchestration_tools,
-            register_lateral_tools,
-            register_persistence_tools,
-            register_ad_tools,
-            register_session_tools,
-            register_report_tools,
-            register_ai_tools,
-            register_misc_tools,
+            register_cve_tools,
+            register_detector_tools,
             register_external_tools,
+            register_lateral_tools,
+            register_misc_tools,
+            register_orchestration_tools,
+            register_persistence_tools,
+            register_recon_tools,
+            register_redteam_tools,
+            register_report_tools,
+            register_session_tools,
+            register_supply_chain_tools,
         )
 
         # 验证所有函数都是可调用的

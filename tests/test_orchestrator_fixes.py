@@ -11,8 +11,9 @@ test_orchestrator_fixes.py - 验证编排器修复的单元测试
     pytest tests/test_orchestrator_fixes.py -v
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 
 class TestURLNormalization:
@@ -121,7 +122,7 @@ class TestVulnScanTargetNormalization:
     def test_get_scan_targets_uses_normalized_url(self):
         """测试: _get_scan_targets 使用规范化后的 URL"""
         from core.orchestrator.phases import VulnScanPhaseExecutor
-        from core.orchestrator.state import PentestState, PentestPhase
+        from core.orchestrator.state import PentestPhase, PentestState
 
         # 创建状态，使用无协议域名
         state = MagicMock(spec=PentestState)
@@ -139,7 +140,7 @@ class TestVulnScanTargetNormalization:
     def test_get_scan_targets_with_directories(self):
         """测试: _get_scan_targets 正确组合目录路径"""
         from core.orchestrator.phases import VulnScanPhaseExecutor
-        from core.orchestrator.state import PentestState, PentestPhase
+        from core.orchestrator.state import PentestPhase, PentestState
 
         state = MagicMock(spec=PentestState)
         state.target = "example.com"
@@ -160,10 +161,7 @@ class TestConfigPriority:
     @pytest.mark.asyncio
     async def test_phase_config_overrides_global_config(self):
         """测试: 阶段配置覆盖全局配置"""
-        from core.orchestrator.orchestrator import (
-            AutoPentestOrchestrator,
-            OrchestratorConfig
-        )
+        from core.orchestrator.orchestrator import AutoPentestOrchestrator, OrchestratorConfig
         from core.orchestrator.state import PentestPhase
 
         # 全局配置
@@ -271,6 +269,7 @@ class TestLegacyToolsDeprecation:
     def test_register_pentest_tools_shows_deprecation_warning(self):
         """测试: register_pentest_tools 显示弃用警告"""
         import warnings
+
         from tools.pentest_tools import register_pentest_tools_legacy
 
         mock_mcp = MagicMock()
@@ -286,10 +285,7 @@ class TestLegacyToolsDeprecation:
 
     def test_backward_compat_alias_exists(self):
         """测试: 向后兼容别名存在"""
-        from tools.pentest_tools import (
-            register_pentest_tools,
-            register_pentest_tools_legacy
-        )
+        from tools.pentest_tools import register_pentest_tools, register_pentest_tools_legacy
 
         # 别名应该指向同一个函数
         assert register_pentest_tools is register_pentest_tools_legacy

@@ -4,8 +4,9 @@
 测试 handlers/redteam_handlers.py 中的工具注册和执行
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 class TestRedTeamHandlersRegistration:
@@ -117,8 +118,8 @@ class TestLateralSMBTool:
     @pytest.mark.asyncio
     async def test_lateral_smb_auth_error(self):
         """测试SMB横向移动认证失败"""
-        from handlers.redteam_handlers import register_redteam_tools
         from core.exceptions import InvalidCredentials
+        from handlers.redteam_handlers import register_redteam_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -615,9 +616,10 @@ class TestExfiltrateFileTool:
     @pytest.mark.asyncio
     async def test_exfiltrate_file_success(self):
         """测试文件外泄成功"""
-        from handlers.redteam_handlers import register_redteam_tools
         import tempfile
         from pathlib import Path
+
+        from handlers.redteam_handlers import register_redteam_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()

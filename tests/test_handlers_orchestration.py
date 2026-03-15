@@ -5,11 +5,12 @@
 仅测 handler 层，所有 core 调用均 mock
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from typing import Dict, Any
-from core.security.mcp_auth_middleware import AuthMode
+from typing import Any, Dict
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from core.security.mcp_auth_middleware import AuthMode
 
 # ==================== 辅助函数 ====================
 

@@ -4,11 +4,11 @@
 测试 handlers/session_handlers.py 中的 4 个工具注册和执行
 """
 
-import pytest
-from unittest.mock import MagicMock, patch
-from typing import Dict, Any
 from datetime import datetime
+from typing import Any, Dict
+from unittest.mock import MagicMock, patch
 
+import pytest
 
 # ==================== 辅助函数 ====================
 

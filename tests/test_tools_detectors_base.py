@@ -13,18 +13,19 @@ test_tools_detectors_base.py - tools/detectors/base.py 单元测试
 - 失败计数器
 """
 
-import pytest
+from typing import Any, Dict, List
 from unittest.mock import Mock, patch
-from typing import List, Dict, Any
+
+import pytest
 
 # 导入被测试的模块
 from tools.detectors.base import (
-    Vulnerability,
     BaseDetector,
+    Vulnerability,
 )
 
-
 # ============== 测试用的具体检测器实现 ==============
+
 
 class MockDetector(BaseDetector):
     """用于测试的模拟检测器"""
@@ -32,15 +33,12 @@ class MockDetector(BaseDetector):
     def get_payloads(self) -> Dict[str, List[str]]:
         """返回测试用的 payload"""
         return {
-            "error_based": ["'", "\"", "1' OR '1'='1"],
+            "error_based": ["'", '"', "1' OR '1'='1"],
             "time_based": ["1' AND SLEEP(5)--"],
         }
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         """验证响应是否表明存在漏洞"""
         if not response or not response.get("success"):
@@ -60,25 +58,20 @@ class MockDetectorNoVuln(BaseDetector):
         return {"test": ["payload1"]}
 
     def validate_response(
-        self,
-        response: Dict[str, Any],
-        payload: str,
-        baseline: Dict[str, Any] = None
+        self, response: Dict[str, Any], payload: str, baseline: Dict[str, Any] = None
     ) -> bool:
         return False
 
 
 # ============== Vulnerability 数据类测试 ==============
 
+
 class TestVulnerability:
     """Vulnerability 数据类测试"""
 
     def test_init_minimal(self):
         """测试最小化初始化"""
-        vuln = Vulnerability(
-            type="SQL Injection",
-            severity="CRITICAL"
-        )
+        vuln = Vulnerability(type="SQL Injection", severity="CRITICAL")
 
         assert vuln.type == "SQL Injection"
         assert vuln.severity == "CRITICAL"
@@ -101,7 +94,7 @@ class TestVulnerability:
             url="https://example.com/search?q=test",
             verified=True,
             confidence=0.95,
-            details={"context": "reflected", "waf": "none"}
+            details={"context": "reflected", "waf": "none"},
         )
 
         assert vuln.type == "XSS"
@@ -126,7 +119,7 @@ class TestVulnerability:
             url="https://example.com/account",
             verified=False,
             confidence=0.7,
-            details={"method": "POST"}
+            details={"method": "POST"},
         )
 
         result = vuln.to_dict()
@@ -154,11 +147,12 @@ class TestVulnerability:
 
 # ============== BaseDetector 初始化测试 ==============
 
+
 class TestBaseDetectorInit:
     """BaseDetector 初始化测试"""
 
-    @patch('tools.detectors.base.GLOBAL_CONFIG', {"request_timeout": 15})
-    @patch('tools.detectors.base.get_verify_ssl', return_value=False)
+    @patch("tools.detectors.base.GLOBAL_CONFIG", {"request_timeout": 15})
+    @patch("tools.detectors.base.get_verify_ssl", return_value=False)
     def test_init_default_config(self, mock_verify_ssl):
         """测试默认配置初始化"""
         detector = MockDetector()
@@ -172,10 +166,7 @@ class TestBaseDetectorInit:
     def test_init_custom_config(self):
         """测试自定义配置初始化"""
         detector = MockDetector(
-            timeout=30,
-            verify_ssl=True,
-            max_retries=5,
-            user_agent="CustomAgent/1.0"
+            timeout=30, verify_ssl=True, max_retries=5, user_agent="CustomAgent/1.0"
         )
 
         assert detector.timeout == 30
@@ -183,8 +174,8 @@ class TestBaseDetectorInit:
         assert detector.max_retries == 5
         assert detector.user_agent == "CustomAgent/1.0"
 
-    @patch('tools.detectors.base.HAS_REQUESTS', True)
-    @patch('tools.detectors.base.HTTPClientFactory')
+    @patch("tools.detectors.base.HAS_REQUESTS", True)
+    @patch("tools.detectors.base.HTTPClientFactory")
     def test_init_with_requests(self, mock_factory):
         """测试有 requests 库时的初始化"""
         mock_client = Mock()
@@ -195,7 +186,7 @@ class TestBaseDetectorInit:
         assert detector.session is not None
         mock_factory.get_sync_client.assert_called_once()
 
-    @patch('tools.detectors.base.HAS_REQUESTS', False)
+    @patch("tools.detectors.base.HAS_REQUESTS", False)
     def test_init_without_requests(self):
         """测试没有 requests 库时的初始化"""
         detector = MockDetector()
@@ -205,10 +196,11 @@ class TestBaseDetectorInit:
 
 # ============== BaseDetector 请求处理测试 ==============
 
+
 class TestBaseDetectorRequests:
     """BaseDetector HTTP 请求处理测试"""
 
-    @patch('tools.detectors.base.HAS_REQUESTS', True)
+    @patch("tools.detectors.base.HAS_REQUESTS", True)
     def test_send_request_get_success(self):
         """测试 GET 请求成功"""
         detector = MockDetector()
@@ -223,12 +215,8 @@ class TestBaseDetectorRequests:
         mock_session.get.return_value = mock_response
         detector.session = mock_session
 
-        with patch('tools.detectors.base.get_proxies', return_value=None):
-            result = detector.send_request(
-                "https://example.com",
-                payload="test",
-                param="id"
-            )
+        with patch("tools.detectors.base.get_proxies", return_value=None):
+            result = detector.send_request("https://example.com", payload="test", param="id")
 
         assert result is not None
         assert result["success"] is True
@@ -237,7 +225,7 @@ class TestBaseDetectorRequests:
         assert result["response_length"] == len("Success response")
         assert "response_time" in result
 
-    @patch('tools.detectors.base.HAS_REQUESTS', True)
+    @patch("tools.detectors.base.HAS_REQUESTS", True)
     def test_send_request_post_success(self):
         """测试 POST 请求成功"""
         detector = MockDetector()
@@ -251,17 +239,15 @@ class TestBaseDetectorRequests:
         mock_session.post.return_value = mock_response
         detector.session = mock_session
 
-        with patch('tools.detectors.base.get_proxies', return_value=None):
+        with patch("tools.detectors.base.get_proxies", return_value=None):
             result = detector.send_request(
-                "https://example.com/api",
-                method="POST",
-                data='{"key": "value"}'
+                "https://example.com/api", method="POST", data='{"key": "value"}'
             )
 
         assert result["success"] is True
         assert result["status_code"] == 201
 
-    @patch('tools.detectors.base.HAS_REQUESTS', True)
+    @patch("tools.detectors.base.HAS_REQUESTS", True)
     def test_send_request_with_custom_headers(self):
         """测试带自定义请求头的请求"""
         detector = MockDetector()
@@ -277,18 +263,15 @@ class TestBaseDetectorRequests:
 
         custom_headers = {"X-Custom-Header": "test"}
 
-        with patch('tools.detectors.base.get_proxies', return_value=None):
-            detector.send_request(
-                "https://example.com",
-                headers=custom_headers
-            )
+        with patch("tools.detectors.base.get_proxies", return_value=None):
+            detector.send_request("https://example.com", headers=custom_headers)
 
         # 验证调用时包含了自定义头
         call_args = mock_session.get.call_args
         assert "headers" in call_args.kwargs
         assert "X-Custom-Header" in call_args.kwargs["headers"]
 
-    @patch('tools.detectors.base.HAS_REQUESTS', True)
+    @patch("tools.detectors.base.HAS_REQUESTS", True)
     def test_send_request_exception_handling(self):
         """测试请求异常处理"""
         detector = MockDetector()
@@ -297,8 +280,8 @@ class TestBaseDetectorRequests:
         mock_session.get.side_effect = Exception("Connection timeout")
         detector.session = mock_session
 
-        with patch('tools.detectors.base.get_proxies', return_value=None):
-            with patch('tools.detectors.base.record_failure') as mock_record:
+        with patch("tools.detectors.base.get_proxies", return_value=None):
+            with patch("tools.detectors.base.record_failure") as mock_record:
                 result = detector.send_request("https://example.com")
 
         assert result is not None
@@ -306,8 +289,8 @@ class TestBaseDetectorRequests:
         assert "error" in result
         mock_record.assert_called_once_with(is_network_error=True)
 
-    @patch('tools.detectors.base.HAS_REQUESTS', False)
-    @patch('tools.detectors.base.make_request')
+    @patch("tools.detectors.base.HAS_REQUESTS", False)
+    @patch("tools.detectors.base.make_request")
     def test_send_request_fallback_to_make_request(self, mock_make_request):
         """测试降级到 make_request"""
         detector = MockDetector()
@@ -316,7 +299,7 @@ class TestBaseDetectorRequests:
         mock_make_request.return_value = {
             "success": True,
             "text": "Fallback response",
-            "status_code": 200
+            "status_code": 200,
         }
 
         result = detector.send_request("https://example.com")
@@ -328,6 +311,7 @@ class TestBaseDetectorRequests:
 
 # ============== BaseDetector 基线响应测试 ==============
 
+
 class TestBaseDetectorBaseline:
     """BaseDetector 基线响应测试"""
 
@@ -335,11 +319,11 @@ class TestBaseDetectorBaseline:
         """测试首次获取基线响应"""
         detector = MockDetector()
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             mock_send.return_value = {
                 "success": True,
                 "status_code": 200,
-                "response_text": "Normal response"
+                "response_text": "Normal response",
             }
 
             baseline = detector.get_baseline("https://example.com")
@@ -357,7 +341,7 @@ class TestBaseDetectorBaseline:
         cached_baseline = {"success": True, "cached": True}
         detector._baseline_cache["https://example.com"] = cached_baseline
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             baseline = detector.get_baseline("https://example.com")
 
         assert baseline == cached_baseline
@@ -367,7 +351,7 @@ class TestBaseDetectorBaseline:
         """测试基线响应获取失败"""
         detector = MockDetector()
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             mock_send.return_value = None
 
             baseline = detector.get_baseline("https://example.com")
@@ -378,6 +362,7 @@ class TestBaseDetectorBaseline:
 
 # ============== BaseDetector Payload 测试 ==============
 
+
 class TestBaseDetectorPayload:
     """BaseDetector Payload 测试逻辑"""
 
@@ -385,23 +370,19 @@ class TestBaseDetectorPayload:
         """测试单个 payload 成功检测"""
         detector = MockDetector()
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             mock_send.return_value = {
                 "success": True,
                 "status_code": 200,
                 "response_text": "MySQL syntax error",
                 "url": "https://example.com?id='",
                 "response_length": 100,
-                "response_time": 0.5
+                "response_time": 0.5,
             }
 
-            with patch('tools.detectors.base.should_abort_scan', return_value=False):
-                with patch('tools.detectors.base.reset_failure_counter'):
-                    vuln = detector.test_payload(
-                        "https://example.com",
-                        "'",
-                        "id"
-                    )
+            with patch("tools.detectors.base.should_abort_scan", return_value=False):
+                with patch("tools.detectors.base.reset_failure_counter"):
+                    vuln = detector.test_payload("https://example.com", "'", "id")
 
         assert vuln is not None
         assert isinstance(vuln, Vulnerability)
@@ -414,20 +395,16 @@ class TestBaseDetectorPayload:
         """测试 payload 未发现漏洞"""
         detector = MockDetectorNoVuln()
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             mock_send.return_value = {
                 "success": True,
                 "status_code": 200,
-                "response_text": "Normal response"
+                "response_text": "Normal response",
             }
 
-            with patch('tools.detectors.base.should_abort_scan', return_value=False):
-                with patch('tools.detectors.base.reset_failure_counter'):
-                    vuln = detector.test_payload(
-                        "https://example.com",
-                        "payload1",
-                        "id"
-                    )
+            with patch("tools.detectors.base.should_abort_scan", return_value=False):
+                with patch("tools.detectors.base.reset_failure_counter"):
+                    vuln = detector.test_payload("https://example.com", "payload1", "id")
 
         assert vuln is None
 
@@ -435,16 +412,12 @@ class TestBaseDetectorPayload:
         """测试 payload 请求失败"""
         detector = MockDetector()
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             mock_send.return_value = {"success": False, "error": "Timeout"}
 
-            with patch('tools.detectors.base.should_abort_scan', return_value=False):
-                with patch('tools.detectors.base.record_failure') as mock_record:
-                    vuln = detector.test_payload(
-                        "https://example.com",
-                        "'",
-                        "id"
-                    )
+            with patch("tools.detectors.base.should_abort_scan", return_value=False):
+                with patch("tools.detectors.base.record_failure") as mock_record:
+                    vuln = detector.test_payload("https://example.com", "'", "id")
 
         assert vuln is None
         mock_record.assert_called_once_with(is_network_error=True)
@@ -453,12 +426,8 @@ class TestBaseDetectorPayload:
         """测试扫描中止"""
         detector = MockDetector()
 
-        with patch('tools.detectors.base.should_abort_scan', return_value=True):
-            vuln = detector.test_payload(
-                "https://example.com",
-                "'",
-                "id"
-            )
+        with patch("tools.detectors.base.should_abort_scan", return_value=True):
+            vuln = detector.test_payload("https://example.com", "'", "id")
 
         assert vuln is None
 
@@ -466,22 +435,20 @@ class TestBaseDetectorPayload:
         """测试批量测试 - 发现第一个漏洞后停止"""
         detector = MockDetector()
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             mock_send.return_value = {
                 "success": True,
                 "status_code": 200,
                 "response_text": "SQL error detected",
                 "url": "https://example.com",
                 "response_length": 50,
-                "response_time": 0.3
+                "response_time": 0.3,
             }
 
-            with patch('tools.detectors.base.should_abort_scan', return_value=False):
-                with patch('tools.detectors.base.reset_failure_counter'):
+            with patch("tools.detectors.base.should_abort_scan", return_value=False):
+                with patch("tools.detectors.base.reset_failure_counter"):
                     vulns = detector.test_payloads(
-                        "https://example.com",
-                        param="id",
-                        stop_on_first=True
+                        "https://example.com", param="id", stop_on_first=True
                     )
 
         assert len(vulns) >= 1
@@ -491,22 +458,20 @@ class TestBaseDetectorPayload:
         """测试批量测试 - 不停止"""
         detector = MockDetector()
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             mock_send.return_value = {
                 "success": True,
                 "status_code": 200,
                 "response_text": "MySQL syntax error",
                 "url": "https://example.com",
                 "response_length": 50,
-                "response_time": 0.3
+                "response_time": 0.3,
             }
 
-            with patch('tools.detectors.base.should_abort_scan', return_value=False):
-                with patch('tools.detectors.base.reset_failure_counter'):
+            with patch("tools.detectors.base.should_abort_scan", return_value=False):
+                with patch("tools.detectors.base.reset_failure_counter"):
                     vulns = detector.test_payloads(
-                        "https://example.com",
-                        param="id",
-                        stop_on_first=False
+                        "https://example.com", param="id", stop_on_first=False
                     )
 
         # 应该测试所有 payload
@@ -515,6 +480,7 @@ class TestBaseDetectorPayload:
 
 # ============== BaseDetector 检测入口测试 ==============
 
+
 class TestBaseDetectorDetect:
     """BaseDetector detect() 方法测试"""
 
@@ -522,18 +488,18 @@ class TestBaseDetectorDetect:
         """测试检测成功"""
         detector = MockDetector()
 
-        with patch.object(detector, 'test_payloads') as mock_test:
+        with patch.object(detector, "test_payloads") as mock_test:
             mock_vuln = Vulnerability(
                 type="SQL Injection",
                 severity="HIGH",
                 param="id",
                 payload="'",
-                url="https://example.com"
+                url="https://example.com",
             )
             mock_test.return_value = [mock_vuln]
 
-            with patch.object(detector, 'verify_vulnerability', return_value=True):
-                with patch('tools.detectors.base.reset_failure_counter'):
+            with patch.object(detector, "verify_vulnerability", return_value=True):
+                with patch("tools.detectors.base.reset_failure_counter"):
                     result = detector.detect("https://example.com")
 
         assert result["success"] is True
@@ -546,10 +512,10 @@ class TestBaseDetectorDetect:
         """测试未发现漏洞"""
         detector = MockDetectorNoVuln()
 
-        with patch.object(detector, 'test_payloads') as mock_test:
+        with patch.object(detector, "test_payloads") as mock_test:
             mock_test.return_value = []
 
-            with patch('tools.detectors.base.reset_failure_counter'):
+            with patch("tools.detectors.base.reset_failure_counter"):
                 result = detector.detect("https://example.com")
 
         assert result["success"] is True
@@ -560,10 +526,10 @@ class TestBaseDetectorDetect:
         """测试检测异常处理"""
         detector = MockDetector()
 
-        with patch.object(detector, 'test_payloads') as mock_test:
+        with patch.object(detector, "test_payloads") as mock_test:
             mock_test.side_effect = Exception("Test exception")
 
-            with patch('tools.detectors.base.reset_failure_counter'):
+            with patch("tools.detectors.base.reset_failure_counter"):
                 result = detector.detect("https://example.com")
 
         assert result["success"] is False
@@ -572,6 +538,7 @@ class TestBaseDetectorDetect:
 
 
 # ============== BaseDetector 二次验证测试 ==============
+
 
 class TestBaseDetectorVerify:
     """BaseDetector 二次验证测试"""
@@ -585,15 +552,15 @@ class TestBaseDetectorVerify:
             severity="HIGH",
             param="id",
             payload="'",
-            url="https://example.com?id='"
+            url="https://example.com?id='",
         )
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             # 第一次请求：获取基线
             # 第二次请求：验证漏洞
             mock_send.side_effect = [
                 {"success": True, "response_text": "Normal"},
-                {"success": True, "response_text": "SQL error"}
+                {"success": True, "response_text": "SQL error"},
             ]
 
             result = detector.verify_vulnerability(vuln)
@@ -609,13 +576,13 @@ class TestBaseDetectorVerify:
             severity="LOW",
             param="id",
             payload="test",
-            url="https://example.com?id=test"
+            url="https://example.com?id=test",
         )
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             mock_send.side_effect = [
                 {"success": True, "response_text": "Normal"},
-                {"success": True, "response_text": "Normal"}
+                {"success": True, "response_text": "Normal"},
             ]
 
             result = detector.verify_vulnerability(vuln)
@@ -641,10 +608,10 @@ class TestBaseDetectorVerify:
             severity="LOW",
             param="id",
             payload="test",
-            url="https://example.com?id=test"
+            url="https://example.com?id=test",
         )
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             mock_send.return_value = None
 
             result = detector.verify_vulnerability(vuln)
@@ -653,6 +620,7 @@ class TestBaseDetectorVerify:
 
 
 # ============== BaseDetector 资源清理测试 ==============
+
 
 class TestBaseDetectorCleanup:
     """BaseDetector 资源清理测试"""
@@ -687,7 +655,7 @@ class TestBaseDetectorCleanup:
 
     def test_context_manager(self):
         """测试上下文管理器"""
-        with patch.object(MockDetector, 'cleanup') as mock_cleanup:
+        with patch.object(MockDetector, "cleanup") as mock_cleanup:
             with MockDetector() as detector:
                 assert detector is not None
 
@@ -695,6 +663,7 @@ class TestBaseDetectorCleanup:
 
 
 # ============== BaseDetector 辅助方法测试 ==============
+
 
 class TestBaseDetectorHelpers:
     """BaseDetector 辅助方法测试"""
@@ -721,11 +690,7 @@ class TestBaseDetectorHelpers:
         """测试提取证据"""
         detector = MockDetector()
 
-        response = {
-            "status_code": 500,
-            "response_length": 1234,
-            "response_time": 2.5
-        }
+        response = {"status_code": 500, "response_length": 1234, "response_time": 2.5}
 
         evidence = detector._extract_evidence(response)
 
@@ -744,6 +709,7 @@ class TestBaseDetectorHelpers:
 
 # ============== 边界条件测试 ==============
 
+
 class TestEdgeCases:
     """边界条件测试"""
 
@@ -751,7 +717,7 @@ class TestEdgeCases:
         """测试空 URL"""
         detector = MockDetector()
 
-        with patch('tools.detectors.base.reset_failure_counter'):
+        with patch("tools.detectors.base.reset_failure_counter"):
             result = detector.detect("")
 
         assert result["success"] is True
@@ -761,22 +727,20 @@ class TestEdgeCases:
         """测试 payload 中的特殊字符"""
         detector = MockDetector()
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             mock_send.return_value = {
                 "success": True,
                 "status_code": 200,
                 "response_text": "Normal",
                 "url": "https://example.com",
                 "response_length": 10,
-                "response_time": 0.1
+                "response_time": 0.1,
             }
 
-            with patch('tools.detectors.base.should_abort_scan', return_value=False):
-                with patch('tools.detectors.base.reset_failure_counter'):
+            with patch("tools.detectors.base.should_abort_scan", return_value=False):
+                with patch("tools.detectors.base.reset_failure_counter"):
                     detector.test_payload(
-                        "https://example.com",
-                        "<script>alert('XSS')</script>",
-                        "search"
+                        "https://example.com", "<script>alert('XSS')</script>", "search"
                     )
 
         # 应该正常处理特殊字符
@@ -785,13 +749,14 @@ class TestEdgeCases:
         """测试 URL 中的 Unicode 字符"""
         detector = MockDetector()
 
-        with patch('tools.detectors.base.reset_failure_counter'):
+        with patch("tools.detectors.base.reset_failure_counter"):
             result = detector.detect("https://example.com/路径/测试")
 
         assert result["success"] is True
 
 
 # ============== 集成测试 ==============
+
 
 class TestIntegration:
     """集成测试"""
@@ -800,27 +765,33 @@ class TestIntegration:
         """测试完整检测工作流"""
         detector = MockDetector()
 
-        with patch.object(detector, 'send_request') as mock_send:
+        with patch.object(detector, "send_request") as mock_send:
             # 模拟基线请求和漏洞检测请求
             mock_send.side_effect = [
                 # 基线请求
                 {"success": True, "status_code": 200, "response_text": "Normal"},
                 # Payload 测试请求
-                {"success": True, "status_code": 500, "response_text": "MySQL error",
-                 "url": "https://example.com?id='", "response_length": 100, "response_time": 0.5},
+                {
+                    "success": True,
+                    "status_code": 500,
+                    "response_text": "MySQL error",
+                    "url": "https://example.com?id='",
+                    "response_length": 100,
+                    "response_time": 0.5,
+                },
                 # 验证请求 1
                 {"success": True, "status_code": 200, "response_text": "Normal"},
                 # 验证请求 2
-                {"success": True, "status_code": 500, "response_text": "MySQL error"}
+                {"success": True, "status_code": 500, "response_text": "MySQL error"},
             ]
 
-            with patch('tools.detectors.base.should_abort_scan', return_value=False):
-                with patch('tools.detectors.base.reset_failure_counter'):
+            with patch("tools.detectors.base.should_abort_scan", return_value=False):
+                with patch("tools.detectors.base.reset_failure_counter"):
                     result = detector.detect("https://example.com", param="id", deep_scan=False)
 
         assert result["success"] is True
         assert result["total"] >= 1
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

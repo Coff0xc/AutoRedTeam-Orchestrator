@@ -5,8 +5,10 @@
 测试 core/detectors/advanced_verifier.py 的所有核心功能
 """
 
-import pytest
 import time
+
+import pytest
+
 from core.detectors.advanced_verifier import (
     AdvancedVerifier,
     OOBCallbackManager,
@@ -15,7 +17,6 @@ from core.detectors.advanced_verifier import (
     VerificationResult,
     VerificationStatus,
 )
-
 
 # ==================== VerificationStatus 测试 ====================
 

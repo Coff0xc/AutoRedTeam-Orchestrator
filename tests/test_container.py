@@ -5,8 +5,10 @@
 测试 core/container.py 的所有核心功能
 """
 
-import pytest
 from abc import ABC, abstractmethod
+
+import pytest
+
 from core.container import (
     CircularDependencyError,
     Container,
@@ -22,7 +24,6 @@ from core.container import (
     set_container,
     singleton,
 )
-
 
 # ==================== 测试用类 ====================
 

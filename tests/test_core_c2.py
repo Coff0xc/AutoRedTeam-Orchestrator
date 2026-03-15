@@ -219,7 +219,7 @@ class TestHTTPTunnel:
 
     def test_http_tunnel_creation(self):
         """测试 HTTP 隧道创建"""
-        from core.c2 import HTTPTunnel, C2Config
+        from core.c2 import C2Config, HTTPTunnel
 
         config = C2Config(
             server="c2.example.com",
@@ -231,7 +231,7 @@ class TestHTTPTunnel:
 
     def test_http_tunnel_url(self):
         """测试 HTTP 隧道 URL"""
-        from core.c2 import HTTPTunnel, C2Config
+        from core.c2 import C2Config, HTTPTunnel
 
         config = C2Config(
             server="c2.example.com",
@@ -249,7 +249,7 @@ class TestDNSTunnel:
 
     def test_dns_tunnel_creation(self):
         """测试 DNS 隧道创建"""
-        from core.c2 import DNSTunnel, C2Config
+        from core.c2 import C2Config, DNSTunnel
 
         config = C2Config(
             server="c2.example.com",
@@ -265,7 +265,7 @@ class TestWebSocketTunnel:
 
     def test_websocket_tunnel_creation(self):
         """测试 WebSocket 隧道创建"""
-        from core.c2 import WebSocketTunnel, C2Config
+        from core.c2 import C2Config, WebSocketTunnel
 
         config = C2Config(
             server="c2.example.com",
@@ -346,8 +346,9 @@ class TestC2Crypto:
 
     def test_quick_encrypt(self):
         """测试快速加密"""
-        from core.c2 import quick_encrypt, quick_decrypt
         import os
+
+        from core.c2 import quick_decrypt, quick_encrypt
 
         plaintext = b"test data"
         key = os.urandom(32)  # 256-bit key
@@ -382,7 +383,7 @@ class TestC2Encoder:
 
     def test_base64_encode(self):
         """测试 Base64 编码"""
-        from core.c2 import base64_encode, base64_decode
+        from core.c2 import base64_decode, base64_encode
 
         data = b"test data"
 
@@ -394,7 +395,7 @@ class TestC2Encoder:
 
     def test_base32_encode(self):
         """测试 Base32 编码"""
-        from core.c2 import base32_encode, base32_decode
+        from core.c2 import base32_decode, base32_encode
 
         data = b"test data"
 
@@ -406,7 +407,7 @@ class TestC2Encoder:
 
     def test_url_safe_encode(self):
         """测试 URL 安全编码"""
-        from core.c2 import url_safe_encode, url_safe_decode
+        from core.c2 import url_safe_decode, url_safe_encode
 
         data = b"test data with special chars: +/="
 
@@ -469,7 +470,7 @@ class TestProtocol:
 
     def test_protocol_constants(self):
         """测试协议常量"""
-        from core.c2 import PROTOCOL_MAGIC, PROTOCOL_VERSION, HEADER_SIZE
+        from core.c2 import HEADER_SIZE, PROTOCOL_MAGIC, PROTOCOL_VERSION
 
         assert PROTOCOL_MAGIC is not None
         assert PROTOCOL_VERSION is not None
@@ -526,7 +527,7 @@ class TestProtocolFunctions:
 
     def test_decode_heartbeat(self):
         """测试解码心跳"""
-        from core.c2 import encode_heartbeat, decode_heartbeat
+        from core.c2 import decode_heartbeat, encode_heartbeat
 
         encoded = encode_heartbeat(beacon_id="test-beacon-001")
 
@@ -536,7 +537,7 @@ class TestProtocolFunctions:
 
     def test_encode_tasks(self):
         """测试编码任务"""
-        from core.c2 import encode_tasks, Task
+        from core.c2 import Task, encode_tasks
 
         tasks = [
             Task(id="1", type="shell", payload="whoami")
@@ -548,7 +549,7 @@ class TestProtocolFunctions:
 
     def test_encode_result(self):
         """测试编码结果"""
-        from core.c2 import encode_result, TaskResult
+        from core.c2 import TaskResult, encode_result
 
         result = TaskResult(
             task_id="1",
@@ -578,13 +579,13 @@ class TestBackwardCompatibility:
 
     def test_light_beacon_alias(self):
         """测试 LightBeacon 别名"""
-        from core.c2 import LightBeacon, Beacon
+        from core.c2 import Beacon, LightBeacon
 
         assert LightBeacon is Beacon
 
     def test_tunnel_config_alias(self):
         """测试 TunnelConfig 别名"""
-        from core.c2 import TunnelConfig, C2Config
+        from core.c2 import C2Config, TunnelConfig
 
         assert TunnelConfig is C2Config
 

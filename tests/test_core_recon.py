@@ -63,7 +63,7 @@ class TestStandardReconEngine:
 
     def test_engine_creation(self):
         """测试引擎创建"""
-        from core.recon import StandardReconEngine, ReconConfig
+        from core.recon import ReconConfig, StandardReconEngine
 
         config = ReconConfig(quick_mode=True)
         engine = StandardReconEngine("https://example.com", config)
@@ -72,7 +72,7 @@ class TestStandardReconEngine:
 
     def test_engine_target(self):
         """测试引擎目标"""
-        from core.recon import StandardReconEngine, ReconConfig
+        from core.recon import ReconConfig, StandardReconEngine
 
         config = ReconConfig()
         engine = StandardReconEngine("https://example.com", config)

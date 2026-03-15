@@ -4,8 +4,9 @@ core.detectors 模块单元测试
 测试漏洞检测器的核心功能
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 # 模块级别标记 - 标识为单元测试和安全测试
 pytestmark = [pytest.mark.unit, pytest.mark.security]
@@ -235,7 +236,7 @@ class TestCompositeDetector:
 
     def test_composite_add_detector(self):
         """测试添加检测器"""
-        from core.detectors import CompositeDetector, SQLiDetector, RCEDetector
+        from core.detectors import CompositeDetector, RCEDetector, SQLiDetector
 
         composite = CompositeDetector([SQLiDetector()])
         composite.add_detector(RCEDetector())
@@ -249,7 +250,6 @@ class TestPayloadManager:
     def test_get_payloads(self):
         """测试获取 payload"""
         from core.detectors import get_payloads
-
         from core.detectors.payloads import PayloadCategory
         payloads = get_payloads(PayloadCategory.SQLI)
 
@@ -279,7 +279,7 @@ class TestPayloadEncoder:
 
     def test_url_encoding(self):
         """测试 URL 编码"""
-        from core.detectors import PayloadEncoder, EncodingType
+        from core.detectors import EncodingType, PayloadEncoder
 
         encoder = PayloadEncoder()
         payload = "<script>alert(1)</script>"
@@ -290,7 +290,7 @@ class TestPayloadEncoder:
 
     def test_html_encoding(self):
         """测试 HTML 编码"""
-        from core.detectors import PayloadEncoder, EncodingType
+        from core.detectors import EncodingType, PayloadEncoder
 
         encoder = PayloadEncoder()
         payload = "<script>alert(1)</script>"
@@ -301,7 +301,7 @@ class TestPayloadEncoder:
 
     def test_base64_encoding(self):
         """测试 Base64 编码"""
-        from core.detectors import PayloadEncoder, EncodingType
+        from core.detectors import EncodingType, PayloadEncoder
 
         encoder = PayloadEncoder()
         payload = "test payload"
@@ -347,7 +347,7 @@ class TestFalsePositiveFilter:
 
     def test_is_false_positive(self):
         """测试误报检测"""
-        from core.detectors import is_false_positive, DetectionResult, Severity
+        from core.detectors import DetectionResult, Severity, is_false_positive
 
         DetectionResult(
             vulnerable=True,

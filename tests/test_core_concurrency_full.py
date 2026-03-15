@@ -4,8 +4,9 @@ core.concurrency 模块单元测试
 测试并发控制和性能管理功能
 """
 
-import pytest
 import time
+
+import pytest
 
 
 class TestDynamicThreadPool:
@@ -73,8 +74,9 @@ class TestAsyncPool:
     @pytest.mark.asyncio
     async def test_async_pool_run(self):
         """测试异步池运行"""
-        from core.concurrency import AsyncPool
         import asyncio
+
+        from core.concurrency import AsyncPool
 
         pool = AsyncPool(concurrency=5)
 
@@ -347,7 +349,7 @@ class TestTaskScheduler:
 
     def test_schedule_task(self):
         """测试调度任务"""
-        from core.concurrency import schedule_task, cancel_task
+        from core.concurrency import cancel_task, schedule_task
 
         executed = []
 
@@ -380,6 +382,7 @@ class TestScheduledTask:
     def test_scheduled_task(self):
         """测试计划任务"""
         import time
+
         from core.concurrency import ScheduledTask
 
         task = ScheduledTask(
