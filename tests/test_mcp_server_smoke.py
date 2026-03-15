@@ -22,6 +22,7 @@ class TestMCPServerSmoke:
             if "mcp_stdio_server" in sys.modules:
                 del sys.modules["mcp_stdio_server"]
             import mcp_stdio_server
+
             assert hasattr(mcp_stdio_server, "main")
         except ImportError as e:
             pytest.fail(f"Failed to import mcp_stdio_server: {e}")
@@ -41,6 +42,7 @@ class TestMCPServerSmoke:
         """Test that handlers module can be imported"""
         try:
             from handlers import register_all_handlers
+
             assert callable(register_all_handlers)
         except ImportError as e:
             pytest.fail(f"Failed to import handlers: {e}")
@@ -49,6 +51,7 @@ class TestMCPServerSmoke:
         """Test that core module exports are available"""
         try:
             from core import ToolRegistry, ToolResult
+
             assert ToolResult is not None
             assert ToolRegistry is not None
         except ImportError as e:
@@ -58,6 +61,7 @@ class TestMCPServerSmoke:
         """Test that ToolResult can be created"""
         try:
             from core import ToolResult
+
             result = ToolResult.ok(data={"test": True})
         except Exception as e:
             pytest.fail(f"Failed to create ToolResult: {e}")
@@ -87,6 +91,7 @@ class TestMCPServerSmoke:
         counter = MockCounter()
 
         import logging
+
         logger = logging.getLogger("test")
 
         # Should not raise any unhandled exceptions
@@ -98,12 +103,12 @@ class TestMCPServerSmoke:
     def test_version_file_exists(self):
         """Test that VERSION file exists and contains valid version"""
         import os
+
         version_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "VERSION"
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "VERSION"
         )
         assert os.path.exists(version_path), "VERSION file should exist"
-        with open(version_path, encoding='utf-8') as f:
+        with open(version_path, encoding="utf-8") as f:
             version = f.read().strip()
         # Basic semver format check
         parts = version.split(".")

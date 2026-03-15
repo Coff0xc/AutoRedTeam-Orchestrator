@@ -296,7 +296,9 @@ class JSAnalyzer:
             result["secrets"] = cls.extract_secrets(js_content)
             logger.info(
                 "[JSAnalyzer] %s -> %d endpoints, %d secrets",
-                js_url, len(result['endpoints']), len(result['secrets'])
+                js_url,
+                len(result["endpoints"]),
+                len(result["secrets"]),
             )
 
         return result

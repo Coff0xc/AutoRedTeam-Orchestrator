@@ -23,22 +23,22 @@ class TestGraphQLTesterInit:
         assert tester.target == "https://api.example.com/graphql"
         assert tester.max_depth == 50
         assert tester.max_batch == 100
-        assert tester.field_name == 'user'
+        assert tester.field_name == "user"
 
     def test_init_with_config(self):
         """测试带配置的初始化"""
         config = {
-            'max_depth': 100,
-            'max_batch': 200,
-            'field_name': 'product',
-            'auth_header': {'Authorization': 'Bearer token'}
+            "max_depth": 100,
+            "max_batch": 200,
+            "field_name": "product",
+            "auth_header": {"Authorization": "Bearer token"},
         }
         tester = GraphQLTester("https://api.example.com/graphql", config)
 
         assert tester.max_depth == 100
         assert tester.max_batch == 200
-        assert tester.field_name == 'product'
-        assert tester.auth_header == {'Authorization': 'Bearer token'}
+        assert tester.field_name == "product"
+        assert tester.auth_header == {"Authorization": "Bearer token"}
 
 
 class TestGraphQLIntrospection:
@@ -50,29 +50,29 @@ class TestGraphQLIntrospection:
 
         # Mock GraphQL 响应 - 返回 Schema 数据
         mock_response = {
-            'success': True,
-            'data': {
-                'data': {
-                    '__schema': {
-                        'types': [
-                            {'name': 'Query', 'kind': 'OBJECT'},
-                            {'name': 'User', 'kind': 'OBJECT'},
-                            {'name': 'Post', 'kind': 'OBJECT'},
+            "success": True,
+            "data": {
+                "data": {
+                    "__schema": {
+                        "types": [
+                            {"name": "Query", "kind": "OBJECT"},
+                            {"name": "User", "kind": "OBJECT"},
+                            {"name": "Post", "kind": "OBJECT"},
                         ],
-                        'queryType': {'name': 'Query'},
-                        'mutationType': {'name': 'Mutation'}
+                        "queryType": {"name": "Query"},
+                        "mutationType": {"name": "Mutation"},
                     }
                 }
-            }
+            },
         }
 
-        with patch.object(tester, '_send_query', return_value=mock_response):
-            with patch.object(tester, '_extract_schema_info'):
+        with patch.object(tester, "_send_query", return_value=mock_response):
+            with patch.object(tester, "_extract_schema_info"):
                 # Mock 提取的 Schema 信息
                 tester._schema_info = {
-                    'types': ['Query', 'User', 'Post'],
-                    'queries': ['user', 'users', 'post'],
-                    'mutations': ['createUser', 'updateUser']
+                    "types": ["Query", "User", "Post"],
+                    "queries": ["user", "users", "post"],
+                    "mutations": ["createUser", "updateUser"],
                 }
 
                 result = tester.test_introspection()
@@ -81,20 +81,17 @@ class TestGraphQLIntrospection:
         assert result.vulnerable is True
         assert result.vuln_type == APIVulnType.GRAPHQL_INTROSPECTION
         assert result.severity == Severity.MEDIUM
-        assert result.evidence['types_count'] == 3
-        assert result.evidence['queries_count'] == 3
+        assert result.evidence["types_count"] == 3
+        assert result.evidence["queries_count"] == 3
 
     def test_introspection_disabled(self):
         """测试 Introspection 已禁用"""
         tester = GraphQLTester("https://api.example.com/graphql")
 
         # Mock GraphQL 响应 - 返回错误
-        mock_response = {
-            'success': False,
-            'errors': [{'message': 'Introspection is disabled'}]
-        }
+        mock_response = {"success": False, "errors": [{"message": "Introspection is disabled"}]}
 
-        with patch.object(tester, '_send_query', return_value=mock_response):
+        with patch.object(tester, "_send_query", return_value=mock_response):
             result = tester.test_introspection()
 
         assert result is None
@@ -104,16 +101,9 @@ class TestGraphQLIntrospection:
         tester = GraphQLTester("https://api.example.com/graphql")
 
         # Mock GraphQL 响应 - 没有 Schema
-        mock_response = {
-            'success': True,
-            'data': {
-                'data': {
-                    'someOtherField': 'value'
-                }
-            }
-        }
+        mock_response = {"success": True, "data": {"data": {"someOtherField": "value"}}}
 
-        with patch.object(tester, '_send_query', return_value=mock_response):
+        with patch.object(tester, "_send_query", return_value=mock_response):
             result = tester.test_introspection()
 
         assert result is None
@@ -128,12 +118,9 @@ class TestGraphQLBatchQueryDoS:
 
         # Mock 批量查询响应 - 接受大量查询
         def mock_send_batch(batch):
-            return {
-                'success': True,
-                'data': [{'data': {'__typename': 'Query'}}] * len(batch)
-            }
+            return {"success": True, "data": [{"data": {"__typename": "Query"}}] * len(batch)}
 
-        with patch.object(tester, '_send_batch', side_effect=mock_send_batch):
+        with patch.object(tester, "_send_batch", side_effect=mock_send_batch):
             result = tester.test_batch_query_dos()
 
         assert result is not None
@@ -148,16 +135,10 @@ class TestGraphQLBatchQueryDoS:
         # Mock 批量查询响应 - 拒绝大量查询
         def mock_send_batch(batch):
             if len(batch) > 10:
-                return {
-                    'success': False,
-                    'errors': [{'message': 'Batch limit exceeded'}]
-                }
-            return {
-                'success': True,
-                'data': [{'data': {'__typename': 'Query'}}] * len(batch)
-            }
+                return {"success": False, "errors": [{"message": "Batch limit exceeded"}]}
+            return {"success": True, "data": [{"data": {"__typename": "Query"}}] * len(batch)}
 
-        with patch.object(tester, '_send_batch', side_effect=mock_send_batch):
+        with patch.object(tester, "_send_batch", side_effect=mock_send_batch):
             result = tester.test_batch_query_dos()
 
         # 如果有限制，可能不返回漏洞或返回较低严重性
@@ -171,16 +152,13 @@ class TestGraphQLBatchQueryDoS:
         # Mock 批量查询响应 - 模拟响应时间增长
         def mock_send_batch(batch):
             time.sleep(len(batch) * 0.001)  # 模拟处理时间
-            return {
-                'success': True,
-                'data': [{'data': {'__typename': 'Query'}}] * len(batch)
-            }
+            return {"success": True, "data": [{"data": {"__typename": "Query"}}] * len(batch)}
 
-        with patch.object(tester, '_send_batch', side_effect=mock_send_batch):
+        with patch.object(tester, "_send_batch", side_effect=mock_send_batch):
             result = tester.test_batch_query_dos()
 
         if result:
-            assert 'response_times' in result.evidence or 'max_accepted' in result.evidence
+            assert "response_times" in result.evidence or "max_accepted" in result.evidence
 
 
 class TestGraphQLDeepNestingDoS:
@@ -192,12 +170,9 @@ class TestGraphQLDeepNestingDoS:
 
         # Mock 深度嵌套查询响应 - 接受深度嵌套
         def mock_send_query(query):
-            return {
-                'success': True,
-                'data': {'data': {'user': {'friends': {'friends': {}}}}}
-            }
+            return {"success": True, "data": {"data": {"user": {"friends": {"friends": {}}}}}}
 
-        with patch.object(tester, '_send_query', side_effect=mock_send_query):
+        with patch.object(tester, "_send_query", side_effect=mock_send_query):
             result = tester.test_deep_nesting_dos()
 
         assert result is not None
@@ -212,18 +187,12 @@ class TestGraphQLDeepNestingDoS:
         # Mock 深度嵌套查询响应 - 拒绝深度嵌套
         def mock_send_query(query):
             # 检查嵌套深度
-            depth = query.count('{')
+            depth = query.count("{")
             if depth > 10:
-                return {
-                    'success': False,
-                    'errors': [{'message': 'Query depth limit exceeded'}]
-                }
-            return {
-                'success': True,
-                'data': {'data': {'user': {}}}
-            }
+                return {"success": False, "errors": [{"message": "Query depth limit exceeded"}]}
+            return {"success": True, "data": {"data": {"user": {}}}}
 
-        with patch.object(tester, '_send_query', side_effect=mock_send_query):
+        with patch.object(tester, "_send_query", side_effect=mock_send_query):
             result = tester.test_deep_nesting_dos()
 
         # 如果有限制，可能不返回漏洞
@@ -240,19 +209,21 @@ class TestGraphQLFieldSuggestion:
 
         # Mock GraphQL 响应 - 返回字段建议
         mock_response = {
-            'success': True,
-            'data': {
-                'errors': [{
-                    'message': (
-                        'Cannot query field "passwrd" on type "User".'
-                        ' Did you mean "password"?'
-                    )
-                }]
+            "success": True,
+            "data": {
+                "errors": [
+                    {
+                        "message": (
+                            'Cannot query field "passwrd" on type "User".'
+                            ' Did you mean "password"?'
+                        )
+                    }
+                ]
             },
-            'text': ''
+            "text": "",
         }
 
-        with patch.object(tester, '_send_query', return_value=mock_response):
+        with patch.object(tester, "_send_query", return_value=mock_response):
             result = tester.test_field_suggestion()
 
         assert result is not None
@@ -266,13 +237,11 @@ class TestGraphQLFieldSuggestion:
 
         # Mock GraphQL 响应 - 不返回字段建议
         mock_response = {
-            'success': False,
-            'errors': [{
-                'message': 'Cannot query field "passwrd" on type "User".'
-            }]
+            "success": False,
+            "errors": [{"message": 'Cannot query field "passwrd" on type "User".'}],
         }
 
-        with patch.object(tester, '_send_query', return_value=mock_response):
+        with patch.object(tester, "_send_query", return_value=mock_response):
             result = tester.test_field_suggestion()
 
         assert result is None
@@ -287,12 +256,9 @@ class TestGraphQLAliasOverload:
 
         # Mock GraphQL 响应 - 接受大量别名
         def mock_send_query(query):
-            return {
-                'success': True,
-                'data': {'data': {f'alias{i}': 'value' for i in range(100)}}
-            }
+            return {"success": True, "data": {"data": {f"alias{i}": "value" for i in range(100)}}}
 
-        with patch.object(tester, '_send_query', side_effect=mock_send_query):
+        with patch.object(tester, "_send_query", side_effect=mock_send_query):
             result = tester.test_alias_overload()
 
         assert result is not None
@@ -306,18 +272,12 @@ class TestGraphQLAliasOverload:
 
         # Mock GraphQL 响应 - 拒绝大量别名
         def mock_send_query(query):
-            alias_count = query.count('alias')
+            alias_count = query.count("alias")
             if alias_count > 50:
-                return {
-                    'success': False,
-                    'errors': [{'message': 'Too many aliases'}]
-                }
-            return {
-                'success': True,
-                'data': {'data': {}}
-            }
+                return {"success": False, "errors": [{"message": "Too many aliases"}]}
+            return {"success": True, "data": {"data": {}}}
 
-        with patch.object(tester, '_send_query', side_effect=mock_send_query):
+        with patch.object(tester, "_send_query", side_effect=mock_send_query):
             result = tester.test_alias_overload()
 
         # 如果有限制，可能不返回漏洞
@@ -334,12 +294,9 @@ class TestGraphQLDirectiveOverload:
 
         # Mock GraphQL 响应 - 接受大量指令
         def mock_send_query(query):
-            return {
-                'success': True,
-                'data': {'data': {'field': 'value'}}
-            }
+            return {"success": True, "data": {"data": {"field": "value"}}}
 
-        with patch.object(tester, '_send_query', side_effect=mock_send_query):
+        with patch.object(tester, "_send_query", side_effect=mock_send_query):
             result = tester.test_directive_overload()
 
         assert result is not None
@@ -353,18 +310,12 @@ class TestGraphQLDirectiveOverload:
 
         # Mock GraphQL 响应 - 拒绝大量指令
         def mock_send_query(query):
-            directive_count = query.count('@')
+            directive_count = query.count("@")
             if directive_count > 50:
-                return {
-                    'success': False,
-                    'errors': [{'message': 'Too many directives'}]
-                }
-            return {
-                'success': True,
-                'data': {'data': {}}
-            }
+                return {"success": False, "errors": [{"message": "Too many directives"}]}
+            return {"success": True, "data": {"data": {}}}
 
-        with patch.object(tester, '_send_query', side_effect=mock_send_query):
+        with patch.object(tester, "_send_query", side_effect=mock_send_query):
             result = tester.test_directive_overload()
 
         # 如果有限制，可能不返回漏洞
@@ -382,18 +333,10 @@ class TestGraphQLInjection:
         # Mock GraphQL 响应 - SQL 错误
         def mock_send_query(query):
             if "'" in query or '"' in query:
-                return {
-                    'success': True,
-                    'data': {},
-                    'text': 'SQL syntax error near "\'"'
-                }
-            return {
-                'success': True,
-                'data': {'data': {}},
-                'text': ''
-            }
+                return {"success": True, "data": {}, "text": 'SQL syntax error near "\'"'}
+            return {"success": True, "data": {"data": {}}, "text": ""}
 
-        with patch.object(tester, '_send_query', side_effect=mock_send_query):
+        with patch.object(tester, "_send_query", side_effect=mock_send_query):
             result = tester.test_injection()
 
         assert result is not None
@@ -407,19 +350,11 @@ class TestGraphQLInjection:
 
         # Mock GraphQL 响应 - NoSQL 错误
         def mock_send_query(query):
-            if '$gt' in query or '$ne' in query:
-                return {
-                    'success': False,
-                    'errors': [{
-                        'message': 'Invalid operator: $gt'
-                    }]
-                }
-            return {
-                'success': True,
-                'data': {'data': {}}
-            }
+            if "$gt" in query or "$ne" in query:
+                return {"success": False, "errors": [{"message": "Invalid operator: $gt"}]}
+            return {"success": True, "data": {"data": {}}}
 
-        with patch.object(tester, '_send_query', side_effect=mock_send_query):
+        with patch.object(tester, "_send_query", side_effect=mock_send_query):
             result = tester.test_injection()
 
         if result:
@@ -432,12 +367,9 @@ class TestGraphQLInjection:
 
         # Mock GraphQL 响应 - 正常处理
         def mock_send_query(query):
-            return {
-                'success': True,
-                'data': {'data': {}}
-            }
+            return {"success": True, "data": {"data": {}}}
 
-        with patch.object(tester, '_send_query', side_effect=mock_send_query):
+        with patch.object(tester, "_send_query", side_effect=mock_send_query):
             result = tester.test_injection()
 
         assert result is None
@@ -452,12 +384,9 @@ class TestGraphQLCircularFragment:
 
         # Mock GraphQL 响应 - 接受循环片段
         def mock_send_query(query):
-            return {
-                'success': True,
-                'data': {'data': {}}
-            }
+            return {"success": True, "data": {"data": {}}}
 
-        with patch.object(tester, '_send_query', side_effect=mock_send_query):
+        with patch.object(tester, "_send_query", side_effect=mock_send_query):
             result = tester.test_circular_fragment()
 
         if result:
@@ -470,17 +399,11 @@ class TestGraphQLCircularFragment:
 
         # Mock GraphQL 响应 - 拒绝循环片段
         def mock_send_query(query):
-            if 'fragment' in query.lower():
-                return {
-                    'success': False,
-                    'errors': [{'message': 'Circular fragment detected'}]
-                }
-            return {
-                'success': True,
-                'data': {'data': {}}
-            }
+            if "fragment" in query.lower():
+                return {"success": False, "errors": [{"message": "Circular fragment detected"}]}
+            return {"success": True, "data": {"data": {}}}
 
-        with patch.object(tester, '_send_query', side_effect=mock_send_query):
+        with patch.object(tester, "_send_query", side_effect=mock_send_query):
             result = tester.test_circular_fragment()
 
         assert result is None
@@ -494,13 +417,10 @@ class TestGraphQLFullScan:
         tester = GraphQLTester("https://api.example.com/graphql")
 
         # Mock 所有请求返回安全响应
-        safe_response = {
-            'success': False,
-            'errors': [{'message': 'Query not allowed'}]
-        }
+        safe_response = {"success": False, "errors": [{"message": "Query not allowed"}]}
 
-        with patch.object(tester, '_send_query', return_value=safe_response):
-            with patch.object(tester, '_send_batch', return_value=safe_response):
+        with patch.object(tester, "_send_query", return_value=safe_response):
+            with patch.object(tester, "_send_batch", return_value=safe_response):
                 results = tester.test()
 
         # 应该执行多个测试
@@ -512,36 +432,20 @@ class TestGraphQLFullScan:
 
         # Mock 响应 - 返回多个漏洞
         def mock_send_query(query):
-            if '__schema' in query or '__type' in query:
+            if "__schema" in query or "__type" in query:
                 return {
-                    'success': True,
-                    'data': {
-                        'data': {
-                            '__schema': {
-                                'types': [{'name': 'Query'}]
-                            }
-                        }
-                    }
+                    "success": True,
+                    "data": {"data": {"__schema": {"types": [{"name": "Query"}]}}},
                 }
-            return {
-                'success': True,
-                'data': {'data': {}}
-            }
+            return {"success": True, "data": {"data": {}}}
 
         def mock_send_batch(batch):
-            return {
-                'success': True,
-                'data': [{'data': {}}] * len(batch)
-            }
+            return {"success": True, "data": [{"data": {}}] * len(batch)}
 
-        with patch.object(tester, '_send_query', side_effect=mock_send_query):
-            with patch.object(tester, '_send_batch', side_effect=mock_send_batch):
-                with patch.object(tester, '_extract_schema_info'):
-                    tester._schema_info = {
-                        'types': ['Query'],
-                        'queries': ['user'],
-                        'mutations': []
-                    }
+        with patch.object(tester, "_send_query", side_effect=mock_send_query):
+            with patch.object(tester, "_send_batch", side_effect=mock_send_batch):
+                with patch.object(tester, "_extract_schema_info"):
+                    tester._schema_info = {"types": ["Query"], "queries": ["user"], "mutations": []}
                     results = tester.test()
 
         # 应该发现一些漏洞
@@ -552,13 +456,10 @@ class TestGraphQLFullScan:
         """测试获取扫描摘要"""
         tester = GraphQLTester("https://api.example.com/graphql")
 
-        safe_response = {
-            'success': False,
-            'errors': [{'message': 'Query not allowed'}]
-        }
+        safe_response = {"success": False, "errors": [{"message": "Query not allowed"}]}
 
-        with patch.object(tester, '_send_query', return_value=safe_response):
-            with patch.object(tester, '_send_batch', return_value=safe_response):
+        with patch.object(tester, "_send_query", return_value=safe_response):
+            with patch.object(tester, "_send_batch", return_value=safe_response):
                 tester.test()
 
         summary = tester.get_summary()
@@ -576,68 +477,63 @@ class TestGraphQLHelperMethods:
         tester = GraphQLTester("https://api.example.com/graphql")
 
         # Mock HTTP 客户端
-        with patch.object(tester, '_get_http_client') as mock_client:
+        with patch.object(tester, "_get_http_client") as mock_client:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.text = '{"data": {"__typename": "Query"}}'
-            mock_response.json.return_value = {
-                'data': {'__typename': 'Query'}
-            }
+            mock_response.json.return_value = {"data": {"__typename": "Query"}}
             mock_client.return_value.post.return_value = mock_response
 
-            result = tester._send_query('{__typename}')
+            result = tester._send_query("{__typename}")
 
-        assert result['success'] is True
-        assert 'data' in result
+        assert result["success"] is True
+        assert "data" in result
 
     def test_send_query_error(self):
         """测试发送查询错误"""
         tester = GraphQLTester("https://api.example.com/graphql")
 
         # Mock HTTP 客户端 - 抛异常触发错误路径
-        with patch.object(tester, '_get_http_client') as mock_client:
+        with patch.object(tester, "_get_http_client") as mock_client:
             mock_client.return_value.post.side_effect = Exception("Connection error")
 
-            result = tester._send_query('{invalid')
+            result = tester._send_query("{invalid")
 
-        assert result['success'] is False
-        assert 'error' in result
+        assert result["success"] is False
+        assert "error" in result
 
     def test_send_query_exception(self):
         """测试发送查询异常"""
         tester = GraphQLTester("https://api.example.com/graphql")
 
         # Mock HTTP 客户端抛出异常
-        with patch.object(tester, '_get_http_client') as mock_client:
+        with patch.object(tester, "_get_http_client") as mock_client:
             mock_client.return_value.post.side_effect = Exception("Connection error")
 
-            result = tester._send_query('{__typename}')
+            result = tester._send_query("{__typename}")
 
-        assert result['success'] is False
+        assert result["success"] is False
 
     def test_send_batch_success(self):
         """测试发送批量查询成功"""
         tester = GraphQLTester("https://api.example.com/graphql")
 
-        batch = [
-            {'query': '{__typename}'},
-            {'query': '{__typename}'}
-        ]
+        batch = [{"query": "{__typename}"}, {"query": "{__typename}"}]
 
         # Mock HTTP 客户端
-        with patch.object(tester, '_get_http_client') as mock_client:
+        with patch.object(tester, "_get_http_client") as mock_client:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = [
-                {'data': {'__typename': 'Query'}},
-                {'data': {'__typename': 'Query'}}
+                {"data": {"__typename": "Query"}},
+                {"data": {"__typename": "Query"}},
             ]
             mock_client.return_value.post.return_value = mock_response
 
             result = tester._send_batch(batch)
 
-        assert result['success'] is True
-        assert len(result['data']) == 2
+        assert result["success"] is True
+        assert len(result["data"]) == 2
 
 
 class TestGraphQLEdgeCases:
@@ -647,39 +543,37 @@ class TestGraphQLEdgeCases:
         """测试空查询"""
         tester = GraphQLTester("https://api.example.com/graphql")
 
-        with patch.object(tester, '_send_query', return_value={'success': False}):
-            result = tester._send_query('')
+        with patch.object(tester, "_send_query", return_value={"success": False}):
+            result = tester._send_query("")
 
-        assert result['success'] is False
+        assert result["success"] is False
 
     def test_malformed_json_response(self):
         """测试格式错误的 JSON 响应"""
         tester = GraphQLTester("https://api.example.com/graphql")
 
         # Mock HTTP 客户端返回无效 JSON
-        with patch.object(tester, '_get_http_client') as mock_client:
+        with patch.object(tester, "_get_http_client") as mock_client:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
             mock_client.return_value.post.return_value = mock_response
 
-            result = tester._send_query('{__typename}')
+            result = tester._send_query("{__typename}")
 
-        assert result['success'] is False
+        assert result["success"] is False
 
     def test_http_error_status(self):
         """测试 HTTP 错误状态码"""
         tester = GraphQLTester("https://api.example.com/graphql")
 
         # Mock HTTP 客户端返回错误状态
-        with patch.object(tester, '_get_http_client') as mock_client:
+        with patch.object(tester, "_get_http_client") as mock_client:
             mock_response = Mock()
             mock_response.status_code = 500
-            mock_response.json.return_value = {
-                'errors': [{'message': 'Internal server error'}]
-            }
+            mock_response.json.return_value = {"errors": [{"message": "Internal server error"}]}
             mock_client.return_value.post.return_value = mock_response
 
-            result = tester._send_query('{__typename}')
+            result = tester._send_query("{__typename}")
 
-        assert result['success'] is False
+        assert result["success"] is False

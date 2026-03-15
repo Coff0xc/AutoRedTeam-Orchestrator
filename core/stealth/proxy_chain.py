@@ -354,7 +354,10 @@ class ProxyChain:
                 retry_delay = random.uniform(1, 3)
                 logger.debug(
                     "[%s] Retrying in %.1fs (attempt %d/%d)",
-                    self.name, retry_delay, attempt + 1, self.max_retry,
+                    self.name,
+                    retry_delay,
+                    attempt + 1,
+                    self.max_retry,
                 )
                 time.sleep(retry_delay)
 

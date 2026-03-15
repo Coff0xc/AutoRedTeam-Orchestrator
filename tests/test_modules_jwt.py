@@ -25,24 +25,20 @@ class TestJWTDecoding:
         header = {"alg": "HS256", "typ": "JWT"}
         payload = {"sub": "1234567890", "name": "Test User", "iat": 1516239022}
 
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).rstrip(b'=').decode()
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).rstrip(b'=').decode()
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
         # 简单签名
         message = f"{header_b64}.{payload_b64}"
-        signature = base64.urlsafe_b64encode(b"fake_signature").rstrip(b'=').decode()
+        signature = base64.urlsafe_b64encode(b"fake_signature").rstrip(b"=").decode()
         token = f"{message}.{signature}"
 
         decoded = decode_jwt(token)
 
         assert decoded is not None
-        assert decoded['header']['alg'] == 'HS256'
-        assert decoded['payload']['name'] == 'Test User'
-        assert decoded['signature'] == signature
+        assert decoded["header"]["alg"] == "HS256"
+        assert decoded["payload"]["name"] == "Test User"
+        assert decoded["signature"] == signature
 
     def test_decode_invalid_jwt_format(self):
         """测试解码无效格式的 JWT"""
@@ -80,17 +76,17 @@ class TestJWTTesterInit:
         """测试带配置的初始化"""
         token = self._create_test_token()
         config = {
-            'timeout': 30,
-            'auth_header': 'X-Auth-Token',
-            'auth_prefix': 'Token',
-            'weak_secrets': ['custom_secret']
+            "timeout": 30,
+            "auth_header": "X-Auth-Token",
+            "auth_prefix": "Token",
+            "weak_secrets": ["custom_secret"],
         }
         tester = JWTTester("https://api.example.com", token, config)
 
         assert tester.timeout == 30
-        assert tester.auth_header == 'X-Auth-Token'
-        assert tester.auth_prefix == 'Token'
-        assert 'custom_secret' in tester.weak_secrets
+        assert tester.auth_header == "X-Auth-Token"
+        assert tester.auth_prefix == "Token"
+        assert "custom_secret" in tester.weak_secrets
 
     def test_init_with_invalid_token(self):
         """测试使用无效 token 初始化"""
@@ -104,20 +100,12 @@ class TestJWTTesterInit:
         if payload is None:
             payload = {"sub": "test", "iat": int(time.time())}
 
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).rstrip(b'=').decode()
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).rstrip(b'=').decode()
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
         message = f"{header_b64}.{payload_b64}"
-        signature = hmac.new(
-            b"secret",
-            message.encode(),
-            hashlib.sha256
-        ).digest()
-        signature_b64 = base64.urlsafe_b64encode(signature).rstrip(b'=').decode()
+        signature = hmac.new(b"secret", message.encode(), hashlib.sha256).digest()
+        signature_b64 = base64.urlsafe_b64encode(signature).rstrip(b"=").decode()
 
         return f"{message}.{signature_b64}"
 
@@ -131,7 +119,7 @@ class TestJWTNoneAlgorithm:
         tester = JWTTester("https://api.example.com", token)
 
         # Mock HTTP 客户端，模拟服务器接受 none 算法
-        with patch.object(tester, '_verify_token_accepted', return_value=True):
+        with patch.object(tester, "_verify_token_accepted", return_value=True):
             result = tester.test_none_algorithm()
 
         assert result is not None
@@ -145,7 +133,7 @@ class TestJWTNoneAlgorithm:
         tester = JWTTester("https://api.example.com", token)
 
         # Mock HTTP 客户端，模拟服务器拒绝 none 算法
-        with patch.object(tester, '_verify_token_accepted', return_value=False):
+        with patch.object(tester, "_verify_token_accepted", return_value=False):
             result = tester.test_none_algorithm()
 
         assert result is None
@@ -160,19 +148,19 @@ class TestJWTNoneAlgorithm:
 
         def mock_verify(test_token):
             # 从 token 中提取算法
-            parts = test_token.split('.')
-            header_json = base64.urlsafe_b64decode(parts[0] + '==')
+            parts = test_token.split(".")
+            header_json = base64.urlsafe_b64decode(parts[0] + "==")
             header = json.loads(header_json)
-            attempted_algs.append(header['alg'])
+            attempted_algs.append(header["alg"])
             return False
 
-        with patch.object(tester, '_verify_token_accepted', side_effect=mock_verify):
+        with patch.object(tester, "_verify_token_accepted", side_effect=mock_verify):
             tester.test_none_algorithm()
 
         # 验证测试了多种变体
-        assert 'none' in attempted_algs
-        assert 'None' in attempted_algs
-        assert 'NONE' in attempted_algs
+        assert "none" in attempted_algs
+        assert "None" in attempted_algs
+        assert "NONE" in attempted_algs
 
     @staticmethod
     def _create_test_token():
@@ -180,12 +168,8 @@ class TestJWTNoneAlgorithm:
         header = {"alg": "HS256", "typ": "JWT"}
         payload = {"sub": "test", "iat": int(time.time())}
 
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).rstrip(b'=').decode()
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).rstrip(b'=').decode()
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
         return f"{header_b64}.{payload_b64}.fake_signature"
 
@@ -205,7 +189,7 @@ class TestJWTWeakSecret:
         assert result.vulnerable is True
         assert result.vuln_type == APIVulnType.JWT_WEAK_SECRET
         assert result.severity == Severity.HIGH
-        assert 'secret' in result.evidence['weak_secret']
+        assert "secret" in result.evidence["weak_secret"]
 
     def test_strong_secret_safe(self):
         """测试强密钥不被检测为弱密钥"""
@@ -221,16 +205,14 @@ class TestJWTWeakSecret:
     def test_weak_secret_custom_list(self):
         """测试自定义弱密钥列表"""
         token = self._create_token_with_secret("my_custom_weak_key")
-        config = {
-            'weak_secrets': ['my_custom_weak_key']
-        }
+        config = {"weak_secrets": ["my_custom_weak_key"]}
         tester = JWTTester("https://api.example.com", token, config)
 
         result = tester.test_weak_secret()
 
         assert result is not None
         assert result.vulnerable is True
-        assert result.evidence['weak_secret'] == 'my_custom_weak_key'
+        assert result.evidence["weak_secret"] == "my_custom_weak_key"
 
     def test_non_hmac_algorithm_skipped(self):
         """测试非 HMAC 算法跳过弱密钥测试"""
@@ -238,12 +220,8 @@ class TestJWTWeakSecret:
         header = {"alg": "RS256", "typ": "JWT"}
         payload = {"sub": "test"}
 
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).rstrip(b'=').decode()
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).rstrip(b'=').decode()
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
         token = f"{header_b64}.{payload_b64}.fake_signature"
         tester = JWTTester("https://api.example.com", token)
@@ -259,20 +237,12 @@ class TestJWTWeakSecret:
         header = {"alg": "HS256", "typ": "JWT"}
         payload = {"sub": "test", "iat": int(time.time())}
 
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).rstrip(b'=').decode()
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).rstrip(b'=').decode()
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
         message = f"{header_b64}.{payload_b64}"
-        signature = hmac.new(
-            secret.encode(),
-            message.encode(),
-            hashlib.sha256
-        ).digest()
-        signature_b64 = base64.urlsafe_b64encode(signature).rstrip(b'=').decode()
+        signature = hmac.new(secret.encode(), message.encode(), hashlib.sha256).digest()
+        signature_b64 = base64.urlsafe_b64encode(signature).rstrip(b"=").decode()
 
         return f"{message}.{signature_b64}"
 
@@ -287,19 +257,19 @@ class TestJWTKIDInjection:
 
         # Mock 验证，模拟接受路径遍历 payload
         def mock_verify(test_token):
-            parts = test_token.split('.')
-            header_json = base64.urlsafe_b64decode(parts[0] + '==')
+            parts = test_token.split(".")
+            header_json = base64.urlsafe_b64decode(parts[0] + "==")
             header = json.loads(header_json)
             # 如果包含路径遍历，返回 True
-            return 'kid' in header and '../' in header['kid']
+            return "kid" in header and "../" in header["kid"]
 
-        with patch.object(tester, '_verify_token_accepted', side_effect=mock_verify):
+        with patch.object(tester, "_verify_token_accepted", side_effect=mock_verify):
             result = tester.test_kid_injection()
 
         assert result is not None
         assert result.vulnerable is True
         assert result.vuln_type == APIVulnType.JWT_KID_INJECTION
-        assert len(result.evidence['vulnerable_payloads']) > 0
+        assert len(result.evidence["vulnerable_payloads"]) > 0
 
     def test_kid_sql_injection(self):
         """测试 KID SQL 注入漏洞"""
@@ -309,27 +279,27 @@ class TestJWTKIDInjection:
         vulnerable_payloads = []
 
         def mock_verify(test_token):
-            parts = test_token.split('.')
-            header_json = base64.urlsafe_b64decode(parts[0] + '==')
+            parts = test_token.split(".")
+            header_json = base64.urlsafe_b64decode(parts[0] + "==")
             header = json.loads(header_json)
-            if 'kid' in header and "'" in header['kid']:
-                vulnerable_payloads.append(header['kid'])
+            if "kid" in header and "'" in header["kid"]:
+                vulnerable_payloads.append(header["kid"])
                 return True
             return False
 
-        with patch.object(tester, '_verify_token_accepted', side_effect=mock_verify):
+        with patch.object(tester, "_verify_token_accepted", side_effect=mock_verify):
             result = tester.test_kid_injection()
 
         if result:
             assert result.vulnerable is True
-            assert any("'" in p['payload'] for p in result.evidence['vulnerable_payloads'])
+            assert any("'" in p["payload"] for p in result.evidence["vulnerable_payloads"])
 
     def test_kid_safe(self):
         """测试服务器正确验证 KID"""
         token = self._create_test_token()
         tester = JWTTester("https://api.example.com", token)
 
-        with patch.object(tester, '_verify_token_accepted', return_value=False):
+        with patch.object(tester, "_verify_token_accepted", return_value=False):
             result = tester.test_kid_injection()
 
         assert result is None
@@ -340,12 +310,8 @@ class TestJWTKIDInjection:
         header = {"alg": "HS256", "typ": "JWT"}
         payload = {"sub": "test"}
 
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).rstrip(b'=').decode()
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).rstrip(b'=').decode()
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
         return f"{header_b64}.{payload_b64}.fake_signature"
 
@@ -363,7 +329,7 @@ class TestJWTExpiration:
         tester = JWTTester("https://api.example.com", token)
 
         # Mock 服务器接受过期 token
-        with patch.object(tester, '_verify_token_accepted', return_value=True):
+        with patch.object(tester, "_verify_token_accepted", return_value=True):
             result = tester.test_expiration()
 
         assert result is not None
@@ -399,27 +365,19 @@ class TestJWTExpiration:
         # 但应该在结果列表中有一个 INFO 级别的结果
         tester.test()
         info_results = [r for r in tester.results if r.severity == Severity.MEDIUM]
-        assert any('过期时间' in r.title for r in info_results)
+        assert any("过期时间" in r.title for r in info_results)
 
     @staticmethod
     def _create_token_with_payload(payload):
         """使用指定 payload 创建 JWT token"""
         header = {"alg": "HS256", "typ": "JWT"}
 
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).rstrip(b'=').decode()
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).rstrip(b'=').decode()
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
         message = f"{header_b64}.{payload_b64}"
-        signature = hmac.new(
-            b"secret",
-            message.encode(),
-            hashlib.sha256
-        ).digest()
-        signature_b64 = base64.urlsafe_b64encode(signature).rstrip(b'=').decode()
+        signature = hmac.new(b"secret", message.encode(), hashlib.sha256).digest()
+        signature_b64 = base64.urlsafe_b64encode(signature).rstrip(b"=").decode()
 
         return f"{message}.{signature_b64}"
 
@@ -433,7 +391,7 @@ class TestJWTSignatureStripping:
         tester = JWTTester("https://api.example.com", token)
 
         # Mock 服务器接受无签名 token
-        with patch.object(tester, '_verify_token_accepted', return_value=True):
+        with patch.object(tester, "_verify_token_accepted", return_value=True):
             result = tester.test_signature_stripping()
 
         assert result is not None
@@ -447,7 +405,7 @@ class TestJWTSignatureStripping:
         tester = JWTTester("https://api.example.com", token)
 
         # Mock 服务器拒绝无签名 token
-        with patch.object(tester, '_verify_token_accepted', return_value=False):
+        with patch.object(tester, "_verify_token_accepted", return_value=False):
             result = tester.test_signature_stripping()
 
         assert result is None
@@ -458,12 +416,8 @@ class TestJWTSignatureStripping:
         header = {"alg": "HS256", "typ": "JWT"}
         payload = {"sub": "test"}
 
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).rstrip(b'=').decode()
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).rstrip(b'=').decode()
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
         return f"{header_b64}.{payload_b64}.fake_signature"
 
@@ -477,7 +431,7 @@ class TestJWTFullScan:
         tester = JWTTester("https://api.example.com", token)
 
         # Mock HTTP 客户端
-        with patch.object(tester, '_verify_token_accepted', return_value=False):
+        with patch.object(tester, "_verify_token_accepted", return_value=False):
             results = tester.test()
 
         # 应该执行多个测试
@@ -490,7 +444,7 @@ class TestJWTFullScan:
         tester = JWTTester("https://api.example.com", token)
 
         # Mock 部分测试返回漏洞
-        with patch.object(tester, '_verify_token_accepted', return_value=True):
+        with patch.object(tester, "_verify_token_accepted", return_value=True):
             results = tester.test()
 
         # 应该发现多个漏洞
@@ -502,7 +456,7 @@ class TestJWTFullScan:
         token = self._create_test_token()
         tester = JWTTester("https://api.example.com", token)
 
-        with patch.object(tester, '_verify_token_accepted', return_value=False):
+        with patch.object(tester, "_verify_token_accepted", return_value=False):
             tester.test()
 
         summary = tester.get_summary()
@@ -517,12 +471,8 @@ class TestJWTFullScan:
         header = {"alg": "HS256", "typ": "JWT"}
         payload = {"sub": "test", "iat": int(time.time())}
 
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).rstrip(b'=').decode()
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).rstrip(b'=').decode()
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
         return f"{header_b64}.{payload_b64}.fake_signature"
 
@@ -532,20 +482,12 @@ class TestJWTFullScan:
         header = {"alg": "HS256", "typ": "JWT"}
         payload = {"sub": "test", "iat": int(time.time())}
 
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).rstrip(b'=').decode()
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).rstrip(b'=').decode()
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
         message = f"{header_b64}.{payload_b64}"
-        signature = hmac.new(
-            secret.encode(),
-            message.encode(),
-            hashlib.sha256
-        ).digest()
-        signature_b64 = base64.urlsafe_b64encode(signature).rstrip(b'=').decode()
+        signature = hmac.new(secret.encode(), message.encode(), hashlib.sha256).digest()
+        signature_b64 = base64.urlsafe_b64encode(signature).rstrip(b"=").decode()
 
         return f"{message}.{signature_b64}"
 
@@ -557,17 +499,17 @@ class TestQuickJWTTest:
         """测试快速测试函数"""
         token = self._create_test_token()
 
-        with patch('modules.api_security.jwt.JWTTester') as MockTester:
+        with patch("modules.api_security.jwt.JWTTester") as MockTester:
             mock_instance = MockTester.return_value
             mock_instance.test.return_value = []
             mock_instance.get_summary.return_value = MagicMock(
-                to_dict=lambda: {'total_tests': 5, 'vulnerable_count': 0}
+                to_dict=lambda: {"total_tests": 5, "vulnerable_count": 0}
             )
 
             result = quick_jwt_test("https://api.example.com", token)
 
         assert isinstance(result, dict)
-        assert 'total_tests' in result
+        assert "total_tests" in result
 
     @staticmethod
     def _create_test_token():
@@ -575,12 +517,8 @@ class TestQuickJWTTest:
         header = {"alg": "HS256", "typ": "JWT"}
         payload = {"sub": "test"}
 
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).rstrip(b'=').decode()
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).rstrip(b'=').decode()
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
         return f"{header_b64}.{payload_b64}.fake_signature"
 
@@ -598,7 +536,7 @@ class TestJWTHelperMethods:
         decoded = tester._base64url_decode(encoded)
 
         assert decoded == original
-        assert '=' not in encoded  # URL safe 不应该有填充
+        assert "=" not in encoded  # URL safe 不应该有填充
 
     def test_create_unsigned_token(self):
         """测试创建无签名 token"""
@@ -610,9 +548,9 @@ class TestJWTHelperMethods:
 
         unsigned_token = tester._create_unsigned_token(header, payload)
 
-        parts = unsigned_token.split('.')
+        parts = unsigned_token.split(".")
         assert len(parts) == 3
-        assert parts[2] == ''  # 签名部分为空
+        assert parts[2] == ""  # 签名部分为空
 
     def test_create_hs256_token(self):
         """测试创建 HS256 token"""
@@ -625,9 +563,9 @@ class TestJWTHelperMethods:
 
         hs256_token = tester._create_hs256_token(header, payload, secret)
 
-        parts = hs256_token.split('.')
+        parts = hs256_token.split(".")
         assert len(parts) == 3
-        assert parts[2] != ''  # 应该有签名
+        assert parts[2] != ""  # 应该有签名
 
     @staticmethod
     def _create_test_token():
@@ -635,11 +573,7 @@ class TestJWTHelperMethods:
         header = {"alg": "HS256", "typ": "JWT"}
         payload = {"sub": "test"}
 
-        header_b64 = base64.urlsafe_b64encode(
-            json.dumps(header).encode()
-        ).rstrip(b'=').decode()
-        payload_b64 = base64.urlsafe_b64encode(
-            json.dumps(payload).encode()
-        ).rstrip(b'=').decode()
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=").decode()
 
         return f"{header_b64}.{payload_b64}.fake_signature"

@@ -45,27 +45,28 @@ mcp = FastMCP("AutoRedTeam")
 
 # ==================== 工具计数器 ====================
 
+
 class ToolCounter:
     """工具注册计数器"""
 
     def __init__(self):
         self.counts = {
-            'recon': 0,
-            'detector': 0,
-            'cve': 0,
-            'redteam': 0,
-            'orchestration': 0,  # 自动化编排
-            'api_security': 0,
-            'cloud_security': 0,
-            'supply_chain': 0,
-            'lateral': 0,        # 横向移动
-            'persistence': 0,    # 持久化
-            'ad': 0,             # AD攻击
-            'external_tools': 0,  # 外部工具集成
-            'session': 0,
-            'report': 0,
-            'ai': 0,
-            'misc': 0,
+            "recon": 0,
+            "detector": 0,
+            "cve": 0,
+            "redteam": 0,
+            "orchestration": 0,  # 自动化编排
+            "api_security": 0,
+            "cloud_security": 0,
+            "supply_chain": 0,
+            "lateral": 0,  # 横向移动
+            "persistence": 0,  # 持久化
+            "ad": 0,  # AD攻击
+            "external_tools": 0,  # 外部工具集成
+            "session": 0,
+            "report": 0,
+            "ai": 0,
+            "misc": 0,
         }
         self.total = 0
 
@@ -73,7 +74,7 @@ class ToolCounter:
         if category in self.counts:
             self.counts[category] += count
         else:
-            self.counts['misc'] += count
+            self.counts["misc"] += count
         self.total += count
 
     def summary(self) -> str:
@@ -85,6 +86,7 @@ _counter = ToolCounter()
 
 
 # ==================== 工具注册入口 ====================
+
 
 def register_all_tools():
     """注册所有工具到MCP"""
@@ -104,6 +106,7 @@ def register_all_tools():
 
 # ==================== 主入口 ====================
 
+
 def main():
     """主入口函数"""
 
@@ -116,8 +119,8 @@ def main():
     logger.info("-" * 60)
 
     # 根据命令行参数决定传输方式
-    if len(sys.argv) > 1 and sys.argv[1] == '--stdio':
-        mcp.run(transport='stdio')
+    if len(sys.argv) > 1 and sys.argv[1] == "--stdio":
+        mcp.run(transport="stdio")
     else:
         mcp.run()
 

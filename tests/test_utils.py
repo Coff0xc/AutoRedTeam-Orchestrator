@@ -161,15 +161,12 @@ class TestReportGenerator:
 
         generator = ReportGenerator()
 
-        data = {
-            "target": "https://example.com",
-            "vulnerabilities": []
-        }
+        data = {"target": "https://example.com", "vulnerabilities": []}
 
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = os.path.join(tmpdir, "report.json")
 
-            if hasattr(generator, 'generate_json'):
+            if hasattr(generator, "generate_json"):
                 generator.generate_json(data, filepath)
                 assert os.path.exists(filepath)
 
@@ -179,15 +176,12 @@ class TestReportGenerator:
 
         generator = ReportGenerator()
 
-        data = {
-            "target": "https://example.com",
-            "vulnerabilities": []
-        }
+        data = {"target": "https://example.com", "vulnerabilities": []}
 
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = os.path.join(tmpdir, "report.html")
 
-            if hasattr(generator, 'generate_html'):
+            if hasattr(generator, "generate_html"):
                 generator.generate_html(data, filepath)
                 assert os.path.exists(filepath)
 
@@ -197,15 +191,12 @@ class TestReportGenerator:
 
         generator = ReportGenerator()
 
-        data = {
-            "target": "https://example.com",
-            "vulnerabilities": []
-        }
+        data = {"target": "https://example.com", "vulnerabilities": []}
 
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = os.path.join(tmpdir, "report.md")
 
-            if hasattr(generator, 'generate_markdown'):
+            if hasattr(generator, "generate_markdown"):
                 generator.generate_markdown(data, filepath)
                 assert os.path.exists(filepath)
 
@@ -318,7 +309,7 @@ class TestFileUtils:
         """测试读取文件"""
         from utils.file_utils import read_file
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("test content")
             filepath = f.name
 
@@ -337,7 +328,7 @@ class TestFileUtils:
 
             write_file(filepath, "test content")
 
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 content = f.read()
 
             assert content == "test content"
@@ -363,21 +354,16 @@ class TestNetUtils:
 
         result = parse_url("https://example.com:8443/path?query=1")
 
-        assert result['scheme'] == 'https'
-        assert result['host'] == 'example.com'
-        assert result['port'] == 8443
-        assert result['path'] == '/path'
+        assert result["scheme"] == "https"
+        assert result["host"] == "example.com"
+        assert result["port"] == 8443
+        assert result["path"] == "/path"
 
     def test_build_url(self):
         """测试构建 URL"""
         from utils.net_utils import build_url
 
-        url = build_url(
-            scheme="https",
-            host="example.com",
-            port=443,
-            path="/api/v1"
-        )
+        url = build_url(scheme="https", host="example.com", port=443, path="/api/v1")
 
         assert "https://example.com" in url
         assert "/api/v1" in url
@@ -452,10 +438,7 @@ class TestTerminalOutput:
         """测试打印表格"""
         from utils.terminal_output import print_table
 
-        data = [
-            {"name": "Test1", "value": 100},
-            {"name": "Test2", "value": 200}
-        ]
+        data = [{"name": "Test1", "value": 100}, {"name": "Test2", "value": 200}]
 
         # 不应该抛出异常
         print_table(data)
@@ -485,7 +468,7 @@ class TestScanMonitor:
 
         monitor = ScanMonitor()
 
-        if hasattr(monitor, 'start') and hasattr(monitor, 'stop'):
+        if hasattr(monitor, "start") and hasattr(monitor, "stop"):
             monitor.start()
             monitor.stop()
 

@@ -15,6 +15,7 @@ class TestHTTPConfig:
     def test_default_config(self):
         """测试默认配置"""
         from core.http import HTTPConfig
+
         config = HTTPConfig()
 
         assert config.timeout == 30
@@ -25,6 +26,7 @@ class TestHTTPConfig:
     def test_custom_config(self):
         """测试自定义配置"""
         from core.http import HTTPConfig
+
         config = HTTPConfig()
         config.timeout = 60
         config.verify_ssl = False
@@ -41,6 +43,7 @@ class TestHTTPClient:
     def test_client_creation(self):
         """测试客户端创建"""
         from core.http import HTTPClient, HTTPConfig
+
         config = HTTPConfig()
         client = HTTPClient(config=config)
 
@@ -62,7 +65,7 @@ class TestHTTPClient:
         # 清理
         reset_client()
 
-    @patch('core.http.client.httpx')
+    @patch("core.http.client.httpx")
     def test_get_request(self, mock_httpx):
         """测试 GET 请求"""
         from core.http import HTTPClient, HTTPConfig
@@ -101,10 +104,7 @@ class TestHTTPResponse:
         from core.http import HTTPResponse
 
         response = HTTPResponse(
-            status_code=200,
-            text="OK",
-            headers={"Content-Type": "text/html"},
-            content=b"OK"
+            status_code=200, text="OK", headers={"Content-Type": "text/html"}, content=b"OK"
         )
 
         assert response.status_code == 200
@@ -129,7 +129,7 @@ class TestHTTPResponse:
             status_code=200,
             text='{"key": "value"}',
             headers={"Content-Type": "application/json"},
-            content=b'{"key": "value"}'
+            content=b'{"key": "value"}',
         )
 
         json_data = response.json()
@@ -281,6 +281,7 @@ class TestClientFactory:
 
 
 # ==================== 异步测试 ====================
+
 
 class TestAsyncHTTPClient:
     """测试异步 HTTP 客户端"""

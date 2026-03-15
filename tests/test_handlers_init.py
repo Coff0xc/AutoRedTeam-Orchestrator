@@ -16,22 +16,22 @@ class TestHandlersInit:
         from handlers import __all__
 
         expected_exports = [
-            'register_recon_tools',
-            'register_detector_tools',
-            'register_cve_tools',
-            'register_api_security_tools',
-            'register_cloud_security_tools',
-            'register_supply_chain_tools',
-            'register_redteam_tools',
-            'register_orchestration_tools',
-            'register_lateral_tools',
-            'register_persistence_tools',
-            'register_ad_tools',
-            'register_session_tools',
-            'register_report_tools',
-            'register_ai_tools',
-            'register_misc_tools',
-            'register_external_tools',
+            "register_recon_tools",
+            "register_detector_tools",
+            "register_cve_tools",
+            "register_api_security_tools",
+            "register_cloud_security_tools",
+            "register_supply_chain_tools",
+            "register_redteam_tools",
+            "register_orchestration_tools",
+            "register_lateral_tools",
+            "register_persistence_tools",
+            "register_ad_tools",
+            "register_session_tools",
+            "register_report_tools",
+            "register_ai_tools",
+            "register_misc_tools",
+            "register_external_tools",
         ]
 
         assert len(__all__) == len(expected_exports)
@@ -105,7 +105,7 @@ class TestRegisterAllHandlers:
         mock_logger = MagicMock()
 
         # 模拟某个注册函数抛出 ImportError
-        with patch('handlers.register_recon_tools', side_effect=ImportError("Module not found")):
+        with patch("handlers.register_recon_tools", side_effect=ImportError("Module not found")):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
             # 验证记录了警告日志
@@ -123,8 +123,9 @@ class TestRegisterAllHandlers:
         mock_logger = MagicMock()
 
         # 模拟某个注册函数抛出 AttributeError
-        with patch('handlers.register_detector_tools',
-                   side_effect=AttributeError("Function not found")):
+        with patch(
+            "handlers.register_detector_tools", side_effect=AttributeError("Function not found")
+        ):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
             # 验证记录了警告日志
@@ -142,7 +143,7 @@ class TestRegisterAllHandlers:
         mock_logger = MagicMock()
 
         # 模拟某个注册函数抛出 TypeError
-        with patch('handlers.register_cve_tools', side_effect=TypeError("Invalid argument type")):
+        with patch("handlers.register_cve_tools", side_effect=TypeError("Invalid argument type")):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
             # 验证记录了警告日志
@@ -160,8 +161,9 @@ class TestRegisterAllHandlers:
         mock_logger = MagicMock()
 
         # 模拟某个注册函数抛出通用异常
-        with patch('handlers.register_api_security_tools',
-                   side_effect=RuntimeError("Unexpected error")):
+        with patch(
+            "handlers.register_api_security_tools", side_effect=RuntimeError("Unexpected error")
+        ):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
             # 验证记录了警告日志
@@ -180,12 +182,14 @@ class TestRegisterAllHandlers:
         mock_logger = MagicMock()
 
         # 模拟多个注册函数失败
-        with patch('handlers.register_recon_tools',
-                   side_effect=ImportError("Recon module error")):
-            with patch('handlers.register_detector_tools',
-                       side_effect=AttributeError("Detector attr error")):
-                with patch('handlers.register_redteam_tools',
-                           side_effect=TypeError("RedTeam type error")):
+        with patch("handlers.register_recon_tools", side_effect=ImportError("Recon module error")):
+            with patch(
+                "handlers.register_detector_tools",
+                side_effect=AttributeError("Detector attr error"),
+            ):
+                with patch(
+                    "handlers.register_redteam_tools", side_effect=TypeError("RedTeam type error")
+                ):
                     register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
                     # 验证记录了多个警告
@@ -200,9 +204,9 @@ class TestRegisterAllHandlers:
         mock_logger = MagicMock()
 
         # 模拟部分注册函数失败
-        with patch('handlers.register_recon_tools', side_effect=ImportError("Error")):
-            with patch('handlers.register_detector_tools'):  # 成功
-                with patch('handlers.register_cve_tools'):  # 成功
+        with patch("handlers.register_recon_tools", side_effect=ImportError("Error")):
+            with patch("handlers.register_detector_tools"):  # 成功
+                with patch("handlers.register_cve_tools"):  # 成功
                     register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
                     # 验证只有失败的记录了警告
@@ -219,23 +223,23 @@ class TestRegisterAllHandlers:
         call_order = []
 
         def track_recon(*args):
-            call_order.append('recon')
+            call_order.append("recon")
 
         def track_detector(*args):
-            call_order.append('detector')
+            call_order.append("detector")
 
         def track_cve(*args):
-            call_order.append('cve')
+            call_order.append("cve")
 
-        with patch('handlers.register_recon_tools', side_effect=track_recon):
-            with patch('handlers.register_detector_tools', side_effect=track_detector):
-                with patch('handlers.register_cve_tools', side_effect=track_cve):
+        with patch("handlers.register_recon_tools", side_effect=track_recon):
+            with patch("handlers.register_detector_tools", side_effect=track_detector):
+                with patch("handlers.register_cve_tools", side_effect=track_cve):
                     register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
                     # 验证注册顺序
-                    assert call_order[0] == 'recon'
-                    assert call_order[1] == 'detector'
-                    assert call_order[2] == 'cve'
+                    assert call_order[0] == "recon"
+                    assert call_order[1] == "detector"
+                    assert call_order[2] == "cve"
 
     def test_register_all_handlers_continues_after_error(self):
         """测试某个处理器失败后继续注册其他处理器"""
@@ -248,24 +252,24 @@ class TestRegisterAllHandlers:
         call_order = []
 
         def track_recon(*args):
-            call_order.append('recon')
+            call_order.append("recon")
             raise ImportError("Recon error")
 
         def track_detector(*args):
-            call_order.append('detector')
+            call_order.append("detector")
 
         def track_cve(*args):
-            call_order.append('cve')
+            call_order.append("cve")
 
-        with patch('handlers.register_recon_tools', side_effect=track_recon):
-            with patch('handlers.register_detector_tools', side_effect=track_detector):
-                with patch('handlers.register_cve_tools', side_effect=track_cve):
+        with patch("handlers.register_recon_tools", side_effect=track_recon):
+            with patch("handlers.register_detector_tools", side_effect=track_detector):
+                with patch("handlers.register_cve_tools", side_effect=track_cve):
                     register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
                     # 验证即使 recon 失败，detector 和 cve 仍然被调用
-                    assert 'recon' in call_order
-                    assert 'detector' in call_order
-                    assert 'cve' in call_order
+                    assert "recon" in call_order
+                    assert "detector" in call_order
+                    assert "cve" in call_order
 
 
 class TestHandlersIntegration:
@@ -285,28 +289,38 @@ class TestHandlersIntegration:
         def mock_register_func(name):
             def register(*args):
                 registered_handlers.append(name)
+
             return register
 
         all_handlers = [
-            'register_recon_tools', 'register_detector_tools', 'register_cve_tools',
-            'register_api_security_tools', 'register_cloud_security_tools',
-            'register_supply_chain_tools', 'register_redteam_tools',
-            'register_orchestration_tools', 'register_lateral_tools',
-            'register_persistence_tools', 'register_ad_tools',
-            'register_session_tools', 'register_report_tools',
-            'register_ai_tools', 'register_misc_tools', 'register_external_tools',
+            "register_recon_tools",
+            "register_detector_tools",
+            "register_cve_tools",
+            "register_api_security_tools",
+            "register_cloud_security_tools",
+            "register_supply_chain_tools",
+            "register_redteam_tools",
+            "register_orchestration_tools",
+            "register_lateral_tools",
+            "register_persistence_tools",
+            "register_ad_tools",
+            "register_session_tools",
+            "register_report_tools",
+            "register_ai_tools",
+            "register_misc_tools",
+            "register_external_tools",
         ]
         with ExitStack() as stack:
             for h in all_handlers:
-                name = h.replace('register_', '').replace('_tools', '')
-                stack.enter_context(patch(f'handlers.{h}', side_effect=mock_register_func(name)))
+                name = h.replace("register_", "").replace("_tools", "")
+                stack.enter_context(patch(f"handlers.{h}", side_effect=mock_register_func(name)))
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
         # 验证所有处理器都被注册
         assert len(registered_handlers) == 16
-        assert 'recon' in registered_handlers
-        assert 'detector' in registered_handlers
-        assert 'redteam' in registered_handlers
+        assert "recon" in registered_handlers
+        assert "detector" in registered_handlers
+        assert "redteam" in registered_handlers
 
     def test_handlers_with_real_mcp_mock(self):
         """测试使用真实的 MCP mock 对象"""
@@ -338,8 +352,9 @@ class TestHandlersErrorMessages:
         mock_counter = MagicMock()
         mock_logger = MagicMock()
 
-        with patch('handlers.register_recon_tools',
-                   side_effect=ImportError("specific module error")):
+        with patch(
+            "handlers.register_recon_tools", side_effect=ImportError("specific module error")
+        ):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
             # 获取警告消息（lazy format 需格式化）
@@ -357,8 +372,9 @@ class TestHandlersErrorMessages:
         mock_counter = MagicMock()
         mock_logger = MagicMock()
 
-        with patch('handlers.register_detector_tools',
-                   side_effect=AttributeError("missing attribute")):
+        with patch(
+            "handlers.register_detector_tools", side_effect=AttributeError("missing attribute")
+        ):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
             args = mock_logger.warning.call_args_list[0][0]
@@ -375,7 +391,7 @@ class TestHandlersErrorMessages:
         mock_counter = MagicMock()
         mock_logger = MagicMock()
 
-        with patch('handlers.register_cve_tools', side_effect=TypeError("wrong type")):
+        with patch("handlers.register_cve_tools", side_effect=TypeError("wrong type")):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
             args = mock_logger.warning.call_args_list[0][0]
@@ -392,7 +408,7 @@ class TestHandlersErrorMessages:
         mock_counter = MagicMock()
         mock_logger = MagicMock()
 
-        with patch('handlers.register_api_security_tools', side_effect=ValueError("custom error")):
+        with patch("handlers.register_api_security_tools", side_effect=ValueError("custom error")):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
             args = mock_logger.warning.call_args_list[0][0]

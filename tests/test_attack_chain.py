@@ -305,7 +305,7 @@ class TestAttackChainEngine:
                 AttackNode("n1", AttackPhase.RECONNAISSANCE, "t1", "tool1", {}),
                 AttackNode("n2", AttackPhase.INITIAL_ACCESS, "t2", "tool2", {}, ["n1"]),
                 AttackNode("n3", AttackPhase.EXECUTION, "t3", "tool3", {}, ["n2"]),
-            ]
+            ],
         )
 
         assert engine._detect_cycle(chain) is False
@@ -320,7 +320,7 @@ class TestAttackChainEngine:
                 AttackNode("n1", AttackPhase.RECONNAISSANCE, "t1", "tool1", {}, ["n3"]),
                 AttackNode("n2", AttackPhase.INITIAL_ACCESS, "t2", "tool2", {}, ["n1"]),
                 AttackNode("n3", AttackPhase.EXECUTION, "t3", "tool3", {}, ["n2"]),
-            ]
+            ],
         )
 
         assert engine._detect_cycle(chain) is True
@@ -333,7 +333,7 @@ class TestAttackChainEngine:
             target="test",
             nodes=[
                 AttackNode("n1", AttackPhase.RECONNAISSANCE, "t1", "tool1", {}, ["n1"]),
-            ]
+            ],
         )
 
         assert engine._detect_cycle(chain) is True
@@ -348,7 +348,7 @@ class TestAttackChainEngine:
             target="test",
             nodes=[
                 AttackNode("n1", AttackPhase.RECONNAISSANCE, "t1", "tool1", {}),
-            ]
+            ],
         )
 
         node = chain.nodes[0]
@@ -363,7 +363,7 @@ class TestAttackChainEngine:
             nodes=[
                 AttackNode("n1", AttackPhase.RECONNAISSANCE, "t1", "tool1", {}),
                 AttackNode("n2", AttackPhase.INITIAL_ACCESS, "t2", "tool2", {}, ["n1"]),
-            ]
+            ],
         )
 
         chain.nodes[0].status = "success"
@@ -379,7 +379,7 @@ class TestAttackChainEngine:
             nodes=[
                 AttackNode("n1", AttackPhase.RECONNAISSANCE, "t1", "tool1", {}),
                 AttackNode("n2", AttackPhase.INITIAL_ACCESS, "t2", "tool2", {}, ["n1"]),
-            ]
+            ],
         )
 
         chain.nodes[0].status = "pending"
@@ -394,7 +394,7 @@ class TestAttackChainEngine:
             target="test",
             nodes=[
                 AttackNode("n2", AttackPhase.INITIAL_ACCESS, "t2", "tool2", {}, ["n1"]),
-            ]
+            ],
         )
 
         assert engine._check_dependencies(chain, chain.nodes[0]) is False
@@ -429,7 +429,7 @@ class TestAttackChainEngine:
             nodes=[
                 AttackNode("n1", AttackPhase.RECONNAISSANCE, "t1", "tool1", {}, ["n2"]),
                 AttackNode("n2", AttackPhase.INITIAL_ACCESS, "t2", "tool2", {}, ["n1"]),
-            ]
+            ],
         )
         engine.chains["cyclic"] = chain
 
@@ -445,7 +445,7 @@ class TestAttackChainEngine:
             nodes=[
                 AttackNode("n1", AttackPhase.RECONNAISSANCE, "t1", "tool1", {}),
                 AttackNode("n2", AttackPhase.INITIAL_ACCESS, "t2", "tool2", {}, ["n1"]),
-            ]
+            ],
         )
         engine.chains["test"] = chain
 
@@ -517,7 +517,7 @@ class TestAttackChainEngine:
                     "ports": [
                         {"port": 22, "state": "open", "service": "ssh"},
                         {"port": 80, "state": "open", "service": "http"},
-                    ]
+                    ],
                 }
             ]
         }
@@ -577,7 +577,7 @@ class TestAttackChainEngine:
                     "ip": "192.168.1.1",
                     "ports": [
                         {"port": 8080, "state": "open", "service": "http-proxy"},
-                    ]
+                    ],
                 }
             ]
         }
@@ -596,9 +596,10 @@ class TestAttackChainEngine:
             target="192.168.1.1",
             nodes=[
                 AttackNode("n1", AttackPhase.RECONNAISSANCE, "active_scanning", "port_scan", {}),
-                AttackNode("n2", AttackPhase.CREDENTIAL_ACCESS, "brute_force", "hydra",
-                           {"service": ""}),
-            ]
+                AttackNode(
+                    "n2", AttackPhase.CREDENTIAL_ACCESS, "brute_force", "hydra", {"service": ""}
+                ),
+            ],
         )
         engine.chains["test"] = chain
 
@@ -676,7 +677,8 @@ class TestAttackChainEngine:
         assert len(suggestions) > 0
         # 应该建议横向移动
         lateral_suggestions = [
-            s for s in suggestions
+            s
+            for s in suggestions
             if "横向" in s["description"] or "credential" in s["action"].lower()
         ]
         assert len(lateral_suggestions) > 0
@@ -768,11 +770,13 @@ class TestIntegrationAttackChain:
         """测试完整的攻击链生命周期"""
         # 创建模拟注册表
         registry = Mock()
-        registry.execute = Mock(side_effect=[
-            {"success": True, "open_ports": [{"port": 80, "service": "http"}]},
-            {"success": True, "vulnerabilities": [{"severity": "high", "title": "SQLi"}]},
-            {"success": True, "exploited": True},
-        ])
+        registry.execute = Mock(
+            side_effect=[
+                {"success": True, "open_ports": [{"port": 80, "service": "http"}]},
+                {"success": True, "vulnerabilities": [{"severity": "high", "title": "SQLi"}]},
+                {"success": True, "exploited": True},
+            ]
+        )
 
         engine = AttackChainEngine(registry)
 

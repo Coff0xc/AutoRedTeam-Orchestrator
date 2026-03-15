@@ -25,7 +25,7 @@ class TestReconHandlersRegistration:
         register_recon_tools(mock_mcp, mock_counter, mock_logger)
 
         # 验证 counter.add 被调用
-        mock_counter.add.assert_called_once_with('recon', 8)
+        mock_counter.add.assert_called_once_with("recon", 8)
 
         # 验证 logger.info 被调用
         mock_logger.info.assert_called_once()
@@ -55,6 +55,7 @@ class TestFullReconTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -65,27 +66,26 @@ class TestFullReconTool:
         # 模拟 StandardReconEngine
         mock_result = MagicMock()
         mock_result.to_dict.return_value = {
-            'dns': {'ip': '1.2.3.4'},
-            'ports': [80, 443],
-            'fingerprints': ['nginx']
+            "dns": {"ip": "1.2.3.4"},
+            "ports": [80, 443],
+            "fingerprints": ["nginx"],
         }
 
-        with patch('core.recon.StandardReconEngine') as mock_engine_class:
+        with patch("core.recon.StandardReconEngine") as mock_engine_class:
             mock_engine = MagicMock()
             mock_engine.async_run = AsyncMock(return_value=mock_result)
             mock_engine_class.return_value = mock_engine
 
             # 调用工具
-            result = await registered_tools['full_recon'](
-                target="https://example.com",
-                quick_mode=True
+            result = await registered_tools["full_recon"](
+                target="https://example.com", quick_mode=True
             )
 
             # 验证结果 — tool(mcp) 通过 ensure_tool_result 将 extras 合并到 data 中
-            assert result['success'] is True
-            assert 'data' in result
-            assert result['data']['target'] == "https://example.com"
-            assert result['data']['dns']['ip'] == '1.2.3.4'
+            assert result["success"] is True
+            assert "data" in result
+            assert result["data"]["target"] == "https://example.com"
+            assert result["data"]["dns"]["ip"] == "1.2.3.4"
 
             # 验证引擎被正确初始化
             mock_engine_class.assert_called_once()
@@ -106,23 +106,22 @@ class TestFullReconTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
         register_recon_tools(mock_mcp, mock_counter, mock_logger)
 
         # 模拟异常
-        with patch('core.recon.StandardReconEngine') as mock_engine_class:
+        with patch("core.recon.StandardReconEngine") as mock_engine_class:
             mock_engine_class.side_effect = Exception("Network error")
 
-            result = await registered_tools['full_recon'](
-                target="https://example.com"
-            )
+            result = await registered_tools["full_recon"](target="https://example.com")
 
-            assert result['success'] is False
-            assert 'error' in result
-            assert "Network error" in result['error']
-            assert result['data']['target'] == "https://example.com"
+            assert result["success"] is False
+            assert "error" in result
+            assert "Network error" in result["error"]
+            assert result["data"]["target"] == "https://example.com"
 
 
 class TestPortScanTool:
@@ -143,6 +142,7 @@ class TestPortScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -151,25 +151,23 @@ class TestPortScanTool:
         # 模拟扫描结果
         mock_port_result = MagicMock()
         mock_port_result.port = 80
-        mock_port_result.state = 'open'
-        mock_port_result.service = 'http'
-        mock_port_result.version = 'nginx 1.18'
+        mock_port_result.state = "open"
+        mock_port_result.service = "http"
+        mock_port_result.version = "nginx 1.18"
 
-        with patch('core.recon.async_scan_ports') as mock_scan:
+        with patch("core.recon.async_scan_ports") as mock_scan:
             mock_scan.return_value = [mock_port_result]
 
-            result = await registered_tools['port_scan'](
-                target="192.168.1.1",
-                ports="1-1000",
-                timeout=2.0
+            result = await registered_tools["port_scan"](
+                target="192.168.1.1", ports="1-1000", timeout=2.0
             )
 
-            assert result['success'] is True
-            assert result['data']['target'] == "192.168.1.1"
-            assert result['data']['total_open'] == 1
-            assert len(result['data']['open_ports']) == 1
-            assert result['data']['open_ports'][0]['port'] == 80
-            assert result['data']['open_ports'][0]['service'] == 'http'
+            assert result["success"] is True
+            assert result["data"]["target"] == "192.168.1.1"
+            assert result["data"]["total_open"] == 1
+            assert len(result["data"]["open_ports"]) == 1
+            assert result["data"]["open_ports"][0]["port"] == 80
+            assert result["data"]["open_ports"][0]["service"] == "http"
 
     @pytest.mark.asyncio
     async def test_port_scan_no_open_ports(self):
@@ -186,6 +184,7 @@ class TestPortScanTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -193,18 +192,16 @@ class TestPortScanTool:
 
         # 模拟无开放端口
         mock_port_result = MagicMock()
-        mock_port_result.state = 'closed'
+        mock_port_result.state = "closed"
 
-        with patch('core.recon.async_scan_ports') as mock_scan:
+        with patch("core.recon.async_scan_ports") as mock_scan:
             mock_scan.return_value = [mock_port_result]
 
-            result = await registered_tools['port_scan'](
-                target="192.168.1.1"
-            )
+            result = await registered_tools["port_scan"](target="192.168.1.1")
 
-            assert result['success'] is True
-            assert result['data']['total_open'] == 0
-            assert len(result['data']['open_ports']) == 0
+            assert result["success"] is True
+            assert result["data"]["total_open"] == 0
+            assert len(result["data"]["open_ports"]) == 0
 
 
 class TestFingerprintTool:
@@ -225,6 +222,7 @@ class TestFingerprintTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -232,25 +230,23 @@ class TestFingerprintTool:
 
         # 模拟指纹结果
         mock_fingerprint = MagicMock()
-        mock_fingerprint.name = 'nginx'
+        mock_fingerprint.name = "nginx"
         mock_fingerprint.category = MagicMock()
-        mock_fingerprint.category.value = 'web_server'
-        mock_fingerprint.version = '1.18.0'
+        mock_fingerprint.category.value = "web_server"
+        mock_fingerprint.version = "1.18.0"
         mock_fingerprint.confidence = 0.95
 
-        with patch('core.recon.identify_fingerprints') as mock_identify:
+        with patch("core.recon.identify_fingerprints") as mock_identify:
             mock_identify.return_value = [mock_fingerprint]
 
-            result = await registered_tools['fingerprint'](
-                url="https://example.com"
-            )
+            result = await registered_tools["fingerprint"](url="https://example.com")
 
-            assert result['success'] is True
-            assert result['data']['url'] == "https://example.com"
-            assert result['data']['count'] == 1
-            assert len(result['data']['fingerprints']) == 1
-            assert result['data']['fingerprints'][0]['name'] == 'nginx'
-            assert result['data']['fingerprints'][0]['version'] == '1.18.0'
+            assert result["success"] is True
+            assert result["data"]["url"] == "https://example.com"
+            assert result["data"]["count"] == 1
+            assert len(result["data"]["fingerprints"]) == 1
+            assert result["data"]["fingerprints"][0]["name"] == "nginx"
+            assert result["data"]["fingerprints"][0]["version"] == "1.18.0"
 
 
 class TestSubdomainEnumTool:
@@ -271,6 +267,7 @@ class TestSubdomainEnumTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -278,22 +275,19 @@ class TestSubdomainEnumTool:
 
         # 模拟子域名结果
         mock_subdomain = MagicMock()
-        mock_subdomain.subdomain = 'www.example.com'
-        mock_subdomain.ip = '1.2.3.4'
-        mock_subdomain.source = 'dns_brute'
+        mock_subdomain.subdomain = "www.example.com"
+        mock_subdomain.ip = "1.2.3.4"
+        mock_subdomain.source = "dns_brute"
 
-        with patch('core.recon.async_enumerate_subdomains') as mock_enum:
+        with patch("core.recon.async_enumerate_subdomains") as mock_enum:
             mock_enum.return_value = [mock_subdomain]
 
-            result = await registered_tools['subdomain_enum'](
-                domain="example.com",
-                limit=100
-            )
+            result = await registered_tools["subdomain_enum"](domain="example.com", limit=100)
 
-            assert result['success'] is True
-            assert result['data']['domain'] == "example.com"
-            assert result['data']['count'] == 1
-            assert result['data']['subdomains'][0]['subdomain'] == 'www.example.com'
+            assert result["success"] is True
+            assert result["data"]["domain"] == "example.com"
+            assert result["data"]["count"] == 1
+            assert result["data"]["subdomains"][0]["subdomain"] == "www.example.com"
 
     @pytest.mark.asyncio
     async def test_subdomain_enum_with_limit(self):
@@ -310,6 +304,7 @@ class TestSubdomainEnumTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -319,21 +314,18 @@ class TestSubdomainEnumTool:
         mock_subdomains = []
         for i in range(150):
             mock_sub = MagicMock()
-            mock_sub.subdomain = f'sub{i}.example.com'
-            mock_sub.ip = f'1.2.3.{i % 255}'
-            mock_sub.source = 'dns_brute'
+            mock_sub.subdomain = f"sub{i}.example.com"
+            mock_sub.ip = f"1.2.3.{i % 255}"
+            mock_sub.source = "dns_brute"
             mock_subdomains.append(mock_sub)
 
-        with patch('core.recon.async_enumerate_subdomains') as mock_enum:
+        with patch("core.recon.async_enumerate_subdomains") as mock_enum:
             mock_enum.return_value = mock_subdomains
 
-            result = await registered_tools['subdomain_enum'](
-                domain="example.com",
-                limit=50
-            )
+            result = await registered_tools["subdomain_enum"](domain="example.com", limit=50)
 
-            assert result['success'] is True
-            assert result['data']['count'] == 50  # 应该被限制到 50
+            assert result["success"] is True
+            assert result["data"]["count"] == 50  # 应该被限制到 50
 
 
 class TestDNSLookupTool:
@@ -354,6 +346,7 @@ class TestDNSLookupTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -362,22 +355,20 @@ class TestDNSLookupTool:
         # 模拟DNS结果
         mock_dns_result = MagicMock()
         mock_dns_result.to_dict.return_value = {
-            'A': ['1.2.3.4'],
-            'MX': ['mail.example.com'],
-            'NS': ['ns1.example.com']
+            "A": ["1.2.3.4"],
+            "MX": ["mail.example.com"],
+            "NS": ["ns1.example.com"],
         }
 
-        with patch('core.recon.get_dns_records') as mock_dns:
+        with patch("core.recon.get_dns_records") as mock_dns:
             mock_dns.return_value = mock_dns_result
 
-            result = await registered_tools['dns_lookup'](
-                domain="example.com"
-            )
+            result = await registered_tools["dns_lookup"](domain="example.com")
 
-            assert result['success'] is True
-            assert result['data']['domain'] == "example.com"
-            assert 'records' in result['data']
-            assert result['data']['records']['A'] == ['1.2.3.4']
+            assert result["success"] is True
+            assert result["data"]["domain"] == "example.com"
+            assert "records" in result["data"]
+            assert result["data"]["records"]["A"] == ["1.2.3.4"]
 
 
 class TestWAFDetectTool:
@@ -398,6 +389,7 @@ class TestWAFDetectTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -406,20 +398,18 @@ class TestWAFDetectTool:
         # 模拟WAF检测结果
         mock_waf_result = MagicMock()
         mock_waf_result.detected = True
-        mock_waf_result.name = 'Cloudflare'
+        mock_waf_result.name = "Cloudflare"
         mock_waf_result.confidence = 0.9
 
-        with patch('core.recon.detect_waf') as mock_waf:
+        with patch("core.recon.detect_waf") as mock_waf:
             mock_waf.return_value = mock_waf_result
 
-            result = await registered_tools['waf_detect'](
-                url="https://example.com"
-            )
+            result = await registered_tools["waf_detect"](url="https://example.com")
 
-            assert result['success'] is True
-            assert result['data']['waf_detected'] is True
-            assert result['data']['waf_name'] == 'Cloudflare'
-            assert result['data']['confidence'] == 0.9
+            assert result["success"] is True
+            assert result["data"]["waf_detected"] is True
+            assert result["data"]["waf_name"] == "Cloudflare"
+            assert result["data"]["confidence"] == 0.9
 
     @pytest.mark.asyncio
     async def test_waf_detect_not_found(self):
@@ -436,6 +426,7 @@ class TestWAFDetectTool:
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
+
             return decorator
 
         mock_mcp.tool = capture_tool
@@ -447,13 +438,11 @@ class TestWAFDetectTool:
         mock_waf_result.name = None
         mock_waf_result.confidence = None
 
-        with patch('core.recon.detect_waf') as mock_waf:
+        with patch("core.recon.detect_waf") as mock_waf:
             mock_waf.return_value = mock_waf_result
 
-            result = await registered_tools['waf_detect'](
-                url="https://example.com"
-            )
+            result = await registered_tools["waf_detect"](url="https://example.com")
 
-            assert result['success'] is True
-            assert result['data']['waf_detected'] is False
-            assert result['data']['waf_name'] is None
+            assert result["success"] is True
+            assert result["data"]["waf_detected"] is False
+            assert result["data"]["waf_name"] is None

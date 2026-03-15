@@ -26,7 +26,7 @@ class TestDetectionResult:
             param="id",
             payload="1' OR '1'='1",
             evidence="SQL syntax error",
-            url="http://example.com/page?id=1"
+            url="http://example.com/page?id=1",
         )
 
         assert result.vulnerable is True
@@ -45,7 +45,7 @@ class TestDetectionResult:
             param="q",
             payload="<script>alert(1)</script>",
             evidence="Script tag reflected",
-            url="http://example.com/search?q=test"
+            url="http://example.com/search?q=test",
         )
 
         result_dict = result.to_dict()
@@ -86,8 +86,8 @@ class TestBaseDetector:
         from core.detectors import BaseDetector
 
         # BaseDetector 是抽象类，我们测试其属性
-        assert hasattr(BaseDetector, 'name')
-        assert hasattr(BaseDetector, 'description')
+        assert hasattr(BaseDetector, "name")
+        assert hasattr(BaseDetector, "description")
 
     def test_detector_config(self):
         """测试检测器配置"""
@@ -117,9 +117,9 @@ class TestSQLiDetector:
         detector = SQLiDetector()
 
         # 检测器应该有 payload 列表
-        assert hasattr(detector, 'payloads') or hasattr(detector, 'get_payloads')
+        assert hasattr(detector, "payloads") or hasattr(detector, "get_payloads")
 
-    @patch('core.detectors.injection.sqli.SQLiDetector._safe_request')
+    @patch("core.detectors.injection.sqli.SQLiDetector._safe_request")
     def test_sqli_detect_vulnerable(self, mock_request):
         """测试 SQLi 检测 - 存在漏洞"""
         from core.detectors import SQLiDetector
@@ -155,7 +155,7 @@ class TestXSSDetector:
         detector = XSSDetector()
 
         # XSS 检测器应该支持多种类型
-        assert hasattr(detector, 'detect')
+        assert hasattr(detector, "detect")
 
 
 class TestRCEDetector:
@@ -251,6 +251,7 @@ class TestPayloadManager:
         """测试获取 payload"""
         from core.detectors import get_payloads
         from core.detectors.payloads import PayloadCategory
+
         payloads = get_payloads(PayloadCategory.SQLI)
 
         assert isinstance(payloads, list)
@@ -311,7 +312,8 @@ class TestPayloadEncoder:
         assert encoded != payload
         # Base64 编码后应该只包含 Base64 字符
         import re
-        assert re.match(r'^[A-Za-z0-9+/=]+$', encoded)
+
+        assert re.match(r"^[A-Za-z0-9+/=]+$", encoded)
 
 
 class TestDetectorPresets:
@@ -329,7 +331,7 @@ class TestDetectorPresets:
         """测试注入类预设"""
         from core.detectors import DetectorPresets
 
-        if hasattr(DetectorPresets, 'injection'):
+        if hasattr(DetectorPresets, "injection"):
             detector = DetectorPresets.injection()
             assert detector is not None
 
@@ -356,7 +358,7 @@ class TestFalsePositiveFilter:
             param="q",
             payload="<script>",
             evidence="",
-            url="http://example.com"
+            url="http://example.com",
         )
 
         # 测试函数存在

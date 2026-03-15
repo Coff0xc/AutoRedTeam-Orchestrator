@@ -34,7 +34,7 @@ class TestDependencyVuln:
             vuln_id="CVE-2021-1234",
             severity=VulnSeverity.HIGH,
             title="Test Vulnerability",
-            description="Test description"
+            description="Test description",
         )
 
         assert vuln.package_name == "requests"
@@ -56,7 +56,7 @@ class TestDependencyVuln:
             fixed_version="3.0.7",
             references=["https://example.com/advisory"],
             cvss_score=9.8,
-            ecosystem="PyPI"
+            ecosystem="PyPI",
         )
 
         assert vuln.fixed_version == "3.0.7"
@@ -146,27 +146,11 @@ class TestParseOSVResponse:
                     "id": "CVE-2021-1234",
                     "summary": "Test Vulnerability",
                     "details": "Detailed description of the vulnerability",
-                    "severity": [
-                        {
-                            "type": "CVSS_V3",
-                            "score": 7.5
-                        }
-                    ],
+                    "severity": [{"type": "CVSS_V3", "score": 7.5}],
                     "affected": [
-                        {
-                            "ranges": [
-                                {
-                                    "events": [
-                                        {"introduced": "0"},
-                                        {"fixed": "2.0.0"}
-                                    ]
-                                }
-                            ]
-                        }
+                        {"ranges": [{"events": [{"introduced": "0"}, {"fixed": "2.0.0"}]}]}
                     ],
-                    "references": [
-                        {"url": "https://example.com/advisory"}
-                    ]
+                    "references": [{"url": "https://example.com/advisory"}],
                 }
             ]
         }
@@ -191,7 +175,7 @@ class TestParseOSVResponse:
                     "details": "Description 1",
                     "severity": [{"type": "CVSS_V3", "score": 9.0}],
                     "affected": [],
-                    "references": []
+                    "references": [],
                 },
                 {
                     "id": "CVE-2021-2222",
@@ -199,8 +183,8 @@ class TestParseOSVResponse:
                     "details": "Description 2",
                     "severity": [{"type": "CVSS_V3", "score": 5.0}],
                     "affected": [],
-                    "references": []
-                }
+                    "references": [],
+                },
             ]
         }
 
@@ -259,12 +243,12 @@ class TestCheckOSV:
                     "details": "Test description",
                     "severity": [{"type": "CVSS_V3", "score": 7.5}],
                     "affected": [],
-                    "references": []
+                    "references": [],
                 }
             ]
         }
 
-        with patch.object(scanner._session, 'post', return_value=mock_response):
+        with patch.object(scanner._session, "post", return_value=mock_response):
             vulns = scanner.check_osv("requests", "2.25.0", "PyPI")
 
         assert len(vulns) == 1
@@ -280,7 +264,7 @@ class TestCheckOSV:
         mock_response.status_code = 200
         mock_response.json.return_value = {"vulns": []}
 
-        with patch.object(scanner._session, 'post', return_value=mock_response):
+        with patch.object(scanner._session, "post", return_value=mock_response):
             vulns = scanner.check_osv("safe-package", "1.0.0", "PyPI")
 
         assert len(vulns) == 0
@@ -294,7 +278,7 @@ class TestCheckOSV:
         mock_response.status_code = 200
         mock_response.json.return_value = {"vulns": []}
 
-        with patch.object(scanner._session, 'post', return_value=mock_response) as mock_post:
+        with patch.object(scanner._session, "post", return_value=mock_response) as mock_post:
             # 第一次调用
             vulns1 = scanner.check_osv("requests", "2.25.0", "PyPI")
             # 第二次调用（应该使用缓存）
@@ -312,7 +296,7 @@ class TestCheckOSV:
         mock_response = Mock()
         mock_response.status_code = 500
 
-        with patch.object(scanner._session, 'post', return_value=mock_response):
+        with patch.object(scanner._session, "post", return_value=mock_response):
             vulns = scanner.check_osv("requests", "2.25.0", "PyPI")
 
         assert len(vulns) == 0
@@ -323,8 +307,10 @@ class TestCheckOSV:
 
         # Mock 网络异常 — check_osv 只捕获 requests.RequestException
         import requests
-        with patch.object(scanner._session, 'post',
-                          side_effect=requests.ConnectionError("Network error")):
+
+        with patch.object(
+            scanner._session, "post", side_effect=requests.ConnectionError("Network error")
+        ):
             vulns = scanner.check_osv("requests", "2.25.0", "PyPI")
 
         assert len(vulns) == 0
@@ -335,7 +321,8 @@ class TestCheckOSV:
 
         # Mock 超时异常
         import requests
-        with patch.object(scanner._session, 'post', side_effect=requests.Timeout("Timeout")):
+
+        with patch.object(scanner._session, "post", side_effect=requests.Timeout("Timeout")):
             vulns = scanner.check_osv("requests", "2.25.0", "PyPI")
 
         assert len(vulns) == 0
@@ -350,7 +337,7 @@ class TestCheckBatchOSV:
 
         packages = [
             {"name": "requests", "version": "2.25.0", "ecosystem": "PyPI"},
-            {"name": "django", "version": "3.0.0", "ecosystem": "PyPI"}
+            {"name": "django", "version": "3.0.0", "ecosystem": "PyPI"},
         ]
 
         # Mock check_osv 方法
@@ -363,16 +350,18 @@ class TestCheckBatchOSV:
                         vuln_id="CVE-2021-1111",
                         severity=VulnSeverity.HIGH,
                         title="Test Vuln",
-                        description="Test"
+                        description="Test",
                     )
                 ]
             return []
 
         # Mock batch POST to fail → falls back to individual check_osv
         import requests
-        with patch.object(scanner._session, 'post',
-                          side_effect=requests.ConnectionError("mock batch fail")):
-            with patch.object(scanner, 'check_osv', side_effect=mock_check_osv):
+
+        with patch.object(
+            scanner._session, "post", side_effect=requests.ConnectionError("mock batch fail")
+        ):
+            with patch.object(scanner, "check_osv", side_effect=mock_check_osv):
                 results = scanner.check_batch_osv(packages)
 
         assert "requests" in results
@@ -409,26 +398,17 @@ class TestDependencyScannerIntegration:
                     ),
                     "severity": [{"type": "CVSS_V3", "score": 9.8}],
                     "affected": [
-                        {
-                            "ranges": [
-                                {
-                                    "events": [
-                                        {"introduced": "0"},
-                                        {"fixed": "1.0.1"}
-                                    ]
-                                }
-                            ]
-                        }
+                        {"ranges": [{"events": [{"introduced": "0"}, {"fixed": "1.0.1"}]}]}
                     ],
                     "references": [
                         {"url": "https://github.com/advisories/GHSA-xxxx-yyyy-zzzz"},
-                        {"url": "https://nvd.nist.gov/vuln/detail/CVE-2021-1234"}
-                    ]
+                        {"url": "https://nvd.nist.gov/vuln/detail/CVE-2021-1234"},
+                    ],
                 }
             ]
         }
 
-        with patch.object(scanner._session, 'post', return_value=mock_response):
+        with patch.object(scanner._session, "post", return_value=mock_response):
             vulns = scanner.check_osv("vulnerable-package", "1.0.0", "PyPI")
 
         assert len(vulns) == 1
@@ -450,7 +430,7 @@ class TestDependencyScannerIntegration:
             mock_response.status_code = 200
             mock_response.json.return_value = {"vulns": []}
 
-            with patch.object(scanner._session, 'post', return_value=mock_response):
+            with patch.object(scanner._session, "post", return_value=mock_response):
                 vulns = scanner.check_osv("test-package", "1.0.0", ecosystem)
 
             assert isinstance(vulns, list)
@@ -468,7 +448,7 @@ class TestDependencyScannerEdgeCases:
         mock_response.status_code = 200
         mock_response.json.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
 
-        with patch.object(scanner._session, 'post', return_value=mock_response):
+        with patch.object(scanner._session, "post", return_value=mock_response):
             vulns = scanner.check_osv("requests", "2.25.0", "PyPI")
 
         assert len(vulns) == 0
@@ -487,8 +467,8 @@ class TestDependencyScannerEdgeCases:
                     "id": "CVE-2021-1234",
                     # 有效的漏洞
                     "summary": "Valid Vuln",
-                    "details": "Description"
-                }
+                    "details": "Description",
+                },
             ]
         }
 
@@ -511,7 +491,7 @@ class TestDependencyScannerEdgeCases:
                     "details": long_description,
                     "severity": [],
                     "affected": [],
-                    "references": []
+                    "references": [],
                 }
             ]
         }
@@ -536,7 +516,7 @@ class TestDependencyScannerEdgeCases:
                     "details": "Description",
                     "severity": [],
                     "affected": [],
-                    "references": references
+                    "references": references,
                 }
             ]
         }
@@ -555,7 +535,7 @@ class TestDependencyScannerEdgeCases:
         mock_response.status_code = 200
         mock_response.json.return_value = {"vulns": []}
 
-        with patch.object(scanner._session, 'post', return_value=mock_response):
+        with patch.object(scanner._session, "post", return_value=mock_response):
             vulns = scanner.check_osv("package-with-dash", "1.0.0", "PyPI")
 
         assert isinstance(vulns, list)
@@ -569,7 +549,7 @@ class TestDependencyScannerEdgeCases:
         mock_response.status_code = 200
         mock_response.json.return_value = {"vulns": []}
 
-        with patch.object(scanner._session, 'post', return_value=mock_response):
+        with patch.object(scanner._session, "post", return_value=mock_response):
             vulns = scanner.check_osv("package", "1.0.0-alpha.1", "PyPI")
 
         assert isinstance(vulns, list)

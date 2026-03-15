@@ -28,12 +28,14 @@ def _make_mcp_and_register():
         def decorator(func):
             registered_tools[func.__name__] = func
             return func
+
         return decorator
 
     mock_mcp.tool = capture_tool
 
-    with patch('utils.mcp_tooling._wrap_tool_func', side_effect=lambda f: f):
+    with patch("utils.mcp_tooling._wrap_tool_func", side_effect=lambda f: f):
         from handlers.cve_handlers import register_cve_tools
+
         register_cve_tools(mock_mcp, mock_counter, mock_logger)
 
     return registered_tools, mock_counter, mock_logger
@@ -49,7 +51,7 @@ class TestCveHandlersRegistration:
         """测试注册函数是否正确注册 8 个工具"""
         registered_tools, mock_counter, mock_logger = _make_mcp_and_register()
 
-        mock_counter.add.assert_called_once_with('cve', 8)
+        mock_counter.add.assert_called_once_with("cve", 8)
         mock_logger.info.assert_called_once()
         assert "8 个CVE工具" in str(mock_logger.info.call_args)
 
@@ -58,9 +60,14 @@ class TestCveHandlersRegistration:
         registered_tools, _, _ = _make_mcp_and_register()
 
         expected_tools = [
-            'cve_search', 'cve_sync', 'cve_stats',
-            'poc_execute', 'poc_list',
-            'cve_auto_exploit', 'cve_exploit_with_desc', 'cve_generate_poc',
+            "cve_search",
+            "cve_sync",
+            "cve_stats",
+            "poc_execute",
+            "poc_list",
+            "cve_auto_exploit",
+            "cve_exploit_with_desc",
+            "cve_generate_poc",
         ]
         for tool_name in expected_tools:
             assert tool_name in registered_tools, f"工具 {tool_name} 未注册"
@@ -85,49 +92,49 @@ class TestCveSearchTool:
         mock_cve.poc_available = True
         mock_cve.poc_path = "/path/to/poc.yaml"
 
-        with patch('core.cve.update_manager.CVEUpdateManager') as MockManager:
+        with patch("core.cve.update_manager.CVEUpdateManager") as MockManager:
             MockManager.return_value.search.return_value = [mock_cve]
 
-            result = await registered_tools['cve_search'](
+            result = await registered_tools["cve_search"](
                 keyword="apache", severity="HIGH", has_poc=True, limit=10
             )
 
-            assert result['success'] is True
-            assert result['keyword'] == 'apache'
-            assert result['count'] == 1
-            assert result['cves'][0]['cve_id'] == 'CVE-2024-1234'
-            assert result['cves'][0]['severity'] == 'HIGH'
-            assert result['cves'][0]['poc_available'] is True
+            assert result["success"] is True
+            assert result["keyword"] == "apache"
+            assert result["count"] == 1
+            assert result["cves"][0]["cve_id"] == "CVE-2024-1234"
+            assert result["cves"][0]["severity"] == "HIGH"
+            assert result["cves"][0]["poc_available"] is True
             # 验证描述被截断到 200 字符
-            assert len(result['cves'][0]['description']) <= 200
+            assert len(result["cves"][0]["description"]) <= 200
 
     @pytest.mark.asyncio
     async def test_cve_search_empty_results(self):
         """测试搜索无结果"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        with patch('core.cve.update_manager.CVEUpdateManager') as MockManager:
+        with patch("core.cve.update_manager.CVEUpdateManager") as MockManager:
             MockManager.return_value.search.return_value = []
 
-            result = await registered_tools['cve_search'](keyword="nonexistent_cve")
+            result = await registered_tools["cve_search"](keyword="nonexistent_cve")
 
-            assert result['success'] is True
-            assert result['count'] == 0
-            assert result['cves'] == []
+            assert result["success"] is True
+            assert result["count"] == 0
+            assert result["cves"] == []
 
     @pytest.mark.asyncio
     async def test_cve_search_exception(self):
         """测试搜索异常处理"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        with patch('core.cve.update_manager.CVEUpdateManager') as MockManager:
+        with patch("core.cve.update_manager.CVEUpdateManager") as MockManager:
             MockManager.return_value.search.side_effect = Exception("Database error")
 
-            result = await registered_tools['cve_search'](keyword="test")
+            result = await registered_tools["cve_search"](keyword="test")
 
-            assert result['success'] is False
-            assert 'error' in result
-            assert "Database error" in result['error']
+            assert result["success"] is False
+            assert "error" in result
+            assert "Database error" in result["error"]
 
 
 # ==================== cve_sync 测试 ====================
@@ -141,36 +148,36 @@ class TestCveSyncTool:
         """测试正常同步"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        with patch('core.cve.update_manager.CVEUpdateManager') as MockManager:
+        with patch("core.cve.update_manager.CVEUpdateManager") as MockManager:
             MockManager.return_value.sync_all = AsyncMock(
                 return_value={
-                    'nvd': (10, 5),
-                    'nuclei': (3, 2),
+                    "nvd": (10, 5),
+                    "nuclei": (3, 2),
                 }
             )
 
-            result = await registered_tools['cve_sync'](days=7)
+            result = await registered_tools["cve_sync"](days=7)
 
-            assert result['success'] is True
-            assert result['days'] == 7
-            assert result['results']['nvd']['new'] == 10
-            assert result['results']['nvd']['updated'] == 5
-            assert result['results']['nuclei']['new'] == 3
+            assert result["success"] is True
+            assert result["days"] == 7
+            assert result["results"]["nvd"]["new"] == 10
+            assert result["results"]["nvd"]["updated"] == 5
+            assert result["results"]["nuclei"]["new"] == 3
 
     @pytest.mark.asyncio
     async def test_cve_sync_exception(self):
         """测试同步异常"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        with patch('core.cve.update_manager.CVEUpdateManager') as MockManager:
+        with patch("core.cve.update_manager.CVEUpdateManager") as MockManager:
             MockManager.return_value.sync_all = AsyncMock(
                 side_effect=ConnectionError("Network unreachable")
             )
 
-            result = await registered_tools['cve_sync'](days=3)
+            result = await registered_tools["cve_sync"](days=3)
 
-            assert result['success'] is False
-            assert 'error' in result
+            assert result["success"] is False
+            assert "error" in result
 
 
 # ==================== cve_stats 测试 ====================
@@ -185,20 +192,20 @@ class TestCveStatsTool:
         registered_tools, _, _ = _make_mcp_and_register()
 
         mock_stats = {
-            'total': 5000,
-            'critical': 200,
-            'high': 800,
-            'poc_count': 150,
+            "total": 5000,
+            "critical": 200,
+            "high": 800,
+            "poc_count": 150,
         }
 
-        with patch('core.cve.update_manager.CVEUpdateManager') as MockManager:
+        with patch("core.cve.update_manager.CVEUpdateManager") as MockManager:
             MockManager.return_value.get_stats.return_value = mock_stats
 
-            result = await registered_tools['cve_stats']()
+            result = await registered_tools["cve_stats"]()
 
-            assert result['success'] is True
-            assert result['stats']['total'] == 5000
-            assert result['stats']['critical'] == 200
+            assert result["success"] is True
+            assert result["stats"]["total"] == 5000
+            assert result["stats"]["critical"] == 200
 
 
 # ==================== poc_execute 测试 ====================
@@ -220,57 +227,55 @@ class TestPocExecuteTool:
         mock_result.extracted = {"version": "1.0"}
         mock_result.execution_time_ms = 150
 
-        with patch('core.cve.poc_engine.get_poc_engine') as mock_engine_fn:
+        with patch("core.cve.poc_engine.get_poc_engine") as mock_engine_fn:
             engine = MagicMock()
             engine.get_template.return_value = mock_template
             engine.execute.return_value = mock_result
             mock_engine_fn.return_value = engine
 
-            result = await registered_tools['poc_execute'](
+            result = await registered_tools["poc_execute"](
                 target="https://example.com",
                 template_id="CVE-2024-1234",
-                variables={"path": "/admin"}
+                variables={"path": "/admin"},
             )
 
-            assert result['success'] is True
-            assert result['vulnerable'] is True
-            assert result['template_id'] == 'CVE-2024-1234'
+            assert result["success"] is True
+            assert result["vulnerable"] is True
+            assert result["template_id"] == "CVE-2024-1234"
 
     @pytest.mark.asyncio
     async def test_poc_execute_template_not_found(self):
         """测试模板不存在"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        with patch('core.cve.poc_engine.get_poc_engine') as mock_engine_fn:
+        with patch("core.cve.poc_engine.get_poc_engine") as mock_engine_fn:
             engine = MagicMock()
             engine.get_template.return_value = None
-            engine.list_templates.return_value = ['tmpl-1', 'tmpl-2']
+            engine.list_templates.return_value = ["tmpl-1", "tmpl-2"]
             mock_engine_fn.return_value = engine
 
-            result = await registered_tools['poc_execute'](
-                target="https://example.com",
-                template_id="nonexistent"
+            result = await registered_tools["poc_execute"](
+                target="https://example.com", template_id="nonexistent"
             )
 
-            assert result['success'] is False
-            assert '模板不存在' in result['error']
-            assert 'available_templates' in result
+            assert result["success"] is False
+            assert "模板不存在" in result["error"]
+            assert "available_templates" in result
 
     @pytest.mark.asyncio
     async def test_poc_execute_exception(self):
         """测试 PoC 执行异常"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        with patch('core.cve.poc_engine.get_poc_engine') as mock_engine_fn:
+        with patch("core.cve.poc_engine.get_poc_engine") as mock_engine_fn:
             mock_engine_fn.side_effect = ImportError("Module not found")
 
-            result = await registered_tools['poc_execute'](
-                target="https://example.com",
-                template_id="test"
+            result = await registered_tools["poc_execute"](
+                target="https://example.com", template_id="test"
             )
 
-            assert result['success'] is False
-            assert 'error' in result
+            assert result["success"] is False
+            assert "error" in result
 
 
 # ==================== poc_list 测试 ====================
@@ -284,49 +289,52 @@ class TestPocListTool:
         """测试列出所有模板"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        with patch('core.cve.poc_engine.get_poc_engine') as mock_engine_fn:
+        with patch("core.cve.poc_engine.get_poc_engine") as mock_engine_fn:
             engine = MagicMock()
-            engine.list_templates.return_value = ['tmpl-1', 'tmpl-2', 'tmpl-3']
+            engine.list_templates.return_value = ["tmpl-1", "tmpl-2", "tmpl-3"]
             mock_engine_fn.return_value = engine
 
-            result = await registered_tools['poc_list']()
+            result = await registered_tools["poc_list"]()
 
-            assert result['success'] is True
-            assert result['count'] == 3
-            assert 'tmpl-1' in result['templates']
+            assert result["success"] is True
+            assert result["count"] == 3
+            assert "tmpl-1" in result["templates"]
 
     @pytest.mark.asyncio
     async def test_poc_list_with_keyword(self):
         """测试关键词过滤"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        with patch('core.cve.poc_engine.get_poc_engine') as mock_engine_fn:
+        with patch("core.cve.poc_engine.get_poc_engine") as mock_engine_fn:
             engine = MagicMock()
             engine.list_templates.return_value = [
-                'apache-rce', 'apache-ssrf', 'nginx-lfi', 'tomcat-rce'
+                "apache-rce",
+                "apache-ssrf",
+                "nginx-lfi",
+                "tomcat-rce",
             ]
             mock_engine_fn.return_value = engine
 
-            result = await registered_tools['poc_list'](keyword="apache")
+            result = await registered_tools["poc_list"](keyword="apache")
 
-            assert result['success'] is True
-            assert result['count'] == 2
-            assert all('apache' in t for t in result['templates'])
+            assert result["success"] is True
+            assert result["count"] == 2
+            assert all("apache" in t for t in result["templates"])
 
     @pytest.mark.asyncio
     async def test_poc_list_with_limit(self):
         """测试限制返回数量"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        with patch('core.cve.poc_engine.get_poc_engine') as mock_engine_fn:
+        with patch("core.cve.poc_engine.get_poc_engine") as mock_engine_fn:
             engine = MagicMock()
-            engine.list_templates.return_value = [f'tmpl-{i}' for i in range(100)]
+            engine.list_templates.return_value = [f"tmpl-{i}" for i in range(100)]
             mock_engine_fn.return_value = engine
 
-            result = await registered_tools['poc_list'](limit=5)
+            result = await registered_tools["poc_list"](limit=5)
 
-            assert result['success'] is True
-            assert result['count'] == 5
+            assert result["success"] is True
+            assert result["count"] == 5
 
 
 # ==================== cve_auto_exploit 测试 ====================
@@ -342,29 +350,28 @@ class TestCveAutoExploitTool:
 
         mock_result = MagicMock()
         mock_result.success = True
-        mock_result.status = MagicMock(value='completed')
+        mock_result.status = MagicMock(value="completed")
         mock_result.vulnerable = True
-        mock_result.vuln_type = 'rce'
-        mock_result.evidence = 'Command executed'
-        mock_result.poc_yaml = 'id: test\ninfo:\n  name: test'
-        mock_result.poc_template_path = '/path/to/poc.yaml'
-        mock_result.exploit_data = {'shell': True}
+        mock_result.vuln_type = "rce"
+        mock_result.evidence = "Command executed"
+        mock_result.poc_yaml = "id: test\ninfo:\n  name: test"
+        mock_result.poc_template_path = "/path/to/poc.yaml"
+        mock_result.exploit_data = {"shell": True}
         mock_result.execution_time_ms = 2500
-        mock_result.steps = ['search', 'generate', 'verify', 'exploit']
+        mock_result.steps = ["search", "generate", "verify", "exploit"]
         mock_result.error = None
 
-        with patch('core.cve.auto_exploit.auto_exploit_cve', new_callable=AsyncMock) as mock_fn:
+        with patch("core.cve.auto_exploit.auto_exploit_cve", new_callable=AsyncMock) as mock_fn:
             mock_fn.return_value = mock_result
 
-            result = await registered_tools['cve_auto_exploit'](
-                target="https://example.com",
-                cve_id="CVE-2024-1234"
+            result = await registered_tools["cve_auto_exploit"](
+                target="https://example.com", cve_id="CVE-2024-1234"
             )
 
-            assert result['success'] is True
-            assert result['vulnerable'] is True
-            assert result['cve_id'] == 'CVE-2024-1234'
-            assert result['vuln_type'] == 'rce'
+            assert result["success"] is True
+            assert result["vulnerable"] is True
+            assert result["cve_id"] == "CVE-2024-1234"
+            assert result["vuln_type"] == "rce"
             mock_fn.assert_called_once_with("https://example.com", "CVE-2024-1234", None)
 
     @pytest.mark.asyncio
@@ -374,7 +381,7 @@ class TestCveAutoExploitTool:
 
         mock_result = MagicMock()
         mock_result.success = True
-        mock_result.status = MagicMock(value='not_vulnerable')
+        mock_result.status = MagicMock(value="not_vulnerable")
         mock_result.vulnerable = False
         mock_result.vuln_type = None
         mock_result.evidence = None
@@ -382,35 +389,33 @@ class TestCveAutoExploitTool:
         mock_result.poc_template_path = None
         mock_result.exploit_data = None
         mock_result.execution_time_ms = 1200
-        mock_result.steps = ['search', 'generate', 'verify']
+        mock_result.steps = ["search", "generate", "verify"]
         mock_result.error = None
 
-        with patch('core.cve.auto_exploit.auto_exploit_cve', new_callable=AsyncMock) as mock_fn:
+        with patch("core.cve.auto_exploit.auto_exploit_cve", new_callable=AsyncMock) as mock_fn:
             mock_fn.return_value = mock_result
 
-            result = await registered_tools['cve_auto_exploit'](
-                target="https://example.com",
-                cve_id="CVE-2024-9999"
+            result = await registered_tools["cve_auto_exploit"](
+                target="https://example.com", cve_id="CVE-2024-9999"
             )
 
-            assert result['success'] is True
-            assert result['vulnerable'] is False
+            assert result["success"] is True
+            assert result["vulnerable"] is False
 
     @pytest.mark.asyncio
     async def test_auto_exploit_exception(self):
         """测试自动利用异常"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        with patch('core.cve.auto_exploit.auto_exploit_cve', new_callable=AsyncMock) as mock_fn:
+        with patch("core.cve.auto_exploit.auto_exploit_cve", new_callable=AsyncMock) as mock_fn:
             mock_fn.side_effect = ConnectionError("Target unreachable")
 
-            result = await registered_tools['cve_auto_exploit'](
-                target="https://example.com",
-                cve_id="CVE-2024-1234"
+            result = await registered_tools["cve_auto_exploit"](
+                target="https://example.com", cve_id="CVE-2024-1234"
             )
 
-            assert result['success'] is False
-            assert 'error' in result
+            assert result["success"] is False
+            assert "error" in result
 
 
 # ==================== cve_exploit_with_desc 测试 ====================
@@ -426,35 +431,37 @@ class TestCveExploitWithDescTool:
 
         mock_result = MagicMock()
         mock_result.success = True
-        mock_result.status = MagicMock(value='completed')
+        mock_result.status = MagicMock(value="completed")
         mock_result.vulnerable = True
-        mock_result.vuln_type = 'sqli'
-        mock_result.evidence = 'SQL injection confirmed'
-        mock_result.poc_yaml = 'id: test'
-        mock_result.exploit_data = {'dumped': True}
+        mock_result.vuln_type = "sqli"
+        mock_result.evidence = "SQL injection confirmed"
+        mock_result.poc_yaml = "id: test"
+        mock_result.exploit_data = {"dumped": True}
         mock_result.execution_time_ms = 1800
-        mock_result.steps = ['generate', 'verify', 'exploit']
+        mock_result.steps = ["generate", "verify", "exploit"]
         mock_result.error = None
 
         with patch(
-            'core.cve.auto_exploit.exploit_cve_with_description',
-            new_callable=AsyncMock
+            "core.cve.auto_exploit.exploit_cve_with_description", new_callable=AsyncMock
         ) as mock_fn:
             mock_fn.return_value = mock_result
 
-            result = await registered_tools['cve_exploit_with_desc'](
+            result = await registered_tools["cve_exploit_with_desc"](
                 target="https://example.com",
                 cve_id="CVE-2024-5678",
                 description="SQL injection in login endpoint",
-                severity="high"
+                severity="high",
             )
 
-            assert result['success'] is True
-            assert result['vulnerable'] is True
-            assert result['cve_id'] == 'CVE-2024-5678'
+            assert result["success"] is True
+            assert result["vulnerable"] is True
+            assert result["cve_id"] == "CVE-2024-5678"
             mock_fn.assert_called_once_with(
-                "https://example.com", "CVE-2024-5678",
-                "SQL injection in login endpoint", "high", None
+                "https://example.com",
+                "CVE-2024-5678",
+                "SQL injection in login endpoint",
+                "high",
+                None,
             )
 
 
@@ -471,48 +478,44 @@ class TestCveGeneratePocTool:
 
         poc_yaml = "id: CVE-2024-1234\ninfo:\n  name: Test\n  severity: high"
 
-        with patch('core.cve.auto_exploit.generate_cve_poc') as mock_fn:
+        with patch("core.cve.auto_exploit.generate_cve_poc") as mock_fn:
             mock_fn.return_value = poc_yaml
 
-            result = await registered_tools['cve_generate_poc'](
-                cve_id="CVE-2024-1234",
-                description="Test vulnerability",
-                severity="high"
+            result = await registered_tools["cve_generate_poc"](
+                cve_id="CVE-2024-1234", description="Test vulnerability", severity="high"
             )
 
-            assert result['success'] is True
-            assert result['cve_id'] == 'CVE-2024-1234'
-            assert result['poc_yaml'] == poc_yaml
-            assert result['poc_length'] == len(poc_yaml)
+            assert result["success"] is True
+            assert result["cve_id"] == "CVE-2024-1234"
+            assert result["poc_yaml"] == poc_yaml
+            assert result["poc_length"] == len(poc_yaml)
 
     @pytest.mark.asyncio
     async def test_generate_poc_failure(self):
         """测试 PoC 生成失败"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        with patch('core.cve.auto_exploit.generate_cve_poc') as mock_fn:
+        with patch("core.cve.auto_exploit.generate_cve_poc") as mock_fn:
             mock_fn.return_value = None
 
-            result = await registered_tools['cve_generate_poc'](
-                cve_id="CVE-2024-9999",
-                description="Unknown vulnerability"
+            result = await registered_tools["cve_generate_poc"](
+                cve_id="CVE-2024-9999", description="Unknown vulnerability"
             )
 
-            assert result['success'] is False
-            assert 'PoC生成失败' in result['error']
+            assert result["success"] is False
+            assert "PoC生成失败" in result["error"]
 
     @pytest.mark.asyncio
     async def test_generate_poc_exception(self):
         """测试 PoC 生成异常"""
         registered_tools, _, _ = _make_mcp_and_register()
 
-        with patch('core.cve.auto_exploit.generate_cve_poc') as mock_fn:
+        with patch("core.cve.auto_exploit.generate_cve_poc") as mock_fn:
             mock_fn.side_effect = RuntimeError("AI service unavailable")
 
-            result = await registered_tools['cve_generate_poc'](
-                cve_id="CVE-2024-1234",
-                description="Test"
+            result = await registered_tools["cve_generate_poc"](
+                cve_id="CVE-2024-1234", description="Test"
             )
 
-            assert result['success'] is False
-            assert 'error' in result
+            assert result["success"] is False
+            assert "error" in result

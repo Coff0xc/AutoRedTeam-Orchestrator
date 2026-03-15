@@ -19,11 +19,11 @@ class TestC2Status:
 
         assert C2Status is not None
         # 检查常见状态
-        if hasattr(C2Status, 'IDLE'):
+        if hasattr(C2Status, "IDLE"):
             assert C2Status.IDLE is not None
-        if hasattr(C2Status, 'CONNECTED'):
+        if hasattr(C2Status, "CONNECTED"):
             assert C2Status.CONNECTED is not None
-        if hasattr(C2Status, 'RUNNING'):
+        if hasattr(C2Status, "RUNNING"):
             assert C2Status.RUNNING is not None
 
 
@@ -36,11 +36,11 @@ class TestTunnelType:
 
         assert TunnelType is not None
         # 检查常见类型
-        if hasattr(TunnelType, 'HTTP'):
+        if hasattr(TunnelType, "HTTP"):
             assert TunnelType.HTTP is not None
-        if hasattr(TunnelType, 'DNS'):
+        if hasattr(TunnelType, "DNS"):
             assert TunnelType.DNS is not None
-        if hasattr(TunnelType, 'WEBSOCKET'):
+        if hasattr(TunnelType, "WEBSOCKET"):
             assert TunnelType.WEBSOCKET is not None
 
 
@@ -60,10 +60,7 @@ class TestC2Config:
         """测试自定义配置"""
         from core.c2 import C2Config
 
-        config = C2Config(
-            server="c2.example.com",
-            port=443
-        )
+        config = C2Config(server="c2.example.com", port=443)
 
         assert config.server == "c2.example.com"
         assert config.port == 443
@@ -76,11 +73,7 @@ class TestTask:
         """测试任务创建"""
         from core.c2 import Task
 
-        task = Task(
-            id="task-001",
-            type="shell",
-            payload="whoami"
-        )
+        task = Task(id="task-001", type="shell", payload="whoami")
 
         assert task is not None
         assert task.id == "task-001"
@@ -89,13 +82,9 @@ class TestTask:
         """测试任务转字典"""
         from core.c2 import Task
 
-        task = Task(
-            id="task-001",
-            type="shell",
-            payload="whoami"
-        )
+        task = Task(id="task-001", type="shell", payload="whoami")
 
-        if hasattr(task, 'to_dict'):
+        if hasattr(task, "to_dict"):
             task_dict = task.to_dict()
             assert isinstance(task_dict, dict)
 
@@ -107,11 +96,7 @@ class TestTaskResult:
         """测试任务结果创建"""
         from core.c2 import TaskResult
 
-        result = TaskResult(
-            task_id="task-001",
-            success=True,
-            output="NT AUTHORITY\\SYSTEM"
-        )
+        result = TaskResult(task_id="task-001", success=True, output="NT AUTHORITY\\SYSTEM")
 
         assert result is not None
         assert result.success is True
@@ -120,11 +105,7 @@ class TestTaskResult:
         """测试失败结果"""
         from core.c2 import TaskResult
 
-        result = TaskResult(
-            task_id="task-001",
-            success=False,
-            error="Command not found"
-        )
+        result = TaskResult(task_id="task-001", success=False, error="Command not found")
 
         assert result.success is False
         assert result.error == "Command not found"
@@ -137,11 +118,7 @@ class TestBeaconInfo:
         """测试 Beacon 信息创建"""
         from core.c2 import BeaconInfo
 
-        info = BeaconInfo(
-            beacon_id="beacon-001",
-            hostname="WORKSTATION-01",
-            username="admin"
-        )
+        info = BeaconInfo(beacon_id="beacon-001", hostname="WORKSTATION-01", username="admin")
 
         assert info is not None
         assert info.beacon_id == "beacon-001"
@@ -154,11 +131,7 @@ class TestBeaconConfig:
         """测试 Beacon 配置创建"""
         from core.c2 import BeaconConfig
 
-        config = BeaconConfig(
-            server="c2.example.com",
-            port=443,
-            protocol="https"
-        )
+        config = BeaconConfig(server="c2.example.com", port=443, protocol="https")
 
         assert config is not None
         assert config.server == "c2.example.com"
@@ -167,10 +140,7 @@ class TestBeaconConfig:
         """测试心跳间隔配置"""
         from core.c2 import BeaconConfig
 
-        config = BeaconConfig(
-            server="c2.example.com",
-            interval=60
-        )
+        config = BeaconConfig(server="c2.example.com", interval=60)
 
         assert config.interval == 60
 
@@ -184,9 +154,9 @@ class TestBeaconMode:
 
         assert BeaconMode is not None
         # 检查常见模式
-        if hasattr(BeaconMode, 'INTERACTIVE'):
+        if hasattr(BeaconMode, "INTERACTIVE"):
             assert BeaconMode.INTERACTIVE is not None
-        if hasattr(BeaconMode, 'SLEEP'):
+        if hasattr(BeaconMode, "SLEEP"):
             assert BeaconMode.SLEEP is not None
 
 
@@ -197,10 +167,7 @@ class TestBeacon:
         """测试 Beacon 创建"""
         from core.c2 import Beacon, BeaconConfig
 
-        config = BeaconConfig(
-            server="c2.example.com",
-            port=443
-        )
+        config = BeaconConfig(server="c2.example.com", port=443)
         beacon = Beacon(config=config)
 
         assert beacon is not None
@@ -221,10 +188,7 @@ class TestHTTPTunnel:
         """测试 HTTP 隧道创建"""
         from core.c2 import C2Config, HTTPTunnel
 
-        config = C2Config(
-            server="c2.example.com",
-            port=443
-        )
+        config = C2Config(server="c2.example.com", port=443)
         tunnel = HTTPTunnel(config)
 
         assert tunnel is not None
@@ -233,14 +197,10 @@ class TestHTTPTunnel:
         """测试 HTTP 隧道 URL"""
         from core.c2 import C2Config, HTTPTunnel
 
-        config = C2Config(
-            server="c2.example.com",
-            port=443,
-            protocol="https"
-        )
+        config = C2Config(server="c2.example.com", port=443, protocol="https")
         tunnel = HTTPTunnel(config)
 
-        if hasattr(tunnel, 'url'):
+        if hasattr(tunnel, "url"):
             assert "https" in tunnel.url or "c2.example.com" in tunnel.url
 
 
@@ -251,10 +211,7 @@ class TestDNSTunnel:
         """测试 DNS 隧道创建"""
         from core.c2 import C2Config, DNSTunnel
 
-        config = C2Config(
-            server="c2.example.com",
-            port=53
-        )
+        config = C2Config(server="c2.example.com", port=53)
         tunnel = DNSTunnel(config)
 
         assert tunnel is not None
@@ -267,10 +224,7 @@ class TestWebSocketTunnel:
         """测试 WebSocket 隧道创建"""
         from core.c2 import C2Config, WebSocketTunnel
 
-        config = C2Config(
-            server="c2.example.com",
-            port=443
-        )
+        config = C2Config(server="c2.example.com", port=443)
         tunnel = WebSocketTunnel(config)
 
         assert tunnel is not None
@@ -331,16 +285,16 @@ class TestC2Crypto:
         crypto = C2Crypto()
         plaintext = b"secret message"
 
-        if hasattr(crypto, 'encrypt') and hasattr(crypto, 'decrypt'):
+        if hasattr(crypto, "encrypt") and hasattr(crypto, "decrypt"):
             encrypted = crypto.encrypt(plaintext)
 
             if encrypted is not None:
                 # 解密
-                if hasattr(encrypted, 'ciphertext'):
+                if hasattr(encrypted, "ciphertext"):
                     decrypted = crypto.decrypt(
                         encrypted.ciphertext,
-                        encrypted.iv if hasattr(encrypted, 'iv') else None,
-                        encrypted.tag if hasattr(encrypted, 'tag') else None
+                        encrypted.iv if hasattr(encrypted, "iv") else None,
+                        encrypted.tag if hasattr(encrypted, "tag") else None,
                     )
                     assert decrypted == plaintext
 
@@ -448,7 +402,7 @@ class TestChunkEncoder:
         encoder = ChunkEncoder(chunk_size=10)
         data = b"This is a long message that needs to be chunked"
 
-        if hasattr(encoder, 'encode'):
+        if hasattr(encoder, "encode"):
             chunks = encoder.encode(data)
             assert isinstance(chunks, (list, tuple))
 
@@ -539,9 +493,7 @@ class TestProtocolFunctions:
         """测试编码任务"""
         from core.c2 import Task, encode_tasks
 
-        tasks = [
-            Task(id="1", type="shell", payload="whoami")
-        ]
+        tasks = [Task(id="1", type="shell", payload="whoami")]
 
         encoded = encode_tasks(tasks)
 
@@ -551,11 +503,7 @@ class TestProtocolFunctions:
         """测试编码结果"""
         from core.c2 import TaskResult, encode_result
 
-        result = TaskResult(
-            task_id="1",
-            success=True,
-            output="test"
-        )
+        result = TaskResult(task_id="1", success=True, output="test")
 
         encoded = encode_result(result)
 
