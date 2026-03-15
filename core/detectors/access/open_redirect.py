@@ -214,7 +214,8 @@ class OpenRedirectDetector(BaseDetector):
                         verified=True,
                         remediation="使用白名单验证重定向目标，避免使用用户提供的完整 URL",
                         references=[
-                            "https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html"
+                            "https://cheatsheetseries.owasp.org/cheatsheets"
+                            "/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html"
                         ],
                         extra={"redirect_type": self._classify_redirect_type(payload)},
                     )

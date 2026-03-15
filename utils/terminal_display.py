@@ -200,7 +200,10 @@ class LiveProgressBar:
                         icon = "✗"
                         color = Colors.RED
 
-                    line = f"\r{color}{icon} [{task['name']}] {bar} {pct}% - {task['message']}{Colors.END}"
+                    line = (
+                        f"\r{color}{icon} [{task['name']}] {bar}"
+                        f" {pct}% - {task['message']}{Colors.END}"
+                    )
                     lines.append(line)
 
                 if lines:

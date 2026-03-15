@@ -236,7 +236,7 @@ class ParameterMutator:
         ("_", lambda: str(int(time.time() * 1000))),  # 时间戳
         ("cache", lambda: str(random.randint(1, 99999))),
         ("rand", lambda: hashlib.md5(str(random.random()).encode()).hexdigest()[:8]),
-        ("v", lambda: f"{random.randint(1,9)}.{random.randint(0,9)}.{random.randint(0,9)}"),
+        ("v", lambda: f"{random.randint(1, 9)}.{random.randint(0, 9)}.{random.randint(0, 9)}"),
         ("nocache", lambda: "1"),
         ("t", lambda: str(int(time.time()))),
     ]

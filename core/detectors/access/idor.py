@@ -214,7 +214,10 @@ class IDORDetector(BaseDetector):
                                 verified=False,
                                 remediation="实施基于权限的访问控制，不要仅依赖客户端提交的标识符",
                                 references=[
-                                    "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/05-Authorization_Testing/04-Testing_for_Insecure_Direct_Object_References"
+                                    "https://owasp.org/www-project-web-security-testing-guide"
+                                    "/latest/4-Web_Application_Security_Testing"
+                                    "/05-Authorization_Testing"
+                                    "/04-Testing_for_Insecure_Direct_Object_References"
                                 ],
                                 extra={"original_value": original_value, "test_value": variant},
                             )

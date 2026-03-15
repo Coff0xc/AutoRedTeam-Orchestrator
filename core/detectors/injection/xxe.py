@@ -210,8 +210,10 @@ class XXEDetector(BaseDetector):
                     response=response_info,
                     remediation="禁用 XML 外部实体解析，使用安全的 XML 解析器配置",
                     references=[
-                        "https://owasp.org/www-community/vulnerabilities/XML_External_Entity_(XXE)_Processing",
-                        "https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html",
+                        "https://owasp.org/www-community/vulnerabilities"
+                        "/XML_External_Entity_(XXE)_Processing",
+                        "https://cheatsheetseries.owasp.org/cheatsheets"
+                        "/XML_External_Entity_Prevention_Cheat_Sheet.html",
                     ],
                     extra={"xxe_type": "basic", "os_type": "unix", "file_read": "/etc/passwd"},
                 )

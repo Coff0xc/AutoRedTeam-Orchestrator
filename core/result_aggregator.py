@@ -229,7 +229,8 @@ class ResultAggregator:
             f.write(f"- 总漏洞数: {stats['total']}\n")
             f.write(f"- 已验证: {stats['verified_count']} ({stats['verified_rate']:.1%})\n")
             f.write(
-                f"- 高置信度: {stats['high_confidence_count']} ({stats['high_confidence_rate']:.1%})\n\n"
+                f"- 高置信度: {stats['high_confidence_count']}"
+                f" ({stats['high_confidence_rate']:.1%})\n\n"
             )
 
             # 按严重程度

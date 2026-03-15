@@ -204,7 +204,9 @@ class AsyncScanner:
             "total_requests": self._stats.total_requests,
             "successful_requests": self._stats.successful_requests,
             "failed_requests": self._stats.failed_requests,
-            "success_rate": f"{self._stats.successful_requests / max(self._stats.total_requests, 1) * 100:.1f}%",
+            "success_rate": (
+                f"{self._stats.successful_requests / max(self._stats.total_requests, 1) * 100:.1f}%"
+            ),
             "total_retries": self._stats.total_retries,
             "avg_response_time": f"{self._stats.avg_response_time:.2f}s",
             "current_concurrency": (

@@ -60,7 +60,10 @@ class CICDSecurityScanner:
     GITHUB_DANGEROUS_PATTERNS = [
         # 直接使用不受信任的输入 (命令注入)
         {
-            "pattern": r"\$\{\{\s*github\.event\.(issue|pull_request|comment|discussion)\.(title|body|head\.ref)",
+            "pattern": (
+                r"\$\{\{\s*github\.event\.(issue|pull_request|comment|discussion)"
+                r"\.(title|body|head\.ref)"
+            ),
             "type": CICDVulnType.UNTRUSTED_INPUT,
             "severity": "high",
             "title": "直接使用不受信任的GitHub事件输入",

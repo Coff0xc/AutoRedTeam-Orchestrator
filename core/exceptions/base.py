@@ -104,7 +104,9 @@ class ConfigError(AutoRedTeamError):
 
     示例:
         >>> raise ConfigError("配置文件不存在", details={"path": "/etc/config.yaml"})
-        >>> raise ConfigError("无效的配置项", code="INVALID_CONFIG", details={"key": "timeout", "value": -1})
+        >>> raise ConfigError(
+        ...     "无效的配置项", code="INVALID_CONFIG", details={"key": "timeout", "value": -1}
+        ... )
     """
 
 

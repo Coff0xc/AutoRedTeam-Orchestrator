@@ -26,7 +26,7 @@ class SSRFDetector(BaseDetector):
 
     使用示例:
         detector = SSRFDetector()
-        results = detector.detect("https://example.com/fetch", params={"url": "https://trusted.com"})
+        results = detector.detect("https://example.com/fetch", params={"url": "https://trusted.com"})  # noqa: E501
     """
 
     name = "ssrf"
@@ -337,7 +337,8 @@ class SSRFDetector(BaseDetector):
                             response=response_info,
                             remediation="限制服务端请求的目标，使用白名单机制",
                             references=[
-                                "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery"
+                                "https://owasp.org/www-community/attacks"
+                                "/Server_Side_Request_Forgery"
                             ],
                             extra={"ssrf_type": "aws_metadata", "target": "169.254.169.254"},
                         )
@@ -590,7 +591,7 @@ class SSRFDetector(BaseDetector):
         gcp_payloads = [
             "http://metadata.google.internal/computeMetadata/v1/",
             "http://metadata.google.internal/computeMetadata/v1/instance/",
-            "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",
+            "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",  # noqa: E501
             "http://metadata.google.internal/computeMetadata/v1/project/project-id",
             # 需要特殊头的变体
             "http://169.254.169.254/computeMetadata/v1/",
@@ -666,7 +667,8 @@ class SSRFDetector(BaseDetector):
         """
         azure_payloads = [
             "http://169.254.169.254/metadata/instance?api-version=2021-02-01",
-            "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/",
+            "http://169.254.169.254/metadata/identity/oauth2/token"
+            "?api-version=2018-02-01&resource=https://management.azure.com/",  # noqa: E501
             "http://169.254.169.254/metadata/instance/compute?api-version=2021-02-01",
         ]
 
@@ -707,7 +709,8 @@ class SSRFDetector(BaseDetector):
                             response=response_info,
                             remediation="限制服务端请求的目标，使用白名单机制",
                             references=[
-                                "https://docs.microsoft.com/en-us/azure/virtual-machines/windows/instance-metadata-service"
+                                "https://docs.microsoft.com/en-us/azure/virtual-machines"
+                                "/windows/instance-metadata-service"
                             ],
                             extra={"ssrf_type": "azure_metadata", "target": "169.254.169.254"},
                         )

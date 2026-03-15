@@ -588,7 +588,11 @@ class NucleiSource(CVESource):
         await self._rate_limiter.acquire()
 
         # 使用 GitHub Search API
-        url = f"https://api.github.com/search/code?q={keyword}+repo:projectdiscovery/nuclei-templates+path:http/cves&per_page={min(limit, 100)}"
+        url = (
+            f"https://api.github.com/search/code?q={keyword}"
+            f"+repo:projectdiscovery/nuclei-templates+path:http/cves"
+            f"&per_page={min(limit, 100)}"
+        )
 
         headers = {"Accept": "application/vnd.github+json"}
         if self.github_token:
@@ -755,7 +759,10 @@ class GitHubPoCSource(CVESource):
 
         # 搜索最近创建的 CVE 相关仓库
         since_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-        url = f"{self.SEARCH_URL}?q=CVE+in:name+created:>{since_date}&sort=updated&order=desc&per_page=100"
+        url = (
+            f"{self.SEARCH_URL}?q=CVE+in:name+created:>{since_date}"
+            f"&sort=updated&order=desc&per_page=100"
+        )
 
         headers = {"Accept": "application/vnd.github+json"}
         if self.github_token:

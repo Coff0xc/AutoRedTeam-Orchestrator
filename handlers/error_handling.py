@@ -254,7 +254,8 @@ def handle_errors(
         装饰器函数
 
     Example:
-        @handle_errors(logger, ErrorCategory.RECON, lambda a, kw: {'target': a[0] if a else kw.get('target')})
+        @handle_errors(logger, ErrorCategory.RECON,
+                       lambda a, kw: {'target': a[0] if a else kw.get('target')})
         async def port_scan(target: str, ports: str = "1-1000") -> Dict[str, Any]:
             ...
     """

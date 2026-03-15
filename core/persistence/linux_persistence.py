@@ -220,8 +220,15 @@ WantedBy=timers.target
             "service_content": service_content,
             "timer_file": f"/etc/systemd/system/{name}.timer",
             "timer_content": timer_content,
-            "install_command": f"systemctl daemon-reload && systemctl enable {name}.timer && systemctl start {name}.timer",
-            "cleanup_command": f"systemctl stop {name}.timer && systemctl disable {name}.timer && rm -f /etc/systemd/system/{name}.service /etc/systemd/system/{name}.timer",
+            "install_command": (
+                f"systemctl daemon-reload && systemctl enable {name}.timer"
+                f" && systemctl start {name}.timer"
+            ),
+            "cleanup_command": (
+                f"systemctl stop {name}.timer && systemctl disable {name}.timer"
+                f" && rm -f /etc/systemd/system/{name}.service"
+                f" /etc/systemd/system/{name}.timer"
+            ),
         }
 
     # ==================== Shell RC ====================

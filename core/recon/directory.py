@@ -514,7 +514,7 @@ class DirectoryScanner:
                     status_code=status,
                     content_length=content_length,
                     content_type=content_type,
-                    is_directory=path.endswith("/") or not "." in path.split("/")[-1],
+                    is_directory=path.endswith("/") or "." not in path.split("/")[-1],
                 )
 
         except urllib.error.HTTPError as e:

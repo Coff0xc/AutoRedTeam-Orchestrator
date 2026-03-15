@@ -328,7 +328,10 @@ class HttpxProbeTool(BaseTool):
         except FileNotFoundError:
             return {
                 "success": False,
-                "error": "httpx未安装，请运行: go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest",
+                "error": (
+                    "httpx未安装，请运行: "
+                    "go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest"
+                ),
             }
         except Exception as e:
             return {"success": False, "error": str(e)}

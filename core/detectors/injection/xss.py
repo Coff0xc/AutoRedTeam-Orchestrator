@@ -248,7 +248,8 @@ class XSSDetector(BaseDetector):
                                     remediation="对用户输入进行 HTML 实体编码，使用 CSP 策略",
                                     references=[
                                         "https://owasp.org/www-community/attacks/xss/",
-                                        "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+                                        "https://cheatsheetseries.owasp.org/cheatsheets"
+                                        "/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
                                     ],
                                     extra={
                                         "xss_type": "reflected",

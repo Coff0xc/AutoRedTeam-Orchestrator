@@ -69,7 +69,9 @@ class PermissionDenied(AuthError):
 
     示例:
         >>> raise PermissionDenied("需要管理员权限")
-        >>> raise PermissionDenied("无权访问该资源", details={"resource": "/admin/users", "required_role": "admin"})
+        >>> raise PermissionDenied(
+        ...     "无权访问该资源", details={"resource": "/admin/users", "required_role": "admin"}
+        ... )
     """
 
 

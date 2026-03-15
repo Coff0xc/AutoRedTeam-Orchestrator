@@ -129,7 +129,7 @@ class InfoDisclosureDetector(BaseDetector):
         "token": [
             r"bearer\s+([a-zA-Z0-9_\-\.]+)",
             r'token[\'":\s]*[=:]\s*[\'"]?([a-zA-Z0-9_\-\.]{20,})[\'"]?',
-            r'jwt[\'":\s]*[=:]\s*[\'"]?(eyJ[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+)[\'"]?',
+            r'jwt[\'":\s]*[=:]\s*[\'"]?(eyJ[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+)[\'"]?',  # noqa: E501
         ],
         "email": [
             r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",

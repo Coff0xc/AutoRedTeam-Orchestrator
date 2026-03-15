@@ -23,7 +23,10 @@ class WeakPasswordDetector(BaseDetector):
 
     使用示例:
         detector = WeakPasswordDetector()
-        results = detector.detect("https://example.com/login", data={"username": "admin", "password": "admin"})
+        results = detector.detect(
+            "https://example.com/login",
+            data={"username": "admin", "password": "admin"},
+        )
     """
 
     name = "weak_password"
@@ -293,7 +296,10 @@ class WeakPasswordDetector(BaseDetector):
                     verified=True,
                     remediation="强制使用强密码策略，禁用默认凭证",
                     references=[
-                        "https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/04-Authentication_Testing/07-Testing_for_Weak_Password_Policy"
+                        "https://owasp.org/www-project-web-security-testing-guide"
+                        "/latest/4-Web_Application_Security_Testing"
+                        "/04-Authentication_Testing"
+                        "/07-Testing_for_Weak_Password_Policy"
                     ],
                     extra={
                         "username": username,

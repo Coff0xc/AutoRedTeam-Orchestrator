@@ -185,7 +185,8 @@ class SubscriptionManager:
             # 5. 创建索引
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_sub_enabled ON subscriptions(enabled)")
             cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_sub_filter ON subscriptions(filter_type, filter_value)"
+                "CREATE INDEX IF NOT EXISTS idx_sub_filter ON subscriptions"
+                "(filter_type, filter_value)"
             )
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_notify_sub ON notification_history(subscription_id)"
@@ -840,7 +841,8 @@ async def main():
             # python subscription_manager.py add keyword "Apache" 7.0 console
             if len(sys.argv) < 6:
                 print(
-                    "用法: add <filter_type> <filter_value> <min_cvss> <notify_method> [notify_target]"
+                    "用法: add <filter_type> <filter_value>"
+                    " <min_cvss> <notify_method> [notify_target]"
                 )
                 return
 

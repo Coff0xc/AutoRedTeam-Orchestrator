@@ -1,6 +1,7 @@
 """
 侦察工具处理器
-包含: full_recon, port_scan, fingerprint, subdomain_enum, dir_scan, dns_lookup, tech_detect, waf_detect
+包含: full_recon, port_scan, fingerprint, subdomain_enum,
+      dir_scan, dns_lookup, tech_detect, waf_detect
 """
 
 from typing import Any, Dict, List

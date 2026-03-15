@@ -18,7 +18,9 @@ Usage:
     # 注册服务
     container.register(HTTPClient, AsyncHTTPClient)
     container.register_singleton(KnowledgeManager)
-    container.register_factory(SessionManager, lambda c: SessionManager(c.resolve(KnowledgeManager)))
+    container.register_factory(
+        SessionManager, lambda c: SessionManager(c.resolve(KnowledgeManager))
+    )
 
     # 解析服务
     http = container.resolve(HTTPClient)

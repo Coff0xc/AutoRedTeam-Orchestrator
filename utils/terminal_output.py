@@ -137,10 +137,12 @@ class TerminalLogger:
         """工具开始执行"""
         timestamp = datetime.now().strftime("%H:%M:%S")
         self._write(
-            f"\n{self.COLORS['yellow']}┌──────────────────────────────────────────────────────────\n"
+            f"\n{self.COLORS['yellow']}"
+            "┌──────────────────────────────────────────────────────────\n"
         )
         self._write(
-            f"│ [{timestamp}] 🚀 {self.COLORS['bold']}{tool_name}{self.COLORS['reset']}{self.COLORS['yellow']}\n"
+            f"│ [{timestamp}] 🚀 {self.COLORS['bold']}{tool_name}"
+            f"{self.COLORS['reset']}{self.COLORS['yellow']}\n"
         )
         self._write(f"│ 目标: {self.COLORS['cyan']}{target}{self.COLORS['yellow']}\n")
         self._write(f"│ 命令: {self.COLORS['white']}{' '.join(cmd)}{self.COLORS['yellow']}\n")
@@ -167,7 +169,8 @@ class TerminalLogger:
         """工具完成"""
         status = f"{self.COLORS['green']}✓ 成功" if success else f"{self.COLORS['red']}✗ 失败"
         self._write(
-            f"\n{self.COLORS['yellow']}┌──────────────────────────────────────────────────────────\n"
+            f"\n{self.COLORS['yellow']}"
+            "┌──────────────────────────────────────────────────────────\n"
         )
         self._write(f"│ {status}{self.COLORS['yellow']} | {tool_name} | 耗时: {duration:.1f}s\n")
         self._write(
@@ -199,7 +202,8 @@ class TerminalLogger:
         timestamp = datetime.now().strftime("%H:%M:%S")
         if details:
             self._write(
-                f"{self.COLORS['magenta']}[{timestamp}] 🎯 {title}: {self.COLORS['cyan']}{details}{self.COLORS['reset']}\n"
+                f"{self.COLORS['magenta']}[{timestamp}] 🎯 {title}: "
+                f"{self.COLORS['cyan']}{details}{self.COLORS['reset']}\n"
             )
         else:
             self._write(f"{self.COLORS['magenta']}[{timestamp}] 🎯 {title}{self.COLORS['reset']}\n")

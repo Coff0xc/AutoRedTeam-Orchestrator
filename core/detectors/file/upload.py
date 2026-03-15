@@ -264,7 +264,8 @@ class FileUploadDetector(BaseDetector):
                         response=response_info,
                         remediation="确保正确配置文件上传功能,使用服务端验证",
                         references=[
-                            "https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload"
+                            "https://owasp.org/www-community/vulnerabilities"
+                            "/Unrestricted_File_Upload"
                         ],
                         extra={
                             "form_index": form["index"],

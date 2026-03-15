@@ -69,7 +69,10 @@ class SubfinderTool(BaseTool):
         except FileNotFoundError:
             return {
                 "success": False,
-                "error": "subfinder未安装，请运行: go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest",
+                "error": (
+                    "subfinder未安装，请运行: "
+                    "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
+                ),
             }
         except Exception as e:
             return {"success": False, "error": str(e)}

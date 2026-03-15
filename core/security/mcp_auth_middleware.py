@@ -104,7 +104,10 @@ def require_auth(
                     logger.warning("工具 %s 需要授权，但未提供API Key", actual_tool_name)
                     return {
                         "success": False,
-                        "error": "Authorization required. Set AUTOREDTEAM_API_KEY environment variable.",
+                        "error": (
+                            "Authorization required. "
+                            "Set AUTOREDTEAM_API_KEY environment variable."
+                        ),
                         "code": "AUTH_REQUIRED",
                     }
                 else:

@@ -302,7 +302,8 @@ class SQLiDetector(BaseDetector):
                     remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
                     references=[
                         "https://owasp.org/www-community/attacks/SQL_Injection",
-                        "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+                        "https://cheatsheetseries.owasp.org/cheatsheets"
+                        "/SQL_Injection_Prevention_Cheat_Sheet.html",
                     ],
                     extra={"db_type": db_type, "injection_type": "error-based"},
                 )

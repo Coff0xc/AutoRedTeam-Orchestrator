@@ -88,7 +88,9 @@ class SecurityHeadersScorer:
                 ),
                 ("preload", r"preload", lambda v: True, "建议添加preload"),
             ],
-            "recommendation": "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload",
+            "recommendation": (
+                "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload"
+            ),
         },
         "Content-Security-Policy": {
             "weight": 20,
@@ -114,7 +116,10 @@ class SecurityHeadersScorer:
                     "object-src应设置为'none'",
                 ),
             ],
-            "recommendation": "Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'",
+            "recommendation": (
+                "Content-Security-Policy: default-src 'self';"
+                " script-src 'self'; object-src 'none'; frame-ancestors 'none'"
+            ),
         },
         "X-Content-Type-Options": {
             "weight": 10,

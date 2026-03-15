@@ -164,7 +164,8 @@ class APITestResult:
 
     def __repr__(self) -> str:
         status = "VULNERABLE" if self.vulnerable else "SAFE"
-        return f"<APITestResult {status} {self.vuln_type.value if self.vuln_type else 'N/A'} [{self.severity.value}]>"
+        vuln = self.vuln_type.value if self.vuln_type else 'N/A'
+        return f"<APITestResult {status} {vuln} [{self.severity.value}]>"
 
 
 @dataclass

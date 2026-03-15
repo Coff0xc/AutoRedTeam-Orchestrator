@@ -322,7 +322,10 @@ class StandardReconEngine(BaseReconEngine):
                                 type="port",
                                 severity=Severity.MEDIUM,
                                 title=f"敏感服务端口开放: {dangerous_ports[port.port]}",
-                                description=f"端口 {port.port} ({port.service or dangerous_ports[port.port]}) 开放",
+                                description=(
+                                    f"端口 {port.port}"
+                                    f" ({port.service or dangerous_ports[port.port]}) 开放"
+                                ),
                                 recommendation="确认该服务是否需要对外开放，建议进行访问控制",
                             )
                         )

@@ -263,7 +263,8 @@ class RCEDetector(BaseDetector):
                         remediation="避免将用户输入直接传递给系统命令，使用白名单验证或安全的 API",
                         references=[
                             "https://owasp.org/www-community/attacks/Command_Injection",
-                            "https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html",
+                            "https://cheatsheetseries.owasp.org/cheatsheets"
+                            "/OS_Command_Injection_Defense_Cheat_Sheet.html",
                         ],
                         extra={"os_type": os_type, "injection_type": "echo-based"},
                     )

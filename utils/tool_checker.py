@@ -31,7 +31,7 @@ class ToolChecker:
         "subfinder": {
             "package": "subfinder",
             "description": "子域名枚举",
-            "install": "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest",
+            "install": "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest",  # noqa: E501
         },
         "httpx": {
             "package": "httpx",

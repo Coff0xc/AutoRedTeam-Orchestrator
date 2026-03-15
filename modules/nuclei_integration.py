@@ -251,7 +251,10 @@ class NucleiScanner:
             except FileNotFoundError:
                 return {
                     "success": False,
-                    "error": "Nuclei not found. Install: go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest",
+                    "error": (
+                        "Nuclei not found. Install: "
+                        "go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"
+                    ),
                 }
             except Exception as e:
                 last_error = str(e)

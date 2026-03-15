@@ -185,7 +185,10 @@ class ProgressBar:
         self.progress = 100
         icon = "✓" if success else "✗"
         bar = self._make_bar()
-        msg = f"\r{icon} [{self.tool_name}] {self.target} {bar} 100% - {'完成' if success else '失败'}\n"
+        msg = (
+            f"\r{icon} [{self.tool_name}] {self.target} {bar}"
+            f" 100% - {'完成' if success else '失败'}\n"
+        )
         sys.stderr.write(msg)
         sys.stderr.flush()
 

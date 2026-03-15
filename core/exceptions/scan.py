@@ -152,7 +152,9 @@ class PayloadError(DetectorError):
     当Payload生成失败、格式错误、编码失败时抛出。
 
     示例:
-        >>> raise PayloadError("Payload编码失败", details={"encoding": "base64", "reason": "invalid characters"})
+        >>> raise PayloadError(
+        ...     "Payload编码失败", details={"encoding": "base64", "reason": "invalid characters"}
+        ... )
     """
 
 

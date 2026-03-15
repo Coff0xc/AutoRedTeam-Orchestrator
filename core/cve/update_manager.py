@@ -311,7 +311,10 @@ class CVEUpdateManager:
             results_per_page = 100  # 每页100条(最大2000)
 
             while True:
-                url = f"{self.NVD_API_BASE}?startIndex={start_index}&resultsPerPage={results_per_page}"
+                url = (
+                    f"{self.NVD_API_BASE}?startIndex={start_index}"
+                    f"&resultsPerPage={results_per_page}"
+                )
                 for key, value in params.items():
                     url += f"&{key}={value}"
 
@@ -410,7 +413,10 @@ class CVEUpdateManager:
         updated_count = 0
 
         # Nuclei Templates目录结构
-        base_url = "https://api.github.com/repos/projectdiscovery/nuclei-templates/git/trees/main?recursive=1"
+        base_url = (
+            "https://api.github.com/repos/projectdiscovery/nuclei-templates"
+            "/git/trees/main?recursive=1"
+        )
 
         headers = {"Accept": "application/vnd.github+json"}
         if self.github_token:

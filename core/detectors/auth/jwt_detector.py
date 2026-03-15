@@ -310,7 +310,8 @@ class JWTDetector(BaseDetector):
                         verified=True,
                         remediation="验证 JWT 时强制指定算法，不信任 header 中的 alg 字段",
                         references=[
-                            "https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/"
+                            "https://auth0.com/blog"
+                            "/critical-vulnerabilities-in-json-web-token-libraries/"
                         ],
                         extra={"attack_type": "algorithm_confusion", "original_alg": original_alg},
                     )

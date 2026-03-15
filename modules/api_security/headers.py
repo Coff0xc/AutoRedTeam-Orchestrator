@@ -279,7 +279,8 @@ class SecurityHeadersTester(BaseAPITester):
                 evidence={"header": "Content-Security-Policy", "value": None},
                 remediation=(
                     "添加CSP头，最小配置:\n"
-                    "Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'"
+                    "Content-Security-Policy: default-src 'self';"
+                    " script-src 'self'; style-src 'self'"
                 ),
             )
             return result

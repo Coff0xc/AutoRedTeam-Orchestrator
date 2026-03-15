@@ -406,7 +406,10 @@ class SmartPayloadSelector:
 
     def _get_all_payloads(self, vuln_type: str, target: TargetProfile) -> List[str]:
         """获取所有候选 Payload（带缓存）"""
-        cache_key = f"{vuln_type}_{target.features.get('waf', 'none')}_{target.features.get('framework', 'none')}"
+        cache_key = (
+            f"{vuln_type}_{target.features.get('waf', 'none')}"
+            f"_{target.features.get('framework', 'none')}"
+        )
 
         if cache_key in self.payload_cache:
             return self.payload_cache[cache_key]

@@ -275,7 +275,10 @@ class DnsxTool(BaseTool):
         except FileNotFoundError:
             return {
                 "success": False,
-                "error": "dnsx未安装，请运行: go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest",
+                "error": (
+                    "dnsx未安装，请运行: "
+                    "go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest"
+                ),
             }
         except Exception as e:
             return {"success": False, "error": str(e)}

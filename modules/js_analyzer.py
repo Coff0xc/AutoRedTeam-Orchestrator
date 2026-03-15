@@ -64,7 +64,7 @@ class JSAnalyzer:
         "github_token": r"gh[pousr]_[A-Za-z0-9_]{36,}",
         "slack_token": r"xox[baprs]-[0-9a-zA-Z]{10,48}",
         "jwt": r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}",
-        "api_key_generic": r"""['"`]?(?:api[_-]?key|apikey|access[_-]?token)['"`]?\s*[:=]\s*['"`]([A-Za-z0-9_\-]{20,})['"`]""",
+        "api_key_generic": r"""['"`]?(?:api[_-]?key|apikey|access[_-]?token)['"`]?\s*[:=]\s*['"`]([A-Za-z0-9_\-]{20,})['"`]""",  # noqa: E501
         "password": r"""['"`]password['"`]\s*[:=]\s*['"`]([^'"`]{6,})['"`]""",
         "internal_ip": r"\b(?:10|172\.(?:1[6-9]|2[0-9]|3[01])|192\.168)\.\d{1,3}\.\d{1,3}\b",
         "private_domain": r"https?://[a-zA-Z0-9-]+\.(?:local|internal|corp|intra)[/\w.-]*",
@@ -295,7 +295,8 @@ class JSAnalyzer:
             result["routes"] = cls.extract_routes(js_content)
             result["secrets"] = cls.extract_secrets(js_content)
             logger.info(
-                f"[JSAnalyzer] {js_url} -> {len(result['endpoints'])} endpoints, {len(result['secrets'])} secrets"
+                "[JSAnalyzer] %s -> %d endpoints, %d secrets",
+                js_url, len(result['endpoints']), len(result['secrets'])
             )
 
         return result
@@ -377,7 +378,7 @@ async def test_js_analyzer():
     # 注意: 以下为测试用的假密钥示例，格式仿真但非真实密钥
     secret_code = """
     const apiKey = 'AIzaSyFAKE_TEST_KEY_NOT_REAL_1234567890';
-    const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';
+    const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U';  # noqa: E501
     """
 
     secrets = JSAnalyzer.extract_secrets(secret_code)

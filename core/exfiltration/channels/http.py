@@ -56,12 +56,14 @@ class HTTPExfiltration(BaseExfiltration):
             cert_path = Path(self.config.ssl_cert_path)
             if not cert_path.exists():
                 self.logger.warning(
-                    f"SSL certificate not found: {self.config.ssl_cert_path}, falling back to verify_ssl"
+                    "SSL certificate not found: %s, falling back to verify_ssl",
+                    self.config.ssl_cert_path,
                 )
                 return self.config.verify_ssl
             if not cert_path.is_file():
                 self.logger.warning(
-                    f"SSL certificate path is not a file: {self.config.ssl_cert_path}, falling back to verify_ssl"
+                    "SSL certificate path is not a file: %s, falling back to verify_ssl",
+                    self.config.ssl_cert_path,
                 )
                 return self.config.verify_ssl
             return str(cert_path)

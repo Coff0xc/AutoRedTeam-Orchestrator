@@ -236,7 +236,8 @@ class PasswordFinder:
         SecretType.AWS_KEY: [
             (r"AKIA[0-9A-Z]{16}", "high"),  # AWS Access Key ID
             (
-                r'(?i)(aws_secret_access_key|aws_secret_key)\s*[=:]\s*["\']?([A-Za-z0-9/+=]{40})["\']?',
+                r'(?i)(aws_secret_access_key|aws_secret_key)\s*[=:]\s*["\']?'  # noqa: E501
+                r'([A-Za-z0-9/+=]{40})["\']?',
                 "high",
             ),
         ],
@@ -671,7 +672,10 @@ class PasswordFinder:
         """
         sarif = {
             "version": "2.1.0",
-            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+            "$schema": (  # noqa: E501
+                "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master"
+                "/Schemata/sarif-schema-2.1.0.json"
+            ),
             "runs": [
                 {
                     "tool": {"driver": {"name": "SecretFinder", "version": "1.0.0", "rules": []}},

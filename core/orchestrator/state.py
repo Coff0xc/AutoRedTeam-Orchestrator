@@ -252,8 +252,8 @@ class PentestState:
         # 脱敏loot数据
         data["loot"] = (
             [
-                {"type": l.get("type", "unknown"), "size": len(str(l.get("data", "")))}
-                for l in self.loot
+                {"type": item.get("type", "unknown"), "size": len(str(item.get("data", "")))}
+                for item in self.loot
             ]
             if self.loot
             else []
