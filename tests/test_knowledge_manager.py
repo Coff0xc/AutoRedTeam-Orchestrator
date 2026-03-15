@@ -353,7 +353,7 @@ class TestInMemoryGraphStore:
         entity_b = KnowledgeEntity(id="b", type=EntityType.SERVICE, name="B")
         store.add_entity(entity_a)
         store.add_entity(entity_b)
-        
+
         rel = KnowledgeRelation(
             id="r1", source_id="a", target_id="b",
             relation_type=RelationType.HOSTS,
@@ -832,15 +832,15 @@ class TestKnowledgeManager:
 
         # 2. 发现服务
         sid_http = km.store_service(tid, "http", 80)
-        sid_ssh = km.store_service(tid, "ssh", 22)
-        sid_mysql = km.store_service(tid, "mysql", 3306)
+        km.store_service(tid, "ssh", 22)
+        km.store_service(tid, "mysql", 3306)
 
         # 3. 发现漏洞
         vid_sqli = km.store_vulnerability(sid_http, "SQL Injection", "critical")
-        vid_xss = km.store_vulnerability(sid_http, "XSS", "medium")
+        km.store_vulnerability(sid_http, "XSS", "medium")
 
         # 4. 获取凭证
-        cid = km.store_credential(
+        km.store_credential(
             tid, "password",
             properties={"username": "root", "hash": "abc123"},
         )

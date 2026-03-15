@@ -12,7 +12,6 @@
 - @pytest.mark.asyncio: 异步测试
 """
 
-import asyncio
 import time
 import json
 import tempfile
@@ -190,7 +189,9 @@ class TestIntegration:
         assert summary is not None
 
         # 保存报告
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
+        with tempfile.NamedTemporaryFile(
+            mode='w', suffix='.json', delete=False, encoding='utf-8'
+        ) as f:
             if isinstance(summary, dict):
                 json.dump(summary, f, indent=2, default=str)
             else:
@@ -208,14 +209,9 @@ def test_basic_imports():
     from core.recon import (
         StandardReconEngine,
         ReconConfig,
-        ReconResult,
-        Finding,
     )
     from core.concurrency import (
         get_collector,
-        get_pool,
-        TokenBucket,
-        CircuitBreaker,
     )
     from core.exploit.pure_scanner import PurePortScanner
 

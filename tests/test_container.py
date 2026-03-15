@@ -7,14 +7,10 @@
 
 import pytest
 from abc import ABC, abstractmethod
-from typing import Optional
-
 from core.container import (
     CircularDependencyError,
     Container,
     Lifetime,
-    ScopedContainer,
-    Service,
     ServiceDescriptor,
     ServiceNotFoundError,
     ServiceProvider,

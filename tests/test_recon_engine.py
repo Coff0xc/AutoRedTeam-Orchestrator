@@ -13,21 +13,15 @@ test_recon_engine.py - StandardReconEngine 单元测试
 """
 
 import pytest
-import asyncio
-import time
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, Any
+from unittest.mock import Mock, patch
 
 # 导入被测试的模块
 from core.recon.engine import StandardReconEngine, create_recon_engine
 from core.recon.base import ReconConfig, ReconResult, Finding, Severity
 from core.recon.phases import (
     ReconPhase,
-    PhaseResult,
     PhaseStatus,
     PhaseManager,
-    DEFAULT_PHASE_ORDER,
-    QUICK_PHASE_ORDER,
 )
 
 
@@ -528,7 +522,7 @@ class TestStopMechanism:
         # 在初始化后立即停止
         engine.stop()
 
-        result = engine.run()
+        engine.run()
 
         # 应该提前终止
         assert engine.is_stopped() is True

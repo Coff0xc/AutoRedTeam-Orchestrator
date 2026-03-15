@@ -214,12 +214,12 @@ class TestMCTSNode:
         root_node.visits = 10
 
         c1 = MCTSNode(state=root_node.state, parent=root_node,
-                       action=Action(ActionType.PORT_SCAN, "scan1", "nmap"))
+                      action=Action(ActionType.PORT_SCAN, "scan1", "nmap"))
         c1.visits = 5
         c1.total_reward = 1.0
 
         c2 = MCTSNode(state=root_node.state, parent=root_node,
-                       action=Action(ActionType.VULN_SCAN, "scan2", "nuclei"))
+                      action=Action(ActionType.VULN_SCAN, "scan2", "nuclei"))
         c2.visits = 3
         c2.total_reward = 2.0
 
@@ -229,11 +229,11 @@ class TestMCTSNode:
 
     def test_best_action_child(self, root_node):
         c1 = MCTSNode(state=root_node.state, parent=root_node,
-                       action=Action(ActionType.PORT_SCAN, "scan1", "nmap"))
+                      action=Action(ActionType.PORT_SCAN, "scan1", "nmap"))
         c1.visits = 10
 
         c2 = MCTSNode(state=root_node.state, parent=root_node,
-                       action=Action(ActionType.VULN_SCAN, "scan2", "nuclei"))
+                      action=Action(ActionType.VULN_SCAN, "scan2", "nuclei"))
         c2.visits = 3
 
         root_node.children = [c1, c2]
@@ -337,7 +337,9 @@ class TestActionGenerator:
 
     def test_generate_empty_terminal(self, gen):
         state = AttackState(target="192.168.1.1", target_type="ip", access_level=2)
-        state.completed_actions = {"port_scan", "service_detect", "privesc", "credential_dump", "lateral_move"}
+        state.completed_actions = {
+            "port_scan", "service_detect", "privesc", "credential_dump", "lateral_move"
+        }
         actions = gen.generate(state)
         # 终态仍可能有一些未完成的动作，但不会崩溃
         assert isinstance(actions, list)

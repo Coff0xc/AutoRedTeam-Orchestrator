@@ -7,13 +7,10 @@ Kubernetes 安全测试模块单元测试
 
 import json
 import subprocess
-from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch, call
-
-import pytest
+from unittest.mock import Mock, patch
 
 from modules.cloud_security.kubernetes import KubernetesTester
-from modules.cloud_security.base import CloudVulnType, CloudSeverity
+from modules.cloud_security.base import CloudSeverity
 
 
 class TestKubernetesTesterInit:
@@ -615,11 +612,16 @@ class TestFullScan:
             with patch.object(tester, 'check_privileged_containers', return_value=None):
                 with patch.object(tester, 'check_host_path_mounts', return_value=None):
                     with patch.object(tester, 'check_dangerous_capabilities', return_value=None):
-                        with patch.object(tester, 'check_service_account_tokens', return_value=None):
-                            with patch.object(tester, 'check_rbac_permissions', return_value=None):
-                                with patch.object(tester, 'check_network_policies', return_value=None):
-                                    with patch.object(tester, 'check_secrets_in_env', return_value=None):
-                                        with patch.object(tester, 'check_host_network', return_value=None):
+                        with patch.object(tester, 'check_service_account_tokens',
+                                          return_value=None):
+                            with patch.object(tester, 'check_rbac_permissions',
+                                              return_value=None):
+                                with patch.object(tester, 'check_network_policies',
+                                                  return_value=None):
+                                    with patch.object(tester, 'check_secrets_in_env',
+                                                      return_value=None):
+                                        with patch.object(tester, 'check_host_network',
+                                                          return_value=None):
                                             findings = tester.scan()
 
         # 应该执行所有检查

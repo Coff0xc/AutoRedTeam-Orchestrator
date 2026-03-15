@@ -12,11 +12,8 @@ test_core_http_client.py - HTTP 客户端单元测试
 """
 
 import pytest
-import asyncio
 import threading
-import time
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
-from typing import Dict, Any
+from unittest.mock import Mock, patch
 
 # 导入被测试的模块
 from core.http.client import (
@@ -24,13 +21,6 @@ from core.http.client import (
     HTTPClient,
 )
 from core.http.config import HTTPConfig, RetryStrategy
-from core.http.exceptions import (
-    HTTPError,
-    TimeoutError as HTTPTimeoutError,
-    ConnectionError as HTTPConnectionError,
-    SSLError,
-    RateLimitError,
-)
 
 
 # ============== HTTPResponse 测试 ==============
@@ -376,7 +366,9 @@ class TestExceptionHandling:
         """测试连接错误"""
         with patch('core.http.client.REQUESTS_AVAILABLE', True):
             with patch('core.http.client.requests') as mock:
-                mock.Session.return_value.request.side_effect = ConnectionError('Connection refused')
+                mock.Session.return_value.request.side_effect = ConnectionError(
+                    'Connection refused'
+                )
 
                 client = HTTPClient()
                 with pytest.raises(Exception):
@@ -398,7 +390,9 @@ class TestExceptionHandling:
         with patch('core.http.client.REQUESTS_AVAILABLE', True):
             with patch('core.http.client.requests') as mock:
                 import ssl
-                mock.Session.return_value.request.side_effect = ssl.SSLError('SSL verification failed')
+                mock.Session.return_value.request.side_effect = ssl.SSLError(
+                    'SSL verification failed'
+                )
 
                 client = HTTPClient()
                 with pytest.raises(Exception):

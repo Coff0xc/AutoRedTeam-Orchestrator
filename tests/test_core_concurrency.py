@@ -15,12 +15,10 @@ import pytest
 import threading
 import time
 import asyncio
-from unittest.mock import Mock, patch
-from typing import List
 
 # 导入被测试的模块
-from core.concurrency.rate_limiter import TokenBucket, SlidingWindowRateLimiter, AdaptiveRateLimiter
-from core.concurrency.pool import DynamicThreadPool, PoolMetrics, TaskWrapper
+from core.concurrency.rate_limiter import TokenBucket, SlidingWindowRateLimiter
+from core.concurrency.pool import DynamicThreadPool
 from core.concurrency.circuit_breaker import CircuitBreaker, CircuitState
 from core.concurrency.semaphore import AsyncSemaphore
 

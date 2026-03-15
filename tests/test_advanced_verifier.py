@@ -7,12 +7,9 @@
 
 import pytest
 import time
-from unittest.mock import Mock
-
 from core.detectors.advanced_verifier import (
     AdvancedVerifier,
     OOBCallbackManager,
-    OOBToken,
     PayloadVariantGenerator,
     VerificationMethod,
     VerificationResult,
@@ -191,7 +188,11 @@ class TestAdvancedVerifier:
             call_count[0] += 1
             if payload and "OR" in payload:
                 # 显著不同的响应：完全不同的内容结构
-                return "<html><table><tr><td>User1</td></tr><tr><td>User2</td></tr><tr><td>Admin</td></tr></table></html>", 200, 0.1
+                return (
+                    "<html><table><tr><td>User1</td></tr>"
+                    "<tr><td>User2</td></tr><tr><td>Admin</td></tr></table></html>",
+                    200, 0.1
+                )
             return "<html><div>Empty result set</div></html>", 200, 0.1
 
         result = verifier.statistical_confirm(
@@ -259,7 +260,11 @@ class TestAdvancedVerifier:
         def mock_request(url, payload):
             # true 条件返回完全不同的内容（模拟真实 SQL 注入）
             if "1=1" in payload or "'a'='a'" in payload or "OR" in payload.upper():
-                return "<html><h1>Welcome Admin</h1><div class='user-data'><table><tr><td>Secret Data</td></tr></table></div></html>", 200, 0.1
+                return (
+                    "<html><h1>Welcome Admin</h1><div class='user-data'>"
+                    "<table><tr><td>Secret Data</td></tr></table></div></html>",
+                    200, 0.1
+                )
             # false 条件返回空结果
             if "1=2" in payload or "'a'='b'" in payload or "AND" in payload.upper():
                 return "<html><h1>Error</h1><p>No records found</p></html>", 200, 0.1

@@ -12,18 +12,13 @@ test_core_session_manager.py - 会话管理器单元测试
 
 import pytest
 import threading
-import time
 import tempfile
-import os
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, Any
+from unittest.mock import Mock
 from pathlib import Path
 
 # 导入被测试的模块
 from core.session.manager import SessionManager
-from core.session.context import ScanContext, ScanPhase, ContextStatus
-from core.session.target import Target, TargetStatus
-from core.session.result import ScanResult, Vulnerability, Severity, VulnType
+from core.session.context import ScanPhase, ContextStatus
 
 
 # ============== 测试夹具 ==============
@@ -303,7 +298,7 @@ class TestEventCallbacks:
         manager.register_callback('session_created', callback)
 
         # 创建会话应该触发回调
-        context = manager.create_session('https://example.com')
+        manager.create_session('https://example.com')
 
         callback.assert_called_once()
 
@@ -316,7 +311,7 @@ class TestEventCallbacks:
         manager.register_callback('session_created', callback1)
         manager.register_callback('session_created', callback2)
 
-        context = manager.create_session('https://example.com')
+        manager.create_session('https://example.com')
 
         callback1.assert_called_once()
         callback2.assert_called_once()
@@ -329,7 +324,7 @@ class TestEventCallbacks:
         manager.register_callback('session_created', callback)
         manager.unregister_callback('session_created', callback)
 
-        context = manager.create_session('https://example.com')
+        manager.create_session('https://example.com')
 
         # 回调不应该被调用
         callback.assert_not_called()
@@ -356,7 +351,7 @@ class TestPersistence:
     def test_auto_save_enabled(self, clean_manager, temp_storage_dir):
         """测试自动保存"""
         manager = SessionManager(storage_dir=temp_storage_dir, auto_save=True)
-        context = manager.create_session('https://example.com')
+        manager.create_session('https://example.com')
 
         # 检查文件是否创建
         session_files = list(Path(temp_storage_dir).glob('*.json'))
@@ -365,7 +360,7 @@ class TestPersistence:
     def test_auto_save_disabled(self, clean_manager, temp_storage_dir):
         """测试禁用自动保存"""
         manager = SessionManager(storage_dir=temp_storage_dir, auto_save=False)
-        context = manager.create_session('https://example.com')
+        manager.create_session('https://example.com')
 
         # 不应该自动创建文件
         session_files = list(Path(temp_storage_dir).glob('*.json'))

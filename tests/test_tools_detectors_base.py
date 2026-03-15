@@ -14,8 +14,7 @@ test_tools_detectors_base.py - tools/detectors/base.py 单元测试
 """
 
 import pytest
-import time
-from unittest.mock import Mock, patch, MagicMock, PropertyMock
+from unittest.mock import Mock, patch
 from typing import List, Dict, Any
 
 # 导入被测试的模块
@@ -279,7 +278,7 @@ class TestBaseDetectorRequests:
         custom_headers = {"X-Custom-Header": "test"}
 
         with patch('tools.detectors.base.get_proxies', return_value=None):
-            result = detector.send_request(
+            detector.send_request(
                 "https://example.com",
                 headers=custom_headers
             )
@@ -774,7 +773,7 @@ class TestEdgeCases:
 
             with patch('tools.detectors.base.should_abort_scan', return_value=False):
                 with patch('tools.detectors.base.reset_failure_counter'):
-                    vuln = detector.test_payload(
+                    detector.test_payload(
                         "https://example.com",
                         "<script>alert('XSS')</script>",
                         "search"

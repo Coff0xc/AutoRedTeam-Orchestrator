@@ -5,8 +5,7 @@ core.detectors 模块单元测试
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from dataclasses import dataclass
+from unittest.mock import Mock, patch
 
 # 模块级别标记 - 标识为单元测试和安全测试
 pytestmark = [pytest.mark.unit, pytest.mark.security]
@@ -350,7 +349,7 @@ class TestFalsePositiveFilter:
         """测试误报检测"""
         from core.detectors import is_false_positive, DetectionResult, Severity
 
-        result = DetectionResult(
+        DetectionResult(
             vulnerable=True,
             vuln_type="xss",
             severity=Severity.MEDIUM,

@@ -7,8 +7,6 @@ CORS 安全测试模块单元测试
 
 from unittest.mock import MagicMock, Mock, patch
 
-import pytest
-
 from modules.api_security.cors import CORSTester, quick_cors_test
 from modules.api_security.base import APIVulnType, Severity
 
@@ -428,8 +426,10 @@ class TestCORSFullScan:
         }
 
         with patch.object(tester, '_send_cors_request', return_value=safe_response):
-            with patch.object(tester, '_send_preflight_request', return_value=safe_response):
-                with patch.object(tester, '_send_method_override_request', return_value=safe_response):
+            with patch.object(tester, '_send_preflight_request',
+                              return_value=safe_response):
+                with patch.object(tester, '_send_method_override_request',
+                                  return_value=safe_response):
                     results = tester.test()
 
         # 应该执行多个测试
@@ -448,8 +448,10 @@ class TestCORSFullScan:
             }
 
         with patch.object(tester, '_send_cors_request', side_effect=mock_send_cors):
-            with patch.object(tester, '_send_preflight_request', side_effect=lambda o: mock_send_cors(o)):
-                with patch.object(tester, '_send_method_override_request', return_value=None):
+            with patch.object(tester, '_send_preflight_request',
+                              side_effect=lambda o: mock_send_cors(o)):
+                with patch.object(tester, '_send_method_override_request',
+                                  return_value=None):
                     results = tester.test()
 
         # 应该发现多个漏洞
@@ -467,8 +469,10 @@ class TestCORSFullScan:
         }
 
         with patch.object(tester, '_send_cors_request', return_value=safe_response):
-            with patch.object(tester, '_send_preflight_request', return_value=safe_response):
-                with patch.object(tester, '_send_method_override_request', return_value=safe_response):
+            with patch.object(tester, '_send_preflight_request',
+                              return_value=safe_response):
+                with patch.object(tester, '_send_method_override_request',
+                                  return_value=safe_response):
                     tester.test()
 
         summary = tester.get_summary()

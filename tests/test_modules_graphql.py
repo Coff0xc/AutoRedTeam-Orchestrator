@@ -7,9 +7,7 @@ GraphQL 安全测试模块单元测试
 
 import json
 import time
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from modules.api_security.graphql import GraphQLTester
 from modules.api_security.base import APIVulnType, Severity
@@ -69,7 +67,7 @@ class TestGraphQLIntrospection:
         }
 
         with patch.object(tester, '_send_query', return_value=mock_response):
-            with patch.object(tester, '_extract_schema_info') as mock_extract:
+            with patch.object(tester, '_extract_schema_info'):
                 # Mock 提取的 Schema 信息
                 tester._schema_info = {
                     'types': ['Query', 'User', 'Post'],
@@ -245,7 +243,10 @@ class TestGraphQLFieldSuggestion:
             'success': True,
             'data': {
                 'errors': [{
-                    'message': 'Cannot query field "passwrd" on type "User". Did you mean "password"?'
+                    'message': (
+                        'Cannot query field "passwrd" on type "User".'
+                        ' Did you mean "password"?'
+                    )
                 }]
             },
             'text': ''

@@ -6,9 +6,7 @@
 """
 
 import json
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from modules.supply_chain.dependency_scanner import (
     DependencyScanner,
@@ -329,7 +327,8 @@ class TestCheckOSV:
 
         # Mock 网络异常 — check_osv 只捕获 requests.RequestException
         import requests
-        with patch.object(scanner._session, 'post', side_effect=requests.ConnectionError("Network error")):
+        with patch.object(scanner._session, 'post',
+                          side_effect=requests.ConnectionError("Network error")):
             vulns = scanner.check_osv("requests", "2.25.0", "PyPI")
 
         assert len(vulns) == 0
@@ -375,7 +374,8 @@ class TestCheckBatchOSV:
 
         # Mock batch POST to fail → falls back to individual check_osv
         import requests
-        with patch.object(scanner._session, 'post', side_effect=requests.ConnectionError("mock batch fail")):
+        with patch.object(scanner._session, 'post',
+                          side_effect=requests.ConnectionError("mock batch fail")):
             with patch.object(scanner, 'check_osv', side_effect=mock_check_osv):
                 results = scanner.check_batch_osv(packages)
 
@@ -408,7 +408,9 @@ class TestDependencyScannerIntegration:
                 {
                     "id": "GHSA-xxxx-yyyy-zzzz",
                     "summary": "Critical Security Issue",
-                    "details": "This is a critical security vulnerability that affects version 1.0.0",
+                    "details": (
+                        "This is a critical security vulnerability that affects version 1.0.0"
+                    ),
                     "severity": [{"type": "CVSS_V3", "score": 9.8}],
                     "affected": [
                         {

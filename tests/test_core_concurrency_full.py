@@ -5,9 +5,7 @@ core.concurrency 模块单元测试
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 import time
-import threading
 
 
 class TestDynamicThreadPool:
@@ -135,7 +133,7 @@ class TestTokenBucket:
 
         # 立即再次获取应该失败（非阻塞模式）
         if hasattr(limiter, 'try_acquire'):
-            result = limiter.try_acquire()
+            result = limiter.try_acquire()  # noqa: F841
             # 可能成功也可能失败，取决于实现
 
 
