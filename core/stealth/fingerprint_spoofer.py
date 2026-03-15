@@ -188,7 +188,7 @@ class JA3Spoofer:
         # 设置 ALPN (HTTP/2 支持)
         try:
             context.set_alpn_protocols(["h2", "http/1.1"])
-        except Exception as exc:
+        except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 禁用证书验证 (渗透测试场景)

@@ -34,7 +34,7 @@ except ImportError:
     HAS_HTTPX = False
 
 try:
-    from PySocks import socks  # 需要 PySocks 库支持 SOCKS 代理
+    from PySocks import socks  # noqa: F401 — 需要 PySocks 库支持 SOCKS 代理
 
     HAS_SOCKS = True
 except ImportError:

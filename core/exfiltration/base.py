@@ -587,7 +587,7 @@ class BaseExfiltration(ABC):
             except IsADirectoryError:
                 self.logger.warning("Is a directory: %s", file_path)
                 return ExfilResult(success=False, channel=self.channel, error="Access denied")
-            except OSError as e:
+            except OSError:
                 # O_NOFOLLOW会在遇到符号链接时抛出OSError
                 if hasattr(os, "O_NOFOLLOW"):
                     self.logger.warning("Symlink or OS error: %s", file_path)

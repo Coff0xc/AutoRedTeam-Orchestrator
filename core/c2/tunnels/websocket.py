@@ -34,7 +34,7 @@ except ImportError:
     HAS_WEBSOCKET = False
 
 try:
-    import websockets
+    import websockets  # noqa: F401
 
     HAS_WEBSOCKETS = True
 except ImportError:

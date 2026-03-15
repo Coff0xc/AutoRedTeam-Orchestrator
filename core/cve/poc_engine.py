@@ -39,7 +39,7 @@ except ImportError:
     HAS_HTTP_FACTORY = False
 
 try:
-    import requests
+    import requests  # noqa: F401
 
     HAS_REQUESTS = True
 except ImportError:
