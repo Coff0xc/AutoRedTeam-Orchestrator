@@ -115,11 +115,11 @@ async def example_full_workflow():
     stats = manager.get_stats()
 
     print(f"\n  总计: {stats.get('total_cves', 0)} CVE")
-    print(f"\n  按严重性:")
+    print("\n  按严重性:")
     for severity, count in stats.get("by_severity", {}).items():
         print(f"    {severity}: {count}")
 
-    print(f"\n  按来源:")
+    print("\n  按来源:")
     for source, count in stats.get("by_source", {}).items():
         print(f"    {source}: {count}")
 
@@ -142,7 +142,7 @@ async def example_monitor_keywords():
         print(f"  发现 {len(results)} 个相关CVE (CVSS >= 7.0, 有PoC)")
 
         if results:
-            print(f"  最新漏洞:")
+            print("  最新漏洞:")
             for cve in results[:3]:
                 print(f"    • {cve.cve_id} [CVSS: {cve.cvss}]")
 

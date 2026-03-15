@@ -327,8 +327,9 @@ class TestCheckOSV:
         """测试网络错误"""
         scanner = DependencyScanner()
 
-        # Mock 网络异常
-        with patch.object(scanner._session, 'post', side_effect=Exception("Network error")):
+        # Mock 网络异常 — check_osv 只捕获 requests.RequestException
+        import requests
+        with patch.object(scanner._session, 'post', side_effect=requests.ConnectionError("Network error")):
             vulns = scanner.check_osv("requests", "2.25.0", "PyPI")
 
         assert len(vulns) == 0
@@ -358,7 +359,7 @@ class TestCheckBatchOSV:
         ]
 
         # Mock check_osv 方法
-        def mock_check_osv(name, version, ecosystem):
+        def mock_check_osv(name, version, ecosystem="PyPI"):
             if name == "requests":
                 return [
                     DependencyVuln(
@@ -372,13 +373,16 @@ class TestCheckBatchOSV:
                 ]
             return []
 
-        with patch.object(scanner, 'check_osv', side_effect=mock_check_osv):
-            results = scanner.check_batch_osv(packages)
+        # Mock batch POST to fail → falls back to individual check_osv
+        import requests
+        with patch.object(scanner._session, 'post', side_effect=requests.ConnectionError("mock batch fail")):
+            with patch.object(scanner, 'check_osv', side_effect=mock_check_osv):
+                results = scanner.check_batch_osv(packages)
 
         assert "requests" in results
         assert len(results["requests"]) == 1
-        assert "django" in results
-        assert len(results["django"]) == 0
+        # django 没有漏洞，不会出现在结果中
+        assert "django" not in results
 
     def test_check_batch_empty(self):
         """测试批量检查空列表"""

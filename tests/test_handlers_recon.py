@@ -72,7 +72,7 @@ class TestFullReconTool:
 
         with patch('core.recon.StandardReconEngine') as mock_engine_class:
             mock_engine = MagicMock()
-            mock_engine.run.return_value = mock_result
+            mock_engine.async_run = AsyncMock(return_value=mock_result)
             mock_engine_class.return_value = mock_engine
 
             # 调用工具
@@ -81,15 +81,15 @@ class TestFullReconTool:
                 quick_mode=True
             )
 
-            # 验证结果
+            # 验证结果 — tool(mcp) 通过 ensure_tool_result 将 extras 合并到 data 中
             assert result['success'] is True
-            assert result['data']['target'] == "https://example.com"
             assert 'data' in result
+            assert result['data']['target'] == "https://example.com"
             assert result['data']['dns']['ip'] == '1.2.3.4'
 
             # 验证引擎被正确初始化
             mock_engine_class.assert_called_once()
-            mock_engine.run.assert_called_once()
+            mock_engine.async_run.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_full_recon_exception(self):

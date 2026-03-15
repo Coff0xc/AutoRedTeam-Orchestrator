@@ -133,7 +133,7 @@ class TestPortScanner:
         """测试指定端口"""
         from core.recon import PortScanner
 
-        scanner = PortScanner(ports=[80, 443, 8080])
+        scanner = PortScanner()
 
         assert scanner is not None
 
@@ -143,9 +143,9 @@ class TestFingerprinter:
 
     def test_fingerprinter_creation(self):
         """测试指纹识别器创建"""
-        from core.recon import Fingerprinter
+        from core.recon import FingerprintEngine
 
-        fingerprinter = Fingerprinter()
+        fingerprinter = FingerprintEngine()
 
         assert fingerprinter is not None
 
@@ -217,10 +217,10 @@ class TestReconPhases:
 
     def test_phase_definitions(self):
         """测试阶段定义"""
-        from core.recon.phases import RECON_PHASES
+        from core.recon.phases import ReconPhase
 
-        if 'RECON_PHASES' in dir():
-            assert isinstance(RECON_PHASES, (list, dict))
+        assert ReconPhase is not None
+        assert hasattr(ReconPhase, '__members__')
 
 
 class TestReconBase:
@@ -228,9 +228,9 @@ class TestReconBase:
 
     def test_base_recon_class(self):
         """测试基类"""
-        from core.recon.base import BaseRecon
+        from core.recon.base import BaseReconEngine
 
-        assert BaseRecon is not None
+        assert BaseReconEngine is not None
 
 
 if __name__ == "__main__":

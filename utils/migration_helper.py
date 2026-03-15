@@ -117,7 +117,7 @@ def print_migration_guide(old_function: str):
         print(f"{'='*60}")
         print(f"新 API: {guide['new_api']}")
         print(f"模块: {guide['module']}")
-        print(f"\n示例:")
+        print("\n示例:")
         print(guide["example"])
         print(f"{'='*60}\n")
 

@@ -210,7 +210,7 @@ class CVEUpdateManager:
                         temp_file.unlink()
                     elif temp_file.is_dir():
                         shutil.rmtree(temp_file)
-                except Exception as exc:
+                except Exception:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         except Exception as e:

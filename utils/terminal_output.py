@@ -275,7 +275,7 @@ def run_with_realtime_output(
                             terminal.tool_output(s_line, is_stderr)
                             state["output_count"] += 1
                         elif state["output_count"] == max_output_lines:
-                            terminal.warning(f"... 输出过多，后续内容已隐藏 (仍在后台记录)")
+                            terminal.warning("... 输出过多，后续内容已隐藏 (仍在后台记录)")
                             state["output_count"] += 1
             except ValueError:
                 pass  # 文件已关闭

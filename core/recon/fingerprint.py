@@ -722,7 +722,7 @@ class FingerprintEngine:
             match = pattern.search(body)
             if match:
                 matched = True
-                evidence = f"Meta tag matched"
+                evidence = "Meta tag matched"
                 if match.groups():
                     version = match.group(1)
 

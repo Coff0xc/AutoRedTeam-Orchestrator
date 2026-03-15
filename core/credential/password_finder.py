@@ -324,7 +324,7 @@ class PasswordFinder:
                     chunk = f.read(512)
                     if b"\x00" in chunk:  # 包含null字节,可能是二进制
                         return True
-        except Exception as exc:
+        except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return False

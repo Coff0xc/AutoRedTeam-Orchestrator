@@ -131,7 +131,7 @@ class BaseDetector(ABC):
                 except ImportError as req_e:
                     logger.error("[%s] 无法加载HTTP客户端: %s", self.name, req_e)
                     raise DetectorError(
-                        f"HTTP客户端初始化失败: 缺少必要的依赖 (requests)",
+                        "HTTP客户端初始化失败: 缺少必要的依赖 (requests)",
                         detector_name=self.name,
                         cause=req_e,
                     )

