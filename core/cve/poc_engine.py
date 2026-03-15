@@ -232,7 +232,7 @@ class PoCEngine:
             if HAS_HTTP_FACTORY:
                 self._session = get_client()
             elif HAS_REQUESTS:
-                import requests
+                import requests  # noqa: F811
 
                 self._session = requests.Session()
                 self._session.verify = self.verify_ssl

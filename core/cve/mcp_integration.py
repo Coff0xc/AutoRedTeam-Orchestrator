@@ -238,7 +238,6 @@ AI调用: cve_search_tool(keyword="SQL injection", min_cvss=9.0, poc_only=True)
 
 if __name__ == "__main__":
     """测试MCP集成函数"""
-    import asyncio
 
     async def test():
         print("测试MCP集成函数...\n")

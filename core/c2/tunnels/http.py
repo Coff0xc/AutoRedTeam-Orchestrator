@@ -239,7 +239,7 @@ class HTTPTunnel(BaseTunnel):
 
         elif HAS_REQUESTS:
             # 回退到 requests
-            import requests
+            import requests  # noqa: F811
 
             session = requests.Session()
             session.verify = False
