@@ -118,7 +118,7 @@ class TheHarvesterTool(BaseTool):
         cmd = ["theHarvester", "-d", domain, "-b", sources, "-l", str(limit)]
 
         try:
-            logger.info("执行TheHarvester: %s", ' '.join(cmd))
+            logger.info("执行TheHarvester: %s", " ".join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             # 解析输出

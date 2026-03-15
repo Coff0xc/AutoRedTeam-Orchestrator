@@ -183,7 +183,7 @@ class SafeExecutor:
 
         # 4. 执行命令
         try:
-            logger.info("执行命令: %s", ' '.join(safe_cmd))
+            logger.info("执行命令: %s", " ".join(safe_cmd))
 
             result = subprocess.run(
                 safe_cmd,
@@ -204,7 +204,7 @@ class SafeExecutor:
             }
 
         except subprocess.TimeoutExpired:
-            logger.error("命令执行超时: %s", ' '.join(safe_cmd))
+            logger.error("命令执行超时: %s", " ".join(safe_cmd))
             return {
                 "success": False,
                 "error": "命令执行超时",
@@ -613,7 +613,7 @@ class SandboxExecutor:
                 run_kwargs["creationflags"] = creationflags
 
             # 5. 执行命令
-            logger.debug("沙箱执行: %s", ' '.join(cmd))
+            logger.debug("沙箱执行: %s", " ".join(cmd))
             result = subprocess.run(cmd, **run_kwargs)
 
             return {
@@ -637,7 +637,7 @@ class SandboxExecutor:
             }
 
         except subprocess.TimeoutExpired as e:
-            logger.error("沙箱执行超时: %s", ' '.join(cmd))
+            logger.error("沙箱执行超时: %s", " ".join(cmd))
             return {
                 "success": False,
                 "error": f"执行超时（{timeout}秒）",
@@ -770,9 +770,9 @@ if __name__ == "__main__":
     # 测试安全命令
     logger.info("[测试1] 安全命令 (nmap)")
     result = executor.execute(["nmap", "-sV", "127.0.0.1"])
-    logger.info("  结果: %s", result.get('success', 'N/A'))
+    logger.info("  结果: %s", result.get("success", "N/A"))
     if result.get("error"):
-        logger.error("  错误: %s", result['error'])
+        logger.error("  错误: %s", result["error"])
 
     # 测试危险命令
     logger.info("[测试2] 危险命令（应该被阻止）")
@@ -800,23 +800,23 @@ if __name__ == "__main__":
     # 测试沙箱中的安全命令
     logger.info("[测试4] 沙箱安全命令 (echo)")
     result = sandbox.execute(["echo", "Hello from sandbox"])
-    logger.info("  结果: %s", result.get('success', 'N/A'))
+    logger.info("  结果: %s", result.get("success", "N/A"))
     if result.get("stdout"):
-        logger.info("  输出: %s", result['stdout'].strip())
+        logger.info("  输出: %s", result["stdout"].strip())
 
     # 测试沙箱黑名单
     logger.info("[测试5] 沙箱黑名单（应该被阻止）")
     result = sandbox.execute(["rm", "-rf", "/tmp/test"])
-    logger.info("  结果: %s", result.get('success', 'N/A'))
+    logger.info("  结果: %s", result.get("success", "N/A"))
     if result.get("error"):
-        logger.info("  错误: %s", result['error'])
+        logger.info("  错误: %s", result["error"])
 
     # 测试路径遍历检测
     logger.info("[测试6] 路径遍历检测（应该被阻止）")
     result = sandbox.execute(["cat", "../../etc/passwd"])
-    logger.info("  结果: %s", result.get('success', 'N/A'))
+    logger.info("  结果: %s", result.get("success", "N/A"))
     if result.get("error"):
-        logger.info("  错误: %s", result['error'])
+        logger.info("  错误: %s", result["error"])
 
     logger.info("=" * 60)
     logger.info("测试完成")

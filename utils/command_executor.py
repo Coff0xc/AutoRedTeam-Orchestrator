@@ -574,6 +574,6 @@ def safe_execute(
     result["warnings"] = warnings + result.get("warnings", [])
 
     # 记录审计日志
-    logger.info("命令执行: %s -> %s", ' '.join(cmd), '成功' if result['success'] else '失败')
+    logger.info("命令执行: %s -> %s", " ".join(cmd), "成功" if result["success"] else "失败")
 
     return result

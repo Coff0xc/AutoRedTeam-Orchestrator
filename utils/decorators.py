@@ -134,7 +134,9 @@ def retry(
                     return func(*args, **kwargs)
                 except exceptions as e:
                     last_exception = e
-                    logger.warning("%s 失败 (尝试 %s/%s): %s", func.__name__, attempt, max_attempts, e)
+                    logger.warning(
+                        "%s 失败 (尝试 %s/%s): %s", func.__name__, attempt, max_attempts, e
+                    )
 
                     if attempt < max_attempts:
                         if on_retry:
@@ -180,7 +182,9 @@ def async_retry(
                     return await func(*args, **kwargs)
                 except exceptions as e:
                     last_exception = e
-                    logger.warning("%s 失败 (尝试 %s/%s): %s", func.__name__, attempt, max_attempts, e)
+                    logger.warning(
+                        "%s 失败 (尝试 %s/%s): %s", func.__name__, attempt, max_attempts, e
+                    )
 
                     if attempt < max_attempts:
                         await asyncio.sleep(current_delay)

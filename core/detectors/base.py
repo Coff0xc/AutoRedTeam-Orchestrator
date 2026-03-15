@@ -617,7 +617,9 @@ class CompositeDetector(BaseDetector):
                 logger.warning("[%s] HTTP 错误: %s", detector_name, results)
             elif isinstance(results, (ValueError, TypeError, KeyError)):
                 # 数据处理错误
-                logger.error("[%s] 数据处理错误: %s: %s", detector_name, type(results).__name__, results)
+                logger.error(
+                    "[%s] 数据处理错误: %s: %s", detector_name, type(results).__name__, results
+                )
             elif isinstance(results, Exception):
                 # 其他未预期的异常
                 logger.error(

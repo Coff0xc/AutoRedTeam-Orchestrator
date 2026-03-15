@@ -375,7 +375,7 @@ class WorkingHoursEnforcement(EvasionTechnique):
                 )
 
             wait_seconds = (next_start - now).total_seconds()
-            logger.info("Outside working hours, waiting %.1f hours", wait_seconds/3600)
+            logger.info("Outside working hours, waiting %.1f hours", wait_seconds / 3600)
 
             # 如果等待时间太长，分段等待并允许取消
             while wait_seconds > 0:

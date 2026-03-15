@@ -241,7 +241,7 @@ class ProxyChain:
                 {"index": i, "url": proxy.url, "valid": is_valid, "response_time": response_time}
             )
 
-        logger.info("[%s] Verified %s/%s proxies", self.name, results['valid'], results['total'])
+        logger.info("[%s] Verified %s/%s proxies", self.name, results["valid"], results["total"])
         return results
 
     def request_through_chain(

@@ -39,6 +39,7 @@ try:
         SENSITIVE_MOUNT_PATHS as _SENSITIVE_PATHS,
         SENSITIVE_RESOURCES as _SENSITIVE_RESOURCES,
     )
+
     _HAS_CONSTANTS = True
 except ImportError:
     _HAS_CONSTANTS = False
@@ -70,11 +71,23 @@ class KubernetesTester(BaseCloudTester):
     version = "3.0.0"
 
     # 使用共享常量 (向后兼容)
-    DANGEROUS_CAPABILITIES = _DANGEROUS_CAPS if _HAS_CONSTANTS else [
-        "SYS_ADMIN", "SYS_PTRACE", "SYS_MODULE", "DAC_READ_SEARCH",
-        "NET_ADMIN", "NET_RAW", "SYS_RAWIO", "MKNOD", "SYS_CHROOT",
-        "AUDIT_WRITE", "SETFCAP",
-    ]
+    DANGEROUS_CAPABILITIES = (
+        _DANGEROUS_CAPS
+        if _HAS_CONSTANTS
+        else [
+            "SYS_ADMIN",
+            "SYS_PTRACE",
+            "SYS_MODULE",
+            "DAC_READ_SEARCH",
+            "NET_ADMIN",
+            "NET_RAW",
+            "SYS_RAWIO",
+            "MKNOD",
+            "SYS_CHROOT",
+            "AUDIT_WRITE",
+            "SETFCAP",
+        ]
+    )
 
     # 敏感挂载路径 (保留原有格式以兼容现有代码)
     SENSITIVE_PATHS = {
@@ -94,15 +107,32 @@ class KubernetesTester(BaseCloudTester):
     }
 
     # 危险RBAC权限 (使用共享常量)
-    DANGEROUS_VERBS = _DANGEROUS_VERBS if _HAS_CONSTANTS else [
-        "*", "create", "update", "patch", "delete"
-    ]
-    SENSITIVE_RESOURCES = _SENSITIVE_RESOURCES if _HAS_CONSTANTS else [
-        "secrets", "pods", "pods/exec", "pods/attach", "pods/portforward",
-        "daemonsets", "deployments", "replicasets", "statefulsets",
-        "configmaps", "serviceaccounts", "clusterroles", "clusterrolebindings",
-        "roles", "rolebindings", "nodes", "persistentvolumes",
-    ]
+    DANGEROUS_VERBS = (
+        _DANGEROUS_VERBS if _HAS_CONSTANTS else ["*", "create", "update", "patch", "delete"]
+    )
+    SENSITIVE_RESOURCES = (
+        _SENSITIVE_RESOURCES
+        if _HAS_CONSTANTS
+        else [
+            "secrets",
+            "pods",
+            "pods/exec",
+            "pods/attach",
+            "pods/portforward",
+            "daemonsets",
+            "deployments",
+            "replicasets",
+            "statefulsets",
+            "configmaps",
+            "serviceaccounts",
+            "clusterroles",
+            "clusterrolebindings",
+            "roles",
+            "rolebindings",
+            "nodes",
+            "persistentvolumes",
+        ]
+    )
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """

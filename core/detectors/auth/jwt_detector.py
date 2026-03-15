@@ -25,14 +25,46 @@ logger = logging.getLogger(__name__)
 
 # 常见弱密钥列表
 WEAK_SECRETS = [
-    "secret", "password", "123456", "admin", "key", "private",
-    "jwt_secret", "jwt-secret", "jwtSecret", "secret_key", "secretkey",
-    "changeme", "changeit", "test", "dev", "development", "production",
-    "your-256-bit-secret", "your-secret-key", "my-secret-key",
-    "supersecret", "super_secret", "topsecret", "top_secret",
-    "qwerty", "letmein", "welcome", "monkey", "dragon", "master",
-    "1234567890", "0123456789", "abcdefgh", "12345678",
-    "", " ", "null", "none", "undefined", "default",
+    "secret",
+    "password",
+    "123456",
+    "admin",
+    "key",
+    "private",
+    "jwt_secret",
+    "jwt-secret",
+    "jwtSecret",
+    "secret_key",
+    "secretkey",
+    "changeme",
+    "changeit",
+    "test",
+    "dev",
+    "development",
+    "production",
+    "your-256-bit-secret",
+    "your-secret-key",
+    "my-secret-key",
+    "supersecret",
+    "super_secret",
+    "topsecret",
+    "top_secret",
+    "qwerty",
+    "letmein",
+    "welcome",
+    "monkey",
+    "dragon",
+    "master",
+    "1234567890",
+    "0123456789",
+    "abcdefgh",
+    "12345678",
+    "",
+    " ",
+    "null",
+    "none",
+    "undefined",
+    "default",
 ]
 
 
@@ -135,7 +167,7 @@ class JWTDetector(BaseDetector):
         if not token and header_name in headers:
             auth_value = headers[header_name]
             if auth_value.startswith(f"{auth_prefix} "):
-                token = auth_value[len(auth_prefix) + 1:]
+                token = auth_value[len(auth_prefix) + 1 :]
 
         if not token:
             logger.warning("未提供 JWT token")
@@ -153,32 +185,50 @@ class JWTDetector(BaseDetector):
 
         # 执行各项检测
         if self.check_none_alg:
-            results.extend(self._test_none_algorithm(url, parsed, header_name, auth_prefix, headers, baseline))
+            results.extend(
+                self._test_none_algorithm(url, parsed, header_name, auth_prefix, headers, baseline)
+            )
 
         if self.check_alg_confusion:
-            results.extend(self._test_algorithm_confusion(url, parsed, header_name, auth_prefix, headers, baseline))
+            results.extend(
+                self._test_algorithm_confusion(
+                    url, parsed, header_name, auth_prefix, headers, baseline
+                )
+            )
 
         if self.check_weak_secret:
-            results.extend(self._test_weak_secret(url, parsed, header_name, auth_prefix, headers, baseline))
+            results.extend(
+                self._test_weak_secret(url, parsed, header_name, auth_prefix, headers, baseline)
+            )
 
         if self.check_exp_bypass:
-            results.extend(self._test_exp_bypass(url, parsed, header_name, auth_prefix, headers, baseline))
+            results.extend(
+                self._test_exp_bypass(url, parsed, header_name, auth_prefix, headers, baseline)
+            )
 
         if self.check_kid_injection:
-            results.extend(self._test_kid_injection(url, parsed, header_name, auth_prefix, headers, baseline))
+            results.extend(
+                self._test_kid_injection(url, parsed, header_name, auth_prefix, headers, baseline)
+            )
 
         if self.check_jku_injection:
-            results.extend(self._test_jku_injection(url, parsed, header_name, auth_prefix, headers, baseline))
+            results.extend(
+                self._test_jku_injection(url, parsed, header_name, auth_prefix, headers, baseline)
+            )
 
         self._log_detection_end(url, results)
         return results
 
-    def _get_baseline(self, url: str, token: str, header_name: str, auth_prefix: str, headers: Dict) -> Optional[Any]:
+    def _get_baseline(
+        self, url: str, token: str, header_name: str, auth_prefix: str, headers: Dict
+    ) -> Optional[Any]:
         """获取有效 token 的基线响应"""
         test_headers = {**headers, header_name: f"{auth_prefix} {token}"}
         return self._safe_request("GET", url, headers=test_headers)
 
-    def _test_with_token(self, url: str, token: str, header_name: str, auth_prefix: str, headers: Dict) -> Optional[Any]:
+    def _test_with_token(
+        self, url: str, token: str, header_name: str, auth_prefix: str, headers: Dict
+    ) -> Optional[Any]:
         """使用指定 token 发送请求"""
         test_headers = {**headers, header_name: f"{auth_prefix} {token}"}
         return self._safe_request("GET", url, headers=test_headers)
@@ -195,28 +245,49 @@ class JWTDetector(BaseDetector):
             return True
         return False
 
-    def _test_none_algorithm(self, url: str, parsed: Dict, header_name: str, auth_prefix: str, headers: Dict, baseline: Any) -> List[DetectionResult]:
+    def _test_none_algorithm(
+        self,
+        url: str,
+        parsed: Dict,
+        header_name: str,
+        auth_prefix: str,
+        headers: Dict,
+        baseline: Any,
+    ) -> List[DetectionResult]:
         """测试 none 算法漏洞"""
         results = []
         for alg in ["none", "None", "NONE", "nOnE"]:
             forged = _forge_token(parsed["header"], parsed["payload"], alg=alg)
             response = self._test_with_token(url, forged, header_name, auth_prefix, headers)
             if self._is_accepted(response, baseline):
-                results.append(self._create_result(
-                    url=url,
-                    vulnerable=True,
-                    payload=f"alg={alg}",
-                    evidence=f"服务器接受 alg={alg} 的 token，状态码: {response.status_code}",
-                    confidence=0.95,
-                    verified=True,
-                    remediation="禁止接受 alg=none 的 JWT，使用白名单验证算法",
-                    references=["https://cwe.mitre.org/data/definitions/327.html"],
-                    extra={"attack_type": "none_algorithm", "forged_token": forged[:50] + "..."},
-                ))
+                results.append(
+                    self._create_result(
+                        url=url,
+                        vulnerable=True,
+                        payload=f"alg={alg}",
+                        evidence=f"服务器接受 alg={alg} 的 token，状态码: {response.status_code}",
+                        confidence=0.95,
+                        verified=True,
+                        remediation="禁止接受 alg=none 的 JWT，使用白名单验证算法",
+                        references=["https://cwe.mitre.org/data/definitions/327.html"],
+                        extra={
+                            "attack_type": "none_algorithm",
+                            "forged_token": forged[:50] + "...",
+                        },
+                    )
+                )
                 return results
         return results
 
-    def _test_algorithm_confusion(self, url: str, parsed: Dict, header_name: str, auth_prefix: str, headers: Dict, baseline: Any) -> List[DetectionResult]:
+    def _test_algorithm_confusion(
+        self,
+        url: str,
+        parsed: Dict,
+        header_name: str,
+        auth_prefix: str,
+        headers: Dict,
+        baseline: Any,
+    ) -> List[DetectionResult]:
         """测试算法混淆漏洞 (RS256 → HS256)"""
         results = []
         original_alg = parsed["header"].get("alg", "").upper()
@@ -229,21 +300,33 @@ class JWTDetector(BaseDetector):
             forged = _forge_token(parsed["header"], parsed["payload"], secret=secret, alg="HS256")
             response = self._test_with_token(url, forged, header_name, auth_prefix, headers)
             if self._is_accepted(response, baseline):
-                results.append(self._create_result(
-                    url=url,
-                    vulnerable=True,
-                    payload="RS256 → HS256",
-                    evidence=f"服务器接受算法混淆攻击，状态码: {response.status_code}",
-                    confidence=0.90,
-                    verified=True,
-                    remediation="验证 JWT 时强制指定算法，不信任 header 中的 alg 字段",
-                    references=["https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/"],
-                    extra={"attack_type": "algorithm_confusion", "original_alg": original_alg},
-                ))
+                results.append(
+                    self._create_result(
+                        url=url,
+                        vulnerable=True,
+                        payload="RS256 → HS256",
+                        evidence=f"服务器接受算法混淆攻击，状态码: {response.status_code}",
+                        confidence=0.90,
+                        verified=True,
+                        remediation="验证 JWT 时强制指定算法，不信任 header 中的 alg 字段",
+                        references=[
+                            "https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/"
+                        ],
+                        extra={"attack_type": "algorithm_confusion", "original_alg": original_alg},
+                    )
+                )
                 return results
         return results
 
-    def _test_weak_secret(self, url: str, parsed: Dict, header_name: str, auth_prefix: str, headers: Dict, baseline: Any) -> List[DetectionResult]:
+    def _test_weak_secret(
+        self,
+        url: str,
+        parsed: Dict,
+        header_name: str,
+        auth_prefix: str,
+        headers: Dict,
+        baseline: Any,
+    ) -> List[DetectionResult]:
         """测试弱密钥"""
         results = []
         original_alg = parsed["header"].get("alg", "").upper()
@@ -251,24 +334,36 @@ class JWTDetector(BaseDetector):
             return results
 
         for secret in self.weak_secrets:
-            forged = _forge_token(parsed["header"], parsed["payload"], secret=secret, alg=original_alg)
+            forged = _forge_token(
+                parsed["header"], parsed["payload"], secret=secret, alg=original_alg
+            )
             response = self._test_with_token(url, forged, header_name, auth_prefix, headers)
             if self._is_accepted(response, baseline):
-                results.append(self._create_result(
-                    url=url,
-                    vulnerable=True,
-                    payload=f"secret={secret!r}",
-                    evidence=f"发现弱密钥: {secret!r}",
-                    confidence=0.99,
-                    verified=True,
-                    remediation="使用强随机密钥 (至少 256 位)，定期轮换密钥",
-                    references=["https://cwe.mitre.org/data/definitions/521.html"],
-                    extra={"attack_type": "weak_secret", "secret": secret},
-                ))
+                results.append(
+                    self._create_result(
+                        url=url,
+                        vulnerable=True,
+                        payload=f"secret={secret!r}",
+                        evidence=f"发现弱密钥: {secret!r}",
+                        confidence=0.99,
+                        verified=True,
+                        remediation="使用强随机密钥 (至少 256 位)，定期轮换密钥",
+                        references=["https://cwe.mitre.org/data/definitions/521.html"],
+                        extra={"attack_type": "weak_secret", "secret": secret},
+                    )
+                )
                 return results
         return results
 
-    def _test_exp_bypass(self, url: str, parsed: Dict, header_name: str, auth_prefix: str, headers: Dict, baseline: Any) -> List[DetectionResult]:
+    def _test_exp_bypass(
+        self,
+        url: str,
+        parsed: Dict,
+        header_name: str,
+        auth_prefix: str,
+        headers: Dict,
+        baseline: Any,
+    ) -> List[DetectionResult]:
         """测试过期验证绕过"""
         results = []
         payload = parsed["payload"].copy()
@@ -280,16 +375,18 @@ class JWTDetector(BaseDetector):
             forged = _forge_token(parsed["header"], payload, alg="none")
             response = self._test_with_token(url, forged, header_name, auth_prefix, headers)
             if self._is_accepted(response, baseline):
-                results.append(self._create_result(
-                    url=url,
-                    vulnerable=True,
-                    payload="removed exp claim",
-                    evidence="服务器接受无 exp 声明的 token",
-                    confidence=0.85,
-                    verified=True,
-                    remediation="强制验证 exp 声明，拒绝无过期时间的 token",
-                    extra={"attack_type": "exp_bypass"},
-                ))
+                results.append(
+                    self._create_result(
+                        url=url,
+                        vulnerable=True,
+                        payload="removed exp claim",
+                        evidence="服务器接受无 exp 声明的 token",
+                        confidence=0.85,
+                        verified=True,
+                        remediation="强制验证 exp 声明，拒绝无过期时间的 token",
+                        extra={"attack_type": "exp_bypass"},
+                    )
+                )
                 return results
 
         # 测试设置极大的 exp
@@ -298,19 +395,29 @@ class JWTDetector(BaseDetector):
         forged = _forge_token(parsed["header"], payload, alg="none")
         response = self._test_with_token(url, forged, header_name, auth_prefix, headers)
         if self._is_accepted(response, baseline):
-            results.append(self._create_result(
-                url=url,
-                vulnerable=True,
-                payload="exp=9999999999",
-                evidence="服务器接受超长过期时间的 token",
-                confidence=0.80,
-                verified=True,
-                remediation="限制 token 最大有效期",
-                extra={"attack_type": "exp_bypass"},
-            ))
+            results.append(
+                self._create_result(
+                    url=url,
+                    vulnerable=True,
+                    payload="exp=9999999999",
+                    evidence="服务器接受超长过期时间的 token",
+                    confidence=0.80,
+                    verified=True,
+                    remediation="限制 token 最大有效期",
+                    extra={"attack_type": "exp_bypass"},
+                )
+            )
         return results
 
-    def _test_kid_injection(self, url: str, parsed: Dict, header_name: str, auth_prefix: str, headers: Dict, baseline: Any) -> List[DetectionResult]:
+    def _test_kid_injection(
+        self,
+        url: str,
+        parsed: Dict,
+        header_name: str,
+        auth_prefix: str,
+        headers: Dict,
+        baseline: Any,
+    ) -> List[DetectionResult]:
         """测试 kid 注入"""
         results = []
         kid_payloads = [
@@ -327,21 +434,31 @@ class JWTDetector(BaseDetector):
             forged = _forge_token(header, parsed["payload"], alg="none")
             response = self._test_with_token(url, forged, header_name, auth_prefix, headers)
             if self._is_accepted(response, baseline):
-                results.append(self._create_result(
-                    url=url,
-                    vulnerable=True,
-                    payload=f"kid={kid_payload}",
-                    evidence=f"可能存在 kid {attack_type} 漏洞",
-                    confidence=0.75,
-                    verified=False,
-                    remediation="对 kid 参数进行严格验证，使用白名单",
-                    references=["https://cwe.mitre.org/data/definitions/22.html"],
-                    extra={"attack_type": f"kid_{attack_type}", "kid": kid_payload},
-                ))
+                results.append(
+                    self._create_result(
+                        url=url,
+                        vulnerable=True,
+                        payload=f"kid={kid_payload}",
+                        evidence=f"可能存在 kid {attack_type} 漏洞",
+                        confidence=0.75,
+                        verified=False,
+                        remediation="对 kid 参数进行严格验证，使用白名单",
+                        references=["https://cwe.mitre.org/data/definitions/22.html"],
+                        extra={"attack_type": f"kid_{attack_type}", "kid": kid_payload},
+                    )
+                )
                 return results
         return results
 
-    def _test_jku_injection(self, url: str, parsed: Dict, header_name: str, auth_prefix: str, headers: Dict, baseline: Any) -> List[DetectionResult]:
+    def _test_jku_injection(
+        self,
+        url: str,
+        parsed: Dict,
+        header_name: str,
+        auth_prefix: str,
+        headers: Dict,
+        baseline: Any,
+    ) -> List[DetectionResult]:
         """测试 jku/x5u 注入"""
         results = []
         if not self.callback_url:
@@ -353,17 +470,22 @@ class JWTDetector(BaseDetector):
             response = self._test_with_token(url, forged, header_name, auth_prefix, headers)
             # jku/x5u 注入需要检查回调是否被访问
             if response and response.status_code != 401:
-                results.append(self._create_result(
-                    url=url,
-                    vulnerable=True,
-                    payload=f"{header_field}={self.callback_url}",
-                    evidence=f"服务器可能处理了 {header_field} 字段 (需验证回调)",
-                    confidence=0.60,
-                    verified=False,
-                    remediation=f"禁用或严格验证 {header_field} 字段，使用白名单",
-                    references=["https://cwe.mitre.org/data/definitions/918.html"],
-                    extra={"attack_type": f"{header_field}_injection", "callback": self.callback_url},
-                ))
+                results.append(
+                    self._create_result(
+                        url=url,
+                        vulnerable=True,
+                        payload=f"{header_field}={self.callback_url}",
+                        evidence=f"服务器可能处理了 {header_field} 字段 (需验证回调)",
+                        confidence=0.60,
+                        verified=False,
+                        remediation=f"禁用或严格验证 {header_field} 字段，使用白名单",
+                        references=["https://cwe.mitre.org/data/definitions/918.html"],
+                        extra={
+                            "attack_type": f"{header_field}_injection",
+                            "callback": self.callback_url,
+                        },
+                    )
+                )
         return results
 
     def get_payloads(self) -> List[str]:

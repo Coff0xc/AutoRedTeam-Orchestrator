@@ -166,7 +166,7 @@ class DNSReconTool(BaseTool):
         cmd = ["dnsrecon", "-d", domain, "-t", scan_type, "--threads", str(threads), "-j", "-"]
 
         try:
-            logger.info("执行DNSRecon: %s", ' '.join(cmd))
+            logger.info("执行DNSRecon: %s", " ".join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             try:
@@ -247,7 +247,7 @@ class DnsxTool(BaseTool):
             cmd.append("-wd")
 
         try:
-            logger.info("执行Dnsx: %s", ' '.join(cmd))
+            logger.info("执行Dnsx: %s", " ".join(cmd))
             result = subprocess.run(
                 cmd, input=domain_input, capture_output=True, text=True, timeout=self.timeout
             )

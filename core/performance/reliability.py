@@ -125,7 +125,9 @@ class RetryExecutor:
                 last_exception = e
                 if attempt < self.policy.max_retries:
                     delay = self.policy.get_delay(attempt)
-                    logger.warning("执行失败: %s，等待 %.2fs 后重试 (尝试 %s)", e, delay, attempt + 1)
+                    logger.warning(
+                        "执行失败: %s，等待 %.2fs 后重试 (尝试 %s)", e, delay, attempt + 1
+                    )
                     time.sleep(delay)
                     self._stats["total_retries"] += 1
                 else:

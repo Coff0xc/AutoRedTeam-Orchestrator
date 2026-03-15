@@ -81,7 +81,8 @@ class InMemoryGraphStore:
                 evict_count = self.MAX_ENTITIES // 10
                 logger.warning(
                     "实体数达到上限 %d，淘汰最旧的 %d 个条目",
-                    self.MAX_ENTITIES, evict_count,
+                    self.MAX_ENTITIES,
+                    evict_count,
                 )
                 self._evict_oldest_entities(evict_count)
 
@@ -157,7 +158,8 @@ class InMemoryGraphStore:
                 evict_count = self.MAX_RELATIONS // 10
                 logger.warning(
                     "关系数达到上限 %d，淘汰最旧的 %d 个条目",
-                    self.MAX_RELATIONS, evict_count,
+                    self.MAX_RELATIONS,
+                    evict_count,
                 )
                 self._evict_oldest_relations(evict_count)
 
@@ -209,7 +211,9 @@ class InMemoryGraphStore:
         if candidates is None:
             candidates = set(self._entities.keys())
 
-        entities = [self._entities[eid] for eid in list(candidates)[:limit] if eid in self._entities]
+        entities = [
+            self._entities[eid] for eid in list(candidates)[:limit] if eid in self._entities
+        ]
         return entities
 
     def find_relations(
@@ -738,11 +742,13 @@ class KnowledgeManager:
         for entity in all_targets:
             score = self._calculate_similarity(target, entity)
             if score > 0:
-                matches.append(SimilarityMatch(
-                    entity=entity,
-                    score=score,
-                    matched_properties=self._get_matched_props(target, entity),
-                ))
+                matches.append(
+                    SimilarityMatch(
+                        entity=entity,
+                        score=score,
+                        matched_properties=self._get_matched_props(target, entity),
+                    )
+                )
 
         matches.sort(key=lambda m: m.score, reverse=True)
         return matches[:top_k]
@@ -826,14 +832,16 @@ class KnowledgeManager:
     ):
         """记录动作执行结果（用于学习）"""
         if len(self._action_history) >= self.MAX_ACTION_HISTORY:
-            self._action_history = self._action_history[-self.MAX_ACTION_HISTORY // 2:]
-        self._action_history.append({
-            "action": action,
-            "state_hash": state_hash,
-            "success": success,
-            "result": result,
-            "timestamp": datetime.now().isoformat(),
-        })
+            self._action_history = self._action_history[-self.MAX_ACTION_HISTORY // 2 :]
+        self._action_history.append(
+            {
+                "action": action,
+                "state_hash": state_hash,
+                "success": success,
+                "result": result,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     def query_action_success_rate(
         self,
@@ -845,7 +853,8 @@ class KnowledgeManager:
 
         for action in actions:
             relevant = [
-                h for h in self._action_history
+                h
+                for h in self._action_history
                 if h["action"] == action and h["state_hash"] == state_hash
             ]
             if relevant:

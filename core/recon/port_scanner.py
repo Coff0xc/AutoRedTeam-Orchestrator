@@ -340,7 +340,9 @@ class PortScanner:
         port_list = self._parse_ports(ports)
         results: List[PortInfo] = []
 
-        self._logger.info("Scanning %s ports: %s ports with %s threads", host, len(port_list), threads)
+        self._logger.info(
+            "Scanning %s ports: %s ports with %s threads", host, len(port_list), threads
+        )
 
         with ThreadPoolExecutor(max_workers=threads) as executor:
             futures = {executor.submit(self._scan_port, host, port): port for port in port_list}

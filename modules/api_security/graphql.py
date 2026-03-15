@@ -492,7 +492,7 @@ class GraphQLTester(BaseAPITester):
         # 测试@include和@skip指令
         for count in [10, 50, 100]:
             directives = " ".join(
-                                ["@include(if: true)" if i % 2 == 0 else "@skip(if: false)" for i in range(count)]
+                ["@include(if: true)" if i % 2 == 0 else "@skip(if: false)" for i in range(count)]
             )
 
             query = f"""

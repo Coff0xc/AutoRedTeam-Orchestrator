@@ -511,7 +511,7 @@ async def _cli_main():
             if entry.cvss:
                 logger.info("CVSS: %s (%s)", entry.cvss.score, entry.cvss.version)
             logger.info("描述: %s...", entry.description[:200])
-            logger.info("有 PoC: %s", '是' if entry.has_poc else '否')
+            logger.info("有 PoC: %s", "是" if entry.has_poc else "否")
             if entry.poc_urls:
                 logger.info("PoC 链接:")
                 for url in entry.poc_urls[:3]:

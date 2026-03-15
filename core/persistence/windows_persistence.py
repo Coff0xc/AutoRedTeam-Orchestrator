@@ -554,4 +554,4 @@ if __name__ == "__main__":
     logger.info("Available methods:")
     for m in list_persistence_methods():
         admin = "[Admin]" if m["admin_required"] else "[User]"
-        logger.info("  %s %s: %s (stealth: %s)", admin, m['method'], m['description'], m['stealth'])
+        logger.info("  %s %s: %s (stealth: %s)", admin, m["method"], m["description"], m["stealth"])

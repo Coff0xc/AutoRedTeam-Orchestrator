@@ -85,13 +85,9 @@ def register_external_tools(mcp, counter, logger):
 
         # 处理端口参数
         if ports == "top100":
-            ports = (
-                "21,22,23,25,53,80,110,111,135,139,143,443,445,993,995,1723,3306,3389,5900,8080"
-            )
+            ports = "21,22,23,25,53,80,110,111,135,139,143,443,445,993,995,1723,3306,3389,5900,8080"
 
-        result = await run_nmap(
-            target=target, ports=ports, preset=preset, extra_args=extra_args
-        )
+        result = await run_nmap(target=target, ports=ports, preset=preset, extra_args=extra_args)
 
         return result
 
@@ -147,9 +143,7 @@ def register_external_tools(mcp, counter, logger):
         if severity:
             args.extend(["-severity", severity])
 
-        result = await run_nuclei(
-            target=target, preset=preset, extra_args=args if args else None
-        )
+        result = await run_nuclei(target=target, preset=preset, extra_args=args if args else None)
 
         return result
 

@@ -77,9 +77,7 @@ class NucleiScanTool(BaseTool):
             # 如果想要看到扫描进度，可以去掉 -silent，但 Nuclei 的进度条可能会弄乱日志
             # 建议：保持 -silent，Nuclei 只有在发现漏洞时才会有输出，这正是我们想要的
 
-            run_with_realtime_output(
-                cmd, tool_name=self.name, target=target, timeout=self.timeout
-            )
+            run_with_realtime_output(cmd, tool_name=self.name, target=target, timeout=self.timeout)
 
             # 解析JSON输出文件
             vulnerabilities = []
@@ -202,7 +200,7 @@ class NucleiTemplateScanTool(BaseTool):
         cmd = ["nuclei", "-u", target, "-t", template_path, "-json", "-silent"]
 
         try:
-            logger.info("执行Nuclei模板扫描: %s", ' '.join(cmd))
+            logger.info("执行Nuclei模板扫描: %s", " ".join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             vulnerabilities = []
@@ -302,7 +300,7 @@ class NucleiWorkflowTool(BaseTool):
         ]
 
         try:
-            logger.info("执行Nuclei工作流: %s", ' '.join(cmd))
+            logger.info("执行Nuclei工作流: %s", " ".join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             vulnerabilities = []

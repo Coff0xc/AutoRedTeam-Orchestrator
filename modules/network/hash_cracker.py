@@ -64,7 +64,9 @@ class JohnTool(BaseTool):
                 choices=list(JOHN_FORMATS.keys()),
             ),
             ToolParameter("wordlist", "string", "字典文件路径", required=False, default=""),
-            ToolParameter("rules", "string", "规则名称(如single/wordlist/jumbo)", required=False, default=""),
+            ToolParameter(
+                "rules", "string", "规则名称(如single/wordlist/jumbo)", required=False, default=""
+            ),
             ToolParameter("incremental", "boolean", "增量模式", required=False, default=False),
             ToolParameter("show", "boolean", "显示已破解结果", required=False, default=False),
         ]
@@ -134,7 +136,11 @@ class JohnTool(BaseTool):
         """解析 john --show 输出"""
         cracked = []
         for line in output.splitlines():
-            if ":" in line and not line.startswith("0 password") and "password hash" not in line.lower():
+            if (
+                ":" in line
+                and not line.startswith("0 password")
+                and "password hash" not in line.lower()
+            ):
                 parts = line.split(":", 1)
                 if len(parts) == 2:
                     cracked.append({"user": parts[0], "password": parts[1].split(":")[0]})
@@ -164,7 +170,14 @@ class HashcatTool(BaseTool):
                 "攻击模式",
                 required=False,
                 default="dictionary",
-                choices=["dictionary", "combinator", "bruteforce", "mask", "hybrid_wl_mask", "hybrid_mask_wl"],
+                choices=[
+                    "dictionary",
+                    "combinator",
+                    "bruteforce",
+                    "mask",
+                    "hybrid_wl_mask",
+                    "hybrid_mask_wl",
+                ],
             ),
             ToolParameter("wordlist", "string", "字典文件路径", required=False, default=""),
             ToolParameter("mask", "string", "掩码(如?a?a?a?a?a?a)", required=False, default=""),

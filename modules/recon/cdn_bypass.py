@@ -14,6 +14,7 @@ import httpx
 
 try:
     import dns.resolver
+
     DNS_AVAILABLE = True
 except ImportError:
     DNS_AVAILABLE = False
@@ -29,16 +30,35 @@ CDN_SIGNATURES: Dict[str, Dict[str, Any]] = {
     "cloudflare": {
         "headers": ["cf-ray", "cf-cache-status", "cf-request-id"],
         "cnames": ["cloudflare.com", "cloudflare.net", "cloudflare-dns.com"],
-        "ip_ranges": ["103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22", "104.16.0.0/13",
-                      "104.24.0.0/14", "108.162.192.0/18", "131.0.72.0/22", "141.101.64.0/18",
-                      "162.158.0.0/15", "172.64.0.0/13", "173.245.48.0/20", "188.114.96.0/20",
-                      "190.93.240.0/20", "197.234.240.0/22", "198.41.128.0/17"],
+        "ip_ranges": [
+            "103.21.244.0/22",
+            "103.22.200.0/22",
+            "103.31.4.0/22",
+            "104.16.0.0/13",
+            "104.24.0.0/14",
+            "108.162.192.0/18",
+            "131.0.72.0/22",
+            "141.101.64.0/18",
+            "162.158.0.0/15",
+            "172.64.0.0/13",
+            "173.245.48.0/20",
+            "188.114.96.0/20",
+            "190.93.240.0/20",
+            "197.234.240.0/22",
+            "198.41.128.0/17",
+        ],
         "nameservers": ["cloudflare.com"],
     },
     "akamai": {
         "headers": ["x-akamai-transformed", "akamai-origin-hop"],
-        "cnames": ["akamai.net", "akamaiedge.net", "akamaihd.net", "akamaitechnologies.com",
-                   "edgesuite.net", "edgekey.net"],
+        "cnames": [
+            "akamai.net",
+            "akamaiedge.net",
+            "akamaihd.net",
+            "akamaitechnologies.com",
+            "edgesuite.net",
+            "edgekey.net",
+        ],
         "nameservers": ["akam.net"],
     },
     "fastly": {
@@ -50,7 +70,12 @@ CDN_SIGNATURES: Dict[str, Dict[str, Any]] = {
         "cnames": ["cloudfront.net", "amazonaws.com"],
     },
     "aliyun": {
-        "headers": ["eagleid", "x-swift-savetime", "x-swift-cachetime", "ali-swift-global-savetime"],
+        "headers": [
+            "eagleid",
+            "x-swift-savetime",
+            "x-swift-cachetime",
+            "ali-swift-global-savetime",
+        ],
         "cnames": ["kunlun.com", "alikunlun.com", "cdngslb.com", "tbcache.com", "aliyuncs.com"],
     },
     "tencent": {
@@ -77,8 +102,16 @@ class CDNDetectTool(BaseTool):
         description="识别目标是否使用CDN及CDN类型",
         category=ToolCategory.RECON,
         parameters=[
-            ToolParameter(name="domain", type=ParamType.DOMAIN, description="目标域名", required=True),
-            ToolParameter(name="timeout", type=ParamType.INTEGER, description="超时秒数", required=False, default=10),
+            ToolParameter(
+                name="domain", type=ParamType.DOMAIN, description="目标域名", required=True
+            ),
+            ToolParameter(
+                name="timeout",
+                type=ParamType.INTEGER,
+                description="超时秒数",
+                required=False,
+                default=10,
+            ),
         ],
         timeout=30.0,
     )
@@ -138,7 +171,9 @@ class CDNDetectTool(BaseTool):
             with httpx.Client(timeout=timeout, verify=False, follow_redirects=True) as client:
                 for scheme in ["https", "http"]:
                     try:
-                        resp = client.get(f"{scheme}://{domain}/", headers={"User-Agent": "Mozilla/5.0"})
+                        resp = client.get(
+                            f"{scheme}://{domain}/", headers={"User-Agent": "Mozilla/5.0"}
+                        )
                         headers_lower = {k.lower(): v for k, v in resp.headers.items()}
 
                         for cdn_name, sigs in CDN_SIGNATURES.items():
@@ -171,10 +206,23 @@ class RealIPFinderTool(BaseTool):
         description="通过多种方法发现CDN后的真实IP",
         category=ToolCategory.RECON,
         parameters=[
-            ToolParameter(name="domain", type=ParamType.DOMAIN, description="目标域名", required=True),
-            ToolParameter(name="securitytrails_key", type=ParamType.STRING, description="SecurityTrails API Key",
-                          required=False, sensitive=True),
-            ToolParameter(name="timeout", type=ParamType.INTEGER, description="超时秒数", required=False, default=15),
+            ToolParameter(
+                name="domain", type=ParamType.DOMAIN, description="目标域名", required=True
+            ),
+            ToolParameter(
+                name="securitytrails_key",
+                type=ParamType.STRING,
+                description="SecurityTrails API Key",
+                required=False,
+                sensitive=True,
+            ),
+            ToolParameter(
+                name="timeout",
+                type=ParamType.INTEGER,
+                description="超时秒数",
+                required=False,
+                default=15,
+            ),
         ],
         timeout=120.0,
     )
@@ -253,8 +301,24 @@ class RealIPFinderTool(BaseTool):
         if not DNS_AVAILABLE:
             return ips
 
-        common_subdomains = ["mail", "ftp", "direct", "origin", "www", "api", "dev", "test",
-                            "staging", "admin", "cpanel", "webmail", "mx", "smtp", "pop", "imap"]
+        common_subdomains = [
+            "mail",
+            "ftp",
+            "direct",
+            "origin",
+            "www",
+            "api",
+            "dev",
+            "test",
+            "staging",
+            "admin",
+            "cpanel",
+            "webmail",
+            "mx",
+            "smtp",
+            "pop",
+            "imap",
+        ]
         resolver = dns.resolver.Resolver()
         resolver.timeout = 3
         resolver.lifetime = 5
@@ -352,11 +416,24 @@ class HistoricalDNSTool(BaseTool):
         description="查询域名的历史DNS记录",
         category=ToolCategory.RECON,
         parameters=[
-            ToolParameter(name="domain", type=ParamType.DOMAIN, description="目标域名", required=True),
-            ToolParameter(name="securitytrails_key", type=ParamType.STRING, description="SecurityTrails API Key",
-                          required=True, sensitive=True),
-            ToolParameter(name="record_type", type=ParamType.STRING, description="记录类型",
-                          required=False, default="a", choices=["a", "aaaa", "mx", "ns", "txt"]),
+            ToolParameter(
+                name="domain", type=ParamType.DOMAIN, description="目标域名", required=True
+            ),
+            ToolParameter(
+                name="securitytrails_key",
+                type=ParamType.STRING,
+                description="SecurityTrails API Key",
+                required=True,
+                sensitive=True,
+            ),
+            ToolParameter(
+                name="record_type",
+                type=ParamType.STRING,
+                description="记录类型",
+                required=False,
+                default="a",
+                choices=["a", "aaaa", "mx", "ns", "txt"],
+            ),
         ],
         timeout=30.0,
     )
@@ -386,18 +463,22 @@ class HistoricalDNSTool(BaseTool):
                 data = resp.json()
                 records = []
                 for record in data.get("records", []):
-                    records.append({
-                        "first_seen": record.get("first_seen"),
-                        "last_seen": record.get("last_seen"),
-                        "values": record.get("values", []),
-                    })
+                    records.append(
+                        {
+                            "first_seen": record.get("first_seen"),
+                            "last_seen": record.get("last_seen"),
+                            "values": record.get("values", []),
+                        }
+                    )
 
-                return ToolResult.ok(data={
-                    "domain": domain,
-                    "record_type": record_type,
-                    "records": records,
-                    "total": len(records),
-                })
+                return ToolResult.ok(
+                    data={
+                        "domain": domain,
+                        "record_type": record_type,
+                        "records": records,
+                        "total": len(records),
+                    }
+                )
 
         except httpx.TimeoutException:
             return ToolResult.fail(error="请求超时")

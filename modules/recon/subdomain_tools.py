@@ -43,7 +43,7 @@ class SubfinderTool(BaseTool):
         cmd.extend(["-timeout", str(timeout_val)])
 
         try:
-            logger.info("执行Subfinder: %s", ' '.join(cmd))
+            logger.info("执行Subfinder: %s", " ".join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             subdomains = []
@@ -105,7 +105,7 @@ class AmassEnumTool(BaseTool):
                 cmd.append("-passive")
             cmd.extend(["-timeout", str(timeout_min)])
 
-            logger.info("执行Amass: %s", ' '.join(cmd))
+            logger.info("执行Amass: %s", " ".join(cmd))
             subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             subdomains = []
@@ -157,7 +157,7 @@ class AssetfinderTool(BaseTool):
         cmd.append(domain)
 
         try:
-            logger.info("执行Assetfinder: %s", ' '.join(cmd))
+            logger.info("执行Assetfinder: %s", " ".join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             subdomains = list(

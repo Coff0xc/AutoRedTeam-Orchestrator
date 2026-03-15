@@ -551,7 +551,7 @@ if __name__ == "__main__":
     )
 
     logger.info("Mutated Request:")
-    logger.info("  URL: %s", result['url'])
-    logger.info("  Headers: %s", list(result['headers'].keys()))
-    logger.info("  Params: %s", result['params'])
-    logger.info("  Delay: %.2fs", result['delay'])
+    logger.info("  URL: %s", result["url"])
+    logger.info("  Headers: %s", list(result["headers"].keys()))
+    logger.info("  Params: %s", result["params"])
+    logger.info("  Delay: %.2fs", result["delay"])
