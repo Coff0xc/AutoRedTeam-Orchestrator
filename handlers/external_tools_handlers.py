@@ -21,7 +21,6 @@ from typing import Any, Dict, List, Optional
 from core.security import require_dangerous_auth
 
 from .error_handling import (
-    ErrorCategory,
     extract_target,
     extract_url,
     handle_external_tool_errors,

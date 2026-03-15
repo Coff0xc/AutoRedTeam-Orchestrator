@@ -7,7 +7,7 @@ phases/poc_exec.py - PoC验证阶段执行器
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import Any, Dict, List
 
 from .base import CVE_ID_PATTERN, BasePhaseExecutor, PhaseResult
 

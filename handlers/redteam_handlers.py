@@ -11,28 +11,6 @@
 
 from typing import Any, Dict, List
 
-from core.exceptions import (  # 横向移动错误; C2错误; 检测器/Payload错误; 认证错误; 权限提升错误; 数据外泄错误; 通用错误
-    AuthError,
-    AutoRedTeamError,
-    BeaconError,
-    C2Error,
-    ChannelBlocked,
-    ChannelConnectionError,
-    ConfigError,
-    EscalationVectorNotFound,
-    ExfiltrationError,
-    InsufficientPrivilege,
-    InvalidCredentials,
-    LateralError,
-    PayloadError,
-    PrivilegeEscalationError,
-    SMBError,
-    SSHError,
-    TunnelError,
-    ValidationError,
-    WMIError,
-)
-
 # 授权中间件
 from core.security import (
     require_critical_auth,

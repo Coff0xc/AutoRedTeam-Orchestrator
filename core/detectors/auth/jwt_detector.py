@@ -14,9 +14,7 @@ import hashlib
 import hmac
 import json
 import logging
-import re
 from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse
 
 from ..base import BaseDetector
 from ..factory import register_detector

@@ -2,8 +2,6 @@
 AI Red Team MCP - Modules
 """
 
-from typing import TYPE_CHECKING
-
 # TYPE_CHECKING imports removed (legacy)
 
 

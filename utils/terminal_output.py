@@ -279,7 +279,7 @@ def run_with_realtime_output(
                             state["output_count"] += 1
             except ValueError:
                 pass  # 文件已关闭
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         stdout_thread = threading.Thread(

@@ -41,7 +41,6 @@ from typing import (
     Any,
     Callable,
     Dict,
-    Generic,
     Optional,
     Type,
     TypeVar,

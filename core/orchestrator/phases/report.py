@@ -6,7 +6,7 @@ phases/report.py - 报告生成阶段执行器
 """
 
 import logging
-from typing import TYPE_CHECKING, Dict, List
+from typing import Dict, List
 
 from .base import BasePhaseExecutor, PhaseResult
 

@@ -310,7 +310,7 @@ class UACBypass:
                     capture_output=True,
                     timeout=10,
                 )
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             return EscalationResult(
@@ -375,7 +375,7 @@ class UACBypass:
                     capture_output=True,
                     timeout=10,
                 )
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             return EscalationResult(

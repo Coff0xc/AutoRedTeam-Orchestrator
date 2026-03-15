@@ -4,17 +4,14 @@
 """
 
 # 导入性能优化组件
-from core.performance import (  # 管理器; 配置; 内存优化; 并发控制; 可靠性; 监控
+from core.performance import (  # 管理器; 内存优化; 并发控制; 可靠性; 监控
     CircuitBreaker,
     ObjectPool,
-    PerformanceConfig,
     PerformanceManager,
     PerformanceMetrics,
     RateLimiter,
     ResultPaginator,
-    RetryPolicy,
     StreamingResultProcessor,
-    init_performance,
     memory_efficient,
     retry_with_policy,
 )
