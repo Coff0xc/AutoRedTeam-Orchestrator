@@ -28,23 +28,10 @@ logger = logging.getLogger(__name__)
 # impacket imports
 try:
     from impacket.krb5 import constants
-    from impacket.krb5.asn1 import (
-        AP_REQ,
-        AS_REP,
-        TGS_REP,
-        EncASRepPart,
-        EncTicketPart,
-        Ticket,
-    )
+    from impacket.krb5.asn1 import TGS_REP
     from impacket.krb5.ccache import CCache
-    from impacket.krb5.kerberosv5 import getKerberosTGT, getKerberosTGS, sendReceive
-    from impacket.krb5.types import KerberosTime, Principal, Ticket as KrbTicket
-    from impacket.krb5.crypto import Key, _enctype_table
-    from impacket.krb5.pac import PACTYPE, PAC_INFO_BUFFER, PAC_LOGON_INFO
-    from impacket.dcerpc.v5.samr import (
-        USER_NORMAL_ACCOUNT,
-        USER_DONT_EXPIRE_PASSWORD,
-    )
+    from impacket.krb5.kerberosv5 import getKerberosTGT, getKerberosTGS
+    from impacket.krb5.types import KerberosTime, Principal
     IMPACKET_AVAILABLE = True
 except ImportError:
     IMPACKET_AVAILABLE = False

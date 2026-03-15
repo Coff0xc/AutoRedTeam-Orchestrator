@@ -7,7 +7,6 @@ CDN识别与真实IP发现工具集
 - 真实IP发现: 历史DNS、SSL证书反查、邮件头分析、子域名IP收集、favicon hash搜索
 """
 
-import hashlib
 import logging
 import socket
 from dataclasses import dataclass, field

@@ -4,7 +4,6 @@ Windows 权限提升模块
 """
 
 import logging
-import platform
 from typing import Any, Dict, List, Optional
 
 from ..base import (

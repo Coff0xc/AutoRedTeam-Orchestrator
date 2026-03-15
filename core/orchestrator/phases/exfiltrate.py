@@ -10,7 +10,7 @@ phases/exfiltrate.py - 数据外泄阶段执行器
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import Any, Dict, List
 
 from .base import BasePhaseExecutor, PhaseResult
 

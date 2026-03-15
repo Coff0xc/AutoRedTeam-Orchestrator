@@ -12,9 +12,9 @@ C2 隧道模块 - C2 Tunnels Module
 """
 
 import logging
-from typing import Optional, Type, Union
+from typing import Optional, Type
 
-from ..base import BaseTunnel, C2Config, TunnelType
+from ..base import BaseTunnel, C2Config
 from .dns import DNSTunnel
 from .http import HTTPTunnel
 from .websocket import WebSocketTunnel

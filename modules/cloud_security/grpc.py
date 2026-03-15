@@ -16,7 +16,6 @@ gRPC安全测试模块
 import logging
 import socket
 import ssl
-import struct
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 

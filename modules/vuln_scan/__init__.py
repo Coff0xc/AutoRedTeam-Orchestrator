@@ -2,8 +2,6 @@
 漏洞扫描模块 - Vulnerability Scanning Tools
 """
 
-from typing import TYPE_CHECKING
-
 from modules.vuln_scan.nikto_tools import NiktoScanTool
 from modules.vuln_scan.nuclei_tools import NucleiScanTool, NucleiTemplateScanTool
 from modules.vuln_scan.ssl_tools import SSLScanTool, TestSSLTool

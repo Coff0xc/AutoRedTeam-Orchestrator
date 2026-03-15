@@ -12,8 +12,6 @@ import socket
 import time
 from typing import Any, Dict, List, Optional
 
-import defusedxml.ElementTree as ElementTree  # 防止 XXE 攻击
-
 from .base import (
     AuthMethod,
     BaseLateralModule,

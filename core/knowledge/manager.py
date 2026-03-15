@@ -8,21 +8,19 @@
 - Neo4j 存储（可选，需安装 neo4j 驱动）
 """
 
-import json
 import threading
 import logging
 import time
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .models import (
     AttackPath,
     EntityType,
     KnowledgeEntity,
     KnowledgeRelation,
-    QueryResult,
     RelationType,
     SimilarityMatch,
 )

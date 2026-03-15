@@ -146,7 +146,7 @@ class ScanMonitor:
             except Exception:
                 try:
                     os.kill(task.process.pid, signal.SIGKILL)
-                except Exception as exc:
+                except Exception:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         task.status = ScanStatus.TIMEOUT
@@ -227,7 +227,7 @@ class ScanMonitor:
                         elif output_count[0] == 1000:
                             terminal.warning("... 输出过多，后续隐藏")
                             output_count[0] += 1
-                except Exception as exc:
+                except Exception:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             stdout_thread = threading.Thread(
@@ -304,7 +304,7 @@ class ScanMonitor:
             if task.process:
                 try:
                     task.process.kill()
-                except Exception as exc:
+                except Exception:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             task.status = ScanStatus.CANCELLED
