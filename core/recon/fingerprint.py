@@ -797,8 +797,6 @@ class FingerprintEngine:
         Returns:
             Favicon的MMH3哈希值
         """
-        import base64
-
         favicon_url = url.rstrip("/") + "/favicon.ico"
 
         try:
@@ -819,7 +817,6 @@ class FingerprintEngine:
                     # 计算MD5哈希
                     md5_hash = hashlib.md5(content).hexdigest()
                     # 计算Base64编码后的哈希（类似Shodan）
-                    b64 = base64.b64encode(content).decode("utf-8")
                     return md5_hash
 
         except Exception as e:

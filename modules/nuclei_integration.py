@@ -535,6 +535,7 @@ class NucleiScanner:
         """获取漏洞修复建议"""
         severity = vuln.get("severity", "").lower()
         vuln_type = vuln.get("type", "")
+        _ = vuln_type
         tags = vuln.get("tags", [])
         template_id = vuln.get("template_id", "")
 

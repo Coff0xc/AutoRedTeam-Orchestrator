@@ -592,7 +592,6 @@ def rate_limit(rate: float = 10.0, name: Optional[str] = None):
     Returns:
         装饰器函数
     """
-    limiter_name = name if name else f"decorator_{id(rate)}"
     bucket = TokenBucket(rate=rate)
 
     def decorator(fn):

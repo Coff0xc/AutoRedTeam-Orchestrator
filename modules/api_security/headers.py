@@ -794,7 +794,7 @@ def quick_headers_test(target: str) -> Dict[str, Any]:
         测试结果和评分
     """
     tester = SecurityHeadersTester(target)
-    results = tester.test()
+    tester.test()
     score = tester.get_security_score()
 
     return {

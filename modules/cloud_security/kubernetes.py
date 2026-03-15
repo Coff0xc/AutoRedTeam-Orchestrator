@@ -707,7 +707,7 @@ def scan_k8s_namespace(namespace: str = "default", kubeconfig: str = None) -> Di
         扫描结果摘要
     """
     tester = KubernetesTester(config={"namespace": namespace, "kubeconfig": kubeconfig})
-    findings = tester.scan()
+    tester.scan()
     return tester.get_summary().to_dict()
 
 
@@ -722,7 +722,7 @@ def scan_k8s_manifest(manifest_path: str) -> Dict[str, Any]:
         扫描结果摘要
     """
     tester = KubernetesTester()
-    findings = tester.scan_manifest(manifest_path)
+    tester.scan_manifest(manifest_path)
     return tester.get_summary().to_dict()
 
 

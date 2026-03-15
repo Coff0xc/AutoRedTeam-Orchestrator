@@ -132,7 +132,6 @@ class IDORDetector(BaseDetector):
         results: List[DetectionResult] = []
 
         params = kwargs.get("params", {})
-        data = kwargs.get("data", {})
         method = kwargs.get("method", "GET").upper()
         headers = kwargs.get("headers", {})
 

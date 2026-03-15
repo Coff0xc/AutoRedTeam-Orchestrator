@@ -609,7 +609,7 @@ def quick_cors_test(target: str) -> Dict[str, Any]:
         测试结果摘要
     """
     tester = CORSTester(target)
-    results = tester.test()
+    tester.test()
     return tester.get_summary().to_dict()
 
 

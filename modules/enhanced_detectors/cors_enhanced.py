@@ -470,6 +470,7 @@ class CORSEnhancedTester:
     def _generate_poc(self, url: str, vuln: Dict) -> str:
         """生成漏洞利用PoC"""
         origin = vuln.get("origin_payload", "https://evil.com")
+        _ = origin
 
         poc = f"""
 <!-- CORS漏洞PoC -->

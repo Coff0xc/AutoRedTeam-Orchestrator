@@ -174,7 +174,6 @@ class AuthBypassDetector(BaseDetector):
         results: List[DetectionResult] = []
 
         headers = kwargs.get("headers", {})
-        expected_status = kwargs.get("expected_status", [401, 403])
 
         # 获取基线响应（未认证）
         baseline = self._get_baseline(url, headers)

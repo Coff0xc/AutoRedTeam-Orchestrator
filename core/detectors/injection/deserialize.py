@@ -299,7 +299,6 @@ tR."""
         results: List[DetectionResult] = []
 
         context = kwargs.get("context", {})
-        tech_stack = context.get("tech_stack", {})
 
         # 确定要测试的反序列化类型
         types_to_test = self._identify_deserialize_types(url, context)

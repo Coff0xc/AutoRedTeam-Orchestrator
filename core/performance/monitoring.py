@@ -128,7 +128,6 @@ class MetricsCollector:
 
     def get_timer_stats(self, name: str, labels: Optional[Dict] = None) -> Dict[str, float]:
         """获取计时器统计"""
-        key = self._make_key(name, labels)
         return self.get_histogram_stats(name, labels)
 
     def _percentile(self, sorted_values: List[float], percentile: float) -> float:

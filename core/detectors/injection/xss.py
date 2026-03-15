@@ -473,7 +473,6 @@ class XSSDetector(BaseDetector):
 
         idx = response_text.find(payload)
         before = response_text[max(0, idx - 50) : idx]
-        after = response_text[idx + len(payload) : idx + len(payload) + 50]
 
         # 检测上下文
         if re.search(r"<script[^>]*>$", before, re.IGNORECASE):

@@ -758,7 +758,6 @@ class FalsePositiveFilter:
 
         # 检查延迟是否与预期匹配
         delayed_count = sum(1 for t in response_times if t >= expected_delay * (1 - tolerance))
-        non_delayed_count = len(response_times) - delayed_count
 
         # 如果延迟和非延迟响应数量相近，可能是随机波动
         if 0.3 <= delayed_count / len(response_times) <= 0.7:

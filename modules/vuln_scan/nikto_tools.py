@@ -217,7 +217,7 @@ class ZAPScanTool(BaseTool):
 
         try:
             logger.info("执行ZAP: %s", ' '.join(cmd))
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
+            subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             alerts = []
             if os.path.exists(report_file):

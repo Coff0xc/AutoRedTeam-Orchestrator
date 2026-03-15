@@ -527,7 +527,7 @@ def scan_aws(region: str = "us-east-1", profile: str = None) -> Dict[str, Any]:
         扫描结果摘要
     """
     tester = AWSTester(config={"region": region, "profile": profile})
-    findings = tester.scan()
+    tester.scan()
     return tester.get_summary().to_dict()
 
 

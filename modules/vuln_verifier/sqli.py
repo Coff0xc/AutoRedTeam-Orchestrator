@@ -257,6 +257,7 @@ class SQLiVerifierMixin:
                     continue
 
                 len_diff = abs(true_len - false_len)
+                _ = len_diff
                 code_diff = true_code != false_code
                 true_vs_original = abs(true_len - original_len)
 

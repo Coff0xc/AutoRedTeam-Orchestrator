@@ -120,7 +120,7 @@ class InteractshClient:
                             identifier=item.get("unique-id", ""),
                         )
                     )
-        except Exception as exc:
+        except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return interactions
@@ -163,7 +163,7 @@ class DNSLogClient:
                 resp = self.session.get(self.PLATFORMS["dnslog"]["domain_api"], timeout=5)
                 if resp.status_code == 200:
                     self.domain = resp.text.strip()
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         elif self.platform == "ceye" and self.token:
@@ -193,7 +193,7 @@ class DNSLogClient:
                                 identifier=record.get("subdomain", ""),
                             )
                         )
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return interactions

@@ -337,7 +337,7 @@ class BlindVulnScanner:
                         url, params={"xml": payload}, headers=headers, timeout=10, verify=False
                     )
                 results["payloads_sent"] += 1
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 等待回调
@@ -372,7 +372,7 @@ class BlindVulnScanner:
                 else:
                     requests.get(url, params={param: payload}, timeout=10, verify=False)
                 results["payloads_sent"] += 1
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         time.sleep(5)
@@ -406,7 +406,7 @@ class BlindVulnScanner:
                 else:
                     requests.get(url, params={param: payload}, timeout=10, verify=False)
                 results["payloads_sent"] += 1
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         time.sleep(5)

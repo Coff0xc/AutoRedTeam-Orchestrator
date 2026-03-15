@@ -166,7 +166,6 @@ class JWTTester(BaseAPITester):
             return None
 
         # 构造none算法的token
-        header = {"alg": "none", "typ": "JWT"}
         payload = self._decoded.get("payload", {})
 
         # 测试多种none变体
@@ -403,7 +402,6 @@ class JWTTester(BaseAPITester):
             return None
 
         # 测试是否接受外部jku
-        payload = self._decoded.get("payload", {})
 
         # 常见的jku绕过测试
         test_jkus = [
@@ -735,7 +733,7 @@ def quick_jwt_test(target: str, token: str) -> Dict[str, Any]:
         测试结果摘要
     """
     tester = JWTTester(target, token)
-    results = tester.test()
+    tester.test()
     return tester.get_summary().to_dict()
 
 

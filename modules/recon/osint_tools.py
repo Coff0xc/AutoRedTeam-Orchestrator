@@ -71,7 +71,7 @@ class WhoisLookupTool(BaseTool):
                         "country": w.country,
                     },
                 }
-            except Exception as e:
+            except Exception:
                 pass  # 回退到命令行
 
         # 使用命令行whois

@@ -171,7 +171,7 @@ async def browser_fingerprint(browser: str = "random") -> Dict[str, Any]:
     )
 
     if browser == "random":
-        profile = BrowserProfileFactory.create_random_profile()
+        BrowserProfileFactory.create_random_profile()
         spoofer = FingerprintSpoofer()
     else:
         browser_map = {

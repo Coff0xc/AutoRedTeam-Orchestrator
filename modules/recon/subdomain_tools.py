@@ -106,7 +106,7 @@ class AmassEnumTool(BaseTool):
             cmd.extend(["-timeout", str(timeout_min)])
 
             logger.info("执行Amass: %s", ' '.join(cmd))
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
+            subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             subdomains = []
             if os.path.exists(output_file):

@@ -709,7 +709,7 @@ class AIDecisionEngine:
         """根据上下文推荐工具"""
         phase = context.get("phase", "recon")
         target_type = context.get("target_type", "unknown")
-        previous_results = context.get("previous_results", [])
+        context.get("previous_results", [])
 
         tool_matrix = {
             ("recon", "ip"): "nmap_scan",

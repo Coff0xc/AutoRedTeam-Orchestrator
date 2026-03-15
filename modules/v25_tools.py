@@ -60,7 +60,7 @@ def register_v25_tools(mcp):
             try:
                 # 在Windows上需要特殊处理事件循环
                 try:
-                    loop = asyncio.get_running_loop()
+                    asyncio.get_running_loop()
                     # 如果有运行中的循环，使用线程池
                     import concurrent.futures
 
@@ -351,12 +351,13 @@ def register_v25_tools(mcp):
                 server = parsed.hostname or "localhost"
                 port = parsed.port or (443 if protocol == "wss" else 80)
 
-                config = C2Config(
+                _config = C2Config(
                     server=server,
                     port=port,
                     protocol=protocol,
                     encryption=enc_algo,
                 )
+                del _config
 
                 return {
                     "success": True,
@@ -401,7 +402,7 @@ def register_v25_tools(mcp):
 
                 # 使用编码器的压缩功能
                 result = encoder.encode(data_bytes, encoding="base64", compress=compress)
-                encoded_data = result.data if isinstance(result.data, str) else result.data.decode()
+                del result
 
                 # 分块
                 chunk_encoder = ChunkEncoder(chunk_size=chunk_size)

@@ -501,7 +501,6 @@ class KerberosAttacker:
             AttackResult包含可破解的hash
         """
         hashes = []
-        tickets = []
 
         for username in usernames:
             self._log(f"Testing {username} for AS-REP roasting...")
@@ -538,8 +537,6 @@ class KerberosAttacker:
         Returns:
             AttackResult包含可破解的hash
         """
-        hashes = []
-
         if not spns:
             self._log("No SPNs provided. Use ad_enum to discover SPNs first.")
             return AttackResult(

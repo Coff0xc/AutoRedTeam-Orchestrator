@@ -593,7 +593,6 @@ class CodeTransformer:
         string_pattern = r'(["\'])(.+?)\1'
 
         def replace_string(match):
-            quote = match.group(1)
             content = match.group(2)
 
             # 短字符串用 chr() 拼接

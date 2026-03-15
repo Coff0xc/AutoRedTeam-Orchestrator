@@ -198,7 +198,6 @@ class SSRFDetector(BaseDetector):
         results: List[DetectionResult] = []
 
         params = kwargs.get("params", {})
-        data = kwargs.get("data", {})
         method = kwargs.get("method", "GET").upper()
         headers = kwargs.get("headers", {})
 
@@ -390,14 +389,10 @@ class SSRFDetector(BaseDetector):
             test_params[param_name] = payload
 
             try:
-                start = time.time()
-
                 if method == "GET":
                     response = self.http_client.get(url, params=test_params, headers=headers)
                 else:
                     response = self.http_client.post(url, data=test_params, headers=headers)
-
-                elapsed = time.time() - start
 
                 # 检查是否有内网服务响应
                 for pattern in self._internal_patterns:

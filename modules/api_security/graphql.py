@@ -606,7 +606,6 @@ class GraphQLTester(BaseAPITester):
                 if not response.get("success"):
                     continue
 
-                data = response.get("data", {})
                 text = response.get("text", "").lower()
 
                 # 检查SQL错误特征
@@ -770,7 +769,7 @@ def quick_graphql_test(target: str) -> Dict[str, Any]:
         测试结果摘要
     """
     tester = GraphQLTester(target)
-    results = tester.test()
+    tester.test()
     return tester.get_summary().to_dict()
 
 

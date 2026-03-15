@@ -126,12 +126,10 @@ class CORSDetector(BaseDetector):
             acac = response.headers.get("Access-Control-Allow-Credentials", "")
 
             if acao == "*":
-                severity = Severity.MEDIUM
                 evidence = "CORS 配置允许任意 Origin (*)"
 
                 # 如果同时允许凭证，严重程度提升
                 if acac.lower() == "true":
-                    severity = Severity.HIGH
                     evidence += "，且允许发送凭证"
 
                 return self._create_result(

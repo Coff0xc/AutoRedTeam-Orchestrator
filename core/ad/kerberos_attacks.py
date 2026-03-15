@@ -314,7 +314,7 @@ class KerberosAttacks:
 
                 pac_request = constants.PA_PAC_REQUEST()
                 pac_request['include-pac'] = True
-                encoded_pac = encoder.encode(pac_request)
+                encoder.encode(pac_request)
 
                 as_req['pvno'] = 5
                 as_req['msg-type'] = int(constants.ApplicationTagNumbers.AS_REQ.value)

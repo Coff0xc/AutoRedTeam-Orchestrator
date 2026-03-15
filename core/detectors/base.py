@@ -182,7 +182,6 @@ class BaseDetector(ABC):
             return payloads
 
         waf_type = self.config.get("waf_type")
-        source = str(self.config.get("smart_payload_source", "adaptive")).lower()
         max_variants = self.config.get("max_payload_variants")
         try:
             max_total = (

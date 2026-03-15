@@ -79,6 +79,7 @@ class SSLScanTool(BaseTool):
 
         lines = output.split("\n")
         section = None
+        _ = section
 
         for line in lines:
             line = line.strip()

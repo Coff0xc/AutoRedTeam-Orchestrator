@@ -216,7 +216,6 @@ class SimpleLDAPClient:
                         # 找到resultCode (应该是第一个INTEGER)
                         for j in range(i, min(i + 20, len(response) - 2)):
                             if response[j] == 0x0A:  # ENUMERATED (resultCode)
-                                length = response[j + 1]
                                 result_code = response[j + 2]
                                 if result_code == 0:
                                     self.bound = True

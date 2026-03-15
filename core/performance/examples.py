@@ -78,7 +78,7 @@ def example_object_pool():
     )
 
     # 使用对象池
-    with session_pool.get() as session:
+    with session_pool.get():
         # response = session.get("https://example.com")
         pass
 

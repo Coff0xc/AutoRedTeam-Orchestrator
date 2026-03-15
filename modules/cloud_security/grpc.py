@@ -326,6 +326,7 @@ class GRPCTester(BaseCloudTester):
             "x-debug",
             "x-request-id",
         ]
+        _ = sensitive_headers  # defined for reference, used conditionally below
 
         # 如果有channel，尝试获取元数据
         if self._channel:
@@ -375,7 +376,6 @@ class GRPCTester(BaseCloudTester):
         for key, payload in injection_payloads:
             try:
                 # 通过metadata附加注入payload进行调用测试
-                metadata = [(key, payload)]
                 # 实际测试需要已知的服务方法
                 # 此处记录可测试的注入点
                 accepted_injections.append({"header": key, "payload": payload})
@@ -518,7 +518,7 @@ def scan_grpc(target: str, use_tls: bool = False) -> Dict[str, Any]:
         扫描结果摘要
     """
     tester = GRPCTester(config={"target": target, "use_tls": use_tls})
-    findings = tester.scan()
+    tester.scan()
     return tester.get_summary().to_dict()
 
 

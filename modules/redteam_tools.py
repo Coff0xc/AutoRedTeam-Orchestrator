@@ -566,6 +566,7 @@ def register_redteam_tools(mcp):
             # 人性化请求
             if humanize:
                 mutator = TrafficMutator()
+                _ = mutator
                 # 添加随机延迟
                 import random
                 import time

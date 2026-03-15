@@ -437,7 +437,7 @@ def scan_azure(subscription_id: str) -> Dict[str, Any]:
         扫描结果摘要
     """
     tester = AzureTester(config={"subscription_id": subscription_id})
-    findings = tester.scan()
+    tester.scan()
     return tester.get_summary().to_dict()
 
 

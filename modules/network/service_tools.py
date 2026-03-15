@@ -71,7 +71,7 @@ class FTPCheckTool(BaseTool):
                         files = []
                         ftp.retrlines("LIST", files.append)
                         result["files"] = files[:20]  # 限制数量
-                    except Exception as exc:
+                    except Exception:
                         logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
                     ftp.quit()

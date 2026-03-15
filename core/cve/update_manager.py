@@ -543,7 +543,6 @@ class CVEUpdateManager:
                                 # 获取现有条目
                                 existing = self._get_cve(cve_id)
 
-                                exploit_id = parts[0]
                                 exploit_path = f"exploit-db:exploits/{parts[1]}"
 
                                 if existing:

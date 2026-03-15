@@ -59,15 +59,12 @@ def register_ai_tools(mcp, counter, logger):
 
         # 判断目标类型
         if target.startswith(("http://", "https://")):
-            parsed = urlparse(target)
+            urlparse(target)
             target_type = "url"
-            domain = parsed.netloc
         elif "." in target and not target.replace(".", "").isdigit():
             target_type = "domain"
-            domain = target
         else:
             target_type = "ip"
-            domain = target
 
         # 创建攻击链引擎 (tool_registry 可为 None，引擎会使用内置工具映射)
         engine = AttackChainEngine(tool_registry=None)

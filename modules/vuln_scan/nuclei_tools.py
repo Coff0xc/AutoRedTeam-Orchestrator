@@ -77,7 +77,7 @@ class NucleiScanTool(BaseTool):
             # 如果想要看到扫描进度，可以去掉 -silent，但 Nuclei 的进度条可能会弄乱日志
             # 建议：保持 -silent，Nuclei 只有在发现漏洞时才会有输出，这正是我们想要的
 
-            result = run_with_realtime_output(
+            run_with_realtime_output(
                 cmd, tool_name=self.name, target=target, timeout=self.timeout
             )
 
@@ -104,7 +104,7 @@ class NucleiScanTool(BaseTool):
                                         try:
                                             vuln = json.loads(line)
                                             vulnerabilities.append(self._parse_vuln_item(vuln))
-                                        except json.JSONDecodeError as exc:
+                                        except json.JSONDecodeError:
                                             logging.getLogger(__name__).warning(
                                                 "Suppressed exception", exc_info=True
                                             )

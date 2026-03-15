@@ -392,6 +392,7 @@ def register_supply_chain_tools(mcp):
             try:
                 sbom_gen = SBOMGenerator(project_path)
                 sbom = sbom_gen.generate(SBOMFormat.SIMPLE)
+                _ = sbom
                 sbom_summary = sbom_gen.get_summary()
                 results["sbom"] = {
                     "total": sbom_summary["total_dependencies"],

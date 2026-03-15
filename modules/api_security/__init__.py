@@ -110,7 +110,7 @@ def full_api_scan(target: str, jwt_token: str = None, config: dict = None) -> di
         composite.add_tester(JWTTester(target, jwt_token, config))
 
     # 执行测试
-    results = composite.test()
+    composite.test()
     return composite.get_summary().to_dict()
 
 

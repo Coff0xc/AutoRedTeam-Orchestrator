@@ -357,7 +357,7 @@ class AsyncDirScanner(AsyncScanner):
 
             if status in [200, 301, 302, 403]:
                 return {"path": path, "url": url, "status": status, "length": length}
-        except Exception as exc:
+        except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return None
@@ -603,7 +603,7 @@ def run_async(coro):
     """运行异步协程 (Python 3.10+ 兼容)"""
     try:
         # 检查是否已有运行中的事件循环
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
         # 有运行中的循环时，使用线程池
         import concurrent.futures
 

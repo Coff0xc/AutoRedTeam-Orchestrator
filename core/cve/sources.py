@@ -662,10 +662,7 @@ class ExploitDBSource(CVESource):
                     continue
 
                 exploit_id = parts[0]
-                file_path = parts[1]
                 description = parts[2].strip('"')
-                date_published = parts[3]
-                author = parts[4]
                 exploit_type = parts[5]
                 platform = parts[6]
                 codes = parts[8] if len(parts) > 8 else ""

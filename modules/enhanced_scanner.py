@@ -110,10 +110,10 @@ class EnhancedScanner:
                             for t in data.get("tech", []):
                                 if t not in assets["technologies"]:
                                     assets["technologies"].append(t)
-                        except Exception as exc:
+                        except Exception:
                             logger.warning("HTTP探测解析异常", exc_info=True)
 
-            except Exception as exc:
+            except Exception:
                 logger.warning("HTTP探测执行异常", exc_info=True)
 
         logger.info("    发现 %d 个活跃URL", len(assets["urls"]))
@@ -233,7 +233,7 @@ class EnhancedScanner:
                                 "verified": True,
                             }
                         )
-                    except Exception as exc:
+                    except Exception:
                         logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         logger.info("    Nuclei发现 %d 个漏洞", len(vulns))

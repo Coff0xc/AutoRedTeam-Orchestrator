@@ -264,10 +264,6 @@ class SudoBypass:
 
         try:
             # 执行利用
-            result = subprocess.run(
-                ["sh", "-c", command], capture_output=True, text=True, timeout=10
-            )
-
             # 验证
             whoami_result = subprocess.run(["whoami"], capture_output=True, text=True, timeout=5)
 

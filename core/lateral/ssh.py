@@ -781,7 +781,7 @@ class SSHLateral(BaseLateralModule):
                 return
 
             nmethods = data[1]
-            methods = client_sock.recv(nmethods)
+            client_sock.recv(nmethods)
 
             # 无认证
             client_sock.send(b"\x05\x00")

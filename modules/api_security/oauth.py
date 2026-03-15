@@ -636,7 +636,7 @@ def quick_oauth_test(target: str, client_id: str, redirect_uri: str) -> Dict[str
         测试结果摘要
     """
     tester = OAuthTester(target, config={"client_id": client_id, "redirect_uri": redirect_uri})
-    results = tester.test()
+    tester.test()
     return tester.get_summary().to_dict()
 
 

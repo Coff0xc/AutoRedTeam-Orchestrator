@@ -344,7 +344,6 @@ class FileUploadDetector(BaseDetector):
                 return results
 
             html = getattr(response, "text", "")
-            html_lower = html.lower()
 
             # 检查 accept 属性是否允许危险类型
             accept_matches = self.ACCEPT_PATTERN.findall(html)
