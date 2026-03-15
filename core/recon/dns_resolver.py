@@ -21,7 +21,7 @@ dns_resolver.py - DNS解析模块
 import asyncio
 import logging
 import socket
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import CancelledError, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
@@ -472,7 +472,7 @@ class DNSResolver:
                     socket.gaierror,
                     socket.timeout,
                     OSError,
-                    concurrent.futures.CancelledError,
+                    CancelledError,
                 ):
                     results[hostname] = []
 

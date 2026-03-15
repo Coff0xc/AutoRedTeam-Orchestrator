@@ -813,14 +813,14 @@ if __name__ == "__main__":
         for p in discover_result.get("injection_points", [])[:10]:
             print(f"  [{p['type']}] {p['method']} {p['param']} @ {p['url'][:50]}...")
 
-        print(f"\n[*] 开始扫描...")
+        print("\n[*] 开始扫描...")
         scan_result = await web_scan(
             target,
             mode="quick",
             injection_points=discover_result.get("injection_points"),
         )
 
-        print(f"\n扫描结果:")
+        print("\n扫描结果:")
         print(f"  - 耗时: {scan_result.get('duration_seconds', 0)}s")
         print(f"  - 发现: {len(scan_result.get('findings', []))} 个漏洞")
 

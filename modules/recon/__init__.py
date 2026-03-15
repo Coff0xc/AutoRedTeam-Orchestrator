@@ -18,7 +18,7 @@ from modules.recon.web_recon_tools import WafDetectTool, WapalyzerTool, WhatWebT
 # TYPE_CHECKING imports removed (legacy)
 
 
-def register_recon_tools(server: "MCPServer"):
+def register_recon_tools(server):
     """注册信息收集工具"""
     tools = [
         # Nmap工具

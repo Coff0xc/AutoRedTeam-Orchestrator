@@ -68,7 +68,7 @@ def is_port_open(host: str, port: int, timeout: float = 3.0, use_udp: bool = Fal
     finally:
         try:
             sock.close()
-        except Exception as exc:
+        except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
 

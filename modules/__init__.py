@@ -5,7 +5,7 @@ AI Red Team MCP - Modules
 # TYPE_CHECKING imports removed (legacy)
 
 
-def register_all_modules(server: "MCPServer"):
+def register_all_modules(server):
     """注册所有模块
 
     注意: 此函数目前未被使用，项目使用 handlers/register_all_handlers 代替。

@@ -693,6 +693,7 @@ def kerberos_attack(
 
 
 if __name__ == "__main__":
+    import json
     import sys
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")

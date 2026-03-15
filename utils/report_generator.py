@@ -281,11 +281,6 @@ class ReportGenerator:
             for f in findings
             if "lfi" in f.get("type", "").lower() or "file" in f.get("type", "").lower()
         ]
-        rce_findings = [
-            f
-            for f in findings
-            if "rce" in f.get("type", "").lower() or "command" in f.get("type", "").lower()
-        ]
         auth_findings = [f for f in findings if "auth" in f.get("type", "").lower()]
 
         # SSRF → 内网探测 → 数据库访问

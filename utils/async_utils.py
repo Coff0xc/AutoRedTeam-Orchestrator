@@ -494,7 +494,7 @@ async def async_first(
                         for t in pending:
                             t.cancel()
                         return result
-                except Exception as exc:
+                except Exception:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             tasks = list(pending)

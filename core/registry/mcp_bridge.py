@@ -17,6 +17,7 @@ from .base import BaseTool, FunctionTool, ToolMetadata, ToolParameter, ToolResul
 from .categories import ToolCategory
 
 if TYPE_CHECKING:
+    from .base import ParamType
     from .registry import ToolRegistry
 
 

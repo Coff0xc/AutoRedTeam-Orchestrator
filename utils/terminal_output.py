@@ -98,14 +98,14 @@ class TerminalLogger:
                 try:
                     self.log_file.write(msg)
                     self.log_file.flush()
-                except Exception as exc:
+                except Exception:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             # 2. 写入标准错误 (MCP兼容方式)
             try:
                 sys.stderr.write(msg)
                 sys.stderr.flush()
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             # 3. 写入真实终端 (如果可用)
@@ -113,7 +113,7 @@ class TerminalLogger:
                 try:
                     self.real_tty.write(msg)
                     self.real_tty.flush()
-                except Exception as exc:
+                except Exception:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     def print(self, msg: str, color: str = None, bold: bool = False):

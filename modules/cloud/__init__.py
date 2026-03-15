@@ -9,7 +9,7 @@ from modules.cloud.k8s_tools import KubeHunterTool
 # TYPE_CHECKING imports removed (legacy)
 
 
-def register_cloud_tools(server: "MCPServer"):
+def register_cloud_tools(server):
     """注册云安全工具"""
     tools = [
         AWSEnumTool(),

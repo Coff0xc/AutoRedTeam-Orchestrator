@@ -10,7 +10,7 @@ from modules.vuln_scan.vuln_search import CVESearchTool, SearchsploitTool
 # TYPE_CHECKING imports removed (legacy)
 
 
-def register_vuln_tools(server: "MCPServer"):
+def register_vuln_tools(server):
     """注册漏洞扫描工具"""
     tools = [
         NucleiScanTool(),

@@ -15,7 +15,7 @@ from modules.network.smb_tools import SMBClientTool, SMBEnumTool
 # TYPE_CHECKING imports removed (legacy)
 
 
-def register_network_tools(server: "MCPServer"):
+def register_network_tools(server):
     """注册网络攻击工具"""
     tools = [
         HydraTool(),

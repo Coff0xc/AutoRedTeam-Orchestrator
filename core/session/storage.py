@@ -10,7 +10,11 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from .context import ScanContext
+    from .result import ScanResult
 
 logger = logging.getLogger(__name__)
 
