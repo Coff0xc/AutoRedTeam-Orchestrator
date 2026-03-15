@@ -514,7 +514,7 @@ class ReportGenerator:
         <h1>🛡️ 安全评估执行摘要</h1>
         <p>评估目标: {{ session_name }} | 报告日期: {{ generated_at[:10] }}</p>
     </div>
-    
+
     <h2>风险概览</h2>
     <div class="risk-meter">
         {% set total = findings_summary.total or 1 %}
@@ -523,7 +523,7 @@ class ReportGenerator:
         <div class="risk-medium" style="width: {{ (findings_summary.medium / total * 100)|int }}%"></div>
         <div class="risk-low" style="width: {{ (findings_summary.low / total * 100)|int }}%"></div>
     </div>
-    
+
     <div class="key-metrics">
         <div class="metric">
             <div class="value" style="color: #d32f2f;">{{ findings_summary.critical }}</div>
@@ -542,7 +542,7 @@ class ReportGenerator:
             <div>测试目标</div>
         </div>
     </div>
-    
+
     {% if attack_chains %}
     <h2>潜在攻击链</h2>
     {% for chain in attack_chains %}
@@ -557,7 +557,7 @@ class ReportGenerator:
     </div>
     {% endfor %}
     {% endif %}
-    
+
     <h2>优先修复建议</h2>
     <ol>
     {% for finding in remediation_priority[:5] %}
@@ -621,16 +621,16 @@ class ReportGenerator:
     <title>渗透测试报告 - {{ session_name }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                background: #0a0a0a; color: #e0e0e0; line-height: 1.6; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 40px; 
+        header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 40px;
                  border-radius: 10px; margin-bottom: 30px; border: 1px solid #333; }
         h1 { color: #00ff88; font-size: 2.5em; margin-bottom: 10px; }
         h2 { color: #00d4ff; margin: 30px 0 15px; padding-bottom: 10px; border-bottom: 2px solid #333; }
         h3 { color: #ff6b6b; margin: 20px 0 10px; }
         .meta { color: #888; font-size: 0.9em; }
-        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
                    gap: 15px; margin: 20px 0; }
         .summary-card { background: #1a1a1a; padding: 20px; border-radius: 8px; text-align: center;
                         border: 1px solid #333; }
@@ -649,7 +649,7 @@ class ReportGenerator:
         .finding.high { border-left-color: #ff6b6b; }
         .finding.medium { border-left-color: #ffa502; }
         .finding.low { border-left-color: #2ed573; }
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.8em; 
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.8em;
                  text-transform: uppercase; font-weight: bold; }
         .badge.critical { background: #ff4757; color: white; }
         .badge.high { background: #ff6b6b; color: white; }
@@ -659,7 +659,7 @@ class ReportGenerator:
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
         th { background: #1a1a1a; color: #00d4ff; }
         code { background: #2a2a2a; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-        footer { text-align: center; padding: 30px; color: #666; margin-top: 40px; 
+        footer { text-align: center; padding: 30px; color: #666; margin-top: 40px;
                  border-top: 1px solid #333; }
     </style>
 </head>
@@ -670,7 +670,7 @@ class ReportGenerator:
             <p class="meta">会话: {{ session_name }} | ID: {{ session_id }}</p>
             <p class="meta">生成时间: {{ generated_at }}</p>
         </header>
-        
+
         <section>
             <h2>📊 发现汇总</h2>
             <div class="summary">
@@ -692,7 +692,7 @@ class ReportGenerator:
                 </div>
             </div>
         </section>
-        
+
         <section>
             <h2>🎯 测试目标</h2>
             <table>
@@ -702,7 +702,7 @@ class ReportGenerator:
                 {% endfor %}
             </table>
         </section>
-        
+
         <section>
             <h2>🔍 安全发现</h2>
             {% for finding in findings %}
@@ -721,7 +721,7 @@ class ReportGenerator:
             </div>
             {% endfor %}
         </section>
-        
+
         <footer>
             <p>AI Red Team MCP - 自动化渗透测试报告</p>
             <p>⚠️ 仅用于授权的安全测试</p>

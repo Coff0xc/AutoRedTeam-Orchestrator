@@ -62,4 +62,3 @@ __all__ = [
     "ProxyType",
     "ProxyAnonymity",
 ]
-
