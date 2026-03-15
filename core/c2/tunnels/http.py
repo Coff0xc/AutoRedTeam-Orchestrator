@@ -262,7 +262,7 @@ class HTTPTunnel(BaseTunnel):
             try:
                 if hasattr(self._client, "close"):
                     self._client.close()
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             self._client = None
@@ -378,7 +378,7 @@ class HTTPTunnel(BaseTunnel):
                 if callable(result):
                     return result()
                 return result
-        except Exception as exc:
+        except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return {}

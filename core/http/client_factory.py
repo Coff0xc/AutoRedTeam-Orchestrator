@@ -191,7 +191,7 @@ class HTTPClientFactory:
             import urllib3
 
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        except Exception as exc:
+        except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     @classmethod

@@ -119,7 +119,7 @@ class TestSQLiDetector:
         # 检测器应该有 payload 列表
         assert hasattr(detector, 'payloads') or hasattr(detector, 'get_payloads')
 
-    @patch('core.detectors.injection.sqli.SQLiDetector._make_request')
+    @patch('core.detectors.injection.sqli.SQLiDetector._safe_request')
     def test_sqli_detect_vulnerable(self, mock_request):
         """测试 SQLi 检测 - 存在漏洞"""
         from core.detectors import SQLiDetector
@@ -251,7 +251,8 @@ class TestPayloadManager:
         """测试获取 payload"""
         from core.detectors import get_payloads
 
-        payloads = get_payloads("sqli")
+        from core.detectors.payloads import PayloadCategory
+        payloads = get_payloads(PayloadCategory.SQLI)
 
         assert isinstance(payloads, list)
         assert len(payloads) > 0
@@ -371,7 +372,7 @@ class TestDetectorType:
         from core.detectors import DetectorType
 
         assert DetectorType.INJECTION is not None
-        assert DetectorType.ACCESS_CONTROL is not None
+        assert DetectorType.ACCESS is not None
 
 
 if __name__ == "__main__":

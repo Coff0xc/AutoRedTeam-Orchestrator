@@ -258,14 +258,14 @@ class OpenRedirectDetector(BaseDetector):
             ]
             for pattern in js_redirect_patterns:
                 if re.search(pattern, response.text, re.IGNORECASE):
-                    return (True, f"检测到 JavaScript 重定向到外部地址")
+                    return (True, "检测到 JavaScript 重定向到外部地址")
 
             # 检查 meta 刷新标签
             meta_pattern = (
                 rf'<meta[^>]+http-equiv=["\']refresh["\'][^>]+url=.*{re.escape(self.test_domain)}'
             )
             if re.search(meta_pattern, response.text, re.IGNORECASE):
-                return (True, f"检测到 meta 刷新重定向到外部地址")
+                return (True, "检测到 meta 刷新重定向到外部地址")
 
         return (False, None)
 

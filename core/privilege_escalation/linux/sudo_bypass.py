@@ -277,7 +277,7 @@ class SudoBypass:
                     method=EscalationMethod.SUDO,
                     from_level=PrivilegeLevel.LOW,
                     to_level=PrivilegeLevel.SYSTEM,
-                    output=f"Sudo exploit successful",
+                    output="Sudo exploit successful",
                     evidence=f"Command: {command}",
                 )
 
@@ -296,7 +296,7 @@ class SudoBypass:
                 method=EscalationMethod.SUDO,
                 from_level=PrivilegeLevel.LOW,
                 to_level=PrivilegeLevel.SYSTEM,
-                output=f"Exploit may have succeeded (interactive shell)",
+                output="Exploit may have succeeded (interactive shell)",
                 evidence=f"Command: {command}",
             )
 

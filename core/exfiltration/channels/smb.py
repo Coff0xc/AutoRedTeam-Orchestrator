@@ -102,7 +102,7 @@ class SMBExfiltration(BaseExfiltration):
         if self._conn:
             try:
                 self._conn.close()
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             self._conn = None
@@ -111,7 +111,7 @@ class SMBExfiltration(BaseExfiltration):
         if self._temp_file:
             try:
                 Path(self._temp_file).unlink(missing_ok=True)
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     def send_chunk(self, data: bytes) -> bool:

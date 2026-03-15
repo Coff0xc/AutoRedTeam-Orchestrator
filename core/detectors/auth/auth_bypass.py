@@ -372,7 +372,7 @@ class AuthBypassDetector(BaseDetector):
                                 url=test_url,
                                 vulnerable=True,
                                 payload=path,
-                                evidence=f"发现可访问的敏感路径",
+                                evidence="发现可访问的敏感路径",
                                 confidence=0.75,
                                 verified=False,
                                 remediation="禁用或保护敏感路径",

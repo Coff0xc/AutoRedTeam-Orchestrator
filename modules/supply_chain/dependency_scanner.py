@@ -5,6 +5,7 @@
 作者: AutoRedTeam
 """
 
+import json
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
@@ -179,7 +180,7 @@ class DependencyScanner:
                 self._cache[cache_key] = vulns
                 return vulns
 
-        except requests.RequestException as e:
+        except (requests.RequestException, json.JSONDecodeError) as e:
             logger.error("OSV查询失败 (%s): %s", package, e)
 
         return []

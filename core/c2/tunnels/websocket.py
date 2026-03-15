@@ -148,7 +148,7 @@ class WebSocketTunnel(BaseTunnel):
         if self._ws:
             try:
                 self._ws.close()
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             self._ws = None
@@ -405,7 +405,7 @@ class ReconnectingWebSocketTunnel(WebSocketTunnel):
                 if time.time() - self._last_heartbeat >= self._heartbeat_interval:
                     self._send_heartbeat()
                     self._last_heartbeat = time.time()
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             time.sleep(1.0)
@@ -415,7 +415,7 @@ class ReconnectingWebSocketTunnel(WebSocketTunnel):
         if self._ws and self._connected:
             try:
                 self._ws.ping()
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
 

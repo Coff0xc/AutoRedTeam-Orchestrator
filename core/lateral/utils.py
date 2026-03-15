@@ -422,7 +422,7 @@ def spray_credentials(
                     result = future.result()
                     if result:
                         success[target] = result
-                except Exception as exc:
+                except Exception:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     else:
@@ -519,7 +519,7 @@ def parse_target_list(targets: Union[str, List[str]]) -> List[str]:
                 if "-" in range_part:
                     start, end = range_part.split("-")
                     return [f"{base}.{i}" for i in range(int(start), int(end) + 1)]
-        except Exception as exc:
+        except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     return [targets]

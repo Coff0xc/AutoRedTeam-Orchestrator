@@ -308,7 +308,7 @@ class CORSDetector(BaseDetector):
                                 url=url,
                                 vulnerable=True,
                                 payload=result.payload,
-                                evidence=f"CORS 配置允许凭证发送到恶意 Origin",
+                                evidence="CORS 配置允许凭证发送到恶意 Origin",
                                 confidence=0.95,
                                 verified=True,
                                 remediation="当允许凭证时，必须严格验证 Origin",

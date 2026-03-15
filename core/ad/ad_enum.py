@@ -170,7 +170,7 @@ class SimpleLDAPClient:
                 self.sock = context.wrap_socket(self.sock, server_hostname=self.host)
 
             return True
-        except Exception as e:
+        except Exception:
             return False
 
     def bind(self, username: str = "", password: str = "") -> bool:
@@ -224,7 +224,7 @@ class SimpleLDAPClient:
                                 break
                         break
             return False
-        except Exception as e:
+        except Exception:
             return False
 
     def search(
@@ -450,7 +450,7 @@ class SimpleLDAPClient:
                 # 发送Unbind
                 message = bytes([0x30, 0x05, 0x02, 0x01, self.message_id, 0x42, 0x00])
                 self.sock.send(message)
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
             finally:

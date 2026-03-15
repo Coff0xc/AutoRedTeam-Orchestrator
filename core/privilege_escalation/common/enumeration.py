@@ -647,7 +647,7 @@ class PrivilegeEnumerator:
                             {
                                 "method": "unquoted_service_path",
                                 "name": "Unquoted Service Path",
-                                "description": f"发现未引用的服务路径",
+                                "description": "发现未引用的服务路径",
                                 "success_probability": 0.6,
                                 "requires_interaction": False,
                                 "detected_info": {

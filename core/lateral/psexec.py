@@ -162,19 +162,19 @@ class PsExecLateral(BaseLateralModule):
         if self._scm_handle and self._dce:
             try:
                 scmr.hRCloseServiceHandle(self._dce, self._scm_handle)
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         if self._dce:
             try:
                 self._dce.disconnect()
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         if self._smb_conn:
             try:
                 self._smb_conn.close()
-            except Exception as exc:
+            except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         self._smb_conn = None
@@ -252,12 +252,12 @@ class PsExecLateral(BaseLateralModule):
             if service_handle:
                 try:
                     scmr.hRDeleteService(self._dce, service_handle)
-                except Exception as exc:
+                except Exception:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
                 try:
                     scmr.hRCloseServiceHandle(self._dce, service_handle)
-                except Exception as exc:
+                except Exception:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
     def execute_with_output(self, command: str, timeout: Optional[float] = None) -> ExecutionResult:

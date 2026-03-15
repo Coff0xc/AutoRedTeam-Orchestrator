@@ -249,7 +249,7 @@ class AttackChainEngine:
                         "url": target if target_type == "url" else f"http://{target}",
                         "wordlist": "common",
                     },
-                    dependencies=[f"node_0"],
+                    dependencies=["node_0"],
                 )
             )
             node_id += 1

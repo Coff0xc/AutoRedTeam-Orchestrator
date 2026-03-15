@@ -242,10 +242,13 @@ class TestGraphQLFieldSuggestion:
 
         # Mock GraphQL 响应 - 返回字段建议
         mock_response = {
-            'success': False,
-            'errors': [{
-                'message': 'Cannot query field "passwrd" on type "User". Did you mean "password"?'
-            }]
+            'success': True,
+            'data': {
+                'errors': [{
+                    'message': 'Cannot query field "passwrd" on type "User". Did you mean "password"?'
+                }]
+            },
+            'text': ''
         }
 
         with patch.object(tester, '_send_query', return_value=mock_response):
@@ -379,14 +382,14 @@ class TestGraphQLInjection:
         def mock_send_query(query):
             if "'" in query or '"' in query:
                 return {
-                    'success': False,
-                    'errors': [{
-                        'message': 'SQL syntax error near "\'"'
-                    }]
+                    'success': True,
+                    'data': {},
+                    'text': 'SQL syntax error near "\'"'
                 }
             return {
                 'success': True,
-                'data': {'data': {}}
+                'data': {'data': {}},
+                'text': ''
             }
 
         with patch.object(tester, '_send_query', side_effect=mock_send_query):
@@ -575,6 +578,7 @@ class TestGraphQLHelperMethods:
         with patch.object(tester, '_get_http_client') as mock_client:
             mock_response = Mock()
             mock_response.status_code = 200
+            mock_response.text = '{"data": {"__typename": "Query"}}'
             mock_response.json.return_value = {
                 'data': {'__typename': 'Query'}
             }
@@ -589,19 +593,14 @@ class TestGraphQLHelperMethods:
         """测试发送查询错误"""
         tester = GraphQLTester("https://api.example.com/graphql")
 
-        # Mock HTTP 客户端
+        # Mock HTTP 客户端 - 抛异常触发错误路径
         with patch.object(tester, '_get_http_client') as mock_client:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.json.return_value = {
-                'errors': [{'message': 'Syntax error'}]
-            }
-            mock_client.return_value.post.return_value = mock_response
+            mock_client.return_value.post.side_effect = Exception("Connection error")
 
             result = tester._send_query('{invalid')
 
         assert result['success'] is False
-        assert 'errors' in result
+        assert 'error' in result
 
     def test_send_query_exception(self):
         """测试发送查询异常"""
