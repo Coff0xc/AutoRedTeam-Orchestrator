@@ -272,7 +272,7 @@ class SecureFileExfiltrator(ABC):
             # 文件系统错误
             logger.error("File operation failed: %s, error: %s", validated_path, e)
             return ExfilResult(success=False, channel=self.channel, error="File operation failed")
-        except Exception as e:
+        except Exception:
             # 未预期的错误
             logger.exception("Unexpected error during file exfiltration: %s", validated_path)
             return ExfilResult(success=False, channel=self.channel, error="Internal error")

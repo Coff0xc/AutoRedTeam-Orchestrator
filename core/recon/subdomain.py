@@ -522,7 +522,7 @@ class SubdomainEnumerator:
             if ips:
                 self._logger.info("Wildcard DNS detected for %s: %s", domain, ips)
                 return set(ips)
-        except Exception as exc:
+        except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return set()

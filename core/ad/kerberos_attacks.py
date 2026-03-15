@@ -292,7 +292,6 @@ class KerberosAttacks:
         from impacket.krb5.asn1 import AS_REQ, AS_REP, seq_set, seq_set_iter
         from impacket.krb5.kerberosv5 import sendReceive
         from pyasn1.codec.der import decoder, encoder
-        from pyasn1.type.univ import noValue
         hashes = []
 
         for username in usernames:
@@ -426,8 +425,6 @@ class KerberosAttacks:
             AttackResult包含生成的票据
         """
         from impacket.krb5.ticket import Ticket as TicketClass
-        from impacket.krb5 import types
-        from pyasn1.codec.der import encoder
 
         if groups is None:
             # 默认高权限组

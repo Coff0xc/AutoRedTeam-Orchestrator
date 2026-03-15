@@ -542,7 +542,7 @@ class VulnerabilityPipeline:
                                         results["weak_credentials"].append(cred)
                                         self.context.weak_credentials.append(cred)
                                         break
-                            except Exception as exc:
+                            except Exception:
                                 logging.getLogger(__name__).warning(
                                     "Suppressed exception", exc_info=True
                                 )
@@ -645,7 +645,7 @@ class VulnerabilityPipeline:
                             results["vulnerabilities"].append(vuln)
                             self.context.vulnerabilities.append(vuln)
 
-                    except Exception as exc:
+                    except Exception:
                         logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         # 结束性能监控

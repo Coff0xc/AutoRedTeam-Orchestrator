@@ -32,7 +32,7 @@ except ImportError:
     HAS_HTTP_CLIENT = False
 
 try:
-    import requests
+    import requests  # noqa: F401
 
     HAS_REQUESTS = True
 except ImportError:

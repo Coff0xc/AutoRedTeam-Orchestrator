@@ -8,8 +8,6 @@ CDN识别与真实IP发现工具集
 """
 
 import logging
-import socket
-from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set
 
 import httpx

@@ -421,7 +421,7 @@ class DNSResolver:
                 return result[0]
             if result[1]:
                 return result[1][0]
-        except Exception as exc:
+        except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
         return None

@@ -191,7 +191,6 @@ class LinuxPrivilegeEscalation(BasePrivilegeEscalation):
 
     def _exploit_cap_setuid(self, binary: str) -> EscalationResult:
         """利用 cap_setuid capability"""
-        import shlex
         import subprocess
 
         # 如果是 Python - 安全方式: 使用参数列表避免 shell=True
