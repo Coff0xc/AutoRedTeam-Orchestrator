@@ -338,7 +338,10 @@ class SSRFProtectionMiddleware(Middleware):
                         addr = ipaddress.ip_address(ip_str)
                         for network in self.BLOCKED_RANGES:
                             if addr in network:
-                                return True, f"Blocked hostname {hostname} resolves to private IP: {ip_str}"
+                                return (
+                                    True,
+                                    f"Blocked hostname {hostname} resolves to private IP: {ip_str}",
+                                )
                     except ValueError:
                         continue
             except socket.gaierror:
@@ -397,7 +400,9 @@ class RateLimitMiddleware(Middleware):
 
             # 令牌桶算法
             elapsed = now - self._last_request[key]
-            self._tokens[key] = min(self.burst, self._tokens[key] + elapsed * self.requests_per_second)
+            self._tokens[key] = min(
+                self.burst, self._tokens[key] + elapsed * self.requests_per_second
+            )
             self._last_request[key] = now
 
             if self._tokens[key] < 1.0:

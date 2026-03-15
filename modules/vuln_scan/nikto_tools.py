@@ -77,7 +77,7 @@ class NiktoScanTool(BaseTool):
             cmd.extend(["-Tuning", tuning])
 
         try:
-            logger.info("执行Nikto: %s", ' '.join(cmd))
+            logger.info("执行Nikto: %s", " ".join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             findings = []
@@ -216,7 +216,7 @@ class ZAPScanTool(BaseTool):
             cmd.append("-j")
 
         try:
-            logger.info("执行ZAP: %s", ' '.join(cmd))
+            logger.info("执行ZAP: %s", " ".join(cmd))
             subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             alerts = []

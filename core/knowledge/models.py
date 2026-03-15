@@ -93,12 +93,16 @@ class KnowledgeEntity:
             type=EntityType(data["type"]),
             name=data["name"],
             properties=data.get("properties", {}),
-            created_at=datetime.fromisoformat(data["created_at"])
-            if "created_at" in data
-            else datetime.now(),
-            updated_at=datetime.fromisoformat(data["updated_at"])
-            if "updated_at" in data
-            else datetime.now(),
+            created_at=(
+                datetime.fromisoformat(data["created_at"])
+                if "created_at" in data
+                else datetime.now()
+            ),
+            updated_at=(
+                datetime.fromisoformat(data["updated_at"])
+                if "updated_at" in data
+                else datetime.now()
+            ),
             metadata=data.get("metadata", {}),
         )
 
@@ -139,9 +143,11 @@ class KnowledgeRelation:
             relation_type=RelationType(data["relation_type"]),
             properties=data.get("properties", {}),
             confidence=data.get("confidence", 1.0),
-            created_at=datetime.fromisoformat(data["created_at"])
-            if "created_at" in data
-            else datetime.now(),
+            created_at=(
+                datetime.fromisoformat(data["created_at"])
+                if "created_at" in data
+                else datetime.now()
+            ),
             metadata=data.get("metadata", {}),
         )
 

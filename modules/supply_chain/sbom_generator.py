@@ -537,4 +537,4 @@ if __name__ == "__main__":
 
     # 生成SBOM
     sbom = generator.generate(SBOMFormat.SIMPLE)
-    logger.info("依赖总数: %s", sbom['total'])
+    logger.info("依赖总数: %s", sbom["total"])

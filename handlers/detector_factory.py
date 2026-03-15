@@ -104,11 +104,15 @@ def _format_findings(results) -> List[Dict[str, Any]]:
         if hasattr(r, "to_dict"):
             findings.append(r.to_dict())
         else:
-            findings.append({
-                "param": getattr(r, "param", None),
-                "payload": getattr(r, "payload", None),
-                "evidence": (r.evidence[:200] if hasattr(r, "evidence") and r.evidence else None),
-            })
+            findings.append(
+                {
+                    "param": getattr(r, "param", None),
+                    "payload": getattr(r, "payload", None),
+                    "evidence": (
+                        r.evidence[:200] if hasattr(r, "evidence") and r.evidence else None
+                    ),
+                }
+            )
     return findings
 
 

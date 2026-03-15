@@ -261,7 +261,7 @@ if __name__ == "__main__":
 
     info = get_module_info()
 
-    logger.info("\n版本: %s", info['version'])
+    logger.info("\n版本: %s", info["version"])
     logger.info("模块状态:")
 
     for module, status in info["modules"].items():
@@ -271,7 +271,7 @@ if __name__ == "__main__":
         )
         logger.info("  %s: %s (%s)", module, available, deps)
 
-    logger.info("\n认证方式: %s", ', '.join(info['auth_methods']))
+    logger.info("\n认证方式: %s", ", ".join(info["auth_methods"]))
 
     logger.info("使用示例:")
     logger.info("  from core.lateral import SMBLateral, Credentials, smb_exec")

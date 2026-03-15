@@ -50,7 +50,7 @@ class SSLScanTool(BaseTool):
         cmd.append(target)
 
         try:
-            logger.info("执行SSLScan: %s", ' '.join(cmd))
+            logger.info("执行SSLScan: %s", " ".join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             # 解析输出
@@ -177,7 +177,7 @@ class TestSSLTool(BaseTool):
         cmd.append(target)
 
         try:
-            logger.info("执行testssl: %s", ' '.join(cmd))
+            logger.info("执行testssl: %s", " ".join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             findings = []

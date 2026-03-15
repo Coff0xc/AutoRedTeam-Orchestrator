@@ -428,13 +428,9 @@ class GRPCTester(BaseCloudTester):
 
             if self.use_tls:
                 creds = grpc.ssl_channel_credentials()
-                channel = grpc.secure_channel(
-                    f"{self.host}:{self.port}", creds, options=options
-                )
+                channel = grpc.secure_channel(f"{self.host}:{self.port}", creds, options=options)
             else:
-                channel = grpc.insecure_channel(
-                    f"{self.host}:{self.port}", options=options
-                )
+                channel = grpc.insecure_channel(f"{self.host}:{self.port}", options=options)
 
             # 实际测试需要已知的服务方法来发送大消息
             # 此处检查channel是否可以使用大消息选项建立

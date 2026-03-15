@@ -51,7 +51,7 @@ class SearchsploitTool(BaseTool):
         cmd.append(query)
 
         try:
-            logger.info("执行Searchsploit: %s", ' '.join(cmd))
+            logger.info("执行Searchsploit: %s", " ".join(cmd))
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
 
             exploits = []

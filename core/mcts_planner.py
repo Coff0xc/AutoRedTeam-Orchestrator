@@ -229,13 +229,13 @@ class MCTSNode:
             return self.total_reward / self.visits
 
         exploitation = self.total_reward / self.visits
-        exploration = exploration_weight * math.sqrt(
-            math.log(self.parent.visits) / self.visits
-        )
+        exploration = exploration_weight * math.sqrt(math.log(self.parent.visits) / self.visits)
 
         return exploitation + exploration
 
-    def best_child(self, exploration_weight: float = DEFAULT_EXPLORATION_WEIGHT) -> Optional["MCTSNode"]:
+    def best_child(
+        self, exploration_weight: float = DEFAULT_EXPLORATION_WEIGHT
+    ) -> Optional["MCTSNode"]:
         """选择最优子节点"""
         if not self.children:
             return None
@@ -256,12 +256,27 @@ class ActionGenerator:
 
     # 端口 -> 服务映射
     PORT_SERVICE_MAP = {
-        21: "ftp", 22: "ssh", 23: "telnet", 25: "smtp",
-        53: "dns", 80: "http", 110: "pop3", 143: "imap",
-        443: "https", 445: "smb", 1433: "mssql", 1521: "oracle",
-        3306: "mysql", 3389: "rdp", 5432: "postgresql",
-        5900: "vnc", 6379: "redis", 8080: "http-alt",
-        8443: "https-alt", 9200: "elasticsearch", 27017: "mongodb",
+        21: "ftp",
+        22: "ssh",
+        23: "telnet",
+        25: "smtp",
+        53: "dns",
+        80: "http",
+        110: "pop3",
+        143: "imap",
+        443: "https",
+        445: "smb",
+        1433: "mssql",
+        1521: "oracle",
+        3306: "mysql",
+        3389: "rdp",
+        5432: "postgresql",
+        5900: "vnc",
+        6379: "redis",
+        8080: "http-alt",
+        8443: "https-alt",
+        9200: "elasticsearch",
+        27017: "mongodb",
     }
 
     # 服务 -> 可用攻击动作
@@ -278,29 +293,49 @@ class ActionGenerator:
             Action(ActionType.VULN_SCAN, "Nuclei扫描", "nuclei"),
         ],
         "ssh": [
-            Action(ActionType.BRUTE_FORCE, "SSH爆破", "hydra", risk_score=0.4, estimated_reward=0.3),
+            Action(
+                ActionType.BRUTE_FORCE, "SSH爆破", "hydra", risk_score=0.4, estimated_reward=0.3
+            ),
         ],
         "ftp": [
-            Action(ActionType.BRUTE_FORCE, "FTP爆破", "hydra", risk_score=0.3, estimated_reward=0.4),
+            Action(
+                ActionType.BRUTE_FORCE, "FTP爆破", "hydra", risk_score=0.3, estimated_reward=0.4
+            ),
             Action(ActionType.VULN_SCAN, "FTP匿名检测", "nmap", estimated_reward=0.5),
         ],
         "smb": [
             Action(ActionType.VULN_SCAN, "SMB漏洞检测", "nmap", estimated_reward=0.6),
             Action(ActionType.BRUTE_FORCE, "SMB爆破", "hydra", risk_score=0.5),
-            Action(ActionType.EXPLOIT, "EternalBlue利用", "msf", risk_score=0.7, estimated_reward=0.9),
+            Action(
+                ActionType.EXPLOIT, "EternalBlue利用", "msf", risk_score=0.7, estimated_reward=0.9
+            ),
         ],
         "mysql": [
             Action(ActionType.BRUTE_FORCE, "MySQL爆破", "hydra", risk_score=0.4),
             Action(ActionType.VULN_SCAN, "MySQL漏洞检测", "nmap"),
         ],
         "redis": [
-            Action(ActionType.EXPLOIT, "Redis未授权访问", "redis-cli", risk_score=0.3, estimated_reward=0.8),
+            Action(
+                ActionType.EXPLOIT,
+                "Redis未授权访问",
+                "redis-cli",
+                risk_score=0.3,
+                estimated_reward=0.8,
+            ),
         ],
         "mongodb": [
-            Action(ActionType.EXPLOIT, "MongoDB未授权访问", "mongo", risk_score=0.3, estimated_reward=0.7),
+            Action(
+                ActionType.EXPLOIT,
+                "MongoDB未授权访问",
+                "mongo",
+                risk_score=0.3,
+                estimated_reward=0.7,
+            ),
         ],
         "elasticsearch": [
-            Action(ActionType.EXPLOIT, "ES未授权访问", "curl", risk_score=0.3, estimated_reward=0.7),
+            Action(
+                ActionType.EXPLOIT, "ES未授权访问", "curl", risk_score=0.3, estimated_reward=0.7
+            ),
         ],
         "rdp": [
             Action(ActionType.BRUTE_FORCE, "RDP爆破", "hydra", risk_score=0.5),
@@ -315,15 +350,24 @@ class ActionGenerator:
         # 阶段1：基础侦察
         if "port_scan" not in state.completed_actions:
             actions.append(
-                Action(ActionType.PORT_SCAN, "全端口扫描", "nmap",
-                       params={"target": state.target}, estimated_reward=0.3)
+                Action(
+                    ActionType.PORT_SCAN,
+                    "全端口扫描",
+                    "nmap",
+                    params={"target": state.target},
+                    estimated_reward=0.3,
+                )
             )
 
         if state.open_ports and "service_detect" not in state.completed_actions:
             actions.append(
-                Action(ActionType.SERVICE_DETECT, "服务识别", "nmap",
-                       params={"ports": list(state.open_ports.keys())},
-                       estimated_reward=0.2)
+                Action(
+                    ActionType.SERVICE_DETECT,
+                    "服务识别",
+                    "nmap",
+                    params={"ports": list(state.open_ports.keys())},
+                    estimated_reward=0.2,
+                )
             )
 
         # 阶段2：基于发现的服务生成动作
@@ -368,22 +412,33 @@ class ActionGenerator:
         if state.credentials:
             if "lateral_move" not in state.completed_actions:
                 actions.append(
-                    Action(ActionType.LATERAL_MOVE, "横向移动", "ssh",
-                           risk_score=0.6, estimated_reward=0.7)
+                    Action(
+                        ActionType.LATERAL_MOVE,
+                        "横向移动",
+                        "ssh",
+                        risk_score=0.6,
+                        estimated_reward=0.7,
+                    )
                 )
 
         # 阶段5：有初始访问时的权限提升
         if state.access_level == 1 and "privesc" not in state.completed_actions:
             actions.append(
-                Action(ActionType.PRIVESC, "权限提升", "linpeas",
-                       risk_score=0.5, estimated_reward=0.8)
+                Action(
+                    ActionType.PRIVESC, "权限提升", "linpeas", risk_score=0.5, estimated_reward=0.8
+                )
             )
 
         # 阶段6：高权限数据获取
         if state.access_level >= 1 and "credential_dump" not in state.completed_actions:
             actions.append(
-                Action(ActionType.CREDENTIAL_DUMP, "凭证提取", "mimikatz",
-                       risk_score=0.6, estimated_reward=0.6)
+                Action(
+                    ActionType.CREDENTIAL_DUMP,
+                    "凭证提取",
+                    "mimikatz",
+                    risk_score=0.6,
+                    estimated_reward=0.6,
+                )
             )
 
         return actions
@@ -444,19 +499,23 @@ class AttackSimulator:
 
         elif action.type == ActionType.VULN_SCAN:
             if self._rng.random() < 0.3:
-                state.add_vulnerability({
-                    "name": "Simulated Vuln",
-                    "severity": self._rng.choice(["critical", "high", "medium", "low"]),
-                    "simulated": True,
-                })
+                state.add_vulnerability(
+                    {
+                        "name": "Simulated Vuln",
+                        "severity": self._rng.choice(["critical", "high", "medium", "low"]),
+                        "simulated": True,
+                    }
+                )
 
         elif action.type == ActionType.WEB_SCAN:
             if self._rng.random() < 0.4:
-                state.add_vulnerability({
-                    "name": "Web Vuln",
-                    "severity": self._rng.choice(["high", "medium"]),
-                    "simulated": True,
-                })
+                state.add_vulnerability(
+                    {
+                        "name": "Web Vuln",
+                        "severity": self._rng.choice(["high", "medium"]),
+                        "simulated": True,
+                    }
+                )
 
         elif action.type == ActionType.BRUTE_FORCE:
             if self._rng.random() < 0.3:
@@ -629,9 +688,7 @@ class MCTSPlanner:
             current.total_reward += reward
             current = current.parent
 
-    def _extract_best_path(
-        self, root: MCTSNode
-    ) -> List[Tuple[Action, int, float]]:
+    def _extract_best_path(self, root: MCTSNode) -> List[Tuple[Action, int, float]]:
         """提取最优路径"""
         path = []
         current = root
@@ -641,11 +698,13 @@ class MCTSPlanner:
             if best is None:
                 break
             if best.action:
-                path.append((
-                    best.action,
-                    best.visits,
-                    best.average_reward,
-                ))
+                path.append(
+                    (
+                        best.action,
+                        best.visits,
+                        best.average_reward,
+                    )
+                )
             current = best
 
         return path

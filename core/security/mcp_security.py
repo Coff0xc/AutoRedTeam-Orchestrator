@@ -443,7 +443,7 @@ class InputValidator:
             hostname = parsed.hostname
             if hostname:
                 # 检测非标准 IP 表示（十六进制 0x7f000001、八进制 0177.0.0.1、纯十进制 2130706433）
-                if re.match(r'^(0x[0-9a-fA-F]+|[0-9]+)$', hostname) or re.match(r'^0\d', hostname):
+                if re.match(r"^(0x[0-9a-fA-F]+|[0-9]+)$", hostname) or re.match(r"^0\d", hostname):
                     return ValidationResult(
                         valid=False,
                         errors=["URL 主机使用非标准 IP 表示，已拒绝"],
@@ -561,12 +561,8 @@ class RateLimiter:
         minute_ago = now - 60
         hour_ago = now - 3600
 
-        self._minute_windows[key] = [
-            t for t in self._minute_windows[key] if t > minute_ago
-        ]
-        self._hour_windows[key] = [
-            t for t in self._hour_windows[key] if t > hour_ago
-        ]
+        self._minute_windows[key] = [t for t in self._minute_windows[key] if t > minute_ago]
+        self._hour_windows[key] = [t for t in self._hour_windows[key] if t > hour_ago]
 
     def _evict_stale_keys(self, now: float):
         """清除过期的空键，防止内存无限增长"""
@@ -630,18 +626,15 @@ class OperationAuthorizer:
         "http_probe": RiskLevel.SAFE,
         "tech_detect": RiskLevel.SAFE,
         "subdomain_enum": RiskLevel.LOW,
-
         # 中等风险
         "vuln_scan": RiskLevel.MEDIUM,
         "dir_scan": RiskLevel.MEDIUM,
         "sqli_detect": RiskLevel.MEDIUM,
         "xss_detect": RiskLevel.MEDIUM,
-
         # 高风险
         "exploit": RiskLevel.HIGH,
         "brute_force": RiskLevel.HIGH,
         "poc_execute": RiskLevel.HIGH,
-
         # 危险操作
         "lateral_move": RiskLevel.CRITICAL,
         "credential_dump": RiskLevel.CRITICAL,
@@ -768,6 +761,7 @@ class MCPSecurityMiddleware:
             async def port_scan(target: str):
                 ...
         """
+
         def decorator(func: Callable) -> Callable:
             # 解析函数签名以支持位置参数的 target
             sig = inspect.signature(func)
@@ -810,4 +804,5 @@ class MCPSecurityMiddleware:
                 return await func(*args, **kwargs)
 
             return wrapper
+
         return decorator

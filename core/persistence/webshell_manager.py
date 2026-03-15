@@ -656,4 +656,4 @@ if __name__ == "__main__":
     logger.info("=" * 50)
     logger.info("Available types:")
     for t in list_webshell_types():
-        logger.info("  %s: %s (variants: %s)", t['type'], t['description'], t['variants'])
+        logger.info("  %s: %s (variants: %s)", t["type"], t["description"], t["variants"])

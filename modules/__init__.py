@@ -30,4 +30,4 @@ def register_all_modules(server):
 
     logger = logging.getLogger(__name__)
     stats = server.tool_registry.get_stats()
-    logger.info("已注册 %s 个工具", stats['total_tools'])
+    logger.info("已注册 %s 个工具", stats["total_tools"])

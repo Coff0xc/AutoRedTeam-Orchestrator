@@ -383,7 +383,9 @@ class AdaptiveRateLimiter:
         self._metrics = AdaptiveMetrics()
         self._lock = threading.Lock()
 
-        logger.debug("自适应限流器已初始化: rate=%s, range=[%s, %s]", initial_rate, min_rate, max_rate)
+        logger.debug(
+            "自适应限流器已初始化: rate=%s, range=[%s, %s]", initial_rate, min_rate, max_rate
+        )
 
     def _adjust_rate(self, new_rate: float) -> None:
         """调整速率"""

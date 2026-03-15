@@ -461,9 +461,14 @@ def _validate_target_auto(
 
     # 阻止常见的内部/云元数据主机名
     internal_patterns = [
-        "localhost", "metadata.google", "169.254.169.254",
-        "metadata.aws", "metadata.azure",
-        "internal", ".local", "127.0.0.1",
+        "localhost",
+        "metadata.google",
+        "169.254.169.254",
+        "metadata.aws",
+        "metadata.azure",
+        "internal",
+        ".local",
+        "127.0.0.1",
     ]
     target_lower = target.lower()
     for pattern in internal_patterns:

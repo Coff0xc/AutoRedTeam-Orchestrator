@@ -74,32 +74,81 @@ class JWTTester(BaseAPITester):
     version = "3.0.0"
 
     # 使用共享常量 (向后兼容)
-    WEAK_SECRETS = _WEAK_SECRETS if _HAS_CONSTANTS else [
-        "secret", "password", "123456", "key", "private", "jwt_secret",
-        "api_secret", "token_secret", "auth_secret", "supersecret", "mysecret",
-        "admin", "test", "demo", "changeme", "letmein", "welcome", "passw0rd",
-        "jwt-secret", "jwt_key", "secret_key", "SECRET_KEY", "JWT_SECRET",
-        "API_KEY", "app_secret", "application_secret", "development",
-        "production", "staging", "testing", "dev_secret", "prod_secret",
-        "local_secret", "", " ", "null", "undefined", "none", "nil",
-        "a", "abc", "1234", "abcd1234", "qwerty", "HS256-secret", "hmac-secret",
-        "your-256-bit-secret", "your-secret-key", "my-secret-key", "super-secret-key",
-    ]
+    WEAK_SECRETS = (
+        _WEAK_SECRETS
+        if _HAS_CONSTANTS
+        else [
+            "secret",
+            "password",
+            "123456",
+            "key",
+            "private",
+            "jwt_secret",
+            "api_secret",
+            "token_secret",
+            "auth_secret",
+            "supersecret",
+            "mysecret",
+            "admin",
+            "test",
+            "demo",
+            "changeme",
+            "letmein",
+            "welcome",
+            "passw0rd",
+            "jwt-secret",
+            "jwt_key",
+            "secret_key",
+            "SECRET_KEY",
+            "JWT_SECRET",
+            "API_KEY",
+            "app_secret",
+            "application_secret",
+            "development",
+            "production",
+            "staging",
+            "testing",
+            "dev_secret",
+            "prod_secret",
+            "local_secret",
+            "",
+            " ",
+            "null",
+            "undefined",
+            "none",
+            "nil",
+            "a",
+            "abc",
+            "1234",
+            "abcd1234",
+            "qwerty",
+            "HS256-secret",
+            "hmac-secret",
+            "your-256-bit-secret",
+            "your-secret-key",
+            "my-secret-key",
+            "super-secret-key",
+        ]
+    )
 
     # 使用共享常量 (向后兼容)
-    KID_INJECTION_PAYLOADS = _KID_PAYLOADS if _HAS_CONSTANTS else [
-        ("../../../etc/passwd", "path_traversal"),
-        ("../../../../../../etc/passwd", "deep_path_traversal"),
-        ("../../../../../../dev/null", "dev_null"),
-        ("/dev/null", "absolute_dev_null"),
-        ("' OR '1'='1", "sql_injection"),
-        ("'; DROP TABLE users;--", "sql_injection_drop"),
-        ("1' UNION SELECT 'secret'--", "sql_union"),
-        ("| cat /etc/passwd", "command_injection"),
-        ("; ls -la", "command_injection_semicolon"),
-        ("http://evil.com/jwks.json", "external_url"),
-        ("file:///etc/passwd", "file_protocol"),
-    ]
+    KID_INJECTION_PAYLOADS = (
+        _KID_PAYLOADS
+        if _HAS_CONSTANTS
+        else [
+            ("../../../etc/passwd", "path_traversal"),
+            ("../../../../../../etc/passwd", "deep_path_traversal"),
+            ("../../../../../../dev/null", "dev_null"),
+            ("/dev/null", "absolute_dev_null"),
+            ("' OR '1'='1", "sql_injection"),
+            ("'; DROP TABLE users;--", "sql_injection_drop"),
+            ("1' UNION SELECT 'secret'--", "sql_union"),
+            ("| cat /etc/passwd", "command_injection"),
+            ("; ls -la", "command_injection_semicolon"),
+            ("http://evil.com/jwks.json", "external_url"),
+            ("file:///etc/passwd", "file_protocol"),
+        ]
+    )
 
     def __init__(self, target: str, token: str, config: Optional[Dict[str, Any]] = None):
         """

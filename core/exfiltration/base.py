@@ -565,7 +565,9 @@ class BaseExfiltration(ABC):
 
                             # 双重检查防止恶意文件
                             if total_read > MAX_FILE_SIZE:
-                                self.logger.warning("File size exceeded during read: %s", total_read)
+                                self.logger.warning(
+                                    "File size exceeded during read: %s", total_read
+                                )
                                 return ExfilResult(
                                     success=False, channel=self.channel, error="Access denied"
                                 )

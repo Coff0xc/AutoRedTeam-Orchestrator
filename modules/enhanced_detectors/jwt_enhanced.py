@@ -87,31 +87,80 @@ class JWTSecurityTester:
     """JWT安全测试器"""
 
     # 使用共享常量 (向后兼容)
-    WEAK_SECRETS = _WEAK_SECRETS if _HAS_CONSTANTS else [
-        "secret", "password", "123456", "admin", "key", "jwt", "jwt_secret",
-        "jwt-secret", "secret123", "password123", "changeme", "mysecret",
-        "supersecret", "defaultsecret", "your-256-bit-secret", "your-secret-key",
-        "my-secret-key", "django-insecure-key", "rails_secret", "laravel_secret",
-        "express_secret", "flask_secret", "spring_secret", "1234567890",
-        "0987654321", "qwerty", "letmein", "abc123", "test", "demo",
-        "development", "production", "", " ", "null", "undefined", "none",
-    ]
+    WEAK_SECRETS = (
+        _WEAK_SECRETS
+        if _HAS_CONSTANTS
+        else [
+            "secret",
+            "password",
+            "123456",
+            "admin",
+            "key",
+            "jwt",
+            "jwt_secret",
+            "jwt-secret",
+            "secret123",
+            "password123",
+            "changeme",
+            "mysecret",
+            "supersecret",
+            "defaultsecret",
+            "your-256-bit-secret",
+            "your-secret-key",
+            "my-secret-key",
+            "django-insecure-key",
+            "rails_secret",
+            "laravel_secret",
+            "express_secret",
+            "flask_secret",
+            "spring_secret",
+            "1234567890",
+            "0987654321",
+            "qwerty",
+            "letmein",
+            "abc123",
+            "test",
+            "demo",
+            "development",
+            "production",
+            "",
+            " ",
+            "null",
+            "undefined",
+            "none",
+        ]
+    )
 
-    NONE_ALGORITHM_VARIANTS = _NONE_VARIANTS if _HAS_CONSTANTS else [
-        "none", "None", "NONE", "nOnE", "none ", " none", "none\t", "\tnone",
-    ]
+    NONE_ALGORITHM_VARIANTS = (
+        _NONE_VARIANTS
+        if _HAS_CONSTANTS
+        else [
+            "none",
+            "None",
+            "NONE",
+            "nOnE",
+            "none ",
+            " none",
+            "none\t",
+            "\tnone",
+        ]
+    )
 
-    KID_INJECTION_PAYLOADS = _KID_PAYLOADS if _HAS_CONSTANTS else [
-        ("../../../etc/passwd", "path_traversal"),
-        ("....//....//etc/passwd", "path_traversal_bypass"),
-        ("/dev/null", "null_file"),
-        ("' OR '1'='1", "sqli"),
-        ("1' AND '1'='1", "sqli"),
-        ("' UNION SELECT 'secret' --", "sqli_union"),
-        ("; cat /etc/passwd", "command_injection"),
-        ("| id", "command_injection"),
-        ("$(id)", "command_substitution"),
-    ]
+    KID_INJECTION_PAYLOADS = (
+        _KID_PAYLOADS
+        if _HAS_CONSTANTS
+        else [
+            ("../../../etc/passwd", "path_traversal"),
+            ("....//....//etc/passwd", "path_traversal_bypass"),
+            ("/dev/null", "null_file"),
+            ("' OR '1'='1", "sqli"),
+            ("1' AND '1'='1", "sqli"),
+            ("' UNION SELECT 'secret' --", "sqli_union"),
+            ("; cat /etc/passwd", "command_injection"),
+            ("| id", "command_injection"),
+            ("$(id)", "command_substitution"),
+        ]
+    )
 
     def __init__(self, timeout: float = 10.0, proxy: Optional[str] = None):
         """
@@ -691,6 +740,6 @@ if __name__ == "__main__":
     # 测试弱密钥
     weak_result = tester.test_weak_secrets(test_token)
     # 弱密钥脱敏：只显示前4位
-    _secret = weak_result.get('found_secret', 'None')
-    _masked = _secret[:4] + "***" if _secret and _secret != 'None' else 'None'
+    _secret = weak_result.get("found_secret", "None")
+    _masked = _secret[:4] + "***" if _secret and _secret != "None" else "None"
     logger.info("Weak secret found: %s", _masked)

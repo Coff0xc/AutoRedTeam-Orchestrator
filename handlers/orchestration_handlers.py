@@ -26,7 +26,6 @@ from core.security import (
 from .error_handling import ErrorCategory, handle_errors, validate_inputs
 from .tooling import tool
 
-
 # ==================== 共享数据类 ====================
 
 
@@ -553,12 +552,18 @@ def register_orchestration_tools(mcp, counter, logger):
 
         # 第一步：验证漏洞
         verifier = VulnerabilityVerifier()
-        verification_results = verifier.batch_verify([detection_result])  # pylint: disable=no-member
+        verification_results = verifier.batch_verify(
+            [detection_result]
+        )  # pylint: disable=no-member
 
         verified = any(r.is_vulnerable for r in verification_results)
         verification_result = {
             "verified": verified,
-            "method_used": verification_results[0].verification_method if verification_results else verification_method,
+            "method_used": (
+                verification_results[0].verification_method
+                if verification_results
+                else verification_method
+            ),
             "confidence": verification_results[0].confidence if verification_results else "low",
         }
 

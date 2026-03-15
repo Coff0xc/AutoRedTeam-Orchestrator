@@ -373,21 +373,61 @@ class ResultParser:
 # 各工具允许的安全参数前缀白名单
 _ALLOWED_ARG_PREFIXES: Dict[str, List[str]] = {
     "nmap": [
-        "-p", "-sV", "-sC", "-sS", "-sT", "-sU", "-O", "-A", "-T",
-        "--open", "--top-ports", "-Pn", "-n", "--rate", "--min-rate", "--max-rate",
+        "-p",
+        "-sV",
+        "-sC",
+        "-sS",
+        "-sT",
+        "-sU",
+        "-O",
+        "-A",
+        "-T",
+        "--open",
+        "--top-ports",
+        "-Pn",
+        "-n",
+        "--rate",
+        "--min-rate",
+        "--max-rate",
     ],
     "nuclei": [
-        "-severity", "-tags", "-type", "--rate-limit", "-c", "-timeout", "-retries", "-rl",
+        "-severity",
+        "-tags",
+        "-type",
+        "--rate-limit",
+        "-c",
+        "-timeout",
+        "-retries",
+        "-rl",
     ],
     "sqlmap": [
-        "--level", "--risk", "--threads", "--timeout", "--retries",
-        "--delay", "--technique", "--dbms", "-p",
+        "--level",
+        "--risk",
+        "--threads",
+        "--timeout",
+        "--retries",
+        "--delay",
+        "--technique",
+        "--dbms",
+        "-p",
     ],
     "ffuf": [
-        "-mc", "-ms", "-fc", "-fs", "-t", "-rate", "-timeout", "-e", "-recursion-depth",
+        "-mc",
+        "-ms",
+        "-fc",
+        "-fs",
+        "-t",
+        "-rate",
+        "-timeout",
+        "-e",
+        "-recursion-depth",
     ],
     "masscan": [
-        "-p", "--rate", "--wait", "--retries", "--open",
+        "-p",
+        "--rate",
+        "--wait",
+        "--retries",
+        "--open",
     ],
 }
 
@@ -396,8 +436,14 @@ _DENIED_ARG_PREFIXES: Dict[str, List[str]] = {
     "nmap": ["--script", "-oN", "-oX", "-oG", "-iL"],
     "nuclei": ["-t", "-w", "-l", "-target", "-u"],
     "sqlmap": [
-        "--os-shell", "--os-cmd", "--os-pwn", "--file-read",
-        "--file-write", "--file-dest", "--sql-shell", "--eval",
+        "--os-shell",
+        "--os-cmd",
+        "--os-pwn",
+        "--file-read",
+        "--file-write",
+        "--file-dest",
+        "--sql-shell",
+        "--eval",
     ],
     "ffuf": ["-request-file", "-o", "-of"],
     "masscan": ["--echo", "-oL", "-oJ", "-oG", "-oX", "-iL", "--adapter"],
@@ -762,7 +808,7 @@ class ToolManager:
             else:
                 full_cmd = cmd
 
-            logger.info("执行: %s", ' '.join(full_cmd))
+            logger.info("执行: %s", " ".join(full_cmd))
 
             process = await asyncio.create_subprocess_exec(
                 *full_cmd,

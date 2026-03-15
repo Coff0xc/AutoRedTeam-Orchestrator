@@ -198,7 +198,7 @@ class DecisionEngine:
                 0.25, self._weights["success_probability"] - 0.025
             )
             self._weights["impact"] = max(0.15, self._weights["impact"] - 0.025)
-            self.logger.info("检测到多次告警，提升隐蔽性权重至 %.2f", self._weights['stealth'])
+            self.logger.info("检测到多次告警，提升隐蔽性权重至 %.2f", self._weights["stealth"])
 
     def suggest_next_phase(self) -> Optional["PentestPhase"]:
         """建议下一个阶段"""

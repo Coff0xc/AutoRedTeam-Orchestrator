@@ -45,9 +45,7 @@ class AIDecisionEngine:
         self.provider = self.config.get("provider", "openai")
         self.model = self.config.get("model", "gpt-4")
         env_key_map = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
-        self.api_key = self.config.get("api_key") or os.getenv(
-            env_key_map.get(self.provider, "")
-        )
+        self.api_key = self.config.get("api_key") or os.getenv(env_key_map.get(self.provider, ""))
         self._client = None
         self._client_lock = threading.Lock()
 
@@ -83,7 +81,9 @@ class AIDecisionEngine:
             logger.warning("%s库未安装，使用本地规则引擎", class_name)
             return "local"
 
-    def analyze_target(self, target: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def analyze_target(
+        self, target: str, context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """分析目标"""
         context = context or {}
 

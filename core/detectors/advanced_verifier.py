@@ -133,7 +133,7 @@ class OOBCallbackManager:
             token_id = uuid.uuid4().hex[:16]
 
             # 清理 finding_type 用于 DNS 回调 URL
-            finding_type_sanitized = re.sub(r'[^a-zA-Z0-9_-]', '', finding_type)
+            finding_type_sanitized = re.sub(r"[^a-zA-Z0-9_-]", "", finding_type)
 
             if protocol == "dns":
                 callback_url = f"{token_id}.{finding_type_sanitized}.{self.callback_server}"
@@ -186,10 +186,7 @@ class OOBCallbackManager:
     def _cleanup_expired_internal(self, max_age: float = 300.0):
         """内部清理过期令牌（假设已持有锁）"""
         now = time.time()
-        expired = [
-            tid for tid, t in self._tokens.items()
-            if now - t.created_at > max_age
-        ]
+        expired = [tid for tid, t in self._tokens.items() if now - t.created_at > max_age]
         for tid in expired:
             del self._tokens[tid]
 
@@ -215,23 +212,23 @@ class PayloadVariantGenerator:
         "true_condition": [
             "' OR '1'='1",
             "' OR 1=1--",
-            "\" OR \"1\"=\"1",
+            '" OR "1"="1',
             "' OR 'a'='a",
             "1 OR 1=1",
         ],
         "false_condition": [
             "' AND '1'='2",
             "' AND 1=2--",
-            "\" AND \"1\"=\"2",
+            '" AND "1"="2',
             "' AND 'a'='b",
             "1 AND 1=2",
         ],
         "error_trigger": [
             "'",
-            "\"",
+            '"',
             "' OR ''='",
             "1'",
-            "1\"",
+            '1"',
         ],
         "time_based": [
             "' OR SLEEP(5)--",
@@ -261,9 +258,7 @@ class PayloadVariantGenerator:
         ],
     }
 
-    def get_variants(
-        self, vuln_type: str, variant_group: str = "basic"
-    ) -> List[str]:
+    def get_variants(self, vuln_type: str, variant_group: str = "basic") -> List[str]:
         """获取 payload 变体
 
         Args:
@@ -358,9 +353,7 @@ class AdvancedVerifier:
             )
 
         # 规范化基线
-        baseline_normalized = [
-            self.normalizer.normalize(r[0]) for r in baseline_responses
-        ]
+        baseline_normalized = [self.normalizer.normalize(r[0]) for r in baseline_responses]
         baseline_statuses = [r[1] for r in baseline_responses]
 
         # 收集 payload 响应
@@ -390,17 +383,17 @@ class AdvancedVerifier:
                 avg_sim = statistics.mean(similarities)
                 status_diff = pr_status != baseline_statuses[0]
 
-                payload_diffs.append({
-                    "payload": payload[:50],
-                    "similarity": avg_sim,
-                    "status_diff": status_diff,
-                    "status": pr_status,
-                })
+                payload_diffs.append(
+                    {
+                        "payload": payload[:50],
+                        "similarity": avg_sim,
+                        "status_diff": status_diff,
+                        "status": pr_status,
+                    }
+                )
 
                 if avg_sim < similarity_threshold:
-                    evidence.append(
-                        f"Payload '{payload[:30]}' 响应差异: sim={avg_sim:.2f}"
-                    )
+                    evidence.append(f"Payload '{payload[:30]}' 响应差异: sim={avg_sim:.2f}")
 
         if not payload_diffs:
             return VerificationResult(
@@ -487,9 +480,7 @@ class AdvancedVerifier:
                 continue
 
             # 比较 true/false 响应
-            for (t_body, t_status), (f_body, f_status) in zip(
-                true_responses, false_responses
-            ):
+            for (t_body, t_status), (f_body, f_status) in zip(true_responses, false_responses):
                 total_tests += 1
 
                 t_norm = self.normalizer.normalize(t_body)
@@ -501,8 +492,7 @@ class AdvancedVerifier:
                 if sim < 0.9 or t_status != f_status:
                     consistent_diffs += 1
                     evidence.append(
-                        f"True/False 差异: sim={sim:.2f}, "
-                        f"status={t_status}/{f_status}"
+                        f"True/False 差异: sim={sim:.2f}, " f"status={t_status}/{f_status}"
                     )
 
         if total_tests == 0:
@@ -594,16 +584,17 @@ class AdvancedVerifier:
                 payload_mean = statistics.mean(payload_times)
                 delay_detected = payload_mean > baseline_mean + expected_delay * 0.7
 
-                delayed_results.append({
-                    "payload": payload[:50],
-                    "mean_time": payload_mean,
-                    "delayed": delay_detected,
-                })
+                delayed_results.append(
+                    {
+                        "payload": payload[:50],
+                        "mean_time": payload_mean,
+                        "delayed": delay_detected,
+                    }
+                )
 
                 if delay_detected:
                     evidence.append(
-                        f"延迟检测: baseline={baseline_mean:.1f}s, "
-                        f"payload={payload_mean:.1f}s"
+                        f"延迟检测: baseline={baseline_mean:.1f}s, " f"payload={payload_mean:.1f}s"
                     )
 
         if not delayed_results:
@@ -720,9 +711,11 @@ class AdvancedVerifier:
         if token.triggered:
             return VerificationResult(
                 status=VerificationStatus.CONFIRMED,
-                method=VerificationMethod.OOB_DNS
-                if "." in token.callback_url and "/" not in token.callback_url
-                else VerificationMethod.OOB_HTTP,
+                method=(
+                    VerificationMethod.OOB_DNS
+                    if "." in token.callback_url and "/" not in token.callback_url
+                    else VerificationMethod.OOB_HTTP
+                ),
                 confidence=0.95,
                 evidence=[
                     f"OOB 回调已触发: {token.finding_type}",
@@ -798,9 +791,7 @@ class AdvancedVerifier:
 
         return results
 
-    def aggregate_results(
-        self, results: Dict[str, VerificationResult]
-    ) -> VerificationResult:
+    def aggregate_results(self, results: Dict[str, VerificationResult]) -> VerificationResult:
         """聚合多方法验证结果
 
         Args:
@@ -818,32 +809,28 @@ class AdvancedVerifier:
             )
 
         confirmed_count = sum(
-            1 for r in results.values()
-            if r.status == VerificationStatus.CONFIRMED
+            1 for r in results.values() if r.status == VerificationStatus.CONFIRMED
         )
-        likely_count = sum(
-            1 for r in results.values()
-            if r.status == VerificationStatus.LIKELY
-        )
-        fp_count = sum(
-            1 for r in results.values()
-            if r.status == VerificationStatus.FALSE_POSITIVE
-        )
+        likely_count = sum(1 for r in results.values() if r.status == VerificationStatus.LIKELY)
+        fp_count = sum(1 for r in results.values() if r.status == VerificationStatus.FALSE_POSITIVE)
         total = len(results)
 
         # 综合所有证据
         all_evidence = []
         for method, result in results.items():
-            all_evidence.extend(
-                [f"[{method}] {e}" for e in result.evidence]
-            )
+            all_evidence.extend([f"[{method}] {e}" for e in result.evidence])
 
         # 加权判定
         if confirmed_count > 0 and confirmed_count >= total * 0.5:
             status = VerificationStatus.CONFIRMED
             confidence = min(
-                statistics.mean([r.confidence for r in results.values()
-                                 if r.status == VerificationStatus.CONFIRMED]),
+                statistics.mean(
+                    [
+                        r.confidence
+                        for r in results.values()
+                        if r.status == VerificationStatus.CONFIRMED
+                    ]
+                ),
                 0.95,
             )
         elif (confirmed_count + likely_count) > fp_count:
@@ -851,8 +838,13 @@ class AdvancedVerifier:
             confidence = statistics.mean([r.confidence for r in results.values()])
         elif fp_count > (confirmed_count + likely_count):
             status = VerificationStatus.FALSE_POSITIVE
-            confidence = statistics.mean([r.confidence for r in results.values()
-                                          if r.status == VerificationStatus.FALSE_POSITIVE])
+            confidence = statistics.mean(
+                [
+                    r.confidence
+                    for r in results.values()
+                    if r.status == VerificationStatus.FALSE_POSITIVE
+                ]
+            )
         else:
             status = VerificationStatus.UNCERTAIN
             confidence = 0.5

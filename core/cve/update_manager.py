@@ -832,8 +832,8 @@ async def main():
         elif command == "stats":
             stats = manager.get_stats()
             logger.info("\n数据库统计:")
-            logger.info("  总CVE数: %s", stats.get('total_cves', 0))
-            logger.info("  有PoC: %s", stats.get('poc_available', 0))
+            logger.info("  总CVE数: %s", stats.get("total_cves", 0))
+            logger.info("  有PoC: %s", stats.get("poc_available", 0))
             logger.info("\n按严重性:")
             for severity, count in stats.get("by_severity", {}).items():
                 logger.info("    %s: %s", severity, count)

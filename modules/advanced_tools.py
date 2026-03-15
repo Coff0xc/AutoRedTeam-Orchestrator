@@ -508,12 +508,12 @@ if __name__ == "__main__":
         # 测试隐蔽请求
         result = await stealth_request("http://example.com/api/user", stealth_level=3)
         logger.info("Stealth Request Config:")
-        logger.info("  URL: %s", result['url'])
-        logger.info("  Browser: %s", result['browser_profile'])
-        logger.info("  Headers: %s...", list(result['headers'].keys())[:5])
+        logger.info("  URL: %s", result["url"])
+        logger.info("  Browser: %s", result["browser_profile"])
+        logger.info("  Headers: %s...", list(result["headers"].keys())[:5])
 
         # 测试指纹
         fp = await browser_fingerprint("chrome")
-        logger.info("\nBrowser Fingerprint: %s", fp['browser'])
+        logger.info("\nBrowser Fingerprint: %s", fp["browser"])
 
     asyncio.run(test())
