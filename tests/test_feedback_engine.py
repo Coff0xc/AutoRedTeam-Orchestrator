@@ -9,24 +9,18 @@
 - PayloadMutator 变异功能
 """
 
-import asyncio
 import pytest
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
 
 # 测试导入
 from core.feedback import (
     FeedbackLoopEngine,
-    FeedbackResult,
     FailureAnalyzer,
-    FailureAnalysis,
     StrategyRegistry,
     AdjustmentStrategy,
     AdjustmentType,
     FailureReason,
     PayloadMutator,
-    RetryContext,
 )
 
 
@@ -172,7 +166,9 @@ class TestFailureAnalyzer:
         analysis = analyzer.analyze(result, {})
 
         # 可能是 TIMEOUT 或 CONNECTION_ERROR
-        assert analysis.reason in [FailureReason.TIMEOUT, FailureReason.CONNECTION_ERROR, FailureReason.UNKNOWN]
+        assert analysis.reason in [
+            FailureReason.TIMEOUT, FailureReason.CONNECTION_ERROR, FailureReason.UNKNOWN
+        ]
 
     def test_analyze_rate_limited(self, analyzer):
         """测试限速检测"""

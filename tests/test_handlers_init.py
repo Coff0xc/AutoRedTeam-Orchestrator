@@ -123,7 +123,8 @@ class TestRegisterAllHandlers:
         mock_logger = MagicMock()
 
         # 模拟某个注册函数抛出 AttributeError
-        with patch('handlers.register_detector_tools', side_effect=AttributeError("Function not found")):
+        with patch('handlers.register_detector_tools',
+                   side_effect=AttributeError("Function not found")):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
             # 验证记录了警告日志
@@ -159,7 +160,8 @@ class TestRegisterAllHandlers:
         mock_logger = MagicMock()
 
         # 模拟某个注册函数抛出通用异常
-        with patch('handlers.register_api_security_tools', side_effect=RuntimeError("Unexpected error")):
+        with patch('handlers.register_api_security_tools',
+                   side_effect=RuntimeError("Unexpected error")):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
             # 验证记录了警告日志
@@ -178,9 +180,12 @@ class TestRegisterAllHandlers:
         mock_logger = MagicMock()
 
         # 模拟多个注册函数失败
-        with patch('handlers.register_recon_tools', side_effect=ImportError("Recon module error")):
-            with patch('handlers.register_detector_tools', side_effect=AttributeError("Detector attr error")):
-                with patch('handlers.register_redteam_tools', side_effect=TypeError("RedTeam type error")):
+        with patch('handlers.register_recon_tools',
+                   side_effect=ImportError("Recon module error")):
+            with patch('handlers.register_detector_tools',
+                       side_effect=AttributeError("Detector attr error")):
+                with patch('handlers.register_redteam_tools',
+                           side_effect=TypeError("RedTeam type error")):
                     register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
                     # 验证记录了多个警告
@@ -333,7 +338,8 @@ class TestHandlersErrorMessages:
         mock_counter = MagicMock()
         mock_logger = MagicMock()
 
-        with patch('handlers.register_recon_tools', side_effect=ImportError("specific module error")):
+        with patch('handlers.register_recon_tools',
+                   side_effect=ImportError("specific module error")):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
             # 获取警告消息（lazy format 需格式化）
@@ -351,7 +357,8 @@ class TestHandlersErrorMessages:
         mock_counter = MagicMock()
         mock_logger = MagicMock()
 
-        with patch('handlers.register_detector_tools', side_effect=AttributeError("missing attribute")):
+        with patch('handlers.register_detector_tools',
+                   side_effect=AttributeError("missing attribute")):
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
             args = mock_logger.warning.call_args_list[0][0]

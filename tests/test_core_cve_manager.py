@@ -13,15 +13,13 @@ test_core_cve_manager.py - CVE 管理器单元测试
 import pytest
 import threading
 import tempfile
-import asyncio
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
-from typing import List, Dict, Any
+from unittest.mock import Mock, patch
 from datetime import datetime
 
 # 导入被测试的模块
 from core.cve.manager import CVEManager
-from core.cve.models import CVEEntry, Severity, CVEStats, SyncStatus
-from core.cve.search import SearchFilter, SearchOptions, SearchResult
+from core.cve.models import CVEEntry, Severity, CVEStats
+from core.cve.search import SearchFilter, SearchOptions
 
 
 # ============== 测试夹具 ==============
@@ -242,13 +240,15 @@ class TestCVESync:
     @pytest.mark.asyncio
     async def test_async_sync(self, manager_with_mock_sources):
         """测试异步同步"""
-        with patch.object(manager_with_mock_sources, 'sync_all', return_value={'status': 'success'}):
+        with patch.object(manager_with_mock_sources, 'sync_all',
+                          return_value={'status': 'success'}):
             status = await manager_with_mock_sources.async_sync_all()
             assert status is not None
 
     def test_sync_error_handling(self, manager_with_mock_sources):
         """测试同步错误处理"""
-        with patch.object(manager_with_mock_sources._sources[0], 'fetch_recent', side_effect=Exception('Network error')):
+        with patch.object(manager_with_mock_sources._sources[0], 'fetch_recent',
+                          side_effect=Exception('Network error')):
             # 不应该因为单个数据源失败而崩溃
             status = manager_with_mock_sources.sync_all()
             assert status is not None

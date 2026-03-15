@@ -61,7 +61,7 @@ class ToolCounter:
             'lateral': 0,        # 横向移动
             'persistence': 0,    # 持久化
             'ad': 0,             # AD攻击
-            'external_tools': 0, # 外部工具集成
+            'external_tools': 0,  # 外部工具集成
             'session': 0,
             'report': 0,
             'ai': 0,

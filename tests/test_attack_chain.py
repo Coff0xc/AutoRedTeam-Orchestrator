@@ -6,9 +6,8 @@
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 from datetime import datetime
-from typing import Dict, Any
 
 from core.attack_chain import (
     AttackPhase,
@@ -596,7 +595,8 @@ class TestAttackChainEngine:
             target="192.168.1.1",
             nodes=[
                 AttackNode("n1", AttackPhase.RECONNAISSANCE, "active_scanning", "port_scan", {}),
-                AttackNode("n2", AttackPhase.CREDENTIAL_ACCESS, "brute_force", "hydra", {"service": ""}),
+                AttackNode("n2", AttackPhase.CREDENTIAL_ACCESS, "brute_force", "hydra",
+                           {"service": ""}),
             ]
         )
         engine.chains["test"] = chain
@@ -788,6 +788,6 @@ class TestIntegrationAttackChain:
         assert result["status"] == "completed"
 
         # 4. 获取建议
-        suggestions = engine.suggest_next_steps(chain.id)
+        engine.suggest_next_steps(chain.id)
         # 有漏洞发现应该有建议
         # （取决于执行结果如何被处理）

@@ -8,8 +8,7 @@ MCTS 性能优化测试
 """
 
 import time
-import pytest
-from core.mcts_planner import MCTSPlanner, AttackState, ActionGenerator
+from core.mcts_planner import MCTSPlanner, AttackState
 
 
 class TestAttackStateOptimization:

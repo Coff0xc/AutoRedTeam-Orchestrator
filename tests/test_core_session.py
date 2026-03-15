@@ -5,8 +5,6 @@ core.session 模块单元测试
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
 
 
 class TestTarget:
@@ -23,7 +21,7 @@ class TestTarget:
 
     def test_target_from_ip(self):
         """测试从 IP 创建目标"""
-        from core.session import Target, TargetType
+        from core.session import Target
 
         target = Target(url="192.168.1.1")
 
@@ -106,7 +104,7 @@ class TestScanContext:
 
     def test_context_phase(self):
         """测试扫描阶段"""
-        from core.session import ScanContext, Target, ScanPhase
+        from core.session import ScanContext, Target
 
         target = Target(url="https://example.com")
         context = ScanContext(target=target)

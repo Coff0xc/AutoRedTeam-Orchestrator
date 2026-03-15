@@ -5,8 +5,6 @@ core.cve 模块单元测试
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
 
 
 class TestCVEEntry:

@@ -12,8 +12,7 @@ test_detectors_base.py - BaseDetector 和 CompositeDetector 单元测试
 """
 
 import pytest
-import asyncio
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock
 from typing import List
 
 # 导入被测试的模块

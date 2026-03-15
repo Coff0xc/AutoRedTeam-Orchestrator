@@ -5,10 +5,7 @@ WebSocket 安全测试模块单元测试
 测试 modules/api_security/websocket.py 的各项功能。
 """
 
-from unittest.mock import MagicMock, Mock, patch
-from urllib.parse import urlparse, parse_qs
-
-import pytest
+from unittest.mock import patch
 
 from modules.api_security.websocket import WebSocketTester
 from modules.api_security.base import APIVulnType, Severity
@@ -250,7 +247,8 @@ class TestWebSocketCompressionOracle:
                 'extensions': 'permessage-deflate'
             }
 
-        with patch.object(tester, '_test_ws_compression', return_value=mock_connect_with_compression()):
+        with patch.object(tester, '_test_ws_compression',
+                          return_value=mock_connect_with_compression()):
             result = tester.test_compression_oracle()
 
         assert result is not None
@@ -270,7 +268,8 @@ class TestWebSocketCompressionOracle:
                 'extensions': ''
             }
 
-        with patch.object(tester, '_test_ws_compression', return_value=mock_connect_no_compression()):
+        with patch.object(tester, '_test_ws_compression',
+                          return_value=mock_connect_no_compression()):
             result = tester.test_compression_oracle()
 
         assert result is None
@@ -340,8 +339,10 @@ class TestWebSocketFullScan:
             return {'success': True, 'origin': origin}
 
         with patch.object(tester, '_test_ws_connection', side_effect=mock_connect):
-            with patch.object(tester, '_test_ws_compression', return_value={'success': True, 'compression': True}):
-                with patch.object(tester, '_test_ws_auth', return_value={'success': True}):
+            with patch.object(tester, '_test_ws_compression',
+                              return_value={'success': True, 'compression': True}):
+                with patch.object(tester, '_test_ws_auth',
+                                  return_value={'success': True}):
                     results = tester.test()
 
         # 应该发现多个漏洞
@@ -454,7 +455,8 @@ class TestWebSocketEdgeCases:
 
         # Mock 连接超时
         if hasattr(tester, '_test_ws_connection'):
-            with patch.object(tester, '_test_ws_connection', side_effect=TimeoutError("Connection timeout")):
+            with patch.object(tester, '_test_ws_connection',
+                              side_effect=TimeoutError("Connection timeout")):
                 result = tester.test_origin_bypass()
 
             # 超时应该被正确处理
@@ -466,7 +468,8 @@ class TestWebSocketEdgeCases:
 
         # Mock 连接被拒绝
         if hasattr(tester, '_test_ws_connection'):
-            with patch.object(tester, '_test_ws_connection', side_effect=ConnectionRefusedError("Connection refused")):
+            with patch.object(tester, '_test_ws_connection',
+                              side_effect=ConnectionRefusedError("Connection refused")):
                 result = tester.test_origin_bypass()
 
             # 连接错误应该被正确处理
@@ -489,8 +492,10 @@ class TestWebSocketSecurityBestPractices:
             return {'success': False}
 
         with patch.object(tester, '_test_ws_connection', side_effect=mock_secure_connect):
-            with patch.object(tester, '_test_ws_compression', return_value={'success': True, 'compression': False}):
-                with patch.object(tester, '_test_ws_auth', return_value={'success': False}):  # 需要认证
+            with patch.object(tester, '_test_ws_compression',
+                              return_value={'success': True, 'compression': False}):
+                with patch.object(tester, '_test_ws_auth',
+                                  return_value={'success': False}):  # 需要认证
                     results = tester.test()
 
         # 安全配置应该没有高危漏洞
@@ -507,8 +512,10 @@ class TestWebSocketSecurityBestPractices:
             return {'success': True}  # 接受所有 Origin
 
         with patch.object(tester, '_test_ws_connection', side_effect=mock_insecure_connect):
-            with patch.object(tester, '_test_ws_compression', return_value={'success': True, 'compression': True}):
-                with patch.object(tester, '_test_ws_auth', return_value={'success': True}):  # 不需要认证
+            with patch.object(tester, '_test_ws_compression',
+                              return_value={'success': True, 'compression': True}):
+                with patch.object(tester, '_test_ws_auth',
+                                  return_value={'success': True}):  # 不需要认证
                     results = tester.test()
 
         # 不安全配置应该发现多个漏洞

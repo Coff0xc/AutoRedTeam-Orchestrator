@@ -5,7 +5,6 @@ core.lateral 模块单元测试
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 
 # 模块级别标记 - 标识为单元测试和安全测试
 pytestmark = [pytest.mark.unit, pytest.mark.security]

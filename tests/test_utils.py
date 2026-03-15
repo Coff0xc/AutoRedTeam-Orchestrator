@@ -5,7 +5,6 @@ utils 模块单元测试
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 import tempfile
 import os
 

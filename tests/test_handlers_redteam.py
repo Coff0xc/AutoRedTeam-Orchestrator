@@ -5,8 +5,7 @@
 """
 
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from typing import Dict, Any
+from unittest.mock import MagicMock, patch
 
 
 class TestRedTeamHandlersRegistration:
@@ -168,7 +167,8 @@ class TestLateralSMBTool:
         mock_mcp.tool = capture_tool
         register_redteam_tools(mock_mcp, mock_counter, mock_logger)
 
-        with patch('core.lateral.smb_lateral.smb_exec', side_effect=ImportError("Module not found")):
+        with patch('core.lateral.smb_lateral.smb_exec',
+                   side_effect=ImportError("Module not found")):
             result = await registered_tools['lateral_smb'](
                 target="192.168.1.100",
                 username="Administrator",
@@ -516,9 +516,10 @@ class TestPrivilegeEscalateTool:
         mock_mcp.tool = capture_tool
         register_redteam_tools(mock_mcp, mock_counter, mock_logger)
 
-        with patch('core.privilege_escalation.get_escalation_module') as mock_get_module:
+        with patch('core.privilege_escalation.get_escalation_module'):
             # 模拟 EscalationMethod(method) 抛出 ValueError
-            with patch('core.privilege_escalation.EscalationMethod', side_effect=ValueError("Invalid method")):
+            with patch('core.privilege_escalation.EscalationMethod',
+                       side_effect=ValueError("Invalid method")):
                 result = await registered_tools['privilege_escalate'](
                     method="invalid_method"
                 )

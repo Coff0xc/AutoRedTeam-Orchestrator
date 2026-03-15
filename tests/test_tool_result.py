@@ -4,7 +4,6 @@ ToolResult 单元测试
 测试统一工具返回值 Schema 的各种功能。
 """
 
-import pytest
 from datetime import datetime
 
 from core.result import (

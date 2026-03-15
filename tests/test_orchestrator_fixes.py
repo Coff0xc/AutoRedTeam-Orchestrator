@@ -13,7 +13,6 @@ test_orchestrator_fixes.py - 验证编排器修复的单元测试
 
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
-from typing import Dict, Any
 
 
 class TestURLNormalization:
@@ -210,7 +209,7 @@ class TestExfiltrateConfig:
     async def test_skip_exfiltrate_config_respected(self):
         """测试: skip_exfiltrate=True 时跳过阶段"""
         from core.orchestrator.phases import ExfiltratePhaseExecutor
-        from core.orchestrator.state import PentestState, PentestPhase
+        from core.orchestrator.state import PentestState
 
         state = MagicMock(spec=PentestState)
         state.recon_data = {}
@@ -229,7 +228,7 @@ class TestExfiltrateConfig:
     async def test_exfiltrate_runs_when_not_skipped(self):
         """测试: skip_exfiltrate=False 时执行阶段"""
         from core.orchestrator.phases import ExfiltratePhaseExecutor
-        from core.orchestrator.state import PentestState, PentestPhase
+        from core.orchestrator.state import PentestState
 
         state = MagicMock(spec=PentestState)
         state.recon_data = {'sensitive_files': ['backup.sql']}
@@ -251,7 +250,7 @@ class TestExfiltrateConfig:
     async def test_exfiltrate_skips_when_no_data(self):
         """测试: 无敏感数据时跳过"""
         from core.orchestrator.phases import ExfiltratePhaseExecutor
-        from core.orchestrator.state import PentestState, PentestPhase
+        from core.orchestrator.state import PentestState
 
         state = MagicMock(spec=PentestState)
         state.recon_data = {'sensitive_files': []}

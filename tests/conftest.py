@@ -6,7 +6,7 @@ Pytest 配置文件
 
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from typing import Generator, Any, Dict, Optional
 
 # 添加项目根目录到 Python 路径

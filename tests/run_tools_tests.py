@@ -12,6 +12,7 @@ import sys
 import subprocess
 from pathlib import Path
 
+
 def run_tests(verbose=False, coverage=False):
     """运行测试"""
     # 测试文件
@@ -56,6 +57,7 @@ def run_tests(verbose=False, coverage=False):
         print("=" * 60)
 
     return result.returncode
+
 
 if __name__ == "__main__":
     verbose = "-v" in sys.argv or "--verbose" in sys.argv

@@ -6,7 +6,6 @@
 
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
-from typing import Dict, Any, List
 
 
 class TestDetectorHandlersRegistration:

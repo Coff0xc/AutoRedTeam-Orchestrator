@@ -41,7 +41,8 @@ def _make_mcp_and_register():
     with patch('utils.mcp_tooling._wrap_tool_func', side_effect=lambda f: f), \
          patch('core.security.require_critical_auth', side_effect=passthrough_decorator), \
          patch('core.security.require_dangerous_auth', side_effect=passthrough_decorator), \
-         patch('core.security.mcp_auth_middleware._auth_config', {"mode": AuthMode.DISABLED, "manager": None, "audit_enabled": False}):
+         patch('core.security.mcp_auth_middleware._auth_config',
+               {"mode": AuthMode.DISABLED, "manager": None, "audit_enabled": False}):
         from handlers.orchestration_handlers import register_orchestration_tools
         register_orchestration_tools(mock_mcp, mock_counter, mock_logger)
 
@@ -588,8 +589,10 @@ class TestExploitOrchestrateTool:
         mock_orch_result.execution_time_ms = 5000
 
         detections = [
-            {'vulnerable': True, 'vuln_type': 'sqli', 'url': 'https://example.com', 'severity': 'high'},
-            {'vulnerable': True, 'vuln_type': 'xss', 'url': 'https://example.com', 'severity': 'medium'},
+            {'vulnerable': True, 'vuln_type': 'sqli', 'url': 'https://example.com',
+             'severity': 'high'},
+            {'vulnerable': True, 'vuln_type': 'xss', 'url': 'https://example.com',
+             'severity': 'medium'},
         ]
 
         with patch('core.exploit.ExploitOrchestrator') as MockOrch, \

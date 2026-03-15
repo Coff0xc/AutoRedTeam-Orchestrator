@@ -6,7 +6,6 @@ MCP 安全中间件测试
 """
 
 import pytest
-import time
 import threading
 
 from core.security.mcp_security import (
@@ -385,7 +384,6 @@ class TestMCPSecurityMiddleware:
             return {"success": True, "target": target}
 
         # 装饰器应该返回可调用对象
-        import asyncio
         assert callable(mock_scan)
 
 

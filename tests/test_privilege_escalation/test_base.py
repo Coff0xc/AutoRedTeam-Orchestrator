@@ -7,7 +7,6 @@ import pytest
 from core.privilege_escalation.base import (
     PrivilegeLevel,
     EscalationMethod,
-    EscalationStatus,
     EscalationResult,
     EscalationConfig,
     EscalationVector,
@@ -26,8 +25,11 @@ class TestPrivilegeLevel:
 
     def test_privilege_level_comparison(self):
         """测试权限级别可以通过值比较"""
-        levels = [PrivilegeLevel.LOW, PrivilegeLevel.MEDIUM, PrivilegeLevel.HIGH, PrivilegeLevel.SYSTEM]
-        values = [l.value for l in levels]
+        levels = [
+            PrivilegeLevel.LOW, PrivilegeLevel.MEDIUM,
+            PrivilegeLevel.HIGH, PrivilegeLevel.SYSTEM
+        ]
+        values = [level.value for level in levels]
         assert 'low' in values
         assert 'system' in values
 
