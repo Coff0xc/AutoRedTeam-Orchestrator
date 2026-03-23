@@ -56,7 +56,7 @@ class HTTPSessionManager:
         self._auth_contexts: Dict[str, AuthContext] = {}
         self._request_count: Dict[str, int] = {}
 
-    def create_session(self, session_id: str = None, verify_ssl: bool = True) -> str:
+    def create_session(self, session_id: Optional[str] = None, verify_ssl: bool = True) -> str:
         """
         创建 HTTP 会话
 
@@ -102,7 +102,7 @@ class HTTPSessionManager:
         password: str,
         username_field: str = "username",
         password_field: str = "password",
-        extra_data: Dict = None,
+        extra_data: Optional[Dict] = None,
     ) -> Dict:
         """
         执行登录
@@ -238,8 +238,8 @@ class HTTPSessionManager:
         session_id: str,
         url: str,
         method: str = "GET",
-        data: Dict = None,
-        headers: Dict = None,
+        data: Optional[Dict] = None,
+        headers: Optional[Dict] = None,
         **kwargs,
     ) -> Dict:
         """

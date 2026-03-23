@@ -12,6 +12,7 @@ ATT&CK Technique: T1003 - OS Credential Dumping
 """
 
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -732,7 +733,7 @@ class CredentialDumper:
 
     # ==================== 统一提取接口 ====================
 
-    def dump_all(self, categories: List[str] = None) -> Dict[str, DumpResult]:
+    def dump_all(self, categories: Optional[List[str]] = None) -> Dict[str, DumpResult]:
         """
         执行所有凭证提取
 
@@ -770,7 +771,7 @@ class CredentialDumper:
 
         return results
 
-    def export_json(self, output_path: str = None) -> str:
+    def export_json(self, output_path: Optional[str] = None) -> str:
         """
         导出所有凭证为JSON
         """
@@ -791,7 +792,9 @@ class CredentialDumper:
 
 
 # 便捷函数
-def dump_credentials(categories: List[str] = None, verbose: bool = False) -> Dict[str, Any]:
+def dump_credentials(
+    categories: Optional[List[str]] = None, verbose: bool = False
+) -> Dict[str, Any]:
     """
     凭证提取便捷函数
 

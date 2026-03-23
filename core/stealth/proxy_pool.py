@@ -278,7 +278,7 @@ class ProxyPool:
             "requests_failed": 0,
         }
 
-    def add_proxy(self, proxy_str: str, validate: bool = None) -> bool:
+    def add_proxy(self, proxy_str: str, validate: Optional[bool] = None) -> bool:
         """
         添加代理
 
@@ -584,7 +584,7 @@ class ProxyChain:
     流量路径: Client -> Proxy1 -> Proxy2 -> ... -> Target
     """
 
-    def __init__(self, proxies: List[Proxy] = None):
+    def __init__(self, proxies: Optional[List[Proxy]] = None):
         self.proxies = proxies or []
 
     def add(self, proxy: Proxy):

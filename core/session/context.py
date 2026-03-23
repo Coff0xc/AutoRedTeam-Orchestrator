@@ -282,7 +282,7 @@ class ScanContext:
         if subdomain and subdomain not in self.subdomains:
             self.subdomains.append(subdomain)
 
-    def add_directory(self, directory: str, status_code: int = None) -> None:
+    def add_directory(self, directory: str, status_code: Optional[int] = None) -> None:
         """
         添加目录
 
@@ -322,7 +322,11 @@ class ScanContext:
         self.parameters.append(param)
 
     def add_api_endpoint(
-        self, path: str, method: str = "GET", params: List[str] = None, authenticated: bool = False
+        self,
+        path: str,
+        method: str = "GET",
+        params: Optional[List[str]] = None,
+        authenticated: bool = False,
     ) -> None:
         """
         添加API端点
@@ -405,7 +409,7 @@ class ScanContext:
         """
         self.errors_count += count
 
-    def log(self, level: str, message: str, data: Any = None) -> None:
+    def log(self, level: str, message: str, data: Optional[Any] = None) -> None:
         """
         记录日志
 

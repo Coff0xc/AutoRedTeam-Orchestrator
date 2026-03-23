@@ -37,7 +37,7 @@ class BaseVerifier:
         self,
         url: str,
         method: str = "GET",
-        data: Any = None,
+        data: Optional[Any] = None,
         headers: Optional[Dict[str, str]] = None,
     ) -> Tuple[Optional[str], int, float, int]:
         """发送HTTP请求"""
@@ -92,8 +92,8 @@ class BaseVerifier:
         method: str = "GET",
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
-        data: Any = None,
-        json_data: Any = None,
+        data: Optional[Any] = None,
+        json_data: Optional[Any] = None,
     ) -> Tuple[str, Optional[str], Dict[str, str]]:
         """准备基础请求"""
         method = (method or "GET").upper()
@@ -131,8 +131,8 @@ class BaseVerifier:
         method: str = "GET",
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
-        data: Any = None,
-        json_data: Any = None,
+        data: Optional[Any] = None,
+        json_data: Optional[Any] = None,
     ) -> Tuple[str, Optional[str], Dict[str, str]]:
         """准备带payload的请求"""
         base_url, body, request_headers = self._prepare_base_request(

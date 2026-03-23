@@ -3,7 +3,7 @@ AI辅助工具处理器
 包含: smart_analyze, attack_chain_plan, smart_payload
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
 from .tooling import tool
@@ -21,7 +21,7 @@ def register_ai_tools(mcp, counter, logger):
     @tool(mcp)
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.AI, context_extractor=extract_target)
-    async def smart_analyze(target: str, context: str = None) -> Dict[str, Any]:
+    async def smart_analyze(target: str, context: Optional[str] = None) -> Dict[str, Any]:
         """智能分析 - AI辅助分析目标并推荐测试策略
 
         Args:
@@ -42,7 +42,7 @@ def register_ai_tools(mcp, counter, logger):
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.AI, context_extractor=extract_target)
     async def attack_chain_plan(
-        target: str, reconnaissance_data: Dict[str, Any] = None
+        target: str, reconnaissance_data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """攻击链规划 - 基于侦察数据规划攻击链
 
@@ -96,7 +96,7 @@ def register_ai_tools(mcp, counter, logger):
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.AI)
     async def smart_payload(
-        vuln_type: str, context: Dict[str, Any] = None, waf_detected: bool = False
+        vuln_type: str, context: Optional[Dict[str, Any]] = None, waf_detected: bool = False
     ) -> Dict[str, Any]:
         """智能Payload生成 - 根据上下文生成优化的payload
 

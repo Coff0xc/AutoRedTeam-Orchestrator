@@ -4,7 +4,7 @@
       dir_scan, dns_lookup, tech_detect, waf_detect
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .error_handling import (
     ErrorCategory,
@@ -122,7 +122,7 @@ def register_recon_tools(mcp, counter, logger):
     @validate_inputs(domain="domain")
     @handle_errors(logger, ErrorCategory.RECON, extract_domain)
     async def subdomain_enum(
-        domain: str, methods: List[str] = None, limit: int = 100
+        domain: str, methods: Optional[List[str]] = None, limit: int = 100
     ) -> Dict[str, Any]:
         """子域名枚举 - 发现目标域名的子域名
 
@@ -155,7 +155,7 @@ def register_recon_tools(mcp, counter, logger):
     @validate_inputs(url="url")
     @handle_errors(logger, ErrorCategory.RECON, extract_url)
     async def dir_scan(
-        url: str, wordlist: str = "common", extensions: List[str] = None
+        url: str, wordlist: str = "common", extensions: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """目录扫描 - 发现Web应用的隐藏路径
 
@@ -187,7 +187,7 @@ def register_recon_tools(mcp, counter, logger):
     @tool(mcp)
     @validate_inputs(domain="domain")
     @handle_errors(logger, ErrorCategory.RECON, extract_domain)
-    async def dns_lookup(domain: str, record_types: List[str] = None) -> Dict[str, Any]:
+    async def dns_lookup(domain: str, record_types: Optional[List[str]] = None) -> Dict[str, Any]:
         """DNS查询 - 获取域名的DNS记录
 
         Args:

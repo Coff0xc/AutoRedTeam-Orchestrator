@@ -102,7 +102,7 @@ def _normalize_platform(system: str) -> str:
     return system_lower
 
 
-def get_escalation_module(config: EscalationConfig = None) -> BasePrivilegeEscalation:
+def get_escalation_module(config: Optional[EscalationConfig] = None) -> BasePrivilegeEscalation:
     """
     根据当前平台获取对应的权限提升模块
 

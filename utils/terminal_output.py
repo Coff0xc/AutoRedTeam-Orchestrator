@@ -116,7 +116,7 @@ class TerminalLogger:
                 except Exception:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
-    def print(self, msg: str, color: str = None, bold: bool = False):
+    def print(self, msg: str, color: Optional[str] = None, bold: bool = False):
         """打印带颜色的消息"""
         prefix = ""
         suffix = self.COLORS["reset"]
@@ -197,7 +197,7 @@ class TerminalLogger:
         timestamp = datetime.now().strftime("%H:%M:%S")
         self._write(f"{self.COLORS['green']}[{timestamp}] ✓ {msg}{self.COLORS['reset']}\n")
 
-    def finding(self, title: str, details: str = None):
+    def finding(self, title: str, details: Optional[str] = None):
         """发现/结果消息"""
         timestamp = datetime.now().strftime("%H:%M:%S")
         if details:

@@ -299,7 +299,7 @@ class ConfigManager:
         """获取配置"""
         return self._config
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: str, default: Optional[Any] = None) -> Any:
         """获取配置项"""
         parts = key.split(".")
         value = self._config
@@ -343,7 +343,7 @@ def get_config() -> AppConfig:
     return _config_manager.config
 
 
-def get_config_value(key: str, default: Any = None) -> Any:
+def get_config_value(key: str, default: Optional[Any] = None) -> Any:
     """获取配置值"""
     global _config_manager
     if _config_manager is None:

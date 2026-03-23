@@ -181,7 +181,7 @@ class C2Crypto:
         """
         return self._kdf_salt
 
-    def _generate_iv(self, size: int = None) -> bytes:
+    def _generate_iv(self, size: Optional[int] = None) -> bytes:
         """生成随机 IV/Nonce"""
         if size is None:
             size = (

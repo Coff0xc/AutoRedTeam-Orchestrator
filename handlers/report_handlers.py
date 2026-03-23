@@ -3,7 +3,7 @@
 包含: generate_report, export_findings
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .error_handling import ErrorCategory, handle_errors, validate_inputs
 from .tooling import tool
@@ -22,7 +22,7 @@ def register_report_tools(mcp, counter, logger):
     @validate_inputs(session_id="session_id")
     @handle_errors(logger, category=ErrorCategory.REPORT)
     async def generate_report(
-        session_id: str, format: str = "json", output_path: str = None
+        session_id: str, format: str = "json", output_path: Optional[str] = None
     ) -> Dict[str, Any]:
         """生成渗透测试报告 - 生成详细的安全评估报告
 
@@ -73,7 +73,7 @@ def register_report_tools(mcp, counter, logger):
     @validate_inputs(session_id="session_id")
     @handle_errors(logger, category=ErrorCategory.REPORT)
     async def export_findings(
-        session_id: str, severity: str = None, format: str = "json"
+        session_id: str, severity: Optional[str] = None, format: str = "json"
     ) -> Dict[str, Any]:
         """导出漏洞发现 - 导出会话中发现的漏洞
 

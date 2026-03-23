@@ -120,7 +120,7 @@ class AttackChainEngine:
         self.chains: Dict[str, AttackChain] = {}
 
     def create_chain(
-        self, target: str, target_type: str, objectives: List[str] = None
+        self, target: str, target_type: str, objectives: Optional[List[str]] = None
     ) -> AttackChain:
         """创建攻击链"""
         import uuid
@@ -138,7 +138,7 @@ class AttackChainEngine:
         return chain
 
     def _generate_nodes(
-        self, target: str, target_type: str, objectives: List[str] = None
+        self, target: str, target_type: str, objectives: Optional[List[str]] = None
     ) -> List[AttackNode]:
         """生成攻击节点"""
         nodes = []
@@ -256,7 +256,7 @@ class AttackChainEngine:
 
         return nodes
 
-    def execute_chain(self, chain_id: str, session_id: str = None) -> Dict[str, Any]:
+    def execute_chain(self, chain_id: str, session_id: Optional[str] = None) -> Dict[str, Any]:
         """执行攻击链"""
         chain = self.chains.get(chain_id)
         if not chain:

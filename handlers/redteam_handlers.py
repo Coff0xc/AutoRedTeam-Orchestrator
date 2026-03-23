@@ -9,7 +9,7 @@
 - DANGEROUS: payload_obfuscate, waf_bypass, privilege_check, post_exploit_privesc_suggest
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # 授权中间件
 from core.security import (
@@ -44,8 +44,8 @@ def register_redteam_tools(mcp, counter, logger):
     async def lateral_smb(
         target: str,
         username: str,
-        password: str = None,
-        ntlm_hash: str = None,
+        password: Optional[str] = None,
+        ntlm_hash: Optional[str] = None,
         command: str = "whoami",
     ) -> Dict[str, Any]:
         """SMB横向移动 - 通过SMB执行远程命令
@@ -147,7 +147,7 @@ def register_redteam_tools(mcp, counter, logger):
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def waf_bypass(
         payload: str,
-        waf_name: str = None,
+        waf_name: Optional[str] = None,
         max_variants: int = 30,
         include_headers: bool = False,
         include_paths: bool = False,
@@ -202,7 +202,9 @@ def register_redteam_tools(mcp, counter, logger):
         ErrorCategory.REDTEAM,
         lambda a, kw: {"path": kw.get("path") or (a[0] if a else None)},
     )
-    async def credential_find(path: str = None, patterns: List[str] = None) -> Dict[str, Any]:
+    async def credential_find(
+        path: Optional[str] = None, patterns: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """凭证发现 - 在文件中搜索敏感凭证
 
         搜索: API密钥、密码、令牌、私钥等
@@ -304,7 +306,7 @@ def register_redteam_tools(mcp, counter, logger):
     @tool(mcp)
     @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
-    async def post_exploit_amsi_bypass(technique: str = None) -> Dict[str, Any]:
+    async def post_exploit_amsi_bypass(technique: Optional[str] = None) -> Dict[str, Any]:
         """AMSI绕过 - 生成AMSI绕过代码
 
         Args:

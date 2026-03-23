@@ -115,7 +115,7 @@ class SudoBypass:
         self.logger = logging.getLogger(f"{__name__}.SudoBypass")
         self._sudo_entries: List[SudoEntry] = []
 
-    def parse_sudo_l(self, password: str = None) -> List[SudoEntry]:
+    def parse_sudo_l(self, password: Optional[str] = None) -> List[SudoEntry]:
         """
         解析 sudo -l 输出
 
@@ -221,7 +221,7 @@ class SudoBypass:
         exploitable.sort(key=lambda x: x[2], reverse=True)
         return exploitable
 
-    def exploit(self, command: str = None) -> EscalationResult:
+    def exploit(self, command: Optional[str] = None) -> EscalationResult:
         """
         执行 sudo 提权
 

@@ -29,8 +29,8 @@ class SQLiVerifierMixin:
         method: str = "GET",
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
-        data: Any = None,
-        json_data: Any = None,
+        data: Optional[Any] = None,
+        json_data: Optional[Any] = None,
     ) -> VerificationResult:
         """时间盲注验证 - 增强版，减少误报"""
         # 多次基准请求取平均值和标准差
@@ -154,8 +154,8 @@ class SQLiVerifierMixin:
         method: str = "GET",
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
-        data: Any = None,
-        json_data: Any = None,
+        data: Optional[Any] = None,
+        json_data: Optional[Any] = None,
     ) -> VerificationResult:
         """布尔盲注验证 - 增强版"""
         # 获取原始响应基线
@@ -330,8 +330,8 @@ class SQLiVerifierMixin:
         method: str = "GET",
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
-        data: Any = None,
-        json_data: Any = None,
+        data: Optional[Any] = None,
+        json_data: Optional[Any] = None,
     ) -> VerificationResult:
         """报错注入验证"""
         error_patterns = [

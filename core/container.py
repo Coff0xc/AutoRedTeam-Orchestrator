@@ -71,7 +71,7 @@ class ServiceDescriptor:
         service_type: Type,
         implementation: Union[Type, Callable, Any],
         lifetime: Lifetime,
-        instance: Any = None,
+        instance: Optional[Any] = None,
     ):
         self.service_type = service_type
         self.implementation = implementation

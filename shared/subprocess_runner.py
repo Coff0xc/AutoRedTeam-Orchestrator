@@ -26,12 +26,12 @@ class SubprocessRunner:
     def run(
         self,
         cmd: Union[str, List[str]],
-        timeout: float = None,
+        timeout: Optional[float] = None,
         parse_json: bool = False,
-        tool_name: str = None,
-        install_cmd: str = None,
-        cwd: str = None,
-        env: Dict[str, str] = None,
+        tool_name: Optional[str] = None,
+        install_cmd: Optional[str] = None,
+        cwd: Optional[str] = None,
+        env: Optional[Dict[str, str]] = None,
         allow_shell: bool = False,
     ) -> ToolResult:
         """执行命令并返回统一结果
@@ -103,9 +103,7 @@ class SubprocessRunner:
                         data={"raw_output": stdout},
                     )
 
-            return ToolResult.ok(
-                data={"output": stdout, **({"stderr": stderr} if stderr else {})}
-            )
+            return ToolResult.ok(data={"output": stdout, **({"stderr": stderr} if stderr else {})})
 
         except subprocess.TimeoutExpired:
             return ToolResult.timeout(f"{tool_name} 执行超时 ({timeout}s)")
@@ -119,8 +117,8 @@ class SubprocessRunner:
     def run_ndjson(
         self,
         cmd: Union[str, List[str]],
-        timeout: float = None,
-        tool_name: str = None,
+        timeout: Optional[float] = None,
+        tool_name: Optional[str] = None,
     ) -> ToolResult:
         """执行命令并解析NDJSON输出(每行一个JSON)"""
         result = self.run(cmd, timeout=timeout, tool_name=tool_name)
@@ -142,16 +140,14 @@ class SubprocessRunner:
     async def async_run(
         self,
         cmd: Union[str, List[str]],
-        timeout: float = None,
+        timeout: Optional[float] = None,
         parse_json: bool = False,
-        tool_name: str = None,
+        tool_name: Optional[str] = None,
     ) -> ToolResult:
         """异步执行命令"""
         import asyncio
 
-        return await asyncio.to_thread(
-            self.run, cmd, timeout, parse_json, tool_name
-        )
+        return await asyncio.to_thread(self.run, cmd, timeout, parse_json, tool_name)
 
 
 # 全局实例

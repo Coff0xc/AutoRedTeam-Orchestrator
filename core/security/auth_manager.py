@@ -153,7 +153,7 @@ class AuthManager:
         "c2_beacon_start": ToolLevel.CRITICAL,
     }
 
-    def __init__(self, storage_path: str = None):
+    def __init__(self, storage_path: Optional[str] = None):
         """
         初始化认证管理器
 
@@ -175,7 +175,7 @@ class AuthManager:
         name: str,
         permissions: List[Permission],
         max_tool_level: ToolLevel = ToolLevel.MODERATE,
-        expires_days: int = None,
+        expires_days: Optional[int] = None,
         rate_limit: int = 100,
     ) -> Dict:
         """
@@ -349,8 +349,8 @@ class AuthManager:
         tool_name: str,
         params: Dict,
         success: bool,
-        error: str = None,
-        ip_address: str = None,
+        error: Optional[str] = None,
+        ip_address: Optional[str] = None,
     ):
         """
         记录审计日志
@@ -406,7 +406,7 @@ class AuthManager:
             for k in self.keys.values()
         ]
 
-    def get_audit_logs(self, key_id: str = None, limit: int = 100) -> List[Dict]:
+    def get_audit_logs(self, key_id: Optional[str] = None, limit: int = 100) -> List[Dict]:
         """获取审计日志"""
         logs = self.audit_logs
         if key_id:

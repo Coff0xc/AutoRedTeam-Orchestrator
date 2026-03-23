@@ -302,8 +302,8 @@ class BaseDetector(ABC):
         url: str,
         headers: Optional[Dict[str, Any]] = None,
         params: Optional[Dict[str, Any]] = None,
-        data: Any = None,
-        json_data: Any = None,
+        data: Optional[Any] = None,
+        json_data: Optional[Any] = None,
         cookies: Optional[Dict[str, Any]] = None,
     ) -> RequestInfo:
         """构建请求上下文，便于后续验证与误报过滤"""
@@ -422,9 +422,7 @@ class BaseDetector(ABC):
                 result.extra["fp_reason"] = fp_result.reason.value
                 result.extra["fp_evidence"] = fp_result.evidence
                 result.confidence *= 1 - fp_result.confidence
-                logger.info(
-                    "[%s] 误报过滤: %s (%s)", self.name, url, fp_result.reason.value
-                )
+                logger.info("[%s] 误报过滤: %s (%s)", self.name, url, fp_result.reason.value)
 
         return result
 
@@ -806,7 +804,7 @@ class ContextAwareDetector(BaseDetector):
         """
         self.context[key] = value
 
-    def get_context(self, key: str, default: Any = None) -> Any:
+    def get_context(self, key: str, default: Optional[Any] = None) -> Any:
         """获取上下文信息
 
         Args:

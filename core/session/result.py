@@ -219,7 +219,7 @@ class Vulnerability:
         if not 0 <= self.confidence <= 1:
             self.confidence = max(0, min(1, self.confidence))
 
-    def mark_verified(self, verified: bool = True, confidence: float = None) -> None:
+    def mark_verified(self, verified: bool = True, confidence: Optional[float] = None) -> None:
         """
         标记验证状态
 
@@ -241,7 +241,9 @@ class Vulnerability:
         if ref and ref not in self.references:
             self.references.append(ref)
 
-    def set_evidence(self, evidence: str, request: str = None, response: str = None) -> None:
+    def set_evidence(
+        self, evidence: str, request: Optional[str] = None, response: Optional[str] = None
+    ) -> None:
         """
         设置漏洞证据
 
@@ -468,7 +470,7 @@ class ScanResult:
         self.status = "completed"
         self.calculate_stats()
 
-    def fail(self, error: str = None) -> None:
+    def fail(self, error: Optional[str] = None) -> None:
         """
         标记扫描失败
 

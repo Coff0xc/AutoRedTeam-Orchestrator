@@ -17,7 +17,7 @@ import zlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # 尝试导入加密库
 try:
@@ -406,8 +406,8 @@ exec({var_name}.decode())
     def obfuscate_multilayer(
         self,
         payload: str,
-        encodings: List[EncodingType] = None,
-        keys: Dict[EncodingType, str] = None,
+        encodings: Optional[List[EncodingType]] = None,
+        keys: Optional[Dict[EncodingType, str]] = None,
     ) -> ObfuscationResult:
         """
         多层混淆
@@ -619,7 +619,7 @@ class ShellcodeObfuscator:
     """Shellcode 混淆器"""
 
     @staticmethod
-    def xor_shellcode(shellcode: bytes, key: bytes = None) -> Tuple[bytes, bytes]:
+    def xor_shellcode(shellcode: bytes, key: Optional[bytes] = None) -> Tuple[bytes, bytes]:
         """XOR 混淆 Shellcode"""
         if key is None:
             key = os.urandom(len(shellcode) if len(shellcode) < 32 else 32)
@@ -657,7 +657,7 @@ class ShellcodeObfuscator:
         return bytes(result)
 
     @staticmethod
-    def to_python_loader(shellcode: bytes, xor_key: bytes = None) -> str:
+    def to_python_loader(shellcode: bytes, xor_key: Optional[bytes] = None) -> str:
         """生成 Python Shellcode 加载器"""
         if xor_key:
             shellcode, _ = ShellcodeObfuscator.xor_shellcode(shellcode, xor_key)

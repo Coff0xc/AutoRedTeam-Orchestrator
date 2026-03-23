@@ -43,6 +43,8 @@
         print(f"修复建议: {result.remediation}")
 """
 
+from typing import Optional
+
 # 访问控制检测器
 from .access import (
     IDORDetector,
@@ -116,8 +118,8 @@ from .payloads import (
 # 请求层检测器
 from .request import (
     CachePoisoningDetector,
-    HTTPSmugglingDetector,
     HostHeaderInjectionDetector,
+    HTTPSmugglingDetector,
 )
 
 # 检测结果
@@ -136,7 +138,7 @@ from .result import (
 # ==================== 便捷函数 ====================
 
 
-def create_detector(name: str, config: dict = None) -> BaseDetector:
+def create_detector(name: str, config: Optional[dict] = None) -> BaseDetector:
     """创建检测器的便捷函数
 
     Args:

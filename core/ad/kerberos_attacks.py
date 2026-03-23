@@ -21,7 +21,7 @@ ATT&CK Techniques:
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -196,8 +196,8 @@ class KerberosAttacks:
 
     def kerberoast(
         self,
-        spns: List[str] = None,
-        target_users: List[str] = None,
+        spns: Optional[List[str]] = None,
+        target_users: Optional[List[str]] = None,
         output_file: str = "",
     ) -> AttackResult:
         """
@@ -415,7 +415,7 @@ class KerberosAttacks:
         domain_sid: str,
         target_user: str = "Administrator",
         user_id: int = 500,
-        groups: List[int] = None,
+        groups: Optional[List[int]] = None,
         duration: int = 10 * 365,
         output_file: str = "golden.ccache",
     ) -> AttackResult:
@@ -499,7 +499,7 @@ class KerberosAttacks:
         spn: str,
         target_user: str = "Administrator",
         user_id: int = 500,
-        groups: List[int] = None,
+        groups: Optional[List[int]] = None,
         duration: int = 10 * 365,
         output_file: str = "silver.ccache",
     ) -> AttackResult:
@@ -688,7 +688,7 @@ def kerberos_attacks(
     username: str = "",
     password: str = "",
     ntlm_hash: str = "",
-    targets: List[str] = None,
+    targets: Optional[List[str]] = None,
     krbtgt_hash: str = "",
     service_hash: str = "",
     domain_sid: str = "",

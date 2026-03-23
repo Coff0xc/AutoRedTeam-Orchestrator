@@ -30,8 +30,8 @@ class XSSVerifierMixin:
         method: str = "GET",
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
-        data: Any = None,
-        json_data: Any = None,
+        data: Optional[Any] = None,
+        json_data: Optional[Any] = None,
     ) -> VerificationResult:
         """反射型XSS验证 - 支持上下文分析"""
         # 生成唯一标识符

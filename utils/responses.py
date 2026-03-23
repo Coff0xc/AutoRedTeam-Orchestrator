@@ -17,11 +17,11 @@
     return tool_not_found("nmap")
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 def success(
-    data: Any = None,
+    data: Optional[Any] = None,
     message: str = "",
     **extra: Any,
 ) -> Dict[str, Any]:

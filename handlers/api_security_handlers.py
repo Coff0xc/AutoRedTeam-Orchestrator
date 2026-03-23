@@ -4,7 +4,7 @@ API安全工具处理器
       security_headers_score, full_api_scan
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .error_handling import (
     ErrorCategory,
@@ -27,7 +27,7 @@ def register_api_security_tools(mcp, counter, logger):
 
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.API_SECURITY)
-    async def jwt_scan(token: str, target: str = None) -> Dict[str, Any]:
+    async def jwt_scan(token: str, target: Optional[str] = None) -> Dict[str, Any]:
         """JWT安全扫描 - 检测JWT令牌的安全问题
 
         检测: None算法、弱密钥、算法混淆、KID注入等
@@ -132,7 +132,7 @@ def register_api_security_tools(mcp, counter, logger):
     @tool(mcp)
     @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.API_SECURITY, context_extractor=extract_url)
-    async def oauth_scan(url: str, client_id: str = None) -> Dict[str, Any]:
+    async def oauth_scan(url: str, client_id: Optional[str] = None) -> Dict[str, Any]:
         """OAuth安全扫描 - 检测OAuth 2.0实现问题
 
         检测: 开放重定向、CSRF、令牌泄露、PKCE缺失
@@ -185,7 +185,7 @@ def register_api_security_tools(mcp, counter, logger):
     @tool(mcp)
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.API_SECURITY, context_extractor=extract_target)
-    async def full_api_scan(target: str, jwt_token: str = None) -> Dict[str, Any]:
+    async def full_api_scan(target: str, jwt_token: Optional[str] = None) -> Dict[str, Any]:
         """完整API安全扫描 - 执行全面的API安全测试
 
         包含: JWT、CORS、安全头、GraphQL(如适用)

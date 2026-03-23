@@ -3,7 +3,7 @@
 包含: session_create, session_status, session_list, session_complete
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .error_handling import (
     ErrorCategory,
@@ -26,7 +26,9 @@ def register_session_tools(mcp, counter, logger):
     @tool(mcp)
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.SESSION, context_extractor=extract_target)
-    async def session_create(target: str, config: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def session_create(
+        target: str, config: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """创建扫描会话 - 创建新的渗透测试会话
 
         Args:
@@ -80,7 +82,7 @@ def register_session_tools(mcp, counter, logger):
 
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.SESSION)
-    async def session_list(status: str = None, limit: int = 20) -> Dict[str, Any]:
+    async def session_list(status: Optional[str] = None, limit: int = 20) -> Dict[str, Any]:
         """列出会话 - 获取会话列表
 
         Args:

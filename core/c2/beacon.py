@@ -685,7 +685,7 @@ class Beacon(BaseC2):
         except (OSError, FileNotFoundError, PermissionError) as e:
             return f"[Error] Cannot change directory: {e}"
 
-    def _handle_ls(self, path: str = None) -> str:
+    def _handle_ls(self, path: Optional[str] = None) -> str:
         """列出目录内容"""
         try:
             target = path or os.getcwd()

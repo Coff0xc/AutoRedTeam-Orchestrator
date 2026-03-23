@@ -14,6 +14,7 @@ ATT&CK Technique: T1552 - Unsecured Credentials
 """
 
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -276,8 +277,8 @@ class PasswordFinder:
 
     def __init__(
         self,
-        ignore_dirs: Set[str] = None,
-        ignore_extensions: Set[str] = None,
+        ignore_dirs: Optional[Set[str]] = None,
+        ignore_extensions: Optional[Set[str]] = None,
         max_file_size: int = 10 * 1024 * 1024,  # 10MB
         verbose: bool = False,
     ):
@@ -477,7 +478,7 @@ class PasswordFinder:
         return False
 
     def scan_directory(
-        self, directory: str, recursive: bool = True, file_patterns: List[str] = None
+        self, directory: str, recursive: bool = True, file_patterns: Optional[List[str]] = None
     ) -> List[SecretFinding]:
         """
         扫描目录
@@ -646,7 +647,7 @@ class PasswordFinder:
         summary["files_affected"] = list(summary["files_affected"])
         return summary
 
-    def export_json(self, output_path: str = None) -> str:
+    def export_json(self, output_path: Optional[str] = None) -> str:
         """
         导出结果为JSON
 

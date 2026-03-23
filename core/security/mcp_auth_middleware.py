@@ -67,7 +67,9 @@ def get_api_key_from_env() -> Optional[str]:
 
 
 def require_auth(
-    tool_name: str = None, level: "ToolLevel" = None, permissions: List["Permission"] = None
+    tool_name: Optional[str] = None,
+    level: Optional["ToolLevel"] = None,
+    permissions: Optional[List["Permission"]] = None,
 ):
     """
     MCP工具授权装饰器

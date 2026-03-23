@@ -325,7 +325,7 @@ class SessionManager:
 
             return result
 
-    def fail_session(self, session_id: str, error: str = None) -> Optional[ScanResult]:
+    def fail_session(self, session_id: str, error: Optional[str] = None) -> Optional[ScanResult]:
         """
         标记会话失败
 

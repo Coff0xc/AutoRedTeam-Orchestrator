@@ -697,7 +697,7 @@ class InputValidator:
         value: str,
         min_length: int = 0,
         max_length: int = 1000,
-        pattern: str = None,
+        pattern: Optional[str] = None,
         allow_empty: bool = False,
     ) -> str:
         """

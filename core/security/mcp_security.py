@@ -749,7 +749,7 @@ class MCPSecurityMiddleware:
         """清理字符串"""
         return self.validator.sanitize_string(value, **kwargs)
 
-    def secure_tool(self, operation: str = None, rate_limit_key: str = None):
+    def secure_tool(self, operation: Optional[str] = None, rate_limit_key: Optional[str] = None):
         """装饰器：保护 MCP 工具
 
         Args:

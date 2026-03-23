@@ -124,7 +124,7 @@ class SafeExecutor:
     def __init__(
         self,
         policy: ExecutionPolicy = ExecutionPolicy.STRICT,
-        custom_whitelist: Dict[str, CommandWhitelist] = None,
+        custom_whitelist: Optional[Dict[str, CommandWhitelist]] = None,
     ):
         """
         初始化安全执行器

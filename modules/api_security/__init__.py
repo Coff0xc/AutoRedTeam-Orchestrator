@@ -32,6 +32,8 @@ API安全测试模块
 版本: 3.0.0
 """
 
+from typing import Optional
+
 # 基础类和类型
 from .base import (
     APIScanSummary,
@@ -84,7 +86,9 @@ from .websocket import (
 
 
 # 便捷函数
-def full_api_scan(target: str, jwt_token: str = None, config: dict = None) -> dict:
+def full_api_scan(
+    target: str, jwt_token: Optional[str] = None, config: Optional[dict] = None
+) -> dict:
     """
     完整API安全扫描
 

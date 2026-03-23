@@ -30,13 +30,13 @@ class OrchestratorConfig:
     def __init__(
         self,
         auto_mode: bool = True,
-        skip_phases: List[str] = None,
+        skip_phases: Optional[List[str]] = None,
         max_retries: int = 3,
         checkpoint_interval: int = 60,
         timeout: int = 3600,
         quick_mode: bool = False,
         skip_exfiltrate: bool = True,
-        report_formats: List[str] = None,
+        report_formats: Optional[List[str]] = None,
     ):
         self.auto_mode = auto_mode
         self.skip_phases = skip_phases or []

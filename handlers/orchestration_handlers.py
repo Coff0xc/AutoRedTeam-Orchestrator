@@ -15,7 +15,7 @@
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # 授权中间件
 from core.security import (
@@ -102,8 +102,8 @@ def register_orchestration_tools(mcp, counter, logger):
         target: str,
         quick_mode: bool = False,
         skip_exfiltrate: bool = True,
-        skip_phases: List[str] = None,
-        report_formats: List[str] = None,
+        skip_phases: Optional[List[str]] = None,
+        report_formats: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """全自动渗透测试 - 执行完整的自动化渗透测试流程
 
@@ -203,7 +203,10 @@ def register_orchestration_tools(mcp, counter, logger):
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.REDTEAM, context_extractor=extract_phase_context)
     async def pentest_phase(
-        target: str, phase: str, session_id: str = None, config: Dict[str, Any] = None
+        target: str,
+        phase: str,
+        session_id: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """执行单个渗透阶段 - 可以单独执行某一阶段
 
@@ -246,7 +249,7 @@ def register_orchestration_tools(mcp, counter, logger):
     @handle_errors(logger, category=ErrorCategory.REDTEAM)
     async def exploit_vulnerability(
         detection_result: Dict[str, Any],
-        targets: Dict[str, Any] = None,
+        targets: Optional[Dict[str, Any]] = None,
         use_feedback: bool = False,
         max_retries: int = 3,
     ) -> Dict[str, Any]:
@@ -346,7 +349,7 @@ def register_orchestration_tools(mcp, counter, logger):
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.REDTEAM, context_extractor=extract_cve_context)
     async def exploit_by_cve(
-        target: str, cve_id: str, variables: Dict[str, str] = None
+        target: str, cve_id: str, variables: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """利用已知CVE漏洞 - 使用PoC模板利用指定CVE
 
@@ -383,7 +386,9 @@ def register_orchestration_tools(mcp, counter, logger):
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.REDTEAM, context_extractor=extract_target_context)
     async def get_attack_paths(
-        target: str, session_id: str = None, reconnaissance_data: Dict[str, Any] = None
+        target: str,
+        session_id: Optional[str] = None,
+        reconnaissance_data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """获取攻击路径建议 - 基于侦察数据智能推荐攻击路径
 
@@ -474,7 +479,9 @@ def register_orchestration_tools(mcp, counter, logger):
     @require_critical_auth
     @handle_errors(logger, category=ErrorCategory.REDTEAM)
     async def exploit_with_retry(
-        detection_result: Dict[str, Any], max_retries: int = 3, targets: Dict[str, Any] = None
+        detection_result: Dict[str, Any],
+        max_retries: int = 3,
+        targets: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """带重试的漏洞利用 - 失败时自动分析原因并调整策略重试
 
@@ -516,7 +523,7 @@ def register_orchestration_tools(mcp, counter, logger):
     async def verify_and_exploit(
         detection_result: Dict[str, Any],
         verification_method: str = "auto",
-        targets: Dict[str, Any] = None,
+        targets: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """验证并利用 - 先验证漏洞真实性，再执行利用
 
@@ -605,7 +612,7 @@ def register_orchestration_tools(mcp, counter, logger):
     @require_dangerous_auth
     @handle_errors(logger, category=ErrorCategory.REDTEAM)
     async def analyze_exploit_failure(
-        failed_result: Dict[str, Any], context: Dict[str, Any] = None
+        failed_result: Dict[str, Any], context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """分析利用失败原因 - 深度分析漏洞利用失败的原因并给出建议
 

@@ -495,7 +495,7 @@ def log_execution(
 
 
 def safe_execute(
-    default_return: Any = None, exceptions: tuple = (Exception,), log_error: bool = True
+    default_return: Optional[Any] = None, exceptions: tuple = (Exception,), log_error: bool = True
 ) -> Callable:
     """
     安全执行装饰器

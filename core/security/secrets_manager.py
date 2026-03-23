@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class SecretsManager:
     """敏感信息管理器"""
 
-    def __init__(self, master_key: str = None, storage_path: str = None):
+    def __init__(self, master_key: Optional[str] = None, storage_path: Optional[str] = None):
         """
         初始化敏感信息管理器
 
@@ -154,7 +154,7 @@ class SecretsManager:
         self._save_secrets()
         logger.info("设置敏感信息: %s", key)
 
-    def get_secret(self, key: str, default: str = None) -> Optional[str]:
+    def get_secret(self, key: str, default: Optional[str] = None) -> Optional[str]:
         """
         获取敏感信息
 
@@ -386,7 +386,7 @@ def get_secrets_manager() -> SecretsManager:
 
 
 # 便捷函数
-def get_secret(key: str, default: str = None) -> Optional[str]:
+def get_secret(key: str, default: Optional[str] = None) -> Optional[str]:
     """获取敏感信息"""
     return get_secrets_manager().get_secret(key, default)
 

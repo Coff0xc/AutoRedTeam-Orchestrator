@@ -352,7 +352,7 @@ class FingerprintSpoofer:
         ssl_ctx = spoofer.get_ssl_context()
     """
 
-    def __init__(self, browser: BrowserType = None):
+    def __init__(self, browser: Optional[BrowserType] = None):
         """
         Args:
             browser: 指定浏览器类型，None 则随机选择

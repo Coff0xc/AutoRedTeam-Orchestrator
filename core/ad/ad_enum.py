@@ -14,6 +14,7 @@ ATT&CK Technique: T1087 - Account Discovery
 """
 
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -231,7 +232,7 @@ class SimpleLDAPClient:
         base_dn: str,
         filter_str: str = "(objectClass=*)",
         scope: int = 2,  # SCOPE_SUBTREE
-        attributes: List[str] = None,
+        attributes: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
         """
         LDAP搜索
@@ -468,7 +469,7 @@ class ADEnumerator:
     def __init__(
         self,
         domain: str,
-        dc_ip: str = None,
+        dc_ip: Optional[str] = None,
         username: str = "",
         password: str = "",
         use_ssl: bool = False,
@@ -785,7 +786,7 @@ class ADEnumerator:
 # 便捷函数
 def ad_enumerate(
     domain: str,
-    dc_ip: str = None,
+    dc_ip: Optional[str] = None,
     username: str = "",
     password: str = "",
     enum_type: str = "all",

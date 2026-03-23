@@ -28,8 +28,8 @@ class LFIRCEVerifierMixin:
         method: str = "GET",
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
-        data: Any = None,
-        json_data: Any = None,
+        data: Optional[Any] = None,
+        json_data: Optional[Any] = None,
     ) -> VerificationResult:
         """本地文件包含验证"""
         # 目标文件和预期内容
@@ -143,8 +143,8 @@ class LFIRCEVerifierMixin:
         method: str = "GET",
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
-        data: Any = None,
-        json_data: Any = None,
+        data: Optional[Any] = None,
+        json_data: Optional[Any] = None,
     ) -> VerificationResult:
         """基于时间的 RCE 验证"""
         # 获取基准时间

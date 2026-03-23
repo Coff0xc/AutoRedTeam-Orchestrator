@@ -33,7 +33,6 @@ from .aws import (
     scan_aws,
 )
 
-
 # 基础类和类型
 from .base import (
     BaseCloudTester,

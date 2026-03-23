@@ -335,7 +335,7 @@ class Target:
         self.metadata[key] = value
         self.updated_at = datetime.now()
 
-    def get_metadata(self, key: str, default: Any = None) -> Any:
+    def get_metadata(self, key: str, default: Optional[Any] = None) -> Any:
         """
         获取元数据
 

@@ -204,7 +204,7 @@ class KubernetesTester(BaseCloudTester):
         except Exception as e:
             return False, str(e)
 
-    def _get_resources(self, resource_type: str, namespace: str = None) -> List[Dict]:
+    def _get_resources(self, resource_type: str, namespace: Optional[str] = None) -> List[Dict]:
         """获取Kubernetes资源"""
         args = ["get", resource_type, "-o", "json"]
 
@@ -723,7 +723,9 @@ class KubernetesTester(BaseCloudTester):
 
 
 # 便捷函数
-def scan_k8s_namespace(namespace: str = "default", kubeconfig: str = None) -> Dict[str, Any]:
+def scan_k8s_namespace(
+    namespace: str = "default", kubeconfig: Optional[str] = None
+) -> Dict[str, Any]:
     """
     快速扫描Kubernetes命名空间
 

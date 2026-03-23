@@ -9,15 +9,13 @@ import re
 from typing import Optional, Tuple
 from urllib.parse import urlparse
 
-from utils.validators import (
-    validate_domain as _validate_domain,
-    validate_ip as _validate_ip,
-    validate_port as _validate_port,
-    validate_url as _validate_url,
-)
+from utils.validators import validate_domain as _validate_domain
+from utils.validators import validate_ip as _validate_ip
+from utils.validators import validate_port as _validate_port
+from utils.validators import validate_url as _validate_url
 
 # 危险字符: 命令分隔符、重定向、子shell、引号、换行、空字节
-_DANGEROUS_CHARS = re.compile(r'[;\|\$\`\&\>\<\(\)\{\}\[\]\\\'\"\n\r\x00\t\x0b\x0c]')
+_DANGEROUS_CHARS = re.compile(r"[;\|\$\`\&\>\<\(\)\{\}\[\]\\\'\"\n\r\x00\t\x0b\x0c]")
 
 
 def validate_domain(domain: str) -> Tuple[bool, Optional[str]]:

@@ -165,7 +165,9 @@ def create_detector_tool(
     @tool(mcp, name=config.name)
     @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
-    async def detector_tool(url: str, params: Dict[str, str] = None, **kwargs) -> Dict[str, Any]:
+    async def detector_tool(
+        url: str, params: Optional[Dict[str, str]] = None, **kwargs
+    ) -> Dict[str, Any]:
         # 动态导入检测器
         import core.detectors as detectors_module
 

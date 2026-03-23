@@ -28,8 +28,8 @@ class SSRFVerifierMixin:
         method: str = "GET",
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
-        data: Any = None,
-        json_data: Any = None,
+        data: Optional[Any] = None,
+        json_data: Optional[Any] = None,
     ) -> VerificationResult:
         """SSRF 漏洞验证
 

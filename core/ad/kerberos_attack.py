@@ -14,6 +14,7 @@ ATT&CK Techniques:
 """
 
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -261,7 +262,7 @@ class KerberosClient:
         realm: str,
         nonce: int,
         enc_types: List[int],
-        till: datetime = None,
+        till: Optional[datetime] = None,
     ) -> bytes:
         """编码KDC-REQ-BODY"""
         if till is None:
@@ -301,7 +302,7 @@ class KerberosClient:
         body = kdc_options + cname_enc + realm_enc + sname_enc + till_enc + nonce_enc + etype_enc
         return self._encode_sequence(body)
 
-    def build_as_req(self, username: str, enc_types: List[int] = None) -> bytes:
+    def build_as_req(self, username: str, enc_types: Optional[List[int]] = None) -> bytes:
         """
         构建AS-REQ消息 (用于AS-REP Roasting)
         不包含预认证数据
@@ -336,7 +337,7 @@ class KerberosClient:
         return as_req
 
     def build_tgs_req(
-        self, spn: str, tgt: bytes, session_key: bytes, enc_types: List[int] = None
+        self, spn: str, tgt: bytes, session_key: bytes, enc_types: Optional[List[int]] = None
     ) -> bytes:
         """
         构建TGS-REQ消息 (用于Kerberoasting)
@@ -522,7 +523,7 @@ class KerberosAttacker:
             success=len(hashes) > 0, attack_type="AS-REP Roasting", target=self.dc_ip, hashes=hashes
         )
 
-    def kerberoast(self, spns: List[str] = None) -> AttackResult:
+    def kerberoast(self, spns: Optional[List[str]] = None) -> AttackResult:
         """
         Kerberoasting攻击
 

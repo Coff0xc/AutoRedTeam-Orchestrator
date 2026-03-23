@@ -10,7 +10,7 @@
     - 减少代码重复
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .error_handling import (
     ErrorCategory,
@@ -34,7 +34,7 @@ def register_detector_tools(mcp, counter, logger):
     @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def vuln_scan(
-        url: str, params: Dict[str, str] = None, detectors: List[str] = None
+        url: str, params: Optional[Dict[str, str]] = None, detectors: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """综合漏洞扫描 - 检测多种Web漏洞
 
@@ -82,7 +82,7 @@ def register_detector_tools(mcp, counter, logger):
     @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def sqli_scan(
-        url: str, params: Dict[str, str] = None, method: str = "GET"
+        url: str, params: Optional[Dict[str, str]] = None, method: str = "GET"
     ) -> Dict[str, Any]:
         """SQL注入检测 - 检测SQL注入漏洞
 
@@ -117,7 +117,7 @@ def register_detector_tools(mcp, counter, logger):
     @tool(mcp)
     @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
-    async def xss_scan(url: str, params: Dict[str, str] = None) -> Dict[str, Any]:
+    async def xss_scan(url: str, params: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """XSS漏洞检测 - 检测跨站脚本攻击漏洞
 
         支持: 反射型XSS、存储型XSS、DOM型XSS
@@ -150,7 +150,7 @@ def register_detector_tools(mcp, counter, logger):
     @tool(mcp)
     @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
-    async def ssrf_scan(url: str, params: Dict[str, str] = None) -> Dict[str, Any]:
+    async def ssrf_scan(url: str, params: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """SSRF漏洞检测 - 检测服务端请求伪造漏洞
 
         Args:
@@ -172,7 +172,7 @@ def register_detector_tools(mcp, counter, logger):
     @tool(mcp)
     @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
-    async def rce_scan(url: str, params: Dict[str, str] = None) -> Dict[str, Any]:
+    async def rce_scan(url: str, params: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """命令注入检测 - 检测远程命令执行漏洞
 
         Args:
@@ -194,7 +194,9 @@ def register_detector_tools(mcp, counter, logger):
     @tool(mcp)
     @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
-    async def path_traversal_scan(url: str, params: Dict[str, str] = None) -> Dict[str, Any]:
+    async def path_traversal_scan(
+        url: str, params: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
         """路径遍历检测 - 检测目录遍历/LFI漏洞
 
         Args:
@@ -216,7 +218,7 @@ def register_detector_tools(mcp, counter, logger):
     @tool(mcp)
     @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
-    async def ssti_scan(url: str, params: Dict[str, str] = None) -> Dict[str, Any]:
+    async def ssti_scan(url: str, params: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """模板注入检测 - 检测服务端模板注入漏洞
 
         支持: Jinja2, Twig, Freemarker, Velocity等模板引擎
@@ -263,7 +265,7 @@ def register_detector_tools(mcp, counter, logger):
     @validate_inputs(url="url")
     @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
     async def idor_scan(
-        url: str, id_param: str = "id", test_ids: List[str] = None
+        url: str, id_param: str = "id", test_ids: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """IDOR漏洞检测 - 检测不安全的直接对象引用
 

@@ -100,7 +100,7 @@ class DynamicContentNormalizer:
         (r"\.css\?v=\d+", ".css?v=[VERSION]"),
     ]
 
-    def __init__(self, custom_patterns: List[Tuple[str, str]] = None):
+    def __init__(self, custom_patterns: Optional[List[Tuple[str, str]]] = None):
         self.patterns = self.DYNAMIC_PATTERNS.copy()
         if custom_patterns:
             self.patterns.extend(custom_patterns)
@@ -237,7 +237,9 @@ class SPADetector:
         "client-side-rendering",
     ]
 
-    def detect(self, body: str, headers: Dict[str, str] = None) -> Tuple[bool, Optional[str]]:
+    def detect(
+        self, body: str, headers: Optional[Dict[str, str]] = None
+    ) -> Tuple[bool, Optional[str]]:
         """检测是否为SPA应用及框架类型"""
         headers = headers or {}
         body_lower = body.lower()
@@ -341,7 +343,7 @@ class WAFBlockDetector:
     BLOCK_STATUS_CODES = [403, 406, 429, 503]
 
     def is_blocked(
-        self, status_code: int, body: str, headers: Dict[str, str] = None
+        self, status_code: int, body: str, headers: Optional[Dict[str, str]] = None
     ) -> Tuple[bool, Optional[str]]:
         """检测请求是否被WAF拦截"""
         headers = headers or {}
@@ -390,7 +392,9 @@ class RateLimitDetector:
         "x-ratelimit-reset",
     ]
 
-    def is_rate_limited(self, status_code: int, body: str, headers: Dict[str, str] = None) -> bool:
+    def is_rate_limited(
+        self, status_code: int, body: str, headers: Optional[Dict[str, str]] = None
+    ) -> bool:
         """检测是否被速率限制"""
         headers = headers or {}
 
@@ -557,9 +561,9 @@ class FalsePositiveFilter:
         body: str,
         status_code: int,
         response_time: float,
-        headers: Dict[str, str] = None,
-        baseline: ResponseBaseline = None,
-        url: str = None,
+        headers: Optional[Dict[str, str]] = None,
+        baseline: Optional[ResponseBaseline] = None,
+        url: Optional[str] = None,
     ) -> FilterResult:
         """
         检查响应是否为误报
@@ -768,7 +772,7 @@ class FalsePositiveFilter:
 
 # 便捷函数
 def is_false_positive(
-    body: str, status_code: int, headers: Dict[str, str] = None
+    body: str, status_code: int, headers: Optional[Dict[str, str]] = None
 ) -> Tuple[bool, str]:
     """快速检查是否为误报"""
     filter_engine = FalsePositiveFilter()

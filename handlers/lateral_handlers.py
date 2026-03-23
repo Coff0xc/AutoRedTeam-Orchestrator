@@ -12,7 +12,7 @@
     - 添加资源清理保护
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # 授权中间件
 from core.security import require_critical_auth
@@ -44,8 +44,8 @@ def register_lateral_tools(mcp, counter, logger):
     async def lateral_ssh(
         target: str,
         username: str,
-        password: str = None,
-        key_file: str = None,
+        password: Optional[str] = None,
+        key_file: Optional[str] = None,
         command: str = "whoami",
         port: int = 22,
     ) -> Dict[str, Any]:
@@ -98,7 +98,7 @@ def register_lateral_tools(mcp, counter, logger):
     async def lateral_ssh_tunnel(
         target: str,
         username: str,
-        password: str = None,
+        password: Optional[str] = None,
         local_port: int = 8080,
         remote_host: str = "127.0.0.1",
         remote_port: int = 80,
@@ -163,7 +163,11 @@ def register_lateral_tools(mcp, counter, logger):
     @validate_inputs(target="target")
     @handle_errors(logger, ErrorCategory.REDTEAM, extract_target)
     async def lateral_wmi(
-        target: str, username: str, password: str = None, command: str = "whoami", domain: str = ""
+        target: str,
+        username: str,
+        password: Optional[str] = None,
+        command: str = "whoami",
+        domain: str = "",
     ) -> Dict[str, Any]:
         """WMI横向移动 - 通过WMI执行远程命令
 
@@ -207,7 +211,7 @@ def register_lateral_tools(mcp, counter, logger):
     async def lateral_wmi_query(
         target: str,
         username: str,
-        password: str = None,
+        password: Optional[str] = None,
         query: str = "SELECT * FROM Win32_OperatingSystem",
         domain: str = "",
     ) -> Dict[str, Any]:
@@ -357,8 +361,8 @@ def register_lateral_tools(mcp, counter, logger):
     async def lateral_psexec(
         target: str,
         username: str,
-        password: str = None,
-        ntlm_hash: str = None,
+        password: Optional[str] = None,
+        ntlm_hash: Optional[str] = None,
         command: str = "whoami",
         domain: str = "",
     ) -> Dict[str, Any]:
@@ -409,8 +413,8 @@ def register_lateral_tools(mcp, counter, logger):
     async def lateral_auto(
         target: str,
         username: str,
-        password: str = None,
-        ntlm_hash: str = None,
+        password: Optional[str] = None,
+        ntlm_hash: Optional[str] = None,
         command: str = "whoami",
         domain: str = "",
     ) -> Dict[str, Any]:

@@ -12,7 +12,7 @@ Active Directory攻击工具处理器
     - kerberos_attack的targets参数，不是target_users
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # 授权中间件
 from core.security import require_critical_auth
@@ -34,7 +34,11 @@ def register_ad_tools(mcp, counter, logger):
     @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def ad_enumerate(
-        domain: str, dc_ip: str, username: str = None, password: str = None, enum_type: str = "all"
+        domain: str,
+        dc_ip: str,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        enum_type: str = "all",
     ) -> Dict[str, Any]:
         """AD枚举 - 枚举Active Directory对象
 
@@ -115,9 +119,9 @@ def register_ad_tools(mcp, counter, logger):
         domain: str,
         dc_ip: str,
         attack_type: str = "asrep",
-        username: str = None,
-        password: str = None,
-        targets: List[str] = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        targets: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Kerberos攻击 - 执行Kerberos协议攻击
 
@@ -192,7 +196,11 @@ def register_ad_tools(mcp, counter, logger):
     @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def ad_spn_scan(
-        domain: str, dc_ip: str, username: str, password: str = None, service_class: str = None
+        domain: str,
+        dc_ip: str,
+        username: str,
+        password: Optional[str] = None,
+        service_class: Optional[str] = None,
     ) -> Dict[str, Any]:
         """SPN扫描 - 扫描域内SPN服务
 

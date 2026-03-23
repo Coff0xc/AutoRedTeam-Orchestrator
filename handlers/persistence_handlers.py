@@ -11,7 +11,7 @@
     - 正确处理返回值类型
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # 授权中间件
 from core.security import require_critical_auth
@@ -34,7 +34,7 @@ def register_persistence_tools(mcp, counter, logger):
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def persistence_windows(
         method: str = "registry",
-        payload: str = None,
+        payload: Optional[str] = None,
         name: str = "WindowsUpdate",
         trigger: str = "logon",
     ) -> Dict[str, Any]:
@@ -113,7 +113,7 @@ def register_persistence_tools(mcp, counter, logger):
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def persistence_linux(
         method: str = "crontab",
-        payload: str = None,
+        payload: Optional[str] = None,
         name: str = "system-update",
         schedule: str = "*/5 * * * *",
     ) -> Dict[str, Any]:
@@ -199,7 +199,7 @@ def register_persistence_tools(mcp, counter, logger):
         shell_type: str = "php",
         password: str = "pass",
         obfuscation: str = "medium",
-        features: List[str] = None,
+        features: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Webshell生成 - 生成各类Webshell
 

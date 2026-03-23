@@ -389,7 +389,7 @@ def reload_config() -> GlobalConfig:
     return _config
 
 
-def get_config_value(key: str, default: Any = None) -> Any:
+def get_config_value(key: str, default: Optional[Any] = None) -> Any:
     """
     获取配置值
 

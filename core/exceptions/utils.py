@@ -53,7 +53,7 @@ def wrap_exception(
 
 def handle_exceptions(
     logger: Optional[logging.Logger] = None,
-    default_return: Any = None,
+    default_return: Optional[Any] = None,
     reraise: bool = False,
     error_mapping: Optional[Dict[Type[Exception], Type[AutoRedTeamError]]] = None,
 ) -> Callable[[Callable[..., T]], Callable[..., Union[T, Any]]]:

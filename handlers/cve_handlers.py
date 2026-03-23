@@ -3,7 +3,7 @@ CVE工具处理器
 包含: cve_search, cve_sync, cve_stats, poc_execute, poc_list
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
 from .tooling import tool
@@ -21,7 +21,10 @@ def register_cve_tools(mcp, counter, logger):
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.CVE)
     async def cve_search(
-        keyword: str, severity: str = None, has_poc: bool = None, limit: int = 50
+        keyword: str,
+        severity: Optional[str] = None,
+        has_poc: Optional[bool] = None,
+        limit: int = 50,
     ) -> Dict[str, Any]:
         """搜索CVE漏洞 - 在本地CVE数据库中搜索
 
@@ -55,7 +58,7 @@ def register_cve_tools(mcp, counter, logger):
 
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.CVE)
-    async def cve_sync(days: int = 7, sources: List[str] = None) -> Dict[str, Any]:
+    async def cve_sync(days: int = 7, sources: Optional[List[str]] = None) -> Dict[str, Any]:
         """同步CVE数据 - 从多个数据源同步最新CVE
 
         数据源: NVD (官方), Nuclei Templates, Exploit-DB
@@ -100,7 +103,7 @@ def register_cve_tools(mcp, counter, logger):
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.CVE, context_extractor=extract_target)
     async def poc_execute(
-        target: str, template_id: str, variables: Dict[str, str] = None
+        target: str, template_id: str, variables: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """执行PoC验证 - 使用PoC模板验证目标漏洞
 
@@ -138,7 +141,7 @@ def register_cve_tools(mcp, counter, logger):
 
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.CVE)
-    async def poc_list(keyword: str = None, limit: int = 50) -> Dict[str, Any]:
+    async def poc_list(keyword: Optional[str] = None, limit: int = 50) -> Dict[str, Any]:
         """列出PoC模板 - 查看已加载的PoC模板
 
         Args:
@@ -164,7 +167,7 @@ def register_cve_tools(mcp, counter, logger):
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.CVE, context_extractor=extract_target)
     async def cve_auto_exploit(
-        target: str, cve_id: str, custom_vars: Dict[str, str] = None
+        target: str, cve_id: str, custom_vars: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """CVE自动利用 - 通过CVE ID自动生成PoC并利用
 
@@ -208,7 +211,7 @@ def register_cve_tools(mcp, counter, logger):
         cve_id: str,
         description: str,
         severity: str = "medium",
-        custom_vars: Dict[str, str] = None,
+        custom_vars: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """通过CVE描述利用 - 已知描述时直接生成PoC并利用
 

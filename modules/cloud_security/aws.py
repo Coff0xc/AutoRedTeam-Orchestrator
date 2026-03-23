@@ -515,7 +515,7 @@ class AWSTester(BaseCloudTester):
 
 
 # 便捷函数
-def scan_aws(region: str = "us-east-1", profile: str = None) -> Dict[str, Any]:
+def scan_aws(region: str = "us-east-1", profile: Optional[str] = None) -> Dict[str, Any]:
     """
     快速AWS安全扫描
 
