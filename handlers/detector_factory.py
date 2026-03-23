@@ -110,6 +110,18 @@ DETECTOR_CONFIGS: List[DetectorConfig] = [
         description="原型链污染检测 - 检测JavaScript Prototype Pollution漏洞",
         vuln_type="支持: 服务端PP、客户端PP、参数合并PP",
     ),
+    DetectorConfig(
+        name="crlf_injection_scan",
+        detector_class="CRLFInjectionDetector",
+        description="CRLF注入检测 - 检测HTTP响应头注入/拆分漏洞",
+        vuln_type="支持: 标准CRLF、Unicode变体、双重编码、Response Splitting",
+    ),
+    DetectorConfig(
+        name="host_header_injection_scan",
+        detector_class="HostHeaderInjectionDetector",
+        description="Host头注入检测 - 检测Host Header Injection漏洞",
+        vuln_type="支持: Host覆盖、X-Forwarded-Host、端口注入、URL覆盖",
+    ),
 ]
 
 

@@ -81,6 +81,7 @@ from .file import (
 
 # 注入类检测器
 from .injection import (
+    CRLFInjectionDetector,
     DeserializeDetector,
     FastjsonDetector,
     LDAPiDetector,
@@ -116,6 +117,7 @@ from .payloads import (
 from .request import (
     CachePoisoningDetector,
     HTTPSmugglingDetector,
+    HostHeaderInjectionDetector,
 )
 
 # 检测结果
@@ -221,6 +223,7 @@ __all__ = [
     "DeserializeDetector",
     "FastjsonDetector",
     "PrototypePollutionDetector",
+    "CRLFInjectionDetector",
     # 访问控制检测器
     "IDORDetector",
     "PathTraversalDetector",
@@ -241,6 +244,7 @@ __all__ = [
     # 请求层检测器
     "HTTPSmugglingDetector",
     "CachePoisoningDetector",
+    "HostHeaderInjectionDetector",
     # 误报过滤
     "FalsePositiveFilter",
     "DynamicContentNormalizer",

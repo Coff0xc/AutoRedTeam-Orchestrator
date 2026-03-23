@@ -4,6 +4,7 @@
 包含 SQL 注入、XSS、命令注入、模板注入、XXE、LDAP 注入、反序列化等检测器
 """
 
+from .crlf_injection import CRLFInjectionDetector
 from .deserialize import DeserializeDetector, FastjsonDetector
 from .ldap import LDAPiDetector
 from .prototype_pollution import PrototypePollutionDetector
@@ -23,4 +24,5 @@ __all__ = [
     "DeserializeDetector",
     "FastjsonDetector",
     "PrototypePollutionDetector",
+    "CRLFInjectionDetector",
 ]
