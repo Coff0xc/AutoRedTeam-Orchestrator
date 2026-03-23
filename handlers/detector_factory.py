@@ -92,6 +92,18 @@ DETECTOR_CONFIGS: List[DetectorConfig] = [
         detector_class="SecurityHeadersDetector",
         description="安全头检测 - 检测HTTP安全响应头配置",
     ),
+    DetectorConfig(
+        name="http_smuggling_scan",
+        detector_class="HTTPSmugglingDetector",
+        description="HTTP请求走私检测 - 检测CL.TE/TE.CL/TE.TE走私漏洞",
+        vuln_type="支持: CL.TE、TE.CL、TE.TE 三种走私变体",
+    ),
+    DetectorConfig(
+        name="cache_poisoning_scan",
+        detector_class="CachePoisoningDetector",
+        description="缓存投毒检测 - 检测Web缓存投毒漏洞",
+        vuln_type="支持: Unkeyed Header、Unkeyed Parameter、Fat GET",
+    ),
 ]
 
 

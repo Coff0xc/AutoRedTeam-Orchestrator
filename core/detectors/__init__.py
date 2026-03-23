@@ -111,6 +111,12 @@ from .payloads import (
     get_payloads_with_variants,
 )
 
+# 请求层检测器
+from .request import (
+    CachePoisoningDetector,
+    HTTPSmugglingDetector,
+)
+
 # 检测结果
 from .result import (
     DetectionResult,
@@ -230,6 +236,9 @@ __all__ = [
     "CSRFDetector",
     "SecurityHeadersDetector",
     "InfoDisclosureDetector",
+    # 请求层检测器
+    "HTTPSmugglingDetector",
+    "CachePoisoningDetector",
     # 误报过滤
     "FalsePositiveFilter",
     "DynamicContentNormalizer",
