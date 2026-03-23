@@ -50,10 +50,9 @@ class TestMCPServerSmoke:
     def test_core_module_importable(self):
         """Test that core module exports are available"""
         try:
-            from core import ToolRegistry, ToolResult
+            from core import ToolResult
 
             assert ToolResult is not None
-            assert ToolRegistry is not None
         except ImportError as e:
             pytest.fail(f"Failed to import core: {e}")
 

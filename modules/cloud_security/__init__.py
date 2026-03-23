@@ -33,11 +33,6 @@ from .aws import (
     scan_aws,
 )
 
-# Azure
-from .azure import (
-    AzureTester,
-    scan_azure,
-)
 
 # 基础类和类型
 from .base import (
@@ -84,9 +79,6 @@ __all__ = [
     # AWS
     "AWSTester",
     "scan_aws",
-    # Azure
-    "AzureTester",
-    "scan_azure",
     # gRPC
     "GRPCTester",
     "scan_grpc",

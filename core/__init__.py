@@ -16,19 +16,6 @@ from core.ai_engine import (
     RiskLevel,
 )
 
-# 工具注册表 (无循环依赖 - 仅使用标准库)
-from core.registry import (
-    BaseTool,
-    FunctionTool,
-    MCPBridge,
-    ToolCategory,
-    ToolParameter,
-    ToolRegistry,
-)
-from core.registry import get_global_bridge as get_bridge  # 向后兼容别名
-from core.registry import (
-    get_registry,
-)
 
 # 统一的工具返回值 Schema
 from core.result import (
@@ -65,15 +52,6 @@ __all__ = [
     "ResultStatus",
     "ToolResultType",
     "ensure_tool_result",
-    # 工具注册表
-    "ToolRegistry",
-    "BaseTool",
-    "FunctionTool",
-    "ToolCategory",
-    "ToolParameter",
-    "MCPBridge",
-    "get_registry",
-    "get_bridge",
     # AI决策引擎
     "AIDecisionEngine",
     "RiskLevel",

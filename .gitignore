@@ -69,3 +69,4 @@ data/auth/
 data/admin_key.txt
 # 密钥文件
 .master_key
+.claude-audit-*.md
