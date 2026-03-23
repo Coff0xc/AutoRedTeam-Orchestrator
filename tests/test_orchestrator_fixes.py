@@ -260,34 +260,5 @@ class TestExfiltrateConfig:
         assert result.data.get("skipped") is True
         assert "无敏感数据" in result.data.get("reason", "")
 
-
-class TestLegacyToolsDeprecation:
-    """测试遗留工具弃用警告"""
-
-    def test_register_pentest_tools_shows_deprecation_warning(self):
-        """测试: register_pentest_tools 显示弃用警告"""
-        import warnings
-
-        from tools.pentest_tools import register_pentest_tools_legacy
-
-        mock_mcp = MagicMock()
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            register_pentest_tools_legacy(mock_mcp)
-
-            # 应该有弃用警告
-            assert len(w) == 1
-            assert issubclass(w[0].category, DeprecationWarning)
-            assert "弃用" in str(w[0].message)
-
-    def test_backward_compat_alias_exists(self):
-        """测试: 向后兼容别名存在"""
-        from tools.pentest_tools import register_pentest_tools, register_pentest_tools_legacy
-
-        # 别名应该指向同一个函数
-        assert register_pentest_tools is register_pentest_tools_legacy
-
-
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

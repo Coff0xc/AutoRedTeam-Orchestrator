@@ -6,7 +6,8 @@ shared 模块测试
 
 import pytest
 
-from shared import ToolResult, validate_domain, validate_ip, validate_port, validate_url
+from core.result import ToolResult
+from shared import validate_domain, validate_ip, validate_port, validate_url
 from shared.subprocess_runner import SubprocessRunner, get_subprocess_runner
 
 
@@ -14,10 +15,16 @@ class TestToolResult:
     """ToolResult 测试"""
 
     def test_ok(self):
-        result = ToolResult.ok(data="test", count=5)
+        result = ToolResult.ok(data={"key": "test", "count": 5})
         assert result.success is True
-        assert result.data == {"data": "test", "count": 5}
+        assert result.data == {"key": "test", "count": 5}
         assert result.error is None
+
+    def test_ok_with_metadata(self):
+        result = ToolResult.ok(data={"key": "test"}, extra="info")
+        assert result.success is True
+        assert result.data == {"key": "test"}
+        assert result.metadata["extra"] == "info"
 
     def test_fail(self):
         result = ToolResult.fail("connection error")
@@ -25,22 +32,16 @@ class TestToolResult:
         assert result.error == "connection error"
 
     def test_timeout(self):
-        result = ToolResult.timeout("nmap", 30.0)
+        result = ToolResult.timeout("nmap 扫描超时 (30s)")
         assert result.success is False
         assert "超时" in result.error
         assert "30" in result.error
 
-    def test_not_installed(self):
-        result = ToolResult.not_installed("nuclei", "apt install nuclei")
-        assert result.success is False
-        assert "nuclei" in result.error
-        assert "apt install" in result.error
-
     def test_to_dict_success(self):
-        result = ToolResult.ok(items=[1, 2, 3])
+        result = ToolResult.ok(data={"items": [1, 2, 3]})
         d = result.to_dict()
         assert d["success"] is True
-        assert d["items"] == [1, 2, 3]
+        assert d["data"]["items"] == [1, 2, 3]
         assert "error" not in d
 
     def test_to_dict_failure(self):
