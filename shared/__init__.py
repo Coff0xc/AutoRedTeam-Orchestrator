@@ -7,7 +7,7 @@
 - validators: 统一输入验证
 """
 
-from .tool_result import ToolResult
+from core.result import ToolResult
 from .subprocess_runner import SubprocessRunner, get_subprocess_runner
 from .validators import (
     validate_domain,

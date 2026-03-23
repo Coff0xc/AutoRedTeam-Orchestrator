@@ -12,7 +12,7 @@ import shutil
 import subprocess
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from .tool_result import ToolResult
+from core.result import ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,8 @@ class SubprocessRunner:
         # 检查工具是否存在
         executable = cmd[0] if isinstance(cmd, list) else cmd.split()[0]
         if not shutil.which(executable):
-            return ToolResult.not_installed(tool_name, install_cmd)
+            hint = f" (安装: {install_cmd})" if install_cmd else ""
+            return ToolResult.fail(f"{tool_name} 未安装{hint}")
 
         try:
             result = subprocess.run(
@@ -87,24 +88,30 @@ class SubprocessRunner:
             # 命令执行失败
             if result.returncode != 0:
                 error_msg = stderr or f"{tool_name}执行失败 (code={result.returncode})"
-                return ToolResult.fail(error_msg, raw_output=stdout or stderr)
+                return ToolResult.fail(error_msg, data={"raw_output": stdout or stderr})
 
             # 解析JSON输出
             if parse_json and stdout:
                 try:
                     data = json.loads(stdout)
                     if isinstance(data, dict):
-                        return ToolResult.ok(**data)
-                    return ToolResult.ok(result=data)
+                        return ToolResult.ok(data=data)
+                    return ToolResult.ok(data={"result": data})
                 except json.JSONDecodeError:
-                    return ToolResult.parse_error(stdout)
+                    return ToolResult.fail(
+                        f"{tool_name} 输出JSON解析失败",
+                        data={"raw_output": stdout},
+                    )
 
-            return ToolResult.ok(output=stdout, stderr=stderr if stderr else None)
+            return ToolResult.ok(
+                data={"output": stdout, **({"stderr": stderr} if stderr else {})}
+            )
 
         except subprocess.TimeoutExpired:
-            return ToolResult.timeout(tool_name, timeout)
+            return ToolResult.timeout(f"{tool_name} 执行超时 ({timeout}s)")
         except FileNotFoundError:
-            return ToolResult.not_installed(tool_name, install_cmd)
+            hint = f" (安装: {install_cmd})" if install_cmd else ""
+            return ToolResult.fail(f"{tool_name} 未安装{hint}")
         except Exception as e:
             logger.exception("subprocess执行异常: %s", cmd)
             return ToolResult.fail(str(e))
@@ -130,7 +137,7 @@ class SubprocessRunner:
                 except json.JSONDecodeError:
                     continue
 
-        return ToolResult.ok(items=items, count=len(items))
+        return ToolResult.ok(data={"items": items, "count": len(items)})
 
     async def async_run(
         self,

@@ -6,10 +6,10 @@
 """
 
 from .tool_manager import (
+    ExternalToolResult,
     ResultParser,
     ToolInfo,
     ToolManager,
-    ToolResult,
     ToolStatus,
     check_tools,
     get_manager,
@@ -23,7 +23,7 @@ from .tool_manager import (
 
 __all__ = [
     "ToolManager",
-    "ToolResult",
+    "ExternalToolResult",
     "ToolInfo",
     "ToolStatus",
     "ResultParser",

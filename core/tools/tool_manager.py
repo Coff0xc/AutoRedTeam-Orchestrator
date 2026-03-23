@@ -74,8 +74,12 @@ class ToolInfo:
 
 
 @dataclass
-class ToolResult:
-    """工具执行结果"""
+class ExternalToolResult:
+    """外部工具执行结果（nmap/nuclei/sqlmap等）
+
+    注意: 这不是 MCP 工具的 ToolResult (core.result.ToolResult)，
+    而是外部命令行工具的执行结果容器。
+    """
 
     tool: str
     success: bool
@@ -765,7 +769,7 @@ class ToolManager:
         extra_args: Optional[List[str]] = None,
         timeout: Optional[int] = None,
         parse_output: bool = True,
-    ) -> ToolResult:
+    ) -> ExternalToolResult:
         """运行工具
 
         Args:
@@ -782,7 +786,9 @@ class ToolManager:
         info = self.tools.get(tool)
 
         if info is None:
-            return ToolResult(tool=tool, success=False, target=target, error=f"未知工具: {tool}")
+            return ExternalToolResult(
+                tool=tool, success=False, target=target, error=f"未知工具: {tool}"
+            )
 
         if info.status != ToolStatus.AVAILABLE:
             # 尝试回退
@@ -791,7 +797,7 @@ class ToolManager:
                 return await self.run(
                     info.fallback, target, preset, extra_args, timeout, parse_output
                 )
-            return ToolResult(
+            return ExternalToolResult(
                 tool=tool, success=False, target=target, error=f"工具不可用: {info.status.value}"
             )
 
@@ -828,7 +834,7 @@ class ToolManager:
             if parse_output and output:
                 parsed_data = self._parse_output(tool, output, metadata)
 
-            return ToolResult(
+            return ExternalToolResult(
                 tool=tool,
                 success=process.returncode == 0,
                 target=target,
@@ -849,7 +855,7 @@ class ToolManager:
                     pass  # 进程已经结束
                 except OSError as e:
                     logger.warning("终止超时进程失败: %s", e)
-            return ToolResult(
+            return ExternalToolResult(
                 tool=tool,
                 success=False,
                 target=target,
@@ -864,7 +870,7 @@ class ToolManager:
                     await process.wait()
                 except (ProcessLookupError, OSError):
                     pass  # 进程已终止或无法访问
-            return ToolResult(
+            return ExternalToolResult(
                 tool=tool,
                 success=False,
                 target=target,
@@ -966,7 +972,7 @@ class ToolManager:
 
         return {"raw": output}
 
-    async def run_chain(self, chain_name: str, target: str, **kwargs) -> List[ToolResult]:
+    async def run_chain(self, chain_name: str, target: str, **kwargs) -> List[ExternalToolResult]:
         """运行工具链
 
         Args:
@@ -981,7 +987,7 @@ class ToolManager:
 
         if not chain:
             return [
-                ToolResult(
+                ExternalToolResult(
                     tool="chain", success=False, target=target, error=f"未知工具链: {chain_name}"
                 )
             ]
@@ -1020,7 +1026,7 @@ class ToolManager:
 
         return results
 
-    def _extract_ports(self, result: ToolResult) -> str:
+    def _extract_ports(self, result: ExternalToolResult) -> str:
         """从扫描结果中提取端口"""
         ports = []
 
@@ -1124,7 +1130,7 @@ def check_tools() -> Dict[str, Dict[str, Any]]:
 # 导出
 __all__ = [
     "ToolManager",
-    "ToolResult",
+    "ExternalToolResult",
     "ToolInfo",
     "ToolStatus",
     "ResultParser",
