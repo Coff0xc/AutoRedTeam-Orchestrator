@@ -119,39 +119,37 @@ class TestHTTPClient:
     @pytest.fixture
     def mock_requests(self):
         """模拟 requests 库"""
-        with patch("core.http.client.REQUESTS_AVAILABLE", True):
-            with patch("core.http.client.requests") as mock:
-                mock_response = Mock()
-                mock_response.status_code = 200
-                mock_response.headers = {"Content-Type": "text/html"}
-                mock_response.text = "OK"
-                mock_response.content = b"OK"
-                mock_response.elapsed.total_seconds.return_value = 0.5
-                mock_response.url = "https://example.com"
-                mock_response.history = []
+        with patch("core.http.client.HTTPX_AVAILABLE", False):
+            with patch("core.http.client.REQUESTS_AVAILABLE", True):
+                with patch("core.http.client.requests") as mock:
+                    mock_response = Mock()
+                    mock_response.status_code = 200
+                    mock_response.headers = {"Content-Type": "text/html"}
+                    mock_response.text = "OK"
+                    mock_response.content = b"OK"
+                    mock_response.elapsed.total_seconds.return_value = 0.5
+                    mock_response.url = "https://example.com"
+                    mock_response.history = []
 
-                mock.Session.return_value.request.return_value = mock_response
-                yield mock
+                    mock.Session.return_value.request.return_value = mock_response
+                    yield mock
 
     def test_init_default_config(self, mock_requests):
         """测试默认配置初始化"""
         client = HTTPClient()
 
         assert client.config.timeout == 30
-        assert client.config.max_retries == 3
-        assert client.config.verify_ssl is False
+        assert client.config.retry.max_retries == 3
+        assert client.config.verify_ssl is True
 
     def test_init_custom_config(self, mock_requests):
         """测试自定义配置初始化"""
-        config = HTTPConfig(
-            timeout=60,
-            max_retries=5,
-            verify_ssl=True,
-        )
+        config = HTTPConfig(timeout=60, verify_ssl=True)
+        config.retry.max_retries = 5
         client = HTTPClient(config)
 
         assert client.config.timeout == 60
-        assert client.config.max_retries == 5
+        assert client.config.retry.max_retries == 5
         assert client.config.verify_ssl is True
 
     def test_get_request(self, mock_requests):
@@ -209,33 +207,32 @@ class TestRetryMechanism:
     @pytest.fixture
     def mock_requests_with_retry(self):
         """模拟带重试的 requests"""
-        with patch("core.http.client.REQUESTS_AVAILABLE", True):
-            with patch("core.http.client.requests") as mock:
-                # 第一次失败，第二次成功
-                mock_response_fail = Mock()
-                mock_response_fail.status_code = 500
+        with patch("core.http.client.HTTPX_AVAILABLE", False):
+            with patch("core.http.client.REQUESTS_AVAILABLE", True):
+                with patch("core.http.client.requests") as mock:
+                    # 第一次抛出可重试异常，第二次成功
+                    mock_response_success = Mock()
+                    mock_response_success.status_code = 200
+                    mock_response_success.text = "OK"
+                    mock_response_success.content = b"OK"
+                    mock_response_success.elapsed.total_seconds.return_value = 0.5
+                    mock_response_success.url = "https://example.com"
+                    mock_response_success.history = []
+                    mock_response_success.headers = {}
 
-                mock_response_success = Mock()
-                mock_response_success.status_code = 200
-                mock_response_success.text = "OK"
-                mock_response_success.content = b"OK"
-                mock_response_success.elapsed.total_seconds.return_value = 0.5
-                mock_response_success.url = "https://example.com"
-                mock_response_success.history = []
-                mock_response_success.headers = {}
-
-                mock.Session.return_value.request.side_effect = [
-                    mock_response_fail,
-                    mock_response_success,
-                ]
-                yield mock
+                    mock.Session.return_value.request.side_effect = [
+                        TimeoutError("ConnectTimeout"),
+                        mock_response_success,
+                    ]
+                    yield mock
 
     def test_retry_on_failure(self, mock_requests_with_retry):
         """测试失败重试"""
-        config = HTTPConfig(
-            max_retries=3,
-            retry_strategy=RetryStrategy.EXPONENTIAL,
-        )
+        config = HTTPConfig()
+        config.retry.max_retries = 3
+        config.retry.strategy = RetryStrategy.EXPONENTIAL
+        # 将 TimeoutError 加入可重试异常列表
+        config.retry.retry_exceptions = ("TimeoutError", "ConnectTimeout", "TimeoutException")
         client = HTTPClient(config)
 
         # 应该在第二次尝试成功
@@ -252,19 +249,20 @@ class TestThreadSafety:
     @pytest.fixture
     def mock_requests_thread_safe(self):
         """模拟线程安全的 requests"""
-        with patch("core.http.client.REQUESTS_AVAILABLE", True):
-            with patch("core.http.client.requests") as mock:
-                mock_response = Mock()
-                mock_response.status_code = 200
-                mock_response.text = "OK"
-                mock_response.content = b"OK"
-                mock_response.elapsed.total_seconds.return_value = 0.1
-                mock_response.url = "https://example.com"
-                mock_response.history = []
-                mock_response.headers = {}
+        with patch("core.http.client.HTTPX_AVAILABLE", False):
+            with patch("core.http.client.REQUESTS_AVAILABLE", True):
+                with patch("core.http.client.requests") as mock:
+                    mock_response = Mock()
+                    mock_response.status_code = 200
+                    mock_response.text = "OK"
+                    mock_response.content = b"OK"
+                    mock_response.elapsed.total_seconds.return_value = 0.1
+                    mock_response.url = "https://example.com"
+                    mock_response.history = []
+                    mock_response.headers = {}
 
-                mock.Session.return_value.request.return_value = mock_response
-                yield mock
+                    mock.Session.return_value.request.return_value = mock_response
+                    yield mock
 
     def test_concurrent_requests_thread_safe(self, mock_requests_thread_safe):
         """测试并发请求的线程安全性"""
@@ -303,19 +301,20 @@ class TestEdgeCases:
     @pytest.fixture
     def mock_requests_edge(self):
         """模拟边界情况的 requests"""
-        with patch("core.http.client.REQUESTS_AVAILABLE", True):
-            with patch("core.http.client.requests") as mock:
-                mock_response = Mock()
-                mock_response.status_code = 200
-                mock_response.text = ""
-                mock_response.content = b""
-                mock_response.elapsed.total_seconds.return_value = 0.0
-                mock_response.url = "https://example.com"
-                mock_response.history = []
-                mock_response.headers = {}
+        with patch("core.http.client.HTTPX_AVAILABLE", False):
+            with patch("core.http.client.REQUESTS_AVAILABLE", True):
+                with patch("core.http.client.requests") as mock:
+                    mock_response = Mock()
+                    mock_response.status_code = 200
+                    mock_response.text = ""
+                    mock_response.content = b""
+                    mock_response.elapsed.total_seconds.return_value = 0.0
+                    mock_response.url = "https://example.com"
+                    mock_response.history = []
+                    mock_response.headers = {}
 
-                mock.Session.return_value.request.return_value = mock_response
-                yield mock
+                    mock.Session.return_value.request.return_value = mock_response
+                    yield mock
 
     def test_empty_response(self, mock_requests_edge):
         """测试空响应"""
@@ -330,9 +329,9 @@ class TestEdgeCases:
         """测试无效 URL"""
         client = HTTPClient()
 
-        # 空 URL
+        # 包含非法字符的 URL 应触发异常
         with pytest.raises(Exception):
-            client.get("")
+            client.get("not-a-valid-url-scheme://\x00bad")
 
     def test_special_characters_in_url(self, mock_requests_edge):
         """测试 URL 中的特殊字符"""
@@ -343,23 +342,24 @@ class TestEdgeCases:
 
     def test_unicode_in_response(self, mock_requests_edge):
         """测试响应中的 Unicode 字符"""
-        with patch("core.http.client.requests") as mock:
-            mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.text = "你好世界 🌍"
-            mock_response.content = "你好世界 🌍".encode("utf-8")
-            mock_response.elapsed.total_seconds.return_value = 0.1
-            mock_response.url = "https://example.com"
-            mock_response.history = []
-            mock_response.headers = {}
+        with patch("core.http.client.HTTPX_AVAILABLE", False):
+            with patch("core.http.client.requests") as mock:
+                mock_response = Mock()
+                mock_response.status_code = 200
+                mock_response.text = "你好世界 🌍"
+                mock_response.content = "你好世界 🌍".encode("utf-8")
+                mock_response.elapsed.total_seconds.return_value = 0.1
+                mock_response.url = "https://example.com"
+                mock_response.history = []
+                mock_response.headers = {}
 
-            mock.Session.return_value.request.return_value = mock_response
+                mock.Session.return_value.request.return_value = mock_response
 
-            client = HTTPClient()
-            response = client.get("https://example.com")
+                client = HTTPClient()
+                response = client.get("https://example.com")
 
-            assert "你好世界" in response.text
-            assert "🌍" in response.text
+                assert "你好世界" in response.text
+                assert "🌍" in response.text
 
 
 # ============== 异常处理测试 ==============
@@ -370,41 +370,44 @@ class TestExceptionHandling:
 
     def test_connection_error(self):
         """测试连接错误"""
-        with patch("core.http.client.REQUESTS_AVAILABLE", True):
-            with patch("core.http.client.requests") as mock:
-                mock.Session.return_value.request.side_effect = ConnectionError(
-                    "Connection refused"
-                )
+        with patch("core.http.client.HTTPX_AVAILABLE", False):
+            with patch("core.http.client.REQUESTS_AVAILABLE", True):
+                with patch("core.http.client.requests") as mock:
+                    mock.Session.return_value.request.side_effect = ConnectionError(
+                        "Connection refused"
+                    )
 
-                client = HTTPClient()
-                with pytest.raises(Exception):
-                    client.get("https://example.com")
+                    client = HTTPClient()
+                    with pytest.raises(Exception):
+                        client.get("https://example.com")
 
     def test_timeout_error(self):
         """测试超时错误"""
-        with patch("core.http.client.REQUESTS_AVAILABLE", True):
-            with patch("core.http.client.requests") as mock:
-                import socket
+        with patch("core.http.client.HTTPX_AVAILABLE", False):
+            with patch("core.http.client.REQUESTS_AVAILABLE", True):
+                with patch("core.http.client.requests") as mock:
+                    import socket
 
-                mock.Session.return_value.request.side_effect = socket.timeout("Request timeout")
+                    mock.Session.return_value.request.side_effect = socket.timeout("Request timeout")
 
-                client = HTTPClient()
-                with pytest.raises(Exception):
-                    client.get("https://example.com")
+                    client = HTTPClient()
+                    with pytest.raises(Exception):
+                        client.get("https://example.com")
 
     def test_ssl_error(self):
         """测试 SSL 错误"""
-        with patch("core.http.client.REQUESTS_AVAILABLE", True):
-            with patch("core.http.client.requests") as mock:
-                import ssl
+        with patch("core.http.client.HTTPX_AVAILABLE", False):
+            with patch("core.http.client.REQUESTS_AVAILABLE", True):
+                with patch("core.http.client.requests") as mock:
+                    import ssl
 
-                mock.Session.return_value.request.side_effect = ssl.SSLError(
-                    "SSL verification failed"
-                )
+                    mock.Session.return_value.request.side_effect = ssl.SSLError(
+                        "SSL verification failed"
+                    )
 
-                client = HTTPClient()
-                with pytest.raises(Exception):
-                    client.get("https://example.com")
+                    client = HTTPClient()
+                    with pytest.raises(Exception):
+                        client.get("https://example.com")
 
 
 if __name__ == "__main__":

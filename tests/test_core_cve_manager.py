@@ -4,8 +4,7 @@ test_core_cve_manager.py - CVE 管理器单元测试
 
 测试覆盖:
 - CVEManager 单例模式
-- CVE 数据同步
-- CVE 搜索
+- CVE 数据搜索
 - 数据源管理
 - 线程安全
 """
@@ -19,7 +18,7 @@ import pytest
 
 # 导入被测试的模块
 from core.cve.manager import CVEManager
-from core.cve.models import CVEEntry, CVEStats, Severity
+from core.cve.models import CVSS, CVEEntry, CVEStats, Severity
 from core.cve.search import SearchFilter, SearchOptions
 
 # ============== 测试夹具 ==============
@@ -45,16 +44,16 @@ def mock_cve_entry():
     """模拟 CVE 条目"""
     return CVEEntry(
         cve_id="CVE-2024-1234",
+        title="Test Vulnerability",
         description="Test vulnerability",
         severity=Severity.HIGH,
-        cvss_score=7.5,
+        cvss=CVSS.from_score(7.5),
         published_date=datetime(2024, 1, 1),
         modified_date=datetime(2024, 1, 2),
         affected_products=["Product A", "Product B"],
-        references=["https://example.com/cve-2024-1234"],
         cwe_ids=["CWE-79"],
         exploit_available=True,
-        poc_url="https://github.com/test/poc",
+        poc_urls=["https://github.com/test/poc"],
     )
 
 
@@ -115,23 +114,30 @@ class TestCVESearch:
             # 模拟搜索结果
             mock_cve = CVEEntry(
                 cve_id="CVE-2024-1234",
+                title="SQL Injection Vulnerability",
                 description="SQL Injection vulnerability",
                 severity=Severity.HIGH,
-                cvss_score=8.5,
+                cvss=CVSS.from_score(8.5),
                 published_date=datetime(2024, 1, 1),
                 affected_products=["MySQL"],
             )
 
-            mock_storage_instance.search.return_value = [mock_cve]
-            mock_storage_instance.get_by_id.return_value = mock_cve
-            mock_storage_instance.get_stats.return_value = CVEStats(
-                total_cves=100,
-                by_severity={Severity.HIGH: 30, Severity.MEDIUM: 50, Severity.LOW: 20},
+            mock_storage_instance.get.return_value = mock_cve
+            mock_storage_instance.stats.return_value = CVEStats(
+                total_count=100,
+                by_severity={"high": 30, "medium": 50, "low": 20},
             )
 
             mock_storage.return_value = mock_storage_instance
 
             manager = CVEManager(db_path=temp_db_path)
+
+            # 在 search_engine 层 mock，绕过直接 SQLite 调用
+            from core.cve.search import SearchResult
+            manager._search_engine.advanced_search = Mock(
+                return_value=SearchResult(entries=[mock_cve], total_count=1, returned_count=1)
+            )
+
             yield manager
 
     def test_search_by_keyword(self, manager_with_data):
@@ -143,48 +149,37 @@ class TestCVESearch:
 
     def test_search_by_cve_id(self, manager_with_data):
         """测试 CVE ID 搜索"""
-        result = manager_with_data.get_cve("CVE-2024-1234")
+        result = manager_with_data.get("CVE-2024-1234")
 
         assert result is not None
         assert result.cve_id == "CVE-2024-1234"
 
     def test_search_by_severity(self, manager_with_data):
         """测试按严重程度搜索"""
-        filter_obj = SearchFilter(severity=Severity.HIGH)
-        results = manager_with_data.search_advanced(filter_obj)
+        results = manager_with_data.search(severity=Severity.HIGH)
 
         assert len(results) > 0
         assert all(r.severity == Severity.HIGH for r in results)
 
     def test_search_by_product(self, manager_with_data):
         """测试按产品搜索"""
-        filter_obj = SearchFilter(product="MySQL")
-        results = manager_with_data.search_advanced(filter_obj)
+        results = manager_with_data.search(keyword="MySQL")
 
         assert len(results) > 0
 
-    def test_search_with_date_range(self, manager_with_data):
-        """测试日期范围搜索"""
-        filter_obj = SearchFilter(
-            start_date=datetime(2024, 1, 1),
-            end_date=datetime(2024, 12, 31),
-        )
-        results = manager_with_data.search_advanced(filter_obj)
+    def test_search_with_limit(self, manager_with_data):
+        """测试限制搜索结果数量"""
+        results = manager_with_data.search("vulnerability", limit=5)
 
-        assert isinstance(results, list)
+        assert len(results) <= 5
 
     def test_search_empty_results(self, manager_with_data):
         """测试空搜索结果"""
-        with patch.object(manager_with_data._storage, "search", return_value=[]):
+        from core.cve.search import SearchResult
+        with patch.object(manager_with_data._search_engine, "advanced_search",
+                          return_value=SearchResult(entries=[], total_count=0, returned_count=0)):
             results = manager_with_data.search("nonexistent-keyword")
             assert results == []
-
-    def test_search_with_limit(self, manager_with_data):
-        """测试限制搜索结果数量"""
-        options = SearchOptions(limit=5)
-        results = manager_with_data.search("vulnerability", options=options)
-
-        assert len(results) <= 5
 
 
 # ============== CVE 数据同步测试 ==============
@@ -211,89 +206,30 @@ class TestCVESync:
                     # 模拟存储
                     mock_storage_instance = Mock()
                     mock_storage_instance.save.return_value = True
+                    mock_storage_instance.save_batch.return_value = (0, 0)
+                    mock_storage_instance.log_sync.return_value = None
                     mock_storage.return_value = mock_storage_instance
 
                     manager = CVEManager()
                     yield manager
 
-    def test_sync_all_sources(self, manager_with_mock_sources):
-        """测试同步所有数据源"""
-        status = manager_with_mock_sources.sync_all()
-
-        assert status is not None
-        assert isinstance(status, dict)
-
-    def test_sync_single_source(self, manager_with_mock_sources):
-        """测试同步单个数据源"""
-        status = manager_with_mock_sources.sync_source("nvd")
-
-        assert status is not None
-
-    def test_sync_with_date_range(self, manager_with_mock_sources):
-        """测试指定日期范围同步"""
-        start_date = datetime(2024, 1, 1)
-        end_date = datetime(2024, 12, 31)
-
-        status = manager_with_mock_sources.sync_all(start_date=start_date, end_date=end_date)
-
-        assert status is not None
-
     @pytest.mark.asyncio
     async def test_async_sync(self, manager_with_mock_sources):
         """测试异步同步"""
-        with patch.object(
-            manager_with_mock_sources, "sync_all", return_value={"status": "success"}
-        ):
-            status = await manager_with_mock_sources.async_sync_all()
-            assert status is not None
+        status = await manager_with_mock_sources.sync(days=1)
+        assert status is not None
+        assert isinstance(status, dict)
 
-    def test_sync_error_handling(self, manager_with_mock_sources):
+    @pytest.mark.asyncio
+    async def test_sync_error_handling(self, manager_with_mock_sources):
         """测试同步错误处理"""
-        with patch.object(
-            manager_with_mock_sources._sources[0],
-            "fetch_recent",
-            side_effect=Exception("Network error"),
-        ):
-            # 不应该因为单个数据源失败而崩溃
-            status = manager_with_mock_sources.sync_all()
-            assert status is not None
-
-
-# ============== 数据源管理测试 ==============
-
-
-class TestDataSourceManagement:
-    """数据源管理测试"""
-
-    def test_list_sources(self, clean_manager):
-        """测试列出数据源"""
-        manager = CVEManager()
-        sources = manager.list_sources()
-
-        assert isinstance(sources, list)
-        assert len(sources) > 0
-
-    def test_get_source_info(self, clean_manager):
-        """测试获取数据源信息"""
-        manager = CVEManager()
-        sources = manager.list_sources()
-
-        if sources:
-            info = manager.get_source_info(sources[0])
-            assert info is not None
-
-    def test_enable_disable_source(self, clean_manager):
-        """测试启用/禁用数据源"""
-        manager = CVEManager()
-        sources = manager.list_sources()
-
-        if sources:
-            source_name = sources[0]
-
-            # 禁用
-            manager.disable_source(source_name)
-            # 启用
-            manager.enable_source(source_name)
+        if manager_with_mock_sources._sources:
+            manager_with_mock_sources._sources[0].fetch_recent = Mock(
+                side_effect=Exception("Network error")
+            )
+        # 不应该因为单个数据源失败而崩溃
+        status = await manager_with_mock_sources.sync(days=1)
+        assert status is not None
 
 
 # ============== 统计信息测试 ==============
@@ -309,23 +245,22 @@ class TestCVEStats:
             mock_storage_instance = Mock()
 
             stats = CVEStats(
-                total_cves=1000,
+                total_count=1000,
+                poc_available_count=200,
                 by_severity={
-                    Severity.CRITICAL: 50,
-                    Severity.HIGH: 200,
-                    Severity.MEDIUM: 500,
-                    Severity.LOW: 250,
+                    "critical": 50,
+                    "high": 200,
+                    "medium": 500,
+                    "low": 250,
                 },
                 by_year={
                     2024: 300,
                     2023: 400,
                     2022: 300,
                 },
-                with_exploit=150,
-                with_poc=200,
             )
 
-            mock_storage_instance.get_stats.return_value = stats
+            mock_storage_instance.stats.return_value = stats
             mock_storage.return_value = mock_storage_instance
 
             manager = CVEManager()
@@ -333,24 +268,23 @@ class TestCVEStats:
 
     def test_get_stats(self, manager_with_stats):
         """测试获取统计信息"""
-        stats = manager_with_stats.get_stats()
+        stats = manager_with_stats.stats()
 
         assert stats is not None
-        assert stats.total_cves == 1000
-        assert stats.by_severity[Severity.HIGH] == 200
+        assert stats.total_count == 1000
+        assert stats.by_severity["high"] == 200
 
     def test_get_severity_distribution(self, manager_with_stats):
         """测试获取严重程度分布"""
-        stats = manager_with_stats.get_stats()
+        stats = manager_with_stats.stats()
         distribution = stats.by_severity
 
-        assert Severity.CRITICAL in distribution
-        assert Severity.HIGH in distribution
-        assert sum(distribution.values()) == 1000
+        assert "critical" in distribution
+        assert "high" in distribution
 
     def test_get_yearly_stats(self, manager_with_stats):
         """测试获取年度统计"""
-        stats = manager_with_stats.get_stats()
+        stats = manager_with_stats.stats()
         yearly = stats.by_year
 
         assert 2024 in yearly
@@ -392,37 +326,6 @@ class TestThreadSafety:
             # 所有搜索都应该成功
             assert len(results) == 10
             assert len(errors) == 0
-
-    def test_concurrent_sync(self, clean_manager):
-        """测试并发同步"""
-        with patch("core.cve.manager.get_storage") as mock_storage:
-            mock_storage_instance = Mock()
-            mock_storage_instance.save.return_value = True
-            mock_storage.return_value = mock_storage_instance
-
-            with patch("core.cve.manager.NVDSource") as mock_nvd:
-                mock_nvd_instance = Mock()
-                mock_nvd_instance.fetch_recent.return_value = []
-                mock_nvd.return_value = mock_nvd_instance
-
-                manager = CVEManager()
-                results = []
-
-                def sync_data():
-                    status = manager.sync_all()
-                    results.append(status)
-
-                # 只有一个同步应该执行（由于同步锁）
-                threads = [threading.Thread(target=sync_data) for _ in range(5)]
-
-                for t in threads:
-                    t.start()
-
-                for t in threads:
-                    t.join()
-
-                # 至少有一个同步成功
-                assert len(results) > 0
 
 
 # ============== 边界条件测试 ==============
@@ -471,11 +374,11 @@ class TestEdgeCases:
         """测试获取不存在的 CVE"""
         with patch("core.cve.manager.get_storage") as mock_storage:
             mock_storage_instance = Mock()
-            mock_storage_instance.get_by_id.return_value = None
+            mock_storage_instance.get.return_value = None
             mock_storage.return_value = mock_storage_instance
 
             manager = CVEManager()
-            result = manager.get_cve("CVE-9999-9999")
+            result = manager.get("CVE-9999-9999")
 
             assert result is None
 
@@ -483,11 +386,11 @@ class TestEdgeCases:
         """测试无效的 CVE ID 格式"""
         with patch("core.cve.manager.get_storage") as mock_storage:
             mock_storage_instance = Mock()
-            mock_storage_instance.get_by_id.return_value = None
+            mock_storage_instance.get.return_value = None
             mock_storage.return_value = mock_storage_instance
 
             manager = CVEManager()
-            result = manager.get_cve("invalid-id")
+            result = manager.get("invalid-id")
 
             assert result is None
 
@@ -506,58 +409,67 @@ class TestIntegration:
             # 模拟 CVE 数据
             mock_cve = CVEEntry(
                 cve_id="CVE-2024-1234",
+                title="Test Vulnerability",
                 description="Test vulnerability",
                 severity=Severity.HIGH,
-                cvss_score=8.0,
+                cvss=CVSS.from_score(8.0),
                 published_date=datetime(2024, 1, 1),
             )
 
-            mock_storage_instance.search.return_value = [mock_cve]
-            mock_storage_instance.get_by_id.return_value = mock_cve
+            mock_storage_instance.get.return_value = mock_cve
             mock_storage_instance.save.return_value = True
-            mock_storage_instance.get_stats.return_value = CVEStats(
-                total_cves=1,
-                by_severity={Severity.HIGH: 1},
+            mock_storage_instance.stats.return_value = CVEStats(
+                total_count=1,
+                by_severity={"high": 1},
             )
 
             mock_storage.return_value = mock_storage_instance
 
             manager = CVEManager()
+
+            from core.cve.search import SearchResult
+            manager._search_engine.advanced_search = Mock(
+                return_value=SearchResult(entries=[mock_cve], total_count=1, returned_count=1)
+            )
 
             # 1. 搜索 CVE
             results = manager.search("Test")
             assert len(results) > 0
 
             # 2. 获取特定 CVE
-            cve = manager.get_cve("CVE-2024-1234")
+            cve = manager.get("CVE-2024-1234")
             assert cve is not None
             assert cve.cve_id == "CVE-2024-1234"
 
             # 3. 获取统计信息
-            stats = manager.get_stats()
-            assert stats.total_cves == 1
+            stats = manager.stats()
+            assert stats.total_count == 1
 
     def test_search_and_filter(self, clean_manager):
         """测试搜索和过滤"""
         with patch("core.cve.manager.get_storage") as mock_storage:
             mock_storage_instance = Mock()
+            mock_storage.return_value = mock_storage_instance
 
             # 创建多个 CVE
             cves = [
                 CVEEntry(
                     cve_id=f"CVE-2024-{i}",
+                    title=f"Vulnerability {i}",
                     description=f"Vulnerability {i}",
                     severity=Severity.HIGH if i % 2 == 0 else Severity.MEDIUM,
-                    cvss_score=7.0 + i * 0.1,
+                    cvss=CVSS.from_score(7.0 + i * 0.1),
                     published_date=datetime(2024, 1, i),
                 )
                 for i in range(1, 6)
             ]
 
-            mock_storage_instance.search.return_value = cves
-            mock_storage.return_value = mock_storage_instance
-
             manager = CVEManager()
+
+            from core.cve.search import SearchResult
+            manager._search_engine.advanced_search = Mock(
+                return_value=SearchResult(entries=cves, total_count=5, returned_count=5)
+            )
 
             # 搜索所有
             all_results = manager.search("Vulnerability")

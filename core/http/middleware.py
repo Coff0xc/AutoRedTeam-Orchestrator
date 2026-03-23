@@ -345,7 +345,7 @@ class SSRFProtectionMiddleware(Middleware):
                     except ValueError:
                         continue
             except socket.gaierror:
-                pass  # DNS resolution failed, allow request to proceed (will fail naturally)
+                return True, f"DNS resolution failed for {hostname}, blocking request"
 
         return False, ""
 

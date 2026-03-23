@@ -728,7 +728,7 @@ class PowerShellObfuscator:
         i = 0
         while i < len(s):
             chunk_len = random.randint(1, 3)
-            parts.append(f"'{s[i:i+chunk_len]}'")
+            parts.append(f"'{s[i:i + chunk_len]}'")
             i += chunk_len
 
         return "(" + "+".join(parts) + ")"

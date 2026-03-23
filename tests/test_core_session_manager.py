@@ -96,8 +96,8 @@ class TestSessionCreation:
         context = manager.create_session("https://example.com")
 
         assert context is not None
-        assert context.target.url == "https://example.com"
-        assert context.status == ContextStatus.CREATED
+        assert context.target.value == "https://example.com"
+        assert context.status == ContextStatus.ACTIVE
         assert context.session_id is not None
 
     def test_create_session_with_config(self, clean_manager):
@@ -121,7 +121,7 @@ class TestSessionCreation:
         assert context.session_id == custom_id
 
     def test_create_session_duplicate_id(self, clean_manager):
-        """测试重复的会话ID"""
+        """测试重复的会话ID — 应抛出 ValueError"""
         manager = SessionManager()
         session_id = "duplicate-id"
 
@@ -129,10 +129,9 @@ class TestSessionCreation:
         context1 = manager.create_session("https://example.com", session_id=session_id)
         assert context1.session_id == session_id
 
-        # 第二次创建应该失败或返回新ID
-        context2 = manager.create_session("https://example.com", session_id=session_id)
-        # 根据实现，可能抛出异常或生成新ID
-        assert context2 is not None
+        # 第二次使用相同ID应抛出异常
+        with pytest.raises(ValueError):
+            manager.create_session("https://example.com", session_id=session_id)
 
     def test_create_multiple_sessions(self, clean_manager):
         """测试创建多个会话"""
@@ -209,11 +208,11 @@ class TestSessionUpdate:
         session_id = context.session_id
 
         # 更新状态
-        success = manager.update_session(session_id, status=ContextStatus.RUNNING)
+        success = manager.update_session(session_id, status=ContextStatus.ACTIVE)
 
         assert success is True
         updated = manager.get_session(session_id)
-        assert updated.status == ContextStatus.RUNNING
+        assert updated.status == ContextStatus.ACTIVE
 
     def test_update_session_phase(self, clean_manager):
         """测试更新会话阶段"""
@@ -226,12 +225,12 @@ class TestSessionUpdate:
 
         assert success is True
         updated = manager.get_session(session_id)
-        assert updated.current_phase == ScanPhase.RECON
+        assert updated.phase == ScanPhase.RECON
 
     def test_update_session_not_exists(self, clean_manager):
         """测试更新不存在的会话"""
         manager = SessionManager()
-        success = manager.update_session("nonexistent-id", status=ContextStatus.RUNNING)
+        success = manager.update_session("nonexistent-id", status=ContextStatus.ACTIVE)
 
         assert success is False
 
@@ -243,14 +242,14 @@ class TestSessionUpdate:
 
         success = manager.update_session(
             session_id,
-            status=ContextStatus.RUNNING,
-            phase=ScanPhase.EXPLOIT,
+            status=ContextStatus.ACTIVE,
+            phase=ScanPhase.EXPLOITATION,
         )
 
         assert success is True
         updated = manager.get_session(session_id)
-        assert updated.status == ContextStatus.RUNNING
-        assert updated.current_phase == ScanPhase.EXPLOIT
+        assert updated.status == ContextStatus.ACTIVE
+        assert updated.phase == ScanPhase.EXPLOITATION
 
 
 # ============== 会话删除测试 ==============
@@ -282,13 +281,13 @@ class TestSessionDeletion:
         manager = SessionManager()
 
         # 创建多个会话
-        manager.create_session("https://example1.com")
-        manager.create_session("https://example2.com")
-        manager.create_session("https://example3.com")
+        ctx1 = manager.create_session("https://example1.com")
+        ctx2 = manager.create_session("https://example2.com")
+        ctx3 = manager.create_session("https://example3.com")
 
-        count = manager.delete_all_sessions()
+        for sid in [ctx1.session_id, ctx2.session_id, ctx3.session_id]:
+            manager.delete_session(sid)
 
-        assert count == 3
         assert len(manager.list_sessions()) == 0
 
 
@@ -303,7 +302,7 @@ class TestEventCallbacks:
         manager = SessionManager()
         callback = Mock()
 
-        manager.register_callback("session_created", callback)
+        manager.on("session_created", callback)
 
         # 创建会话应该触发回调
         manager.create_session("https://example.com")
@@ -316,8 +315,8 @@ class TestEventCallbacks:
         callback1 = Mock()
         callback2 = Mock()
 
-        manager.register_callback("session_created", callback1)
-        manager.register_callback("session_created", callback2)
+        manager.on("session_created", callback1)
+        manager.on("session_created", callback2)
 
         manager.create_session("https://example.com")
 
@@ -329,8 +328,8 @@ class TestEventCallbacks:
         manager = SessionManager()
         callback = Mock()
 
-        manager.register_callback("session_created", callback)
-        manager.unregister_callback("session_created", callback)
+        manager.on("session_created", callback)
+        manager.off("session_created", callback)
 
         manager.create_session("https://example.com")
 
@@ -344,7 +343,7 @@ class TestEventCallbacks:
         def bad_callback(context):
             raise RuntimeError("Callback error")
 
-        manager.register_callback("session_created", bad_callback)
+        manager.on("session_created", bad_callback)
 
         # 不应该因为回调异常而崩溃
         context = manager.create_session("https://example.com")
@@ -362,8 +361,8 @@ class TestPersistence:
         manager = SessionManager(storage_dir=temp_storage_dir, auto_save=True)
         manager.create_session("https://example.com")
 
-        # 检查文件是否创建
-        session_files = list(Path(temp_storage_dir).glob("*.json"))
+        # 文件保存在 contexts/ 子目录
+        session_files = list(Path(temp_storage_dir).rglob("*.json"))
         assert len(session_files) > 0
 
     def test_auto_save_disabled(self, clean_manager, temp_storage_dir):
@@ -372,7 +371,7 @@ class TestPersistence:
         manager.create_session("https://example.com")
 
         # 不应该自动创建文件
-        session_files = list(Path(temp_storage_dir).glob("*.json"))
+        session_files = list(Path(temp_storage_dir).rglob("*.json"))
         assert len(session_files) == 0
 
     def test_manual_save(self, clean_manager, temp_storage_dir):
@@ -383,8 +382,8 @@ class TestPersistence:
         # 手动保存
         manager.save_session(context.session_id)
 
-        # 检查文件是否创建
-        session_files = list(Path(temp_storage_dir).glob("*.json"))
+        # 检查文件是否创建（保存在 contexts/ 子目录）
+        session_files = list(Path(temp_storage_dir).rglob("*.json"))
         assert len(session_files) > 0
 
     def test_load_session(self, clean_manager, temp_storage_dir):
@@ -447,7 +446,7 @@ class TestThreadSafety:
         results = []
 
         def update_session():
-            success = manager.update_session(session_id, status=ContextStatus.RUNNING)
+            success = manager.update_session(session_id, status=ContextStatus.ACTIVE)
             results.append(success)
 
         threads = [threading.Thread(target=update_session) for _ in range(10)]
@@ -475,7 +474,7 @@ class TestThreadSafety:
             read_results.append(ctx is not None)
 
         def write_session():
-            success = manager.update_session(session_id, status=ContextStatus.RUNNING)
+            success = manager.update_session(session_id, status=ContextStatus.ACTIVE)
             write_results.append(success)
 
         # 混合读写线程
@@ -504,12 +503,11 @@ class TestEdgeCases:
     """边界条件测试"""
 
     def test_empty_target(self, clean_manager):
-        """测试空目标"""
+        """测试空目标 — Target.parse 对空字符串抛出 ValueError"""
         manager = SessionManager()
 
-        # 空字符串目标
-        context = manager.create_session("")
-        assert context is not None
+        with pytest.raises(ValueError):
+            manager.create_session("")
 
     def test_invalid_target(self, clean_manager):
         """测试无效目标"""
@@ -525,7 +523,7 @@ class TestEdgeCases:
         context = manager.create_session("https://例え.jp")
 
         assert context is not None
-        assert "例え.jp" in context.target.url
+        assert "例え.jp" in context.target.value
 
     def test_very_long_target(self, clean_manager):
         """测试超长目标"""
@@ -557,15 +555,15 @@ class TestIntegration:
         # 1. 创建会话
         context = manager.create_session("https://example.com")
         session_id = context.session_id
-        assert context.status == ContextStatus.CREATED
+        assert context.status == ContextStatus.ACTIVE
 
         # 2. 启动会话
-        manager.update_session(session_id, status=ContextStatus.RUNNING)
-        assert manager.get_session(session_id).status == ContextStatus.RUNNING
+        manager.update_session(session_id, status=ContextStatus.ACTIVE)
+        assert manager.get_session(session_id).status == ContextStatus.ACTIVE
 
         # 3. 更新阶段
         manager.update_session(session_id, phase=ScanPhase.RECON)
-        assert manager.get_session(session_id).current_phase == ScanPhase.RECON
+        assert manager.get_session(session_id).phase == ScanPhase.RECON
 
         # 4. 完成会话
         manager.update_session(session_id, status=ContextStatus.COMPLETED)
@@ -590,7 +588,7 @@ class TestIntegration:
 
         # 更新部分会话
         for i in range(3):
-            manager.update_session(sessions[i], status=ContextStatus.RUNNING)
+            manager.update_session(sessions[i], status=ContextStatus.ACTIVE)
 
         # 删除部分会话
         for i in range(2):

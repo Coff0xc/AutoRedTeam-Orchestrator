@@ -28,12 +28,8 @@ jobs:
       - name: Check import sorting with isort
         run: isort --check-only --profile black core/ modules/ utils/ handlers/
 
-      - name: Lint with flake8 (strict)
-        continue-on-error: true  # TODO: Fix existing F401/F841/E722 violations then remove this
-        run: flake8 --max-line-length 100 --ignore=E501,W503,E402,E203,W504 --extend-ignore=F811,F541,F821,W291,W293,E741,E713,E226,E231 core/ modules/ utils/ handlers/
-
-      - name: Lint with flake8 (baseline)
-        run: flake8 --max-line-length 100 --ignore=E501,W503,E402,E203,W504 --extend-ignore=E722,F401,F841,F811,F541,F821,W291,W293,E741,E713,E226,E231 core/ modules/ utils/ handlers/
+      - name: Lint with flake8
+        run: flake8 --max-line-length 100 --ignore=E501,W503,E402,E203,W504 core/ modules/ utils/ handlers/
 
       - name: Install mypy
         run: pip install mypy
@@ -105,17 +101,6 @@ jobs:
             --cov-report=term-missing \
             --cov-fail-under=20 \
             --ignore=tests/test_performance_integration.py \
-            --ignore=tests/test_core_concurrency.py \
-            --ignore=tests/test_core_cve_manager.py \
-            --ignore=tests/test_core_exploit_engine.py \
-            --ignore=tests/test_core_http.py \
-            --ignore=tests/test_core_http_client.py \
-            --ignore=tests/test_core_session.py \
-            --ignore=tests/test_core_session_manager.py \
-            --ignore=tests/test_utils.py \
-            --ignore=tests/test_modules_websocket.py \
-            --ignore=tests/test_modules_kubernetes.py \
-            --ignore=tests/test_handlers_redteam.py \
             --ignore=tests/test_modules_jwt.py \
             -m "not slow and not integration and not network" \
             --timeout=30 \

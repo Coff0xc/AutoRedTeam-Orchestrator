@@ -53,10 +53,10 @@ class TerminalDisplay:
 
     def _print_header(self):
         """打印头部"""
-        print(f"{Colors.CYAN}{'='*70}")
+        print(f"{Colors.CYAN}{'=' * 70}")
         print(f"  {Colors.BOLD}🔥 {self.title}{Colors.END}")
         print(f"{Colors.CYAN}  时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"{'='*70}{Colors.END}\n")
+        print(f"{'=' * 70}{Colors.END}\n")
 
     def add_task(self, name: str, status: str = "pending"):
         """添加任务"""

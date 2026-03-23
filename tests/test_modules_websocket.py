@@ -107,7 +107,7 @@ class TestWebSocketTokenInURL:
         assert result.vulnerable is True
         assert result.vuln_type == APIVulnType.WEBSOCKET_TOKEN_LEAK
         assert result.severity == Severity.MEDIUM
-        assert "token" in result.evidence["sensitive_params"]
+        assert "token" in result.evidence["found_params"]
 
     def test_api_key_in_url_detected(self):
         """测试检测到 URL 中的 API Key"""
@@ -117,7 +117,7 @@ class TestWebSocketTokenInURL:
 
         assert result is not None
         assert result.vulnerable is True
-        assert "api_key" in result.evidence["sensitive_params"]
+        assert "api_key" in result.evidence["found_params"]
 
     def test_no_sensitive_params(self):
         """测试 URL 中没有敏感参数"""
@@ -134,7 +134,7 @@ class TestWebSocketTokenInURL:
         result = tester.test_token_in_url()
 
         assert result is not None
-        assert len(result.evidence["sensitive_params"]) >= 2
+        assert len(result.evidence["found_params"]) >= 2
 
 
 class TestWebSocketOriginBypass:
@@ -145,29 +145,29 @@ class TestWebSocketOriginBypass:
         tester = WebSocketTester("wss://api.example.com/ws")
 
         # Mock WebSocket 连接 - 接受恶意 Origin
-        def mock_connect(origin):
-            return {"success": True, "origin": origin}
+        def mock_connect(origin="", extra_headers=None):
+            return {"connected": True, "headers": {}, "extensions": [], "error": ""}
 
-        with patch.object(tester, "_test_ws_connection", side_effect=mock_connect):
+        with patch.object(tester, "_try_ws_connect", side_effect=mock_connect):
             result = tester.test_origin_bypass()
 
         assert result is not None
         assert result.vulnerable is True
         assert result.vuln_type == APIVulnType.WEBSOCKET_ORIGIN_BYPASS
         assert result.severity in [Severity.HIGH, Severity.CRITICAL]
-        assert len(result.evidence["bypassed_origins"]) > 0
+        assert len(result.evidence["accepted_origins"]) > 0
 
     def test_origin_validation_strict(self):
         """测试严格的 Origin 验证"""
         tester = WebSocketTester("wss://api.example.com/ws")
 
         # Mock WebSocket 连接 - 拒绝恶意 Origin
-        def mock_connect(origin):
+        def mock_connect(origin="", extra_headers=None):
             if origin == tester.target_origin:
-                return {"success": True, "origin": origin}
-            return {"success": False, "error": "Invalid origin"}
+                return {"connected": True, "headers": {}, "extensions": [], "error": ""}
+            return {"connected": False, "headers": {}, "extensions": [], "error": "Invalid origin"}
 
-        with patch.object(tester, "_test_ws_connection", side_effect=mock_connect):
+        with patch.object(tester, "_try_ws_connect", side_effect=mock_connect):
             result = tester.test_origin_bypass()
 
         assert result is None
@@ -177,17 +177,17 @@ class TestWebSocketOriginBypass:
         tester = WebSocketTester("wss://api.example.com/ws")
 
         # Mock WebSocket 连接 - 接受 null Origin
-        def mock_connect(origin):
+        def mock_connect(origin="", extra_headers=None):
             if origin == "null":
-                return {"success": True, "origin": origin}
-            return {"success": False}
+                return {"connected": True, "headers": {}, "extensions": [], "error": ""}
+            return {"connected": False, "headers": {}, "extensions": [], "error": ""}
 
-        with patch.object(tester, "_test_ws_connection", side_effect=mock_connect):
+        with patch.object(tester, "_try_ws_connect", side_effect=mock_connect):
             result = tester.test_origin_bypass()
 
         if result:
             assert result.vulnerable is True
-            assert any("null" in str(o) for o in result.evidence["bypassed_origins"])
+            assert any("null" in str(o) for o in result.evidence["accepted_origins"])
 
 
 class TestWebSocketCSWSH:
@@ -198,28 +198,28 @@ class TestWebSocketCSWSH:
         tester = WebSocketTester("wss://api.example.com/ws")
 
         # Mock WebSocket 连接 - 不验证 Origin 和 CSRF Token
-        def mock_connect(origin, headers=None):
-            return {"success": True, "origin": origin, "authenticated": True}
+        def mock_connect(origin="", extra_headers=None):
+            return {"connected": True, "headers": {}, "extensions": [], "error": ""}
 
-        with patch.object(tester, "_test_ws_connection", side_effect=mock_connect):
+        with patch.object(tester, "_try_ws_connect", side_effect=mock_connect):
             result = tester.test_cswsh()
 
         assert result is not None
         assert result.vulnerable is True
         assert result.vuln_type == APIVulnType.WEBSOCKET_CSWSH
-        assert result.severity == Severity.CRITICAL
+        assert result.severity == Severity.HIGH
 
     def test_cswsh_protected(self):
         """测试有 CSWSH 保护"""
         tester = WebSocketTester("wss://api.example.com/ws")
 
         # Mock WebSocket 连接 - 验证 Origin
-        def mock_connect(origin, headers=None):
+        def mock_connect(origin="", extra_headers=None):
             if origin == tester.target_origin:
-                return {"success": True}
-            return {"success": False, "error": "Invalid origin"}
+                return {"connected": True, "headers": {}, "extensions": [], "error": ""}
+            return {"connected": False, "headers": {}, "extensions": [], "error": "Invalid origin"}
 
-        with patch.object(tester, "_test_ws_connection", side_effect=mock_connect):
+        with patch.object(tester, "_try_ws_connect", side_effect=mock_connect):
             result = tester.test_cswsh()
 
         assert result is None
@@ -232,12 +232,10 @@ class TestWebSocketCompressionOracle:
         """测试检测到压缩 Oracle 攻击"""
         tester = WebSocketTester("wss://api.example.com/ws")
 
-        # Mock WebSocket 连接 - 支持压缩
-        def mock_connect_with_compression():
-            return {"success": True, "compression": True, "extensions": "permessage-deflate"}
-
         with patch.object(
-            tester, "_test_ws_compression", return_value=mock_connect_with_compression()
+            tester,
+            "_try_ws_connect",
+            return_value={"connected": True, "headers": {}, "extensions": ["permessage-deflate"], "error": ""},
         ):
             result = tester.test_compression_oracle()
 
@@ -250,12 +248,10 @@ class TestWebSocketCompressionOracle:
         """测试压缩已禁用"""
         tester = WebSocketTester("wss://api.example.com/ws")
 
-        # Mock WebSocket 连接 - 不支持压缩
-        def mock_connect_no_compression():
-            return {"success": True, "compression": False, "extensions": ""}
-
         with patch.object(
-            tester, "_test_ws_compression", return_value=mock_connect_no_compression()
+            tester,
+            "_try_ws_connect",
+            return_value={"connected": True, "headers": {}, "extensions": [], "error": ""},
         ):
             result = tester.test_compression_oracle()
 
@@ -269,11 +265,12 @@ class TestWebSocketAuthBypass:
         """测试检测到认证绕过"""
         tester = WebSocketTester("wss://api.example.com/ws")
 
-        # Mock WebSocket 连接 - 不需要认证
-        def mock_connect(headers=None):
-            return {"success": True, "authenticated": True}
-
-        with patch.object(tester, "_test_ws_auth", side_effect=lambda h: mock_connect(h)):
+        # Mock WebSocket 连接 - 不需要认证，所有调用均成功
+        with patch.object(
+            tester,
+            "_try_ws_connect",
+            return_value={"connected": True, "headers": {}, "extensions": [], "error": ""},
+        ):
             result = tester.test_auth_bypass()
 
         assert result is not None
@@ -285,13 +282,12 @@ class TestWebSocketAuthBypass:
         """测试需要认证"""
         tester = WebSocketTester("wss://api.example.com/ws")
 
-        # Mock WebSocket 连接 - 需要认证
-        def mock_connect(headers=None):
-            if headers and "Authorization" in headers:
-                return {"success": True, "authenticated": True}
-            return {"success": False, "error": "Unauthorized"}
-
-        with patch.object(tester, "_test_ws_auth", side_effect=lambda h: mock_connect(h)):
+        # Mock WebSocket 连接 - 所有无认证/无效认证调用均失败
+        with patch.object(
+            tester,
+            "_try_ws_connect",
+            return_value={"connected": False, "headers": {}, "extensions": [], "error": "Unauthorized"},
+        ):
             result = tester.test_auth_bypass()
 
         assert result is None
@@ -304,11 +300,12 @@ class TestWebSocketFullScan:
         """测试完整扫描执行所有测试"""
         tester = WebSocketTester("wss://api.example.com/ws")
 
-        # Mock 所有测试方法
-        with patch.object(tester, "_test_ws_connection", return_value={"success": False}):
-            with patch.object(tester, "_test_ws_compression", return_value={"success": False}):
-                with patch.object(tester, "_test_ws_auth", return_value={"success": False}):
-                    results = tester.test()
+        with patch.object(
+            tester,
+            "_try_ws_connect",
+            return_value={"connected": False, "headers": {}, "extensions": [], "error": ""},
+        ):
+            results = tester.test()
 
         # 应该执行多个测试
         assert len(results) >= 0
@@ -318,16 +315,13 @@ class TestWebSocketFullScan:
         # 使用不安全的 ws:// 和 URL 中的 token
         tester = WebSocketTester("ws://api.example.com/ws?token=secret")
 
-        # Mock WebSocket 连接 - 接受所有 Origin
-        def mock_connect(origin, headers=None):
-            return {"success": True, "origin": origin}
-
-        with patch.object(tester, "_test_ws_connection", side_effect=mock_connect):
-            with patch.object(
-                tester, "_test_ws_compression", return_value={"success": True, "compression": True}
-            ):
-                with patch.object(tester, "_test_ws_auth", return_value={"success": True}):
-                    results = tester.test()
+        # Mock WebSocket 连接 - 接受所有 Origin，支持压缩
+        with patch.object(
+            tester,
+            "_try_ws_connect",
+            return_value={"connected": True, "headers": {}, "extensions": ["permessage-deflate"], "error": ""},
+        ):
+            results = tester.test()
 
         # 应该发现多个漏洞
         vulnerable_results = [r for r in results if r.vulnerable]
@@ -337,10 +331,12 @@ class TestWebSocketFullScan:
         """测试获取扫描摘要"""
         tester = WebSocketTester("wss://api.example.com/ws")
 
-        with patch.object(tester, "_test_ws_connection", return_value={"success": False}):
-            with patch.object(tester, "_test_ws_compression", return_value={"success": False}):
-                with patch.object(tester, "_test_ws_auth", return_value={"success": False}):
-                    tester.test()
+        with patch.object(
+            tester,
+            "_try_ws_connect",
+            return_value={"connected": False, "headers": {}, "extensions": [], "error": ""},
+        ):
+            tester.test()
 
         summary = tester.get_summary()
 
@@ -391,12 +387,12 @@ class TestWebSocketHelperMethods:
         """测试计算 WebSocket Accept Key"""
         tester = WebSocketTester("wss://api.example.com/ws")
 
-        if hasattr(tester, "_calculate_accept_key"):
+        if hasattr(tester, "_compute_accept_key"):
             # 使用已知的测试向量
             test_key = "dGhlIHNhbXBsZSBub25jZQ=="
             expected_accept = "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
 
-            accept_key = tester._calculate_accept_key(test_key)
+            accept_key = tester._compute_accept_key(test_key)
             assert accept_key == expected_accept
 
 
@@ -425,7 +421,7 @@ class TestWebSocketEdgeCases:
         """测试空查询参数"""
         tester = WebSocketTester("wss://api.example.com/ws?")
 
-        assert tester.path == "/ws?"
+        assert tester.path == "/ws"
         assert len(tester.query_params) == 0
 
     def test_special_characters_in_path(self):
@@ -473,21 +469,14 @@ class TestWebSocketSecurityBestPractices:
         # 安全配置：wss + 无 URL token + 严格 Origin 验证
         tester = WebSocketTester("wss://api.example.com/ws")
 
-        # Mock 安全配置
-        def mock_secure_connect(origin, headers=None):
-            # 只接受特定 Origin
+        # Mock 安全配置 - 只接受目标 Origin，无压缩，需要认证
+        def mock_secure_connect(origin="", extra_headers=None):
             if origin == tester.target_origin:
-                return {"success": True}
-            return {"success": False}
+                return {"connected": True, "headers": {}, "extensions": [], "error": ""}
+            return {"connected": False, "headers": {}, "extensions": [], "error": "Invalid origin"}
 
-        with patch.object(tester, "_test_ws_connection", side_effect=mock_secure_connect):
-            with patch.object(
-                tester, "_test_ws_compression", return_value={"success": True, "compression": False}
-            ):
-                with patch.object(
-                    tester, "_test_ws_auth", return_value={"success": False}
-                ):  # 需要认证
-                    results = tester.test()
+        with patch.object(tester, "_try_ws_connect", side_effect=mock_secure_connect):
+            results = tester.test()
 
         # 安全配置应该没有高危漏洞
         critical_vulns = [r for r in results if r.vulnerable and r.severity == Severity.CRITICAL]
@@ -498,18 +487,12 @@ class TestWebSocketSecurityBestPractices:
         # 不安全配置：ws + URL token + 无 Origin 验证
         tester = WebSocketTester("ws://api.example.com/ws?token=secret123")
 
-        # Mock 不安全配置
-        def mock_insecure_connect(origin, headers=None):
-            return {"success": True}  # 接受所有 Origin
+        # Mock 不安全配置 - 接受所有 Origin，支持压缩
+        def mock_insecure_connect(origin="", extra_headers=None):
+            return {"connected": True, "headers": {}, "extensions": ["permessage-deflate"], "error": ""}
 
-        with patch.object(tester, "_test_ws_connection", side_effect=mock_insecure_connect):
-            with patch.object(
-                tester, "_test_ws_compression", return_value={"success": True, "compression": True}
-            ):
-                with patch.object(
-                    tester, "_test_ws_auth", return_value={"success": True}
-                ):  # 不需要认证
-                    results = tester.test()
+        with patch.object(tester, "_try_ws_connect", side_effect=mock_insecure_connect):
+            results = tester.test()
 
         # 不安全配置应该发现多个漏洞
         vulnerable_results = [r for r in results if r.vulnerable]

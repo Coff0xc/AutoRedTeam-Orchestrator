@@ -400,7 +400,7 @@ class PasswordFinder:
                             line_content=line.strip(),
                             matched_text=matched_text,
                             confidence=actual_confidence,
-                            context=f"Line {max(1, line_num-2)}-{min(len(lines), line_num+2)}",
+                            context=f"Line {max(1, line_num - 2)}-{min(len(lines), line_num + 2)}",
                         )
                         findings.append(finding)
                         self._log(f"Found {secret_type.value} in {file_path}:{line_num}")

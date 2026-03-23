@@ -20,8 +20,8 @@ class TestHTTPConfig:
 
         assert config.timeout == 30
         assert config.verify_ssl is True
-        assert config.max_retries == 3
-        assert config.user_agent is not None
+        assert config.retry.max_retries == 3
+        assert config.default_headers.get("User-Agent") is not None
 
     def test_custom_config(self):
         """测试自定义配置"""
@@ -30,11 +30,11 @@ class TestHTTPConfig:
         config = HTTPConfig()
         config.timeout = 60
         config.verify_ssl = False
-        config.max_retries = 5
+        config.retry.max_retries = 5
 
         assert config.timeout == 60
         assert config.verify_ssl is False
-        assert config.max_retries == 5
+        assert config.retry.max_retries == 5
 
 
 class TestHTTPClient:
@@ -104,7 +104,8 @@ class TestHTTPResponse:
         from core.http import HTTPResponse
 
         response = HTTPResponse(
-            status_code=200, text="OK", headers={"Content-Type": "text/html"}, content=b"OK"
+            status_code=200, text="OK", headers={"Content-Type": "text/html"},
+            content=b"OK", elapsed=0.1, url="https://example.com"
         )
 
         assert response.status_code == 200
@@ -115,8 +116,8 @@ class TestHTTPResponse:
         """测试 ok 属性"""
         from core.http import HTTPResponse
 
-        response_ok = HTTPResponse(status_code=200, text="", headers={}, content=b"")
-        response_error = HTTPResponse(status_code=500, text="", headers={}, content=b"")
+        response_ok = HTTPResponse(status_code=200, text="", headers={}, content=b"", elapsed=0.1, url="https://example.com")
+        response_error = HTTPResponse(status_code=500, text="", headers={}, content=b"", elapsed=0.1, url="https://example.com")
 
         assert response_ok.ok is True
         assert response_error.ok is False
@@ -130,9 +131,11 @@ class TestHTTPResponse:
             text='{"key": "value"}',
             headers={"Content-Type": "application/json"},
             content=b'{"key": "value"}',
+            elapsed=0.1,
+            url="https://example.com",
         )
 
-        json_data = response.json()
+        json_data = response.json
         assert json_data == {"key": "value"}
 
 
@@ -228,7 +231,7 @@ class TestMiddleware:
         chain = MiddlewareChain()
         chain.add(LoggingMiddleware())
 
-        assert len(chain.middlewares) == 1
+        assert len(chain._middlewares) == 1
 
 
 class TestHTTPSession:
@@ -258,8 +261,10 @@ class TestHTTPSession:
         session = HTTPSession(base_url="https://api.example.com")
         session.set_bearer_token("test-token")
 
-        assert "Authorization" in session.headers
-        assert "Bearer test-token" in session.headers["Authorization"]
+        auth_header = session.auth.get_auth_header()
+        assert auth_header is not None
+        assert "Authorization" in auth_header
+        assert "Bearer test-token" in auth_header["Authorization"]
 
 
 class TestClientFactory:

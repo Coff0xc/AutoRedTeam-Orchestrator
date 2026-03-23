@@ -414,7 +414,7 @@ class SBOMGenerator:
 
         for i, dep in enumerate(deps):
             package = {
-                "SPDXID": f"SPDXRef-Package-{i+1}",
+                "SPDXID": f"SPDXRef-Package-{i + 1}",
                 "name": dep.name,
                 "versionInfo": dep.version,
                 "downloadLocation": "NOASSERTION",

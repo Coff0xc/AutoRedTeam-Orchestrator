@@ -615,11 +615,11 @@ class SubscriptionManager:
 
     def _notify_console(self, subscription: Subscription, cves: List[CVEEntry]):
         """控制台通知"""
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(
             f"[订阅通知] ID={subscription.id} | {subscription.filter_type}={subscription.filter_value}"
         )
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
         print(f"匹配到 {len(cves)} 个新CVE:\n")
 
         for cve in cves:
@@ -630,7 +630,7 @@ class SubscriptionManager:
             print(f"  更新: {cve.last_updated}")
             print()
 
-        print(f"{'='*80}\n")
+        print(f"{'=' * 80}\n")
 
     def _notify_file(self, subscription: Subscription, cves: List[CVEEntry]):
         """文件通知"""
@@ -647,11 +647,11 @@ class SubscriptionManager:
 
             # 追加写入
             with open(file_path, "a", encoding="utf-8") as f:
-                f.write(f"\n{'='*80}\n")
+                f.write(f"\n{'=' * 80}\n")
                 f.write(f"[订阅通知] {datetime.now().isoformat()}\n")
                 f.write(f"订阅ID: {subscription.id}\n")
                 f.write(f"过滤条件: {subscription.filter_type}={subscription.filter_value}\n")
-                f.write(f"{'='*80}\n\n")
+                f.write(f"{'=' * 80}\n\n")
 
                 for cve in cves:
                     f.write(f"[{cve.severity}] {cve.cve_id} (CVSS: {cve.cvss})\n")

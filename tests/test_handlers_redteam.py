@@ -147,7 +147,7 @@ class TestLateralSMBTool:
             )
 
             assert result["success"] is False
-            assert "认证失败" in result["error"]
+            assert "Invalid username or password" in result["error"]
 
     @pytest.mark.asyncio
     async def test_lateral_smb_import_error(self):
@@ -171,14 +171,14 @@ class TestLateralSMBTool:
         register_redteam_tools(mock_mcp, mock_counter, mock_logger)
 
         with patch(
-            "core.lateral.smb_lateral.smb_exec", side_effect=ImportError("Module not found")
+            "core.lateral.smb.smb_exec", side_effect=ImportError("Module not found")
         ):
             result = await registered_tools["lateral_smb"](
                 target="192.168.1.100", username="Administrator", password="P@ssw0rd"
             )
 
             assert result["success"] is False
-            assert "模块导入失败" in result["error"]
+            assert "Module not found" in result["error"]
 
 
 class TestC2BeaconStartTool:
@@ -327,9 +327,7 @@ class TestPayloadObfuscateTool:
             )
 
             assert result["success"] is False
-            assert "参数错误" in result["error"]
-
-
+            assert "Invalid technique" in result["error"]
 class TestCredentialFindTool:
     """测试 credential_find 凭证发现工具"""
 
@@ -395,7 +393,7 @@ class TestCredentialFindTool:
             result = await registered_tools["credential_find"](path="/root")
 
             assert result["success"] is False
-            assert "权限不足" in result["error"]
+            assert "Access denied" in result["error"]
 
 
 class TestPrivilegeCheckTool:
@@ -522,7 +520,7 @@ class TestPrivilegeEscalateTool:
                 result = await registered_tools["privilege_escalate"](method="invalid_method")
 
                 assert result["success"] is False
-                assert "无效方法" in result["error"]
+                assert "Invalid method" in result["error"]
 
 
 class TestExfiltrateDataTool:
@@ -601,7 +599,7 @@ class TestExfiltrateDataTool:
         )
 
         assert result["success"] is False
-        assert "参数错误" in result["error"]
+        assert result["error_type"] == "ValueError"
 
 
 class TestExfiltrateFileTool:

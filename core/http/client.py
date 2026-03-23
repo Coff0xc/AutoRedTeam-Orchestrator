@@ -505,7 +505,8 @@ class HTTPClient:
                 # 日志
                 if self.config.log_responses:
                     logger.info(
-                        f"[HTTP] {response.status_code} {method} {url} " f"({elapsed*1000:.2f}ms)"
+                        f"[HTTP] {response.status_code} {method} {url} "
+                        f"({elapsed * 1000:.2f}ms)"
                     )
 
                 return response
@@ -659,7 +660,8 @@ class HTTPClient:
                 # 日志
                 if self.config.log_responses:
                     logger.info(
-                        f"[HTTP] {response.status_code} {method} {url} " f"({elapsed*1000:.2f}ms)"
+                        f"[HTTP] {response.status_code} {method} {url} "
+                        f"({elapsed * 1000:.2f}ms)"
                     )
 
                 return response

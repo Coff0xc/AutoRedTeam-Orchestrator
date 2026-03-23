@@ -176,7 +176,7 @@ class AttackChainEngine:
                     technique="dns_recon",
                     tool="dns_lookup",  # 修正: 使用 recon_tools 中的 dns_lookup
                     params={"domain": target},
-                    dependencies=[f"node_{node_id-1}"],
+                    dependencies=[f"node_{node_id - 1}"],
                 )
             )
             node_id += 1
@@ -212,7 +212,7 @@ class AttackChainEngine:
             technique="vuln_scan",
             tool="vuln_scan",
             params={"url": target if target_type == "url" else f"http://{target}"},
-            dependencies=[f"node_{node_id-1}"],
+            dependencies=[f"node_{node_id - 1}"],
         )
         nodes.append(vuln_node)
         node_id += 1

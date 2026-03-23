@@ -22,6 +22,7 @@ from .error_handling import (
     extract_file_path,
     extract_target,
     handle_errors,
+    require_non_empty,
     validate_inputs,
 )
 from .tooling import tool
@@ -74,6 +75,7 @@ def register_redteam_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_critical_auth
+    @validate_inputs(server="target", port="port")
     @handle_errors(
         logger,
         ErrorCategory.REDTEAM,
@@ -112,6 +114,7 @@ def register_redteam_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_dangerous_auth
+    @require_non_empty("payload")
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def payload_obfuscate(payload: str, technique: str = "xor") -> Dict[str, Any]:
         """Payload混淆 - 对payload进行混淆处理
@@ -140,6 +143,7 @@ def register_redteam_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_dangerous_auth
+    @require_non_empty("payload")
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def waf_bypass(
         payload: str,
@@ -192,6 +196,7 @@ def register_redteam_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_critical_auth
+    @validate_inputs(path="path")
     @handle_errors(
         logger,
         ErrorCategory.REDTEAM,
@@ -359,6 +364,7 @@ def register_redteam_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_dangerous_auth
+    @require_non_empty("current_privileges")
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def post_exploit_privesc_suggest(
         current_privileges: List[str], target_os: str = "windows"
@@ -377,6 +383,7 @@ def register_redteam_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_critical_auth
+    @require_non_empty("data")
     @handle_errors(
         logger, ErrorCategory.REDTEAM, lambda a, kw: {"channel": kw.get("channel", "https")}
     )
@@ -429,6 +436,7 @@ def register_redteam_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_critical_auth
+    @validate_inputs(file_path="path")
     @handle_errors(logger, ErrorCategory.REDTEAM, extract_file_path)
     async def exfiltrate_file(
         file_path: str,
