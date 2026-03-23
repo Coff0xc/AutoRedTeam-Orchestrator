@@ -549,8 +549,8 @@ class MetricsCollector:
                     lines.append(f"  {name}:")
                     lines.append(f"    总请求: {metrics.total_requests}")
                     lines.append(f"    成功率: {metrics.success_rate:.2%}")
-                    lines.append(f"    平均响应: {metrics.avg_response_time*1000:.2f}ms")
-                    lines.append(f"    P95响应: {metrics.p95_response_time*1000:.2f}ms")
+                    lines.append(f"    平均响应: {metrics.avg_response_time * 1000:.2f}ms")
+                    lines.append(f"    P95响应: {metrics.p95_response_time * 1000:.2f}ms")
 
             if self._counters:
                 lines.append("\n计数器:")

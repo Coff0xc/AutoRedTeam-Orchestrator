@@ -149,55 +149,55 @@ class TestSlidingWindowRateLimiter:
 
     def test_init_basic(self):
         """测试基本初始化"""
-        window = SlidingWindowRateLimiter(rate=10, window_size=1.0)
+        window = SlidingWindowRateLimiter(max_requests=10, window_seconds=1.0)
 
-        assert window.rate == 10
-        assert window.window_size == 1.0
+        assert window.max_requests == 10
+        assert window.window_seconds == 1.0
 
     def test_try_acquire_success(self):
         """测试成功获取"""
-        window = SlidingWindowRateLimiter(rate=10, window_size=1.0)
+        window = SlidingWindowRateLimiter(max_requests=10, window_seconds=1.0)
 
         # 前10个请求应该成功
         for _ in range(10):
-            assert window.try_acquire() is True
+            assert window.record_request() is True
 
     def test_try_acquire_failure(self):
         """测试获取失败"""
-        window = SlidingWindowRateLimiter(rate=5, window_size=1.0)
+        window = SlidingWindowRateLimiter(max_requests=5, window_seconds=1.0)
 
         # 前5个成功
         for _ in range(5):
-            assert window.try_acquire() is True
+            assert window.record_request() is True
 
         # 第6个应该失败
-        assert window.try_acquire() is False
+        assert window.record_request() is False
 
     def test_window_sliding(self):
         """测试窗口滑动"""
-        window = SlidingWindowRateLimiter(rate=5, window_size=0.5)
+        window = SlidingWindowRateLimiter(max_requests=5, window_seconds=0.5)
 
         # 消耗所有配额
         for _ in range(5):
-            window.try_acquire()
+            window.record_request()
 
         # 应该失败
-        assert window.try_acquire() is False
+        assert window.record_request() is False
 
         # 等待窗口滑动
         time.sleep(0.6)
 
         # 应该成功
-        assert window.try_acquire() is True
+        assert window.record_request() is True
 
     def test_thread_safety(self):
         """测试线程安全"""
-        window = SlidingWindowRateLimiter(rate=50, window_size=1.0)
+        window = SlidingWindowRateLimiter(max_requests=50, window_seconds=1.0)
         success_count = [0]
         lock = threading.Lock()
 
         def acquire():
-            if window.try_acquire():
+            if window.record_request():
                 with lock:
                     success_count[0] += 1
 
@@ -297,7 +297,7 @@ class TestDynamicThreadPool:
         for f in futures:
             f.result()
 
-        metrics = pool.get_metrics()
+        metrics = pool.stats["metrics"]
 
         assert metrics["submitted_tasks"] == 10
         assert metrics["completed_tasks"] == 10
@@ -384,7 +384,7 @@ class TestCircuitBreaker:
 
     def test_half_open_state(self):
         """测试半开状态"""
-        breaker = CircuitBreaker(failure_threshold=2, timeout=0.1)
+        breaker = CircuitBreaker(failure_threshold=2, success_threshold=1, timeout=0.1)
 
         def failing_func():
             raise RuntimeError("Failed")
@@ -413,19 +413,18 @@ class TestCircuitBreaker:
         """测试装饰器用法"""
         breaker = CircuitBreaker(failure_threshold=3)
 
-        @breaker.decorator
         def protected_func(x):
             if x < 0:
                 raise ValueError("Negative value")
             return x * 2
 
         # 成功调用
-        assert protected_func(5) == 10
+        assert breaker.call(protected_func, 5) == 10
 
         # 失败调用
         for _ in range(3):
             with pytest.raises(ValueError):
-                protected_func(-1)
+                breaker.call(protected_func, -1)
 
         # 应该触发熔断
         assert breaker.state == CircuitState.OPEN
@@ -442,7 +441,7 @@ class TestAsyncSemaphore:
         """测试基本初始化"""
         semaphore = AsyncSemaphore(value=5)
 
-        assert semaphore._value == 5
+        assert semaphore.value == 5
 
     @pytest.mark.asyncio
     async def test_acquire_release(self):
@@ -451,11 +450,11 @@ class TestAsyncSemaphore:
 
         # 获取
         await semaphore.acquire()
-        assert semaphore._value == 1
+        assert semaphore._acquired_count - semaphore._released_count == 1
 
         # 释放
         semaphore.release()
-        assert semaphore._value == 2
+        assert semaphore._acquired_count - semaphore._released_count == 0
 
     @pytest.mark.asyncio
     async def test_context_manager(self):
@@ -463,9 +462,9 @@ class TestAsyncSemaphore:
         semaphore = AsyncSemaphore(value=2)
 
         async with semaphore:
-            assert semaphore._value == 1
+            assert semaphore._acquired_count - semaphore._released_count == 1
 
-        assert semaphore._value == 2
+        assert semaphore._acquired_count - semaphore._released_count == 0
 
     @pytest.mark.asyncio
     async def test_concurrent_access(self):

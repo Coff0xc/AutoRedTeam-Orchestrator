@@ -39,7 +39,7 @@ class PoolMetrics:
     failed_tasks: int = 0
     total_execution_time: float = 0.0
     peak_workers: int = 0
-    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+    _lock: threading.RLock = field(default_factory=threading.RLock, repr=False)
 
     def record_submit(self) -> None:
         """记录任务提交"""
@@ -437,12 +437,15 @@ class DynamicThreadPool:
                 return
 
             self._shutdown = True
+            executor = self._executor
+            self._executor = None
 
-            if self._executor is not None:
-                logger.info("正在关闭线程池 '%s'...", self.name)
-                self._executor.shutdown(wait=wait, cancel_futures=cancel_pending)
-                self._executor = None
-                logger.info("线程池 '%s' 已关闭", self.name)
+        # 在锁外执行 shutdown，避免与 on_complete 回调中的
+        # _adjust_pool_size() 竞争 self._lock 导致死锁
+        if executor is not None:
+            logger.info("正在关闭线程池 '%s'...", self.name)
+            executor.shutdown(wait=wait, cancel_futures=cancel_pending)
+            logger.info("线程池 '%s' 已关闭", self.name)
 
     @property
     def stats(self) -> Dict[str, Any]:
