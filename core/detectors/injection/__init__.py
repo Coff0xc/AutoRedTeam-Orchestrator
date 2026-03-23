@@ -6,6 +6,7 @@
 
 from .deserialize import DeserializeDetector, FastjsonDetector
 from .ldap import LDAPiDetector
+from .prototype_pollution import PrototypePollutionDetector
 from .rce import RCEDetector
 from .sqli import SQLiDetector
 from .ssti import SSTIDetector
@@ -21,4 +22,5 @@ __all__ = [
     "LDAPiDetector",
     "DeserializeDetector",
     "FastjsonDetector",
+    "PrototypePollutionDetector",
 ]

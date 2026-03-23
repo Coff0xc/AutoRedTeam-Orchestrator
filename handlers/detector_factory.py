@@ -104,6 +104,12 @@ DETECTOR_CONFIGS: List[DetectorConfig] = [
         description="缓存投毒检测 - 检测Web缓存投毒漏洞",
         vuln_type="支持: Unkeyed Header、Unkeyed Parameter、Fat GET",
     ),
+    DetectorConfig(
+        name="prototype_pollution_scan",
+        detector_class="PrototypePollutionDetector",
+        description="原型链污染检测 - 检测JavaScript Prototype Pollution漏洞",
+        vuln_type="支持: 服务端PP、客户端PP、参数合并PP",
+    ),
 ]
 
 

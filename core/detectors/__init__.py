@@ -84,6 +84,7 @@ from .injection import (
     DeserializeDetector,
     FastjsonDetector,
     LDAPiDetector,
+    PrototypePollutionDetector,
     RCEDetector,
     SQLiDetector,
     SSTIDetector,
@@ -219,6 +220,7 @@ __all__ = [
     "LDAPiDetector",
     "DeserializeDetector",
     "FastjsonDetector",
+    "PrototypePollutionDetector",
     # 访问控制检测器
     "IDORDetector",
     "PathTraversalDetector",
