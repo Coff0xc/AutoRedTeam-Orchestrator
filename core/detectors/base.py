@@ -86,6 +86,8 @@ class BaseDetector(ABC):
 
         Args:
             config: 检测器配置，会与默认配置合并
+                enable_fp_filter: 启用误报过滤 (默认 False)
+                enable_advanced_verify: 启用高级验证 (默认 False)
         """
         defaults = self._load_defaults()
         self.config = {**defaults, **(config or {})}
@@ -93,6 +95,8 @@ class BaseDetector(ABC):
         self._http_client = None
         self._start_time: Optional[float] = None
         self._end_time: Optional[float] = None
+        self._fp_filter = None
+        self._advanced_verifier = None
 
     @property
     def http_client(self):
@@ -175,6 +179,86 @@ class BaseDetector(ABC):
             payload字符串列表
         """
         return []
+
+    @property
+    def fp_filter(self):
+        """懒加载误报过滤器"""
+        if self._fp_filter is None:
+            from .false_positive_filter import FalsePositiveFilter
+
+            self._fp_filter = FalsePositiveFilter()
+        return self._fp_filter
+
+    @property
+    def advanced_verifier(self):
+        """懒加载高级验证器"""
+        if self._advanced_verifier is None:
+            from .advanced_verifier import AdvancedVerifier
+
+            self._advanced_verifier = AdvancedVerifier()
+        return self._advanced_verifier
+
+    def _check_false_positive(self, response: "ResponseInfo") -> Any:
+        """检查响应是否为误报
+
+        使用 FalsePositiveFilter 检测 WAF拦截、SPA fallback、动态内容等误报场景。
+
+        Args:
+            response: 响应信息
+
+        Returns:
+            FilterResult 实例
+        """
+        from .false_positive_filter import FilterReason, FilterResult
+
+        try:
+            return self.fp_filter.check(
+                body=response.body or "",
+                status_code=response.status_code,
+                response_time=response.elapsed_ms / 1000.0,
+                headers=dict(response.headers) if response.headers else {},
+            )
+        except Exception as e:
+            logger.debug("[%s] 误报过滤异常: %s", self.name, e)
+            return FilterResult(
+                is_false_positive=False,
+                reason=FilterReason.NOT_FILTERED,
+                confidence=0.0,
+            )
+
+    def _make_request_func(
+        self,
+        base_url: str,
+        param: str,
+        method: str = "GET",
+        headers: Optional[Dict[str, Any]] = None,
+    ):
+        """创建 AdvancedVerifier 需要的 request_func 回调
+
+        Args:
+            base_url: 目标URL
+            param: 注入参数名
+            method: HTTP方法
+            headers: 请求头
+
+        Returns:
+            Callable[[str, str], Tuple[str, int, float]]
+        """
+
+        def request_func(url: str, payload: str):
+            start = time.time()
+            params = {param: payload} if param else {}
+            resp = self._safe_request(method, url, params=params, headers=headers)
+            elapsed = time.time() - start
+            if resp is None:
+                return ("", 0, elapsed)
+            return (
+                getattr(resp, "text", ""),
+                getattr(resp, "status_code", 0),
+                elapsed,
+            )
+
+        return request_func
 
     def _enhance_payloads(self, payloads: List[str]) -> List[str]:
         """根据配置扩展Payload（WAF绕过/智能变异）"""
@@ -306,7 +390,7 @@ class BaseDetector(ABC):
         Returns:
             DetectionResult实例
         """
-        return DetectionResult(
+        result = DetectionResult(
             vulnerable=vulnerable,
             vuln_type=self.vuln_type,
             severity=self.severity,
@@ -324,6 +408,25 @@ class BaseDetector(ABC):
             references=references or [],
             extra=extra or {},
         )
+
+        # 误报过滤: 当启用且检测到漏洞时，自动检查是否为误报
+        if (
+            result.vulnerable
+            and self.config.get("enable_fp_filter", False)
+            and response is not None
+        ):
+            fp_result = self._check_false_positive(response)
+            if fp_result.is_false_positive:
+                result.vulnerable = False
+                result.extra["fp_filtered"] = True
+                result.extra["fp_reason"] = fp_result.reason.value
+                result.extra["fp_evidence"] = fp_result.evidence
+                result.confidence *= 1 - fp_result.confidence
+                logger.info(
+                    "[%s] 误报过滤: %s (%s)", self.name, url, fp_result.reason.value
+                )
+
+        return result
 
     def _log_detection_start(self, url: str) -> None:
         """记录检测开始"""
