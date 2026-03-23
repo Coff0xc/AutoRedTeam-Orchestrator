@@ -15,7 +15,7 @@ import struct
 import threading
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from .base import (
     AuthMethod,
@@ -612,7 +612,7 @@ class SSHLateral(BaseLateralModule):
             return []
 
         try:
-            return sftp.listdir(path)
+            return cast(List[str], sftp.listdir(path))
         except (IOError, OSError, SSHException) as e:
             self.logger.error("列出目录失败: %s", e)
             return []

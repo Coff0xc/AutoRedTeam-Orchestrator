@@ -27,7 +27,7 @@ import ipaddress
 import logging
 import re
 import socket
-from typing import Iterator, List, Optional, Tuple, Union
+from typing import Iterator, List, Optional, Tuple, Union, cast
 from urllib.parse import urlparse
 
 
@@ -160,7 +160,7 @@ def get_local_ip() -> str:
         sock.connect(("8.8.8.8", 80))
         ip = sock.getsockname()[0]
         sock.close()
-        return ip
+        return cast(str, ip)
     except Exception:
         return "127.0.0.1"
 

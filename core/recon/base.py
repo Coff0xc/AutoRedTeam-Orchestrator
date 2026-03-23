@@ -25,7 +25,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, cast
 from urllib.parse import urlparse
 
 from .phases import (
@@ -529,7 +529,7 @@ class BaseReconEngine(ABC):
 
             duration = time.time() - start
             result.duration = duration
-            return result
+            return cast(PhaseResult, result)
 
         except Exception as e:
             duration = time.time() - start

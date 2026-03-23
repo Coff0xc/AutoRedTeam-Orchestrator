@@ -14,7 +14,7 @@ import threading
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, List, Optional, Tuple
+from typing import Iterator, List, Optional, Tuple, cast
 
 from .models import CVSS, CVEEntry, CVEStats, Reference, Severity, SyncStatus
 
@@ -198,7 +198,7 @@ class CVEStorage:
             # 启用 WAL 模式提高并发性能
             self._local.conn.execute("PRAGMA journal_mode = WAL")
 
-        return self._local.conn
+        return cast(sqlite3.Connection, self._local.conn)
 
     @contextmanager
     def _transaction(self) -> Iterator[sqlite3.Cursor]:
@@ -531,7 +531,7 @@ class CVEStorage:
         conn = self._get_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM cve_entries")
-        return cursor.fetchone()[0]
+        return cast(int, cursor.fetchone()[0])
 
     def stats(self) -> CVEStats:
         """获取统计信息"""

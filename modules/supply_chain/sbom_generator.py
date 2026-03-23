@@ -147,7 +147,7 @@ class SBOMGenerator:
 
     def parse_requirements_txt(self, file_path: Optional[Path] = None) -> List[Dependency]:
         """解析Python requirements.txt"""
-        dependencies = []
+        dependencies: List[Dependency] = []
 
         if file_path is None:
             file_path = self.project_path / "requirements.txt"
@@ -189,7 +189,7 @@ class SBOMGenerator:
 
     def parse_package_json(self, file_path: Optional[Path] = None) -> List[Dependency]:
         """解析Node.js package.json"""
-        dependencies = []
+        dependencies: List[Dependency] = []
 
         if file_path is None:
             file_path = self.project_path / "package.json"
@@ -238,7 +238,7 @@ class SBOMGenerator:
 
     def parse_go_mod(self, file_path: Optional[Path] = None) -> List[Dependency]:
         """解析Go go.mod"""
-        dependencies = []
+        dependencies: List[Dependency] = []
 
         if file_path is None:
             file_path = self.project_path / "go.mod"
@@ -288,7 +288,7 @@ class SBOMGenerator:
 
     def parse_pyproject_toml(self, file_path: Optional[Path] = None) -> List[Dependency]:
         """解析Python pyproject.toml"""
-        dependencies = []
+        dependencies: List[Dependency] = []
 
         if file_path is None:
             file_path = self.project_path / "pyproject.toml"
@@ -494,7 +494,7 @@ class SBOMGenerator:
         if not self._dependencies:
             self.scan_all()
 
-        ecosystem_counts = {}
+        ecosystem_counts: Dict[str, int] = {}
         for dep in self._dependencies:
             eco = dep.ecosystem.value
             ecosystem_counts[eco] = ecosystem_counts.get(eco, 0) + 1

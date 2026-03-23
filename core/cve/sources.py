@@ -12,7 +12,7 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from .models import CVSS, CVEEntry, Reference, Severity
 
@@ -137,7 +137,7 @@ class CVESource(ABC):
                     lambda: client.get(url, headers=headers, timeout=timeout)
                 )
                 if response.status_code == 200:
-                    return response.json()
+                    return cast(Dict[str, Any], response.json())
                 else:
                     logger.warning("HTTP %s: %s", response.status_code, url)
                     return None
@@ -155,7 +155,7 @@ class CVESource(ABC):
                         ssl=False,
                     ) as resp:
                         if resp.status == 200:
-                            return await resp.json()
+                            return cast(Dict[str, Any], await resp.json())
                         else:
                             logger.warning("HTTP %s: %s", resp.status, url)
                             return None

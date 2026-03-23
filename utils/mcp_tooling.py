@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import functools
 import inspect
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 
 def _wrap_tool_func(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -42,7 +42,7 @@ def build_tool_decorator(mcp, **kwargs) -> Callable[[Callable[..., Any]], Callab
     """Return a tool decorator that normalizes results to ToolResult.to_dict()."""
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        return mcp.tool(**kwargs)(_wrap_tool_func(func))
+        return cast(Callable[..., Any], mcp.tool(**kwargs)(_wrap_tool_func(func)))
 
     return decorator
 
@@ -50,7 +50,7 @@ def build_tool_decorator(mcp, **kwargs) -> Callable[[Callable[..., Any]], Callab
 def patch_mcp_tool(mcp) -> Callable[..., Any]:
     """Patch mcp.tool to normalize all tool outputs. Returns the original tool."""
     if getattr(mcp.tool, "_tool_result_patched", False):
-        return getattr(mcp.tool, "_original_tool", mcp.tool)
+        return cast(Callable[..., Any], getattr(mcp.tool, "_original_tool", mcp.tool))
 
     original_tool = mcp.tool
 
@@ -58,7 +58,7 @@ def patch_mcp_tool(mcp) -> Callable[..., Any]:
         decorator = original_tool(*args, **kwargs)
 
         def apply(func: Callable[..., Any]) -> Any:
-            return decorator(_wrap_tool_func(func))
+            return cast(Callable[..., Any], decorator(_wrap_tool_func(func)))
 
         return apply
 

@@ -25,7 +25,7 @@ import uuid
 import zlib
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from .base import BeaconInfo, Task, TaskResult
 from .crypto import C2Crypto, CryptoAlgorithm
@@ -244,7 +244,7 @@ class ProtocolCodec:
             data = zlib.decompress(data)
 
         # JSON 反序列化
-        return json.loads(data.decode("utf-8"))
+        return cast(Dict[str, Any], json.loads(data.decode("utf-8")))
 
     # ==================== 心跳 ====================
 
@@ -511,7 +511,7 @@ class ProtocolCodec:
             payload = zlib.decompress(payload)
 
         if as_dict:
-            return json.loads(payload.decode("utf-8"))
+            return cast(Dict[str, Any], json.loads(payload.decode("utf-8")))
 
         return payload
 

@@ -152,7 +152,7 @@ class FileUploadDetector(BaseDetector):
 
     def _find_upload_forms(self, html: str, base_url: str) -> List[Dict[str, Any]]:
         """查找页面中的文件上传表单"""
-        forms = []
+        forms: List[Dict[str, Any]] = []
         html_lower = html.lower()
 
         # 检查是否存在文件上传
@@ -227,7 +227,7 @@ class FileUploadDetector(BaseDetector):
 
     def _detect_upload_forms(self, url: str) -> List[DetectionResult]:
         """检测文件上传表单"""
-        results = []
+        results: List[DetectionResult] = []
 
         try:
             response = self.http_client.get(url)
@@ -283,7 +283,7 @@ class FileUploadDetector(BaseDetector):
 
     def _detect_client_validation(self, url: str) -> List[DetectionResult]:
         """检测仅客户端验证的问题"""
-        results = []
+        results: List[DetectionResult] = []
 
         try:
             response = self.http_client.get(url)
@@ -337,7 +337,7 @@ class FileUploadDetector(BaseDetector):
 
     def _detect_dangerous_extensions(self, url: str) -> List[DetectionResult]:
         """检测是否允许危险扩展名"""
-        results = []
+        results: List[DetectionResult] = []
 
         try:
             response = self.http_client.get(url)

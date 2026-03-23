@@ -4,6 +4,8 @@
 包含: SQLi, XSS, LFI/RFI, RCE, SSRF, XXE, SSTI, Deserialization等
 """
 
+from typing import Any, List, cast
+
 
 class MegaPayloads:
     """超级Payload库"""

@@ -258,8 +258,8 @@ def run_with_realtime_output(
             env=env,
         )
 
-        stdout_lines = []
-        stderr_lines = []
+        stdout_lines: List[str] = []
+        stderr_lines: List[str] = []
 
         # 使用列表作为简单的计数器引用
         state = {"output_count": 0, "killed": False}

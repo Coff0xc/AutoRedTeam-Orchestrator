@@ -4,7 +4,7 @@ HTTP 相关异常定义
 提供统一的 HTTP 层异常类型，便于精确捕获和处理网络错误
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 
 class HTTPError(Exception):
@@ -312,13 +312,19 @@ def exception_from_status_code(
     if exc_class:
         # RateLimitError 不接受 status_code 参数（固定为 429）
         if exc_class == RateLimitError:
-            return exc_class(message=message or f"HTTP {status_code}", url=url, details=details)
+            return cast(
+                HTTPError,
+                exc_class(message=message or f"HTTP {status_code}", url=url, details=details),
+            )
         # 其他异常类正常传递 status_code
-        return exc_class(
-            message=message or f"HTTP {status_code}",
-            status_code=status_code,
-            url=url,
-            details=details,
+        return cast(
+            HTTPError,
+            exc_class(
+                message=message or f"HTTP {status_code}",
+                status_code=status_code,
+                url=url,
+                details=details,
+            ),
         )
 
     # 按状态码范围判断

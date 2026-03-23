@@ -9,7 +9,7 @@ import logging
 import os
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from jinja2 import Template
 

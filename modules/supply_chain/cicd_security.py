@@ -192,7 +192,7 @@ class CICDSecurityScanner:
 
     def scan_github_actions(self) -> List[CICDFinding]:
         """扫描GitHub Actions配置"""
-        findings = []
+        findings: List[CICDFinding] = []
         workflows_dir = self.project_path / ".github" / "workflows"
 
         if not workflows_dir.exists():
@@ -208,7 +208,7 @@ class CICDSecurityScanner:
 
     def _scan_github_workflow(self, file_path: Path) -> List[CICDFinding]:
         """扫描单个GitHub Workflow文件"""
-        findings = []
+        findings: List[CICDFinding] = []
         content = self._read_file(file_path)
 
         if not content:
@@ -243,7 +243,7 @@ class CICDSecurityScanner:
 
     def scan_gitlab_ci(self) -> List[CICDFinding]:
         """扫描GitLab CI配置"""
-        findings = []
+        findings: List[CICDFinding] = []
         ci_file = self.project_path / ".gitlab-ci.yml"
 
         if not ci_file.exists():
@@ -298,7 +298,7 @@ class CICDSecurityScanner:
 
     def _scan_jenkinsfile(self, file_path: Path) -> List[CICDFinding]:
         """扫描单个Jenkinsfile"""
-        findings = []
+        findings: List[CICDFinding] = []
         content = self._read_file(file_path)
 
         if not content:
@@ -395,8 +395,8 @@ class CICDSecurityScanner:
 
         # 统计
         by_severity = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-        by_platform = {}
-        by_type = {}
+        by_platform: Dict[str, int] = {}
+        by_type: Dict[str, int] = {}
 
         for finding in all_findings:
             by_severity[finding.severity] = by_severity.get(finding.severity, 0) + 1

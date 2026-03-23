@@ -26,7 +26,7 @@ import os
 import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 logger = logging.getLogger(__name__)
 
@@ -208,21 +208,21 @@ class GlobalConfig:
                 try:
                     import yaml
 
-                    return yaml.safe_load(content) or {}
+                    return cast(Dict[str, Any], yaml.safe_load(content) or {})
                 except ImportError:
                     raise ImportError("需要安装 pyyaml: pip install pyyaml")
 
             elif path.suffix == ".json":
-                return json.loads(content)
+                return cast(Dict[str, Any], json.loads(content))
 
             else:
                 # 尝试作为YAML解析
                 try:
                     import yaml
 
-                    return yaml.safe_load(content) or {}
+                    return cast(Dict[str, Any], yaml.safe_load(content) or {})
                 except ImportError:
-                    return json.loads(content)
+                    return cast(Dict[str, Any], json.loads(content))
 
         except Exception as e:
             logger.warning("加载配置文件失败 %s: %s", path, e)

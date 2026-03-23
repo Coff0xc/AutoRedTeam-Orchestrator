@@ -35,7 +35,7 @@ import threading
 import time
 import warnings
 from collections import OrderedDict
-from typing import Any, Callable, Dict, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, Optional, TypeVar, Union, cast
 
 T = TypeVar("T")
 
@@ -68,7 +68,7 @@ def timer(func: Callable[..., T]) -> Callable[..., T]:
         result = func(*args, **kwargs)
         elapsed = time.perf_counter() - start
         logger.info("%s 执行时间: %.4f秒", func.__name__, elapsed)
-        return result
+        return cast(T, result)
 
     return wrapper
 
@@ -90,7 +90,7 @@ def async_timer(func: Callable[..., T]) -> Callable[..., T]:
         result = await func(*args, **kwargs)
         elapsed = time.perf_counter() - start
         logger.info("%s 执行时间: %.4f秒", func.__name__, elapsed)
-        return result
+        return cast(T, result)
 
     return wrapper
 
@@ -179,7 +179,7 @@ def async_retry(
 
             for attempt in range(1, max_attempts + 1):
                 try:
-                    return await func(*args, **kwargs)
+                    return cast(T, await func(*args, **kwargs))
                 except exceptions as e:
                     last_exception = e
                     logger.warning(
@@ -285,7 +285,7 @@ def cache(ttl: int = 3600, maxsize: int = 128, key_func: Optional[Callable] = No
             found, value = cache_store.get(cache_key)
             if found:
                 logger.debug("%s 命中缓存", func.__name__)
-                return value
+                return cast(T, value)
 
             # 执行函数
             result = func(*args, **kwargs)

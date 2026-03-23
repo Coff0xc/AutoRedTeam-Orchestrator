@@ -109,7 +109,7 @@ class ResultParser:
     @staticmethod
     def parse_nmap_xml(xml_content: str) -> Dict[str, Any]:
         """解析 Nmap XML 输出"""
-        result = {
+        result: Dict[str, Any] = {
             "hosts": [],
             "scan_info": {},
         }
@@ -287,7 +287,7 @@ class ResultParser:
     @staticmethod
     def parse_ffuf_json(output: str) -> Dict[str, Any]:
         """解析 ffuf JSON 输出"""
-        result = {
+        result: Dict[str, Any] = {
             "results": [],
             "config": {},
         }
@@ -328,7 +328,7 @@ class ResultParser:
     @staticmethod
     def parse_masscan_json(output: str) -> Dict[str, Any]:
         """解析 Masscan JSON 输出"""
-        result = {
+        result: Dict[str, Any] = {
             "hosts": {},
         }
 

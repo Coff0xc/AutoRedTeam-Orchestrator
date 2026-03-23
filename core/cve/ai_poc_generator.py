@@ -10,7 +10,7 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, cast
 
 logger = logging.getLogger(__name__)
 
@@ -595,7 +595,7 @@ class AIPoCGenerator:
             template_dict, allow_unicode=True, default_flow_style=False, sort_keys=False
         )
 
-        return yaml_str
+        return cast(str, yaml_str)
 
     def _generate_minimal_template(self, cve_id: str, severity: str) -> str:
         """生成最小可用模板 (失败时兜底)"""

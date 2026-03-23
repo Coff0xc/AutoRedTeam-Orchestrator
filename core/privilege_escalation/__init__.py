@@ -11,7 +11,7 @@ ATT&CK Tactic: TA0004 - Privilege Escalation
 仅用于授权渗透测试和安全研究
 """
 
-from typing import List, Optional
+from typing import List, Optional, cast
 
 from .base import (
     BasePrivilegeEscalation,
@@ -97,7 +97,7 @@ def _normalize_platform(system: str) -> str:
 
     # 检查别名映射
     if system_lower in PLATFORM_ALIASES:
-        return PLATFORM_ALIASES[system_lower]
+        return cast(str, PLATFORM_ALIASES[system_lower])
 
     return system_lower
 

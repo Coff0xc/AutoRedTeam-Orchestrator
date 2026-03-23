@@ -18,7 +18,7 @@ import urllib.parse
 from dataclasses import dataclass, field
 from datetime import datetime
 from threading import Lock
-from typing import Any, Callable, Dict, List, Optional, TypeVar
+from typing import Any, Callable, Dict, List, Optional, TypeVar, cast
 
 from .failure_analyzer import FailureAnalysis, FailureAnalyzer
 from .strategies import (
@@ -520,7 +520,7 @@ class FeedbackLoopEngine:
         delay += jitter
 
         # 限制最大延迟
-        return min(delay, self.max_delay)
+        return cast(float, min(delay, self.max_delay))
 
     def _record_success(self, context: RetryContext) -> None:
         """记录成功的策略"""

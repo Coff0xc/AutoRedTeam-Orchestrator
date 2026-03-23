@@ -14,7 +14,7 @@ import struct
 import tempfile
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 from .base import (
     AuthMethod,
@@ -298,7 +298,7 @@ class SMBLateral(BaseLateralModule):
         # 检查 NT_STATUS
         if len(response) > 12:
             status = struct.unpack("<I", response[9:13])[0]
-            return status == 0
+            return cast(bool, status == 0)
         return False
 
     def disconnect(self) -> None:

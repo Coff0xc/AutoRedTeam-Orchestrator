@@ -47,6 +47,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
     get_type_hints,
 )
 
@@ -238,7 +239,7 @@ class Container:
 
         # 单例已有实例
         if descriptor.lifetime == Lifetime.SINGLETON and descriptor.instance is not None:
-            return descriptor.instance
+            return cast(T, descriptor.instance)
 
         # 创建实例
         self._resolving.append(service_type)
@@ -252,7 +253,7 @@ class Container:
         if descriptor.lifetime == Lifetime.SINGLETON:
             descriptor.instance = instance
 
-        return instance
+        return cast(T, instance)
 
     def _create_instance(self, descriptor: ServiceDescriptor) -> Any:
         """创建服务实例"""
@@ -363,7 +364,7 @@ class ScopedContainer(Container):
         # 范围单例
         if descriptor.lifetime == Lifetime.SCOPED:
             if service_type in self._scoped_instances:
-                return self._scoped_instances[service_type]
+                return cast(T, self._scoped_instances[service_type])
 
             self._resolving.append(service_type)
             try:
@@ -372,7 +373,7 @@ class ScopedContainer(Container):
                 if service_type in self._resolving:
                     self._resolving.remove(service_type)
             self._scoped_instances[service_type] = instance
-            return instance
+            return cast(T, instance)
 
         # 其他情况委托给父类
         return super()._resolve_internal(service_type)

@@ -227,9 +227,9 @@ class InjectionPointCollection:
 
     def get_stats(self) -> Dict[str, Any]:
         """获取统计信息"""
-        type_counts = {}
-        source_counts = {}
-        method_counts = {}
+        type_counts: Dict[str, int] = {}
+        source_counts: Dict[str, int] = {}
+        method_counts: Dict[str, int] = {}
 
         for p in self.points:
             # 类型统计

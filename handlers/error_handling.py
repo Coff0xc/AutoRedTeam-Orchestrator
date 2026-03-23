@@ -28,7 +28,7 @@ import functools
 import inspect
 import logging
 from enum import Enum
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Optional, Tuple, Type, cast
 
 
 class ErrorCategory(Enum):
@@ -268,7 +268,7 @@ def handle_errors(
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
                 try:
-                    return await func(*args, **kwargs)
+                    return cast(Dict[str, Any], await func(*args, **kwargs))
                 except Exception as exc:
                     return _handle_exception(
                         exc,
@@ -287,7 +287,7 @@ def handle_errors(
             @functools.wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
                 try:
-                    return func(*args, **kwargs)
+                    return cast(Dict[str, Any], func(*args, **kwargs))
                 except Exception as exc:
                     return _handle_exception(
                         exc,
@@ -439,11 +439,11 @@ def _validate_target_auto(
 
     # 尝试作为 URL
     if target.startswith(("http://", "https://")):
-        return validate_url(target)
+        return cast(bool, validate_url(target))
 
     # 尝试作为 CIDR
     if "/" in target:
-        return validate_cidr(target)
+        return cast(bool, validate_cidr(target))
 
     # 尝试作为 IP
     if validate_ip(target):
@@ -528,7 +528,7 @@ def validate_inputs(**param_validators: str) -> Callable[[Callable[..., Any]], C
                 validation_error = _do_validation(param_validators, param_names, args, kwargs)
                 if validation_error:
                     return validation_error
-                return await func(*args, **kwargs)
+                return cast(Dict[str, Any], await func(*args, **kwargs))
 
             return async_wrapper
         else:
@@ -538,7 +538,7 @@ def validate_inputs(**param_validators: str) -> Callable[[Callable[..., Any]], C
                 validation_error = _do_validation(param_validators, param_names, args, kwargs)
                 if validation_error:
                     return validation_error
-                return func(*args, **kwargs)
+                return cast(Dict[str, Any], func(*args, **kwargs))
 
             return sync_wrapper
 
@@ -627,7 +627,7 @@ def require_non_empty(*param_names: str) -> Callable[[Callable[..., Any]], Calla
                 error = _check_non_empty(param_names, all_param_names, args, kwargs)
                 if error:
                     return error
-                return await func(*args, **kwargs)
+                return cast(Dict[str, Any], await func(*args, **kwargs))
 
             return async_wrapper
         else:
@@ -637,7 +637,7 @@ def require_non_empty(*param_names: str) -> Callable[[Callable[..., Any]], Calla
                 error = _check_non_empty(param_names, all_param_names, args, kwargs)
                 if error:
                     return error
-                return func(*args, **kwargs)
+                return cast(Dict[str, Any], func(*args, **kwargs))
 
             return sync_wrapper
 
@@ -718,7 +718,7 @@ def handle_external_tool_errors(
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
                 try:
-                    return await func(*args, **kwargs)
+                    return cast(Dict[str, Any], await func(*args, **kwargs))
                 except Exception as exc:
                     return _handle_external_tool_exception(
                         exc, logger, tool_name, context_extractor, args, kwargs
@@ -730,7 +730,7 @@ def handle_external_tool_errors(
             @functools.wraps(func)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Dict[str, Any]:
                 try:
-                    return func(*args, **kwargs)
+                    return cast(Dict[str, Any], func(*args, **kwargs))
                 except Exception as exc:
                     return _handle_external_tool_exception(
                         exc, logger, tool_name, context_extractor, args, kwargs

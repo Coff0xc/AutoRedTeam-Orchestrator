@@ -13,7 +13,7 @@ import logging
 import platform
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from ..base import EscalationMethod, EscalationResult, PrivilegeLevel
 
@@ -131,7 +131,7 @@ class UACBypass:
         try:
             import ctypes
 
-            return ctypes.windll.shell32.IsUserAnAdmin() != 0
+            return cast(bool, ctypes.windll.shell32.IsUserAnAdmin() != 0)
         except (AttributeError, OSError, ValueError):
             return False
 

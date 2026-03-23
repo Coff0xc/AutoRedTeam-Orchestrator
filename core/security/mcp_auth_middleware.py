@@ -10,7 +10,7 @@ import functools
 import logging
 import os
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, cast
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ def require_auth(
 
             # 检查授权模式
             if _auth_config["mode"] == AuthMode.DISABLED:
-                return await func(*args, **kwargs)
+                return cast(Dict[str, Any], await func(*args, **kwargs))
 
             # 获取API Key
             api_key_str = get_api_key_from_env()
@@ -115,7 +115,7 @@ def require_auth(
                 else:
                     # 宽松模式：允许但记录警告
                     logger.warning("工具 %s 未授权访问（宽松模式）", actual_tool_name)
-                    return await func(*args, **kwargs)
+                    return cast(Dict[str, Any], await func(*args, **kwargs))
 
             # 验证API Key
             auth_mgr = get_auth_manager()
@@ -127,7 +127,7 @@ def require_auth(
                         "error": "Authorization system unavailable",
                         "code": "AUTH_UNAVAILABLE",
                     }
-                return await func(*args, **kwargs)
+                return cast(Dict[str, Any], await func(*args, **kwargs))
 
             # 验证Key
             api_key = auth_mgr.verify_key(api_key_str)
@@ -165,7 +165,7 @@ def require_auth(
                         api_key.key_id, actual_tool_name, _sanitize_params(kwargs), success=True
                     )
 
-                return result
+                return cast(Dict[str, Any], result)
             except Exception as e:
                 # 记录失败审计
                 if _auth_config["audit_enabled"]:
@@ -184,7 +184,7 @@ def require_auth(
 
             # 检查授权模式
             if _auth_config["mode"] == AuthMode.DISABLED:
-                return func(*args, **kwargs)
+                return cast(Dict[str, Any], func(*args, **kwargs))
 
             # 获取API Key
             api_key_str = get_api_key_from_env()
@@ -196,7 +196,7 @@ def require_auth(
                         "error": "Authorization required",
                         "code": "AUTH_REQUIRED",
                     }
-                return func(*args, **kwargs)
+                return cast(Dict[str, Any], func(*args, **kwargs))
 
             auth_mgr = get_auth_manager()
             if not auth_mgr:
@@ -206,7 +206,7 @@ def require_auth(
                         "error": "Authorization system unavailable",
                         "code": "AUTH_UNAVAILABLE",
                     }
-                return func(*args, **kwargs)
+                return cast(Dict[str, Any], func(*args, **kwargs))
 
             api_key = auth_mgr.verify_key(api_key_str)
             if not api_key:
@@ -223,7 +223,7 @@ def require_auth(
                     "code": "PERMISSION_DENIED",
                 }
 
-            return func(*args, **kwargs)
+            return cast(Dict[str, Any], func(*args, **kwargs))
 
         # 根据函数类型返回对应的wrapper
         import asyncio

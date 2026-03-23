@@ -27,7 +27,7 @@ import math
 import random
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 logger = logging.getLogger(__name__)
 
@@ -747,4 +747,4 @@ class MCTSPlanner:
             按推荐度排序的动作列表
         """
         result = self.plan(root_state, iterations)
-        return result["recommended_actions"]
+        return cast(List[Dict[Any, Any]], result["recommended_actions"])

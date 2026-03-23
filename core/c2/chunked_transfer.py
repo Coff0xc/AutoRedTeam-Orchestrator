@@ -12,7 +12,7 @@ import hashlib
 import random
 import time
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, cast
 
 
 @dataclass

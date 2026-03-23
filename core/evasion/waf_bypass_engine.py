@@ -13,7 +13,7 @@ import string
 import urllib.parse
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 
 logger = logging.getLogger(__name__)
 
@@ -261,7 +261,7 @@ class WAFDetector:
         for version_name, patterns in versions.items():
             for pattern in patterns:
                 if re.search(pattern, combined, re.IGNORECASE):
-                    return version_name
+                    return cast(str, version_name)
 
         return None
 

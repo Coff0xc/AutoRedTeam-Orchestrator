@@ -28,7 +28,18 @@ import asyncio
 import functools
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Awaitable, Callable, Coroutine, List, Optional, Sequence, TypeVar, Union
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Coroutine,
+    List,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+    cast,
+)
 
 T = TypeVar("T")
 
@@ -112,7 +123,7 @@ def ensure_sync(func: Callable[..., Union[T, Awaitable[T]]]) -> Callable[..., T]
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs) -> T:
-        return run_sync(func(*args, **kwargs))
+        return cast(T, run_sync(func(*args, **kwargs)))
 
     return wrapper
 

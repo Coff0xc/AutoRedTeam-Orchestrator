@@ -13,7 +13,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, cast
 
 logger = logging.getLogger(__name__)
 
@@ -539,7 +539,7 @@ class RateLimiterGroup:
                 else:
                     raise ValueError(f"未知的限流器类型: {limiter_type}")
 
-            return self._limiters[name]
+            return cast("TokenBucket", self._limiters[name])
 
     def remove(self, name: str) -> bool:
         """

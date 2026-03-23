@@ -20,7 +20,7 @@ import struct
 import zlib
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 logger = logging.getLogger(__name__)
 
@@ -403,7 +403,7 @@ class JSONEncoder:
             解码后的字典
         """
         decoded = self.encoder.decode(data, encoding, decompress=decompress)
-        return json.loads(decoded.decode("utf-8"))
+        return cast(Dict[str, Any], json.loads(decoded.decode("utf-8")))
 
 
 # ==================== 流量混淆 ====================

@@ -10,7 +10,7 @@ import base64
 import logging
 import socket
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from .base import (
     AuthMethod,
@@ -314,7 +314,7 @@ class WinRMLateral(BaseLateralModule):
             try:
                 import json
 
-                return json.loads(result.output)
+                return cast(Dict[str, Any], json.loads(result.output))
             except (json.JSONDecodeError, ValueError) as e:
                 self.logger.debug("JSON 解析失败: %s", e)
 

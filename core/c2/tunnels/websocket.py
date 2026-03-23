@@ -18,7 +18,7 @@ import queue
 import threading
 import time
 import uuid
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, cast
 
 from ..base import BaseTunnel, C2Config
 from ..encoding import C2Encoder
@@ -237,7 +237,7 @@ class WebSocketTunnel(BaseTunnel):
         try:
             # 从队列获取数据
             data = self._recv_queue.get(timeout=timeout or self.config.timeout)
-            return data
+            return cast(bytes, data)
 
         except queue.Empty:
             return None
@@ -248,7 +248,7 @@ class WebSocketTunnel(BaseTunnel):
     def receive_nowait(self) -> Optional[bytes]:
         """非阻塞接收"""
         try:
-            return self._recv_queue.get_nowait()
+            return cast(bytes, self._recv_queue.get_nowait())
         except queue.Empty:
             return None
 

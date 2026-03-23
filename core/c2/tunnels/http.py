@@ -16,7 +16,7 @@ HTTP 隧道 - HTTP/HTTPS Tunnel
 import logging
 import time
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 from ..base import BaseTunnel, C2Config
 from ..encoding import C2Encoder, TrafficObfuscator
@@ -350,10 +350,10 @@ class HTTPTunnel(BaseTunnel):
             return False
 
         if hasattr(response, "ok"):
-            return response.ok
+            return cast(bool, response.ok)
 
         if hasattr(response, "status_code"):
-            return 200 <= response.status_code < 400
+            return cast(bool, 200 <= response.status_code < 400)
 
         return False
 
@@ -363,7 +363,7 @@ class HTTPTunnel(BaseTunnel):
             return 0
 
         if hasattr(response, "status_code"):
-            return response.status_code
+            return cast(int, response.status_code)
 
         return 0
 
@@ -376,8 +376,8 @@ class HTTPTunnel(BaseTunnel):
             if hasattr(response, "json"):
                 result = response.json
                 if callable(result):
-                    return result()
-                return result
+                    return cast(Dict[str, Any], result())
+                return cast(Dict[str, Any], result)
         except Exception:
             logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 

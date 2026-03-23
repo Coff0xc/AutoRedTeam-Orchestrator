@@ -289,7 +289,7 @@ class JWTDetector(BaseDetector):
         baseline: Any,
     ) -> List[DetectionResult]:
         """测试算法混淆漏洞 (RS256 → HS256)"""
-        results = []
+        results: List[DetectionResult] = []
         original_alg = parsed["header"].get("alg", "").upper()
         # 仅当原始算法是 RS* 时测试
         if not original_alg.startswith("RS"):
@@ -329,7 +329,7 @@ class JWTDetector(BaseDetector):
         baseline: Any,
     ) -> List[DetectionResult]:
         """测试弱密钥"""
-        results = []
+        results: List[DetectionResult] = []
         original_alg = parsed["header"].get("alg", "").upper()
         if not original_alg.startswith("HS"):
             return results
@@ -461,7 +461,7 @@ class JWTDetector(BaseDetector):
         baseline: Any,
     ) -> List[DetectionResult]:
         """测试 jku/x5u 注入"""
-        results = []
+        results: List[DetectionResult] = []
         if not self.callback_url:
             return results
 

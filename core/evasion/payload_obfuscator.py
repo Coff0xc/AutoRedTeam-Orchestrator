@@ -17,7 +17,7 @@ import zlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 # 尝试导入加密库
 try:
@@ -317,8 +317,8 @@ class PayloadObfuscator:
             raise ValueError(f"Unsupported encoding: {encoding}")
 
         if encoding in [EncodingType.XOR, EncodingType.AES]:
-            return encoder_class(key)
-        return encoder_class()
+            return cast(BaseEncoder, encoder_class(key))
+        return cast(BaseEncoder, encoder_class())
 
     def _generate_var_name(self) -> str:
         """生成随机变量名"""

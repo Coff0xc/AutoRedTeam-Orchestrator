@@ -359,7 +359,7 @@ class PasswordFinder:
         Returns:
             发现的敏感信息列表
         """
-        findings = []
+        findings: List[SecretFinding] = []
 
         try:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -543,7 +543,7 @@ class PasswordFinder:
         """
         import subprocess
 
-        findings = []
+        findings: List[SecretFinding] = []
         repo_path = Path(repo_path)
 
         if not (repo_path / ".git").exists():

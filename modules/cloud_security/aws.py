@@ -151,7 +151,7 @@ class AWSTester(BaseCloudTester):
 
     def check_s3_public_buckets(self) -> List[CloudFinding]:
         """检测公开的S3存储桶"""
-        findings = []
+        findings: List[CloudFinding] = []
 
         try:
             s3 = self._session.client("s3")
@@ -230,7 +230,7 @@ class AWSTester(BaseCloudTester):
 
     def check_iam_policies(self) -> List[CloudFinding]:
         """检测IAM权限配置"""
-        findings = []
+        findings: List[CloudFinding] = []
 
         try:
             iam = self._session.client("iam")
@@ -344,7 +344,7 @@ class AWSTester(BaseCloudTester):
 
     def check_security_groups(self) -> List[CloudFinding]:
         """检测安全组配置"""
-        findings = []
+        findings: List[CloudFinding] = []
 
         try:
             ec2 = self._session.client("ec2")
@@ -431,7 +431,7 @@ class AWSTester(BaseCloudTester):
 
     def check_cloudtrail(self) -> List[CloudFinding]:
         """检测CloudTrail配置"""
-        findings = []
+        findings: List[CloudFinding] = []
 
         try:
             cloudtrail = self._session.client("cloudtrail")
@@ -474,7 +474,7 @@ class AWSTester(BaseCloudTester):
 
     def check_ec2_metadata(self) -> List[CloudFinding]:
         """检测EC2元数据服务配置"""
-        findings = []
+        findings: List[CloudFinding] = []
 
         try:
             ec2 = self._session.client("ec2")

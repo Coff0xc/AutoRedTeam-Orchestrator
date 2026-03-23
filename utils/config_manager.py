@@ -10,7 +10,7 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 import yaml
 
@@ -328,7 +328,7 @@ class ConfigManager:
             else:
                 return obj
 
-        return dataclass_to_dict(self._config)
+        return cast(Dict[str, Any], dataclass_to_dict(self._config))
 
 
 # 全局配置管理器实例

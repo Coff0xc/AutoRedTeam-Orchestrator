@@ -11,7 +11,7 @@ Warning: 仅限授权渗透测试使用！
 
 import base64
 import logging
-from typing import Union
+from typing import Union, cast
 
 from ..base import (
     BaseExfiltration,
@@ -115,7 +115,7 @@ class HTTPExfiltration(BaseExfiltration):
                 response = self._session.head(
                     self.config.destination, timeout=self.config.timeout, verify=verify
                 )
-                return response.status_code < 500
+                return cast(bool, response.status_code < 500)
             except requests.exceptions.SSLError as e:
                 # SSL错误必须失败
                 self.logger.error("SSL verification failed: %s", e)

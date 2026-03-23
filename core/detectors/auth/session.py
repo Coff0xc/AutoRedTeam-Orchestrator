@@ -137,7 +137,7 @@ class SessionDetector(BaseDetector):
         Returns:
             检测结果列表
         """
-        results = []
+        results: List[DetectionResult] = []
         parsed = urlparse(url)
         is_https = parsed.scheme == "https"
 
@@ -217,7 +217,7 @@ class SessionDetector(BaseDetector):
         Returns:
             检测结果列表
         """
-        results = []
+        results: List[DetectionResult] = []
         session_ids: List[str] = []
 
         # 收集多个会话 ID
@@ -266,7 +266,7 @@ class SessionDetector(BaseDetector):
         Returns:
             检测结果列表
         """
-        results = []
+        results: List[DetectionResult] = []
 
         if not login_data:
             return results

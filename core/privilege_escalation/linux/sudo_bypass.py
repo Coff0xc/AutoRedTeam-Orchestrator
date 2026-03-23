@@ -14,7 +14,7 @@ import platform
 import re
 import subprocess
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 from ..base import EscalationMethod, EscalationResult, PrivilegeLevel
 
@@ -361,7 +361,7 @@ class SudoBypass:
             min_v = parse_version(min_ver)
             max_v = parse_version(max_ver)
 
-            return min_v <= v <= max_v
+            return cast(bool, min_v <= v <= max_v)
 
         except ValueError:
             return False
