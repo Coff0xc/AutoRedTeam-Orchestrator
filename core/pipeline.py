@@ -661,7 +661,7 @@ class VulnerabilityPipeline:
 
     def _generate_attack_chain(self) -> Dict[str, Any]:
         """生成攻击链"""
-        chain = {"phases": [], "recommended_sequence": [], "exploitation_paths": []}
+        chain: Dict[str, Any] = {"phases": [], "recommended_sequence": [], "exploitation_paths": []}
 
         # 基于指纹的初始访问
         if self.context.detected_cms:

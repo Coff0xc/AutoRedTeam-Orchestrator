@@ -52,6 +52,15 @@ def get_auth_manager() -> Optional["AuthManager"]:
 
 def set_auth_mode(mode: AuthMode):
     """设置授权模式"""
+    if mode == AuthMode.DISABLED:
+        # 仅在测试环境下允许禁用授权
+        is_test = os.getenv("AUTOREDTEAM_ENV") == "test" or os.getenv("PYTEST_CURRENT_TEST")
+        if not is_test:
+            logger.warning(
+                "拒绝设置DISABLED模式：仅允许在测试环境中禁用授权 "
+                "(需设置 AUTOREDTEAM_ENV=test 或 PYTEST_CURRENT_TEST)"
+            )
+            return
     _auth_config["mode"] = mode
     logger.info("授权模式设置为: %s", mode.value)
 
@@ -102,6 +111,28 @@ def require_auth(
 
             # 无Key情况处理
             if not api_key_str:
+                # CRITICAL/DANGEROUS 级工具无论何种非DISABLED模式都必须认证
+                _is_high_level = False
+                if HAS_AUTH_MANAGER and level is not None:
+                    _is_high_level = level in (ToolLevel.CRITICAL, ToolLevel.DANGEROUS)
+                elif not HAS_AUTH_MANAGER and level is not None:
+                    # AuthManager不可用但指定了level，安全起见视为高危
+                    _is_high_level = True
+
+                if _is_high_level:
+                    logger.warning(
+                        "CRITICAL/DANGEROUS 工具 %s 需要授权，但未提供API Key",
+                        actual_tool_name,
+                    )
+                    return {
+                        "success": False,
+                        "error": (
+                            "Authorization required for CRITICAL/DANGEROUS tools. "
+                            "Set AUTOREDTEAM_API_KEY environment variable."
+                        ),
+                        "code": "AUTH_REQUIRED",
+                    }
+
                 if _auth_config["mode"] == AuthMode.STRICT:
                     logger.warning("工具 %s 需要授权，但未提供API Key", actual_tool_name)
                     return {
@@ -113,7 +144,7 @@ def require_auth(
                         "code": "AUTH_REQUIRED",
                     }
                 else:
-                    # 宽松模式：允许但记录警告
+                    # 宽松模式：SAFE/MODERATE 工具允许但记录警告
                     logger.warning("工具 %s 未授权访问（宽松模式）", actual_tool_name)
                     return cast(Dict[str, Any], await func(*args, **kwargs))
 
@@ -190,12 +221,34 @@ def require_auth(
             api_key_str = get_api_key_from_env()
 
             if not api_key_str:
+                # CRITICAL/DANGEROUS 级工具无论何种非DISABLED模式都必须认证
+                _is_high_level = False
+                if HAS_AUTH_MANAGER and level is not None:
+                    _is_high_level = level in (ToolLevel.CRITICAL, ToolLevel.DANGEROUS)
+                elif not HAS_AUTH_MANAGER and level is not None:
+                    _is_high_level = True
+
+                if _is_high_level:
+                    logger.warning(
+                        "CRITICAL/DANGEROUS 工具 %s 需要授权，但未提供API Key",
+                        actual_tool_name,
+                    )
+                    return {
+                        "success": False,
+                        "error": (
+                            "Authorization required for CRITICAL/DANGEROUS tools. "
+                            "Set AUTOREDTEAM_API_KEY environment variable."
+                        ),
+                        "code": "AUTH_REQUIRED",
+                    }
+
                 if _auth_config["mode"] == AuthMode.STRICT:
                     return {
                         "success": False,
                         "error": "Authorization required",
                         "code": "AUTH_REQUIRED",
                     }
+                # 宽松模式：SAFE/MODERATE 工具允许
                 return cast(Dict[str, Any], func(*args, **kwargs))
 
             auth_mgr = get_auth_manager()

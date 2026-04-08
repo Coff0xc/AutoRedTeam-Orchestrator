@@ -352,7 +352,7 @@ class TaskScheduler:
     def stats(self) -> Dict[str, Any]:
         """获取统计信息"""
         with self._lock:
-            status_counts = {}
+            status_counts: Dict[str, int] = {}
             for task in self._task_map.values():
                 status = task.status.value
                 status_counts[status] = status_counts.get(status, 0) + 1

@@ -14,7 +14,7 @@ ATT&CK Technique: T1087 - Account Discovery
 """
 
 import logging
-from typing import Optional
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ class SimpleLDAPClient:
         if length < 128:
             return bytes([length])
         else:
-            length_bytes = []
+            length_bytes: List[int] = []
             while length > 0:
                 length_bytes.insert(0, length & 0xFF)
                 length >>= 8
@@ -142,7 +142,7 @@ class SimpleLDAPClient:
         if value == 0:
             return bytes([0x02, 0x01, 0x00])
 
-        result = []
+        result: List[int] = []
         while value > 0:
             result.insert(0, value & 0xFF)
             value >>= 8

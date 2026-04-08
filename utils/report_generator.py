@@ -449,7 +449,7 @@ class ReportGenerator:
         if errors is None:
             return 0.0
         success = max(total - errors, 0)
-        return round(success / total * 100, 2)
+        return cast(float, round(success / total * 100, 2))
 
     def _extract_result_url(self, result: Any) -> Optional[str]:
         """从执行结果中提取URL"""

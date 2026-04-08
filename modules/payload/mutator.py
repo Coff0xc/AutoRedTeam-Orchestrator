@@ -336,7 +336,7 @@ class PayloadMutator:
         Returns:
             [{"payload": ..., "mutation": ..., "description": ...}, ...]
         """
-        variants = []
+        variants: List[Dict[str, str]] = []
         seen = {payload}  # 跟踪已生成的变体
 
         # 单一变异

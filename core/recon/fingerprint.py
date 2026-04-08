@@ -575,7 +575,7 @@ class FingerprintEngine:
         self,
     ) -> Dict[str, Dict[str, List[Tuple[FingerprintRule, Optional[Pattern]]]]]:
         """编译所有规则的正则表达式"""
-        compiled = {}
+        compiled: Dict[str, Dict[str, List[Tuple[FingerprintRule, Optional[Pattern]]]]] = {}
         for category, names in self.FINGERPRINTS.items():
             compiled[category] = {}
             for name, rules in names.items():

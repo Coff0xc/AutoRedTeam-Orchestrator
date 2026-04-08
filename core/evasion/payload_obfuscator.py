@@ -828,7 +828,7 @@ def obfuscate_python_code(
     """
     try:
         result_code = code
-        var_mapping = {}
+        var_mapping: Dict[str, str] = {}
 
         if rename_vars:
             var_obfuscator = VariableObfuscator()

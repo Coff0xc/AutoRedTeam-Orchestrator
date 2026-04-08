@@ -30,17 +30,14 @@ sys.path.insert(0, PROJECT_ROOT)
 
 from mcp.server.fastmcp import FastMCP
 
-from utils.logger import configure_root_logger
-
-# ==================== 日志配置 ====================
-
-configure_root_logger(level=logging.INFO, log_to_file=True, log_to_console=True)
-logger = logging.getLogger("AutoRedTeam")
-
-
 # ==================== MCP服务器实例 ====================
 
 mcp = FastMCP("AutoRedTeam")
+
+
+# ==================== 日志配置 (延迟到 main 调用) ====================
+
+logger = logging.getLogger("AutoRedTeam")
 
 
 # ==================== 工具计数器 ====================
@@ -110,8 +107,21 @@ def register_all_tools():
 def main():
     """主入口函数"""
 
+    # 配置日志（延迟到启动时）
+    from utils.logger import configure_root_logger
+
+    configure_root_logger(level=logging.INFO, log_to_file=True, log_to_console=True)
+
     # 注册所有工具
     register_all_tools()
+
+    # 显示安全配置
+    try:
+        from core.security.mcp_auth_middleware import _auth_config
+
+        logger.info("授权模式: %s", _auth_config["mode"].value)
+    except Exception:
+        logger.warning("无法读取授权模式配置")
 
     # 启动MCP服务器
     logger.info("AutoRedTeam MCP Server v3.0.2 启动中...")

@@ -21,7 +21,7 @@ import hmac
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urlparse
 
 from .base import (
@@ -717,7 +717,7 @@ class JWTTester(BaseAPITester):
             response = client.get(self.target, headers=headers, timeout=self.timeout)
 
             # 2xx或3xx表示接受，401/403表示拒绝
-            return response.status_code < 400
+            return cast(bool, response.status_code < 400)
 
         except Exception as e:
             logger.debug("验证令牌时发生错误: %s", e)
@@ -727,7 +727,7 @@ class JWTTester(BaseAPITester):
         """获取服务端公钥"""
         # 首先检查配置中是否提供了公钥
         if self.public_key:
-            return self.public_key
+            return cast(str, self.public_key)
 
         # 尝试从常见端点获取
         common_jwks_paths = [

@@ -330,5 +330,311 @@ def register_detector_tools(mcp, counter, logger):
 
         return {"success": True, "url": url, "findings": [r.to_dict() for r in results]}
 
+    # ── 以下为新增的 10 个休眠检测器 ──
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def ldap_scan(
+        url: str, params: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """LDAP注入检测 - 检测LDAP注入漏洞
+
+        Args:
+            url: 目标URL
+            params: 请求参数
+
+        Returns:
+            LDAP注入检测结果
+        """
+        from core.detectors.injection.ldap import LDAPiDetector
+
+        detector = LDAPiDetector()
+        results = await detector.async_detect(url, params=params or {})
+        findings = [r.to_dict() for r in results if r.vulnerable]
+        return {
+            "success": True,
+            "url": url,
+            "vulnerable": len(findings) > 0,
+            "findings": findings,
+            "total_checks": len(results),
+        }
+
+    counter.add("detector", 1)
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def open_redirect_scan(
+        url: str, params: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """开放重定向检测 - 检测URL重定向漏洞
+
+        Args:
+            url: 目标URL
+            params: 请求参数
+
+        Returns:
+            开放重定向检测结果
+        """
+        from core.detectors.access.open_redirect import OpenRedirectDetector
+
+        detector = OpenRedirectDetector()
+        results = await detector.async_detect(url, params=params or {})
+        findings = [r.to_dict() for r in results if r.vulnerable]
+        return {
+            "success": True,
+            "url": url,
+            "vulnerable": len(findings) > 0,
+            "findings": findings,
+            "total_checks": len(results),
+        }
+
+    counter.add("detector", 1)
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def info_disclosure_scan(url: str) -> Dict[str, Any]:
+        """信息泄露检测 - 检测敏感信息泄露
+
+        检测: 错误信息泄露、目录列表、敏感文件暴露等
+
+        Args:
+            url: 目标URL
+
+        Returns:
+            信息泄露检测结果
+        """
+        from core.detectors.misc.info_disclosure import InfoDisclosureDetector
+
+        detector = InfoDisclosureDetector()
+        results = await detector.async_detect(url)
+        findings = [r.to_dict() for r in results if r.vulnerable]
+        return {
+            "success": True,
+            "url": url,
+            "vulnerable": len(findings) > 0,
+            "findings": findings,
+            "total_checks": len(results),
+        }
+
+    counter.add("detector", 1)
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def csrf_scan(
+        url: str, data: Optional[Dict[str, str]] = None, method: str = "POST"
+    ) -> Dict[str, Any]:
+        """CSRF跨站请求伪造检测 - 检测CSRF防护缺失或配置问题
+
+        Args:
+            url: 目标URL
+            data: POST数据
+            method: HTTP方法 (POST/PUT/DELETE/PATCH)
+
+        Returns:
+            CSRF检测结果
+        """
+        from core.detectors.misc.csrf import CSRFDetector
+
+        detector = CSRFDetector()
+        results = await detector.async_detect(url, data=data or {}, method=method)
+        findings = [r.to_dict() for r in results if r.vulnerable]
+        return {
+            "success": True,
+            "url": url,
+            "vulnerable": len(findings) > 0,
+            "findings": findings,
+            "total_checks": len(results),
+        }
+
+    counter.add("detector", 1)
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def auth_bypass_scan(
+        url: str, params: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """认证绕过检测 - 检测身份认证绕过漏洞
+
+        Args:
+            url: 目标URL
+            params: 请求参数
+
+        Returns:
+            认证绕过检测结果
+        """
+        from core.detectors.auth.auth_bypass import AuthBypassDetector
+
+        detector = AuthBypassDetector()
+        results = await detector.async_detect(url, params=params or {})
+        findings = [r.to_dict() for r in results if r.vulnerable]
+        return {
+            "success": True,
+            "url": url,
+            "vulnerable": len(findings) > 0,
+            "findings": findings,
+            "total_checks": len(results),
+        }
+
+    counter.add("detector", 1)
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def weak_password_scan(
+        url: str, params: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """弱密码检测 - 检测弱密码和默认凭据
+
+        Args:
+            url: 目标URL
+            params: 请求参数 (例: {"username_field": "user", "password_field": "pass"})
+
+        Returns:
+            弱密码检测结果
+        """
+        from core.detectors.auth.weak_password import WeakPasswordDetector
+
+        detector = WeakPasswordDetector()
+        results = await detector.async_detect(url, params=params or {})
+        findings = [r.to_dict() for r in results if r.vulnerable]
+        return {
+            "success": True,
+            "url": url,
+            "vulnerable": len(findings) > 0,
+            "findings": findings,
+            "total_checks": len(results),
+        }
+
+    counter.add("detector", 1)
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def session_scan(
+        url: str, params: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """会话安全检测 - 检测会话管理漏洞
+
+        检测: 会话固定、会话劫持、Cookie安全属性缺失等
+
+        Args:
+            url: 目标URL
+            params: 请求参数
+
+        Returns:
+            会话安全检测结果
+        """
+        from core.detectors.auth.session import SessionDetector
+
+        detector = SessionDetector()
+        results = await detector.async_detect(url, params=params or {})
+        findings = [r.to_dict() for r in results if r.vulnerable]
+        return {
+            "success": True,
+            "url": url,
+            "vulnerable": len(findings) > 0,
+            "findings": findings,
+            "total_checks": len(results),
+        }
+
+    counter.add("detector", 1)
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def upload_scan(
+        url: str, params: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """文件上传漏洞检测 - 检测文件上传安全问题
+
+        检测: 文件类型绕过、路径穿越、恶意文件上传等
+
+        Args:
+            url: 目标URL (文件上传端点)
+            params: 请求参数
+
+        Returns:
+            文件上传漏洞检测结果
+        """
+        from core.detectors.file.upload import FileUploadDetector
+
+        detector = FileUploadDetector()
+        results = await detector.async_detect(url, params=params or {})
+        findings = [r.to_dict() for r in results if r.vulnerable]
+        return {
+            "success": True,
+            "url": url,
+            "vulnerable": len(findings) > 0,
+            "findings": findings,
+            "total_checks": len(results),
+        }
+
+    counter.add("detector", 1)
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def lfi_scan(
+        url: str, params: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """本地文件包含检测 - 检测LFI漏洞
+
+        Args:
+            url: 目标URL
+            params: 请求参数
+
+        Returns:
+            LFI检测结果
+        """
+        from core.detectors.file.lfi import LFIDetector
+
+        detector = LFIDetector()
+        results = await detector.async_detect(url, params=params or {})
+        findings = [r.to_dict() for r in results if r.vulnerable]
+        return {
+            "success": True,
+            "url": url,
+            "vulnerable": len(findings) > 0,
+            "findings": findings,
+            "total_checks": len(results),
+        }
+
+    counter.add("detector", 1)
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def deserialize_scan(
+        url: str, params: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """反序列化漏洞检测 - 检测不安全的反序列化
+
+        Args:
+            url: 目标URL
+            params: 请求参数
+
+        Returns:
+            反序列化漏洞检测结果
+        """
+        from core.detectors.injection.deserialize import DeserializeDetector
+
+        detector = DeserializeDetector()
+        results = await detector.async_detect(url, params=params or {})
+        findings = [r.to_dict() for r in results if r.vulnerable]
+        return {
+            "success": True,
+            "url": url,
+            "vulnerable": len(findings) > 0,
+            "findings": findings,
+            "total_checks": len(results),
+        }
+
+    counter.add("detector", 1)
+
     counter.add("detector", 11)
-    logger.info("[Detector] 已注册 11 个漏洞检测工具")
+    logger.info("[Detector] 已注册 21 个漏洞检测工具")

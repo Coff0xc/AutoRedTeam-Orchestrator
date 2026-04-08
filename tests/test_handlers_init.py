@@ -32,6 +32,11 @@ class TestHandlersInit:
             "register_ai_tools",
             "register_misc_tools",
             "register_external_tools",
+            "register_parallel_tools",
+            "register_knowledge_tools",
+            "register_mcts_tools",
+            "register_prompt_handlers",
+            "register_resource_handlers",
         ]
 
         assert len(__all__) == len(expected_exports)
@@ -309,15 +314,20 @@ class TestHandlersIntegration:
             "register_ai_tools",
             "register_misc_tools",
             "register_external_tools",
+            "register_parallel_tools",
+            "register_knowledge_tools",
+            "register_mcts_tools",
+            "register_prompt_handlers",
+            "register_resource_handlers",
         ]
         with ExitStack() as stack:
             for h in all_handlers:
-                name = h.replace("register_", "").replace("_tools", "")
+                name = h.replace("register_", "").replace("_tools", "").replace("_handlers", "")
                 stack.enter_context(patch(f"handlers.{h}", side_effect=mock_register_func(name)))
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
         # 验证所有处理器都被注册
-        assert len(registered_handlers) == 16
+        assert len(registered_handlers) == 21
         assert "recon" in registered_handlers
         assert "detector" in registered_handlers
         assert "redteam" in registered_handlers

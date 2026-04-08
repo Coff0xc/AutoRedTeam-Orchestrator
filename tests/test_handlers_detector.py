@@ -24,15 +24,19 @@ class TestDetectorHandlersRegistration:
         # 执行注册
         register_detector_tools(mock_mcp, mock_counter, mock_logger)
 
-        # 验证 counter.add 被调用
-        mock_counter.add.assert_called_once_with("detector", 11)
+        # 验证 counter.add 被调用 (11个原始 + 10个新激活)
+        detector_calls = [
+            c for c in mock_counter.add.call_args_list if c[0][0] == "detector"
+        ]
+        total_detectors = sum(c[0][1] for c in detector_calls)
+        assert total_detectors == 21
 
         # 验证 logger.info 被调用
-        mock_logger.info.assert_called_once()
-        assert "11 个漏洞检测工具" in str(mock_logger.info.call_args)
+        info_calls = [str(c) for c in mock_logger.info.call_args_list]
+        assert any("检测工具" in s for s in info_calls)
 
-        # 验证 @mcp.tool() 装饰器被调用了 11 次
-        assert mock_mcp.tool.call_count == 11
+        # 验证 @mcp.tool() 装饰器被调用 (11原始 + 10新激活 = 21)
+        assert mock_mcp.tool.call_count == 21
 
 
 class TestVulnScanTool:

@@ -23,7 +23,7 @@ import logging
 import socket
 import ssl
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urlparse
 
 from ..base import BaseDetector
@@ -209,7 +209,7 @@ class HTTPSmugglingDetector(BaseDetector):
 
         if not times:
             return None
-        return sum(times) / len(times)
+        return cast(float, sum(times) / len(times))
 
     def _detect_clte(
         self,

@@ -220,7 +220,7 @@ class KubernetesTester(BaseCloudTester):
 
         try:
             data = json.loads(output)
-            return data.get("items", [])
+            return cast(List[Dict[Any, Any]], data.get("items", []))
         except json.JSONDecodeError:
             return []
 
@@ -700,7 +700,7 @@ class KubernetesTester(BaseCloudTester):
     def _simple_yaml_parse(self, content: str) -> List[Dict]:
         """简单YAML解析（备用）"""
         docs = []
-        current_doc = {}
+        current_doc: Dict[str, Any] = {}
 
         for line in content.split("\n"):
             if line.strip() == "---":
