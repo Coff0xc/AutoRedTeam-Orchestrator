@@ -1,17 +1,13 @@
 <h1 align="center">AutoRedTeam-Orchestrator</h1>
 
 <p align="center">
-  <b>AI-Driven Automated Penetration Testing Framework Based on Model Context Protocol</b><br>
-  <sub>Cross-platform | 131 MCP Tools | 26 Detectors | Full ATT&CK Coverage | Knowledge Graph Enhanced</sub>
+  <b>Enterprise AI Red Team Orchestration Platform</b><br>
+  <sub>Pure Python Engines | MCP + SDK + CLI | Full Kill Chain Automation | Auto-download Tools</sub>
 </p>
 
 <p align="center">
   <a href="README.md">简体中文</a> ·
-  <a href="README_EN.md"><b>English</b></a> ·
-  <a href="README_JA.md">日本語</a> ·
-  <a href="README_RU.md">Русский</a> ·
-  <a href="README_DE.md">Deutsch</a> ·
-  <a href="README_FR.md">Français</a>
+  <a href="README_EN.md"><b>English</b></a>
 </p>
 
 <p align="center">
@@ -25,8 +21,8 @@
   <img src="https://img.shields.io/badge/Version-3.1.0-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=flat-square" alt="MCP">
-  <img src="https://img.shields.io/badge/Tools-131-FF6B6B?style=flat-square" alt="Tools">
-  <img src="https://img.shields.io/badge/Tests-1963-4CAF50?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Tools-132-FF6B6B?style=flat-square" alt="Tools">
+  <img src="https://img.shields.io/badge/Tests-1980-4CAF50?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License">
 </p>
 
@@ -42,11 +38,12 @@
 +-----------------------------------------------------------------------------+
 |                    AutoRedTeam-Orchestrator v3.1.0                           |
 +-----------------------------------------------------------------------------+
-|  * 131 MCP Tools         * 14 YAML Payload Files  * 1963 Tests             |
+|  * 132 MCP Tools         * 14 YAML Payload Files  * 1980 Tests             |
 |  * 10-Phase Recon        * 26 Vuln Detectors      * 5-Protocol Lateral     |
-|  * MCTS Attack Planner   * SQLite Knowledge Graph  * AI PoC Generation     |
+|  * MCTS Attack Planner   * SQLite Knowledge Graph  * Production C2 Server  |
 |  * Nuclei Template Engine * Docker Sandbox         * SARIF CI/CD Output    |
-|  * False-Positive Filter * Dependency Injection    * MCP Security Layer    |
+|  * Unified Engine Router  * Auto-Download Tools   * LaZagne Integration    |
+|  * PostExploit Executor   * Passive Recon (6 src) * LLM-Enhanced Decision  |
 +-----------------------------------------------------------------------------+
 |  Three Interfaces: MCP Server | Python SDK | CLI                            |
 |  AI Editors: Cursor | Windsurf | Kiro | Claude Desktop | Claude Code       |
