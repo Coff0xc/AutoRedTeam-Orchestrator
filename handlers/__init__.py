@@ -4,7 +4,7 @@ AutoRedTeam MCP Handlers
 
 此模块将原 mcp_stdio_server.py 中的工具按功能拆分为独立模块:
 - recon_handlers: 侦察工具 (8个)
-- detector_handlers: 漏洞检测工具 (21个, 含10个新激活检测器)
+- detector_factory: 漏洞检测工具 (26个, 工厂模式生成)
 - cve_handlers: CVE相关工具 (8个)
 - api_security_handlers: API安全工具 (7个)
 - cloud_security_handlers: 云安全工具 (3个)
@@ -31,7 +31,7 @@ from .ai_handlers import register_ai_tools
 from .api_security_handlers import register_api_security_tools
 from .cloud_security_handlers import register_cloud_security_tools
 from .cve_handlers import register_cve_tools
-from .detector_handlers import register_detector_tools
+from .detector_factory import register_detector_tools
 from .external_tools_handlers import register_external_tools
 from .knowledge_handlers import register_knowledge_tools
 from .lateral_handlers import register_lateral_tools

