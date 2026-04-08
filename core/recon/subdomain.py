@@ -330,6 +330,7 @@ class SubdomainEnumerator:
         threads: int = 50,
         wordlist: Optional[str] = None,
         max_subdomains: int = 1000,
+        passive: bool = True,
     ):
         """初始化子域名枚举器
 
@@ -338,11 +339,13 @@ class SubdomainEnumerator:
             threads: 并发线程数
             wordlist: 自定义字典路径
             max_subdomains: 最大子域名数量
+            passive: 是否启用被动侦察（先跑被动源再暴破）
         """
         self.timeout = timeout
         self.threads = threads
         self.wordlist = wordlist
         self.max_subdomains = max_subdomains
+        self.passive = passive
 
         # DNS解析器
         self._resolver = DNSResolver(timeout=timeout)
@@ -425,6 +428,9 @@ class SubdomainEnumerator:
     ) -> List[SubdomainInfo]:
         """异步枚举子域名
 
+        当 passive=True 时，先运行被动侦察收集子域名，
+        再用被动结果 + 字典进行 DNS 暴破验证，最终合并去重。
+
         Args:
             domain: 目标域名
             custom_wordlist: 自定义字典列表
@@ -433,7 +439,36 @@ class SubdomainEnumerator:
         Returns:
             发现的子域名列表
         """
+        # 被动侦察阶段
+        passive_subdomains: List[str] = []
+        if self.passive:
+            try:
+                from .passive_recon import PassiveRecon
+
+                passive = PassiveRecon(timeout=max(int(self.timeout * 2), 10))
+                passive_subdomains = await passive.discover_subdomains(domain)
+                self._logger.info(
+                    "被动侦察发现 %d 个子域名: %s", len(passive_subdomains), domain
+                )
+            except Exception as e:
+                self._logger.warning("被动侦察失败，继续 DNS 暴破: %s", e)
+
+        # DNS 暴破阶段
         wordlist = self._load_wordlist(custom_wordlist)
+
+        # 将被动发现的子域名添加到暴破验证列表
+        # 提取子域名前缀（去掉根域名部分）
+        passive_words = []
+        suffix = f".{domain}"
+        for sub in passive_subdomains:
+            if sub.endswith(suffix):
+                prefix = sub[: -len(suffix)]
+                if prefix:
+                    passive_words.append(prefix)
+
+        # 合并: 被动结果前缀 + 字典
+        all_words = list(set(wordlist) | set(passive_words))
+
         wildcard_ips = self._detect_wildcard(domain)
 
         results: List[SubdomainInfo] = []
@@ -446,13 +481,21 @@ class SubdomainEnumerator:
                 subdomain = f"{word}.{domain}"
                 return await self._async_check_subdomain(subdomain, wildcard_ips)
 
-        tasks = [check_with_limit(word) for word in wordlist[: self.max_subdomains * 2]]
+        tasks = [check_with_limit(word) for word in all_words[: self.max_subdomains * 2]]
         check_results = await asyncio.gather(*tasks, return_exceptions=True)
 
+        seen_subdomains: Set[str] = set()
         for result in check_results:
             if isinstance(result, SubdomainInfo) and not result.is_wildcard:
                 if len(results) < self.max_subdomains:
-                    results.append(result)
+                    if result.subdomain not in seen_subdomains:
+                        seen_subdomains.add(result.subdomain)
+                        # 标记被动发现的来源
+                        if result.subdomain in passive_subdomains:
+                            result.metadata["source"] = "passive+dns"
+                        else:
+                            result.metadata["source"] = "bruteforce"
+                        results.append(result)
 
         return sorted(results, key=lambda x: x.subdomain)
 
