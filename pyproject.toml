@@ -214,9 +214,10 @@ Repository = "https://github.com/Coff0xc/AutoRedTeam-Orchestrator"
 Issues = "https://github.com/Coff0xc/AutoRedTeam-Orchestrator/issues"
 
 [project.scripts]
-autoredteam = "mcp_stdio_server:main"
+autort = "cli.main:app"
+autoredteam-mcp = "mcp_stdio_server:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core*", "modules*", "tools*", "utils*"]
+include = ["core*", "modules*", "tools*", "utils*", "autort*", "cli*"]
 exclude = ["tests*", "scripts*", "backup*"]
