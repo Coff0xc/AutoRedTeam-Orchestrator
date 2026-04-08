@@ -362,7 +362,7 @@ class PortScanner:
         return sorted(results, key=lambda x: x.port)
 
     async def async_scan(
-        self, host: str, ports: str = "1-1000", concurrency: int = 100
+        self, host: str, ports: str = "1-1000", concurrency: int = 500
     ) -> List[PortInfo]:
         """异步扫描端口
 
@@ -392,6 +392,35 @@ class PortScanner:
         for result in scan_results:
             if isinstance(result, PortInfo) and result.is_open():
                 results.append(result)
+
+        # 对开放端口进行服务探针 (内置 nmap -sV 能力)
+        if results and self.grab_banner:
+            try:
+                from core.recon.service_probe import ServiceProber
+
+                prober = ServiceProber(timeout=min(3.0, self.timeout))
+                open_ports = [r.port for r in results]
+                probed = await prober.probe_ports(host, open_ports, concurrency=min(50, concurrency))
+                # 合并探针结果到 PortInfo
+                probe_map = {p.port: p for p in probed}
+                for port_info in results:
+                    si = probe_map.get(port_info.port)
+                    if si:
+                        if si.service != "unknown":
+                            port_info.service = si.service
+                        if si.version:
+                            port_info.version = si.version
+                        if si.banner and not port_info.banner:
+                            port_info.banner = si.banner
+                        if si.tls:
+                            port_info.metadata["tls"] = True
+                            port_info.metadata["tls_version"] = si.tls_version
+                        if si.os_guess:
+                            port_info.metadata["os_guess"] = si.os_guess
+                        if si.cert_subject:
+                            port_info.metadata["cert_subject"] = si.cert_subject
+            except Exception as e:
+                self._logger.debug("服务探针失败 (不影响扫描结果): %s", e)
 
         return sorted(results, key=lambda x: x.port)
 

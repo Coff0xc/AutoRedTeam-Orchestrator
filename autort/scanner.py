@@ -237,6 +237,53 @@ class Scanner:
             logger.error("subdomain_enum 失败: %s", e)
             return [{"success": False, "error": str(e)}]
 
+    async def passive_recon(self, domain: Optional[str] = None) -> Dict[str, Any]:
+        """被动侦察 — 通过公开 API 收集子域名，零主动流量
+
+        查询 crt.sh、HackerTarget、ThreatCrowd、URLScan.io、
+        AlienVault OTX、RapidDNS 等公开数据源。
+
+        Args:
+            domain: 根域名，默认从 target 自动提取
+
+        Returns:
+            被动侦察结果 {"subdomains": [...], "by_source": {...}}
+        """
+        try:
+            from core.recon.passive_recon import PassiveRecon
+
+            if domain is None:
+                from urllib.parse import urlparse
+
+                parsed = urlparse(self.target)
+                hostname = parsed.hostname or self.target
+                parts = hostname.split(".")
+                domain = ".".join(parts[-2:]) if len(parts) >= 2 else hostname
+
+            recon = PassiveRecon(
+                timeout=self._config.get("passive_timeout", 10)
+            )
+            by_source = await recon.discover_subdomains_with_sources(domain)
+
+            # 合并所有子域名
+            all_subs = set()
+            for subs in by_source.values():
+                all_subs.update(subs)
+
+            return {
+                "success": True,
+                "domain": domain,
+                "subdomains": sorted(all_subs),
+                "count": len(all_subs),
+                "by_source": {
+                    k: {"subdomains": v, "count": len(v)}
+                    for k, v in by_source.items()
+                },
+            }
+        except Exception as e:
+            logger.error("passive_recon 失败: %s", e)
+            return {"success": False, "error": str(e)}
+
     async def nuclei_scan(
         self,
         tags: Optional[List[str]] = None,

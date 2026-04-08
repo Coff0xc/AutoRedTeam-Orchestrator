@@ -267,5 +267,43 @@ def register_recon_tools(mcp, counter, logger):
             "confidence": result.confidence if hasattr(result, "confidence") else None,
         }
 
-    counter.add("recon", 8)
-    logger.info("[Recon] 已注册 8 个侦察工具")
+    @tool(mcp)
+    @validate_inputs(domain="domain")
+    @handle_errors(logger, ErrorCategory.RECON, extract_domain)
+    async def passive_subdomain_enum(
+        domain: str, timeout: int = 10
+    ) -> Dict[str, Any]:
+        """被动子域名枚举 - 通过公开API零流量发现子域名
+
+        查询6个公开数据源: crt.sh、HackerTarget、ThreatCrowd、
+        URLScan.io、AlienVault OTX、RapidDNS。无需主动扫描。
+
+        Args:
+            domain: 目标域名 (例: example.com)
+            timeout: 每个数据源的超时时间(秒)
+
+        Returns:
+            子域名列表及各数据源的发现结果
+        """
+        from core.recon.passive_recon import PassiveRecon
+
+        recon = PassiveRecon(timeout=timeout)
+        by_source = await recon.discover_subdomains_with_sources(domain)
+
+        all_subs = set()
+        for subs in by_source.values():
+            all_subs.update(subs)
+
+        return {
+            "success": True,
+            "domain": domain,
+            "subdomains": sorted(all_subs),
+            "count": len(all_subs),
+            "by_source": {
+                k: {"subdomains": v, "count": len(v)}
+                for k, v in by_source.items()
+            },
+        }
+
+    counter.add("recon", 9)
+    logger.info("[Recon] 已注册 9 个侦察工具 (含被动侦察)")

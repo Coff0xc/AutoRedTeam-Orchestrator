@@ -113,6 +113,12 @@ from .subdomain import (
     enumerate_subdomains,
 )
 
+# 被动侦察
+from .passive_recon import (
+    PassiveRecon,
+    passive_subdomain_discovery,
+)
+
 # 技术栈识别
 from .tech_detect import (
     TechDetector,
@@ -174,6 +180,9 @@ __all__ = [
     "SubdomainEnumerator",
     "enumerate_subdomains",
     "async_enumerate_subdomains",
+    # 被动侦察
+    "PassiveRecon",
+    "passive_subdomain_discovery",
     # 目录扫描
     "DirectoryInfo",
     "DirectoryScanner",

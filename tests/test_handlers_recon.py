@@ -24,15 +24,15 @@ class TestReconHandlersRegistration:
         # 执行注册
         register_recon_tools(mock_mcp, mock_counter, mock_logger)
 
-        # 验证 counter.add 被调用
-        mock_counter.add.assert_called_once_with("recon", 8)
+        # 验证 counter.add 被调用 (8 原有 + 1 passive_subdomain_enum = 9)
+        mock_counter.add.assert_called_once_with("recon", 9)
 
         # 验证 logger.info 被调用
         mock_logger.info.assert_called_once()
-        assert "8 个侦察工具" in str(mock_logger.info.call_args)
+        assert "9 个侦察工具" in str(mock_logger.info.call_args)
 
-        # 验证 @mcp.tool() 装饰器被调用了 8 次
-        assert mock_mcp.tool.call_count == 8
+        # 验证 @mcp.tool() 装饰器被调用了 9 次
+        assert mock_mcp.tool.call_count == 9
 
 
 class TestFullReconTool:

