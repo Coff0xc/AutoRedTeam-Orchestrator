@@ -241,6 +241,23 @@ def mock_scan_session():
     }
 
 
+# ==================== HTTP 重试延迟 Mock ====================
+
+
+@pytest.fixture(autouse=True)
+def _patch_http_retry_sleep(monkeypatch):
+    """测试中将 HTTP client 模块内的 time.sleep 替换为 noop，
+    避免 retry backoff 导致测试超时。
+    仅 patch core.http.client 模块的引用，不影响其他模块。
+    """
+    try:
+        import core.http.client as _http_client
+
+        monkeypatch.setattr(_http_client.time, "sleep", lambda _s: None)
+    except (ImportError, AttributeError):
+        pass
+
+
 # ==================== 标记注册 ====================
 
 
