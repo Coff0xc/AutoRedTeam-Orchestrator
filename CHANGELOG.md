@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-04-08
+
+### Added
+
+- **Python SDK** (`autort/`): Enterprise API with `Scanner`, `Exploiter`, `AutoPentest`, `RedTeam`, `Reporter` classes
+- **CLI** (`cli/`): Typer-based CLI — `autort scan`, `autort detect`, `autort exploit`, `autort pentest`, `autort report`
+- **Unified Config** (`core/config/`): Pydantic-based configuration system with YAML + env var cascade
+- **YAML Payloads** (`data/payloads/`): 14 YAML files extracted from mega_payloads.py with `core/payload/loader.py`
+- **Detector Factory**: `detector_factory.py` activated — 25 detector configs, replaces 640-line manual registration
+- **Handler Tests**: 95 new tests for handlers, SDK, and CLI (1766 total, 40%+ coverage)
+- **HTTP Retry Mock**: conftest.py fixture to eliminate test timeouts from HTTP backoff sleep
+
+### Changed
+
+- **Architecture**: `modules/` merged into `core/` — single unified engine layer
+- **utils/__init__.py**: Converted from 455-line eager imports to `__getattr__`-based lazy loading
+- **CI**: Coverage threshold raised from 20% to 40%, lint/coverage targets include `handlers/`, `autort/`, `cli/`
+- **pyproject.toml**: New entry points `autort` (CLI) and `autoredteam-mcp` (MCP server)
+
+### Removed
+
+- `modules/` package (merged into `core/`)
+- `shared/` package (was pure re-export layer)
+- `core/container.py` (527-line unused DI framework)
+- `utils/config_manager.py` (dead code)
+- 6 empty module directories (`modules/enhanced_detectors`, `exploit`, `network`, `post_exploit`, `recon`, `vuln_scan`)
+
+### Fixed
+
+- `handlers/resource_handlers.py`: Logger parameter mismatch (used module-level logger instead of passed parameter)
+- `detector_handlers.py`: Double-counting in ToolCounter
+
 ## [3.0.2] - 2026-02-02
 
 ### Added

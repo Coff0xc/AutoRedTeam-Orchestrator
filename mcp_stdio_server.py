@@ -90,7 +90,7 @@ def register_all_tools():
     from handlers import register_all_handlers
 
     logger.info("=" * 60)
-    logger.info("AutoRedTeam MCP Server v3.0.2 - 工具注册")
+    logger.info("AutoRedTeam MCP Server v3.1.0 - 工具注册")
     logger.info("=" * 60)
 
     # 使用模块化的 handlers 注册所有工具
@@ -124,7 +124,7 @@ def main():
         logger.warning("无法读取授权模式配置")
 
     # 启动MCP服务器
-    logger.info("AutoRedTeam MCP Server v3.0.2 启动中...")
+    logger.info("AutoRedTeam MCP Server v3.1.0 启动中...")
     logger.info("支持: Cursor / Windsurf / Kiro 等AI编辑器")
     logger.info("-" * 60)
 
