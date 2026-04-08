@@ -63,6 +63,7 @@ from .beacon import (
     BeaconConfig,
     BeaconMode,
     BeaconServer,
+    BeaconSession,
     create_beacon,
     start_beacon_server,
 )
@@ -146,6 +147,7 @@ __all__ = [
     "BeaconMode",
     "BeaconConfig",
     "Beacon",
+    "BeaconSession",
     "BeaconServer",
     "create_beacon",
     "start_beacon_server",

