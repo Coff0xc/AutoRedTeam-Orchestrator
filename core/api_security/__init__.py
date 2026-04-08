@@ -12,17 +12,17 @@ API安全测试模块
 
 使用示例:
     # JWT测试
-    from modules.api_security import JWTTester
+    from core.api_security import JWTTester
     tester = JWTTester('https://api.example.com', token)
     results = tester.test()
 
     # CORS测试
-    from modules.api_security import CORSTester
+    from core.api_security import CORSTester
     tester = CORSTester('https://api.example.com')
     results = tester.test()
 
     # 组合测试
-    from modules.api_security import CompositeTester, JWTTester, CORSTester
+    from core.api_security import CompositeTester, JWTTester, CORSTester
     composite = CompositeTester('https://api.example.com')
     composite.add_tester(JWTTester('https://api.example.com', token))
     composite.add_tester(CORSTester('https://api.example.com'))

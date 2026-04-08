@@ -10,17 +10,17 @@
 
 使用示例:
     # Kubernetes扫描
-    from modules.cloud_security import KubernetesTester
+    from core.cloud_security import KubernetesTester
     tester = KubernetesTester(config={'namespace': 'default'})
     findings = tester.scan()
 
     # AWS扫描
-    from modules.cloud_security import AWSTester
+    from core.cloud_security import AWSTester
     tester = AWSTester(config={'region': 'us-east-1'})
     findings = tester.scan()
 
     # 清单文件扫描
-    from modules.cloud_security import scan_k8s_manifest
+    from core.cloud_security import scan_k8s_manifest
     result = scan_k8s_manifest('/path/to/deployment.yaml')
 
 作者: AutoRedTeam

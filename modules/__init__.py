@@ -1,5 +1,9 @@
-"""
-AI Red Team MCP - Modules
+"""Deprecated: use core.* imports instead."""
 
-功能模块包，由 handlers/ 按需导入具体子模块。
-"""
+import warnings
+
+warnings.warn(
+    "modules package is deprecated, use core.* imports",
+    DeprecationWarning,
+    stacklevel=2,
+)

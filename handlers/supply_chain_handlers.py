@@ -32,7 +32,7 @@ def register_supply_chain_tools(mcp, counter, logger):
         Returns:
             SBOM数据
         """
-        from modules.supply_chain.sbom_generator import SBOMGenerator
+        from core.supply_chain.sbom_generator import SBOMGenerator
 
         generator = SBOMGenerator()
         sbom = generator.generate(project_path, format=output_format)
@@ -57,7 +57,7 @@ def register_supply_chain_tools(mcp, counter, logger):
         Returns:
             依赖漏洞报告
         """
-        from modules.supply_chain.dependency_scanner import DependencyScanner
+        from core.supply_chain.dependency_scanner import DependencyScanner
 
         scanner = DependencyScanner()
         results = scanner.scan(project_path)
@@ -82,7 +82,7 @@ def register_supply_chain_tools(mcp, counter, logger):
         Returns:
             安全发现
         """
-        from modules.supply_chain.cicd_security import CICDScanner
+        from core.supply_chain.cicd_security import CICDScanner
 
         scanner = CICDScanner()
         findings = scanner.scan(config_path)

@@ -735,7 +735,7 @@ class TestVerifyAndExploitTool:
 
         with (
             patch("core.exploit.ExploitEngine") as MockEngine,
-            patch("modules.vuln_verifier.VulnerabilityVerifier") as MockVerifier,
+            patch("core.vuln_verifier.VulnerabilityVerifier") as MockVerifier,
         ):
             mock_vr = MagicMock()
             mock_vr.is_vulnerable = True
@@ -766,7 +766,7 @@ class TestVerifyAndExploitTool:
             "url": "https://example.com",
         }
 
-        with patch("modules.vuln_verifier.VulnerabilityVerifier") as MockVerifier:
+        with patch("core.vuln_verifier.VulnerabilityVerifier") as MockVerifier:
             mock_vr = MagicMock()
             mock_vr.is_vulnerable = False
             mock_vr.verification_method = "statistical"

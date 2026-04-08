@@ -9,8 +9,8 @@ import json
 import time
 from unittest.mock import Mock, patch
 
-from modules.api_security.base import APIVulnType, Severity
-from modules.api_security.graphql import GraphQLTester
+from core.api_security.base import APIVulnType, Severity
+from core.api_security.graphql import GraphQLTester
 
 
 class TestGraphQLTesterInit:

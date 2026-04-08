@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from core.detectors.false_positive_filter import FalsePositiveFilter, ResponseBaseline
     from core.detectors.result import DetectionResult
     from core.http.client import HTTPClient
-    from modules.vuln_verifier import StatisticalVerifier
+    from core.vuln_verifier import StatisticalVerifier
 
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
             from core.detectors.false_positive_filter import FalsePositiveFilter
             from core.evasion import normalize_waf_type
             from core.http import HTTPClient, HTTPConfig
-            from modules.vuln_verifier import StatisticalVerifier
+            from core.vuln_verifier import StatisticalVerifier
 
             targets = self._get_scan_targets()
             detector_types = self.config.get(

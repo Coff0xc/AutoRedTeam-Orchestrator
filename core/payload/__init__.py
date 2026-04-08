@@ -16,7 +16,7 @@ Payload 统一模块 - 整合的 Payload 生成、选择、变异引擎
 - TargetProfile: 目标特征分析
 
 使用示例:
-    from modules.payload import (
+    from core.payload import (
         get_payload_engine,
         smart_select_payloads,
         mutate_payload,
