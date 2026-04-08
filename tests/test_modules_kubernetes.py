@@ -9,8 +9,8 @@ import json
 import subprocess
 from unittest.mock import Mock, patch
 
-from modules.cloud_security.base import CloudSeverity
-from modules.cloud_security.kubernetes import KubernetesTester
+from core.cloud_security.base import CloudSeverity
+from core.cloud_security.kubernetes import KubernetesTester
 
 
 class TestKubernetesTesterInit:

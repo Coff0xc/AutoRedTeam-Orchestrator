@@ -7,8 +7,8 @@ WebSocket 安全测试模块单元测试
 
 from unittest.mock import patch
 
-from modules.api_security.base import APIVulnType, Severity
-from modules.api_security.websocket import WebSocketTester
+from core.api_security.base import APIVulnType, Severity
+from core.api_security.websocket import WebSocketTester
 
 
 class TestWebSocketTesterInit:

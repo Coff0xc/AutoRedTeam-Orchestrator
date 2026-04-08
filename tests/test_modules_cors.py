@@ -7,8 +7,8 @@ CORS 安全测试模块单元测试
 
 from unittest.mock import MagicMock, Mock, patch
 
-from modules.api_security.base import APIVulnType, Severity
-from modules.api_security.cors import CORSTester, quick_cors_test
+from core.api_security.base import APIVulnType, Severity
+from core.api_security.cors import CORSTester, quick_cors_test
 
 
 class TestCORSTesterInit:
@@ -448,7 +448,7 @@ class TestQuickCORSTest:
 
     def test_quick_cors_test(self):
         """测试快速测试函数"""
-        with patch("modules.api_security.cors.CORSTester") as MockTester:
+        with patch("core.api_security.cors.CORSTester") as MockTester:
             mock_instance = MockTester.return_value
             mock_instance.test.return_value = []
             mock_instance.get_summary.return_value = MagicMock(

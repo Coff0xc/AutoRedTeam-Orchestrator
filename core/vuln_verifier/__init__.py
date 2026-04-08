@@ -13,13 +13,13 @@
 - oob.py: OOB 验证器 (OOBIntegratedVerifier)
 
 使用示例:
-    from modules.vuln_verifier import VulnerabilityVerifier, VerificationResult
+    from core.vuln_verifier import VulnerabilityVerifier, VerificationResult
 
     verifier = VulnerabilityVerifier(timeout=10)
     result = verifier.verify("http://example.com?id=1", "id", "sqli")
 
     # 或直接使用特定验证
-    from modules.vuln_verifier import StatisticalVerifier
+    from core.vuln_verifier import StatisticalVerifier
     stat_verifier = StatisticalVerifier(sample_size=10)
 """
 

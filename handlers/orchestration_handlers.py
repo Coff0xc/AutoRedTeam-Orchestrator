@@ -545,7 +545,7 @@ def register_orchestration_tools(mcp, counter, logger):
             验证和利用结果
         """
         from core.exploit import ExploitEngine
-        from modules.vuln_verifier import VulnerabilityVerifier
+        from core.vuln_verifier import VulnerabilityVerifier
 
         wrapped = DetectionResultWrapper(
             vulnerable=detection_result.get("vulnerable", False),

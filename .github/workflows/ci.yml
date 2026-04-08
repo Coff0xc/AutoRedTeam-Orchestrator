@@ -23,13 +23,13 @@ jobs:
           pip install flake8 black isort
 
       - name: Check code style with Black
-        run: black --check --line-length 100 core/ modules/ utils/ handlers/
+        run: black --check --line-length 100 core/ utils/ handlers/
 
       - name: Check import sorting with isort
-        run: isort --check-only --profile black core/ modules/ utils/ handlers/
+        run: isort --check-only --profile black core/ utils/ handlers/
 
       - name: Lint with flake8
-        run: flake8 --max-line-length 100 --ignore=E501,W503,E402,E203,W504 core/ modules/ utils/ handlers/
+        run: flake8 --max-line-length 100 --ignore=E501,W503,E402,E203,W504 core/ utils/ handlers/
 
       - name: Install mypy
         run: pip install mypy
@@ -52,7 +52,7 @@ jobs:
         run: pip install bandit pip-audit safety
 
       - name: Security scan with Bandit
-        run: bandit -c .bandit -r core/ modules/ utils/ handlers/ -f json -o bandit-report.json
+        run: bandit -c .bandit -r core/ utils/ handlers/ -f json -o bandit-report.json
 
       - name: Upload Bandit Report
         uses: actions/upload-artifact@v4
@@ -68,7 +68,7 @@ jobs:
       - name: Check for hardcoded secrets
         run: |
           pip install detect-secrets
-          detect-secrets scan core/ modules/ utils/ handlers/ --list-all-secrets || true
+          detect-secrets scan core/ utils/ handlers/ --list-all-secrets || true
 
   test:
     runs-on: ubuntu-latest

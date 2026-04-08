@@ -12,8 +12,8 @@ import json
 import time
 from unittest.mock import MagicMock, patch
 
-from modules.api_security.base import APIVulnType, Severity
-from modules.api_security.jwt import JWTTester, decode_jwt, quick_jwt_test
+from core.api_security.base import APIVulnType, Severity
+from core.api_security.jwt import JWTTester, decode_jwt, quick_jwt_test
 
 
 class TestJWTDecoding:
@@ -499,7 +499,7 @@ class TestQuickJWTTest:
         """测试快速测试函数"""
         token = self._create_test_token()
 
-        with patch("modules.api_security.jwt.JWTTester") as MockTester:
+        with patch("core.api_security.jwt.JWTTester") as MockTester:
             mock_instance = MockTester.return_value
             mock_instance.test.return_value = []
             mock_instance.get_summary.return_value = MagicMock(

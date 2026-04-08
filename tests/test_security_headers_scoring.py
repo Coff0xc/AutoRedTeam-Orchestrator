@@ -5,7 +5,7 @@ import pytest
 # 模块级别标记 - 标识为单元测试和安全测试
 pytestmark = [pytest.mark.unit, pytest.mark.security]
 
-from modules.api_security.headers import SecurityHeadersTester
+from core.api_security.headers import SecurityHeadersTester
 
 
 def test_security_headers_scoring_quality():

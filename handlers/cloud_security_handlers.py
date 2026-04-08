@@ -34,7 +34,7 @@ def register_cloud_security_tools(mcp, counter, logger):
         Returns:
             安全发现
         """
-        from modules.cloud_security import KubernetesTester, scan_k8s_manifest
+        from core.cloud_security import KubernetesTester, scan_k8s_manifest
 
         if manifest_path:
             findings = scan_k8s_manifest(manifest_path)
@@ -64,7 +64,7 @@ def register_cloud_security_tools(mcp, counter, logger):
         Returns:
             安全发现
         """
-        from modules.cloud_security import scan_grpc
+        from core.cloud_security import scan_grpc
 
         result = scan_grpc(target)
 
@@ -90,7 +90,7 @@ def register_cloud_security_tools(mcp, counter, logger):
         Returns:
             安全发现
         """
-        from modules.cloud_security import scan_aws
+        from core.cloud_security import scan_aws
 
         result = scan_aws(region=region, services=services)
 

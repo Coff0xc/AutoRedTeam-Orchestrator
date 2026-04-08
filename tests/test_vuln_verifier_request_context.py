@@ -1,7 +1,7 @@
 import json
 from urllib.parse import parse_qs, urlparse
 
-from modules.vuln_verifier import VulnerabilityVerifier
+from core.vuln_verifier import VulnerabilityVerifier
 
 
 def test_prepare_request_get_merges_params():

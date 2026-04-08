@@ -63,7 +63,7 @@ def register_misc_tools(mcp, counter, logger):
         Returns:
             分析结果
         """
-        from modules.js_analyzer import JSAnalyzer
+        from core.recon.js_analyzer import JSAnalyzer
 
         analyzer = JSAnalyzer()
         results = analyzer.analyze(url)

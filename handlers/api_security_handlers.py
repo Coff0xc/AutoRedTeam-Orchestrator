@@ -39,7 +39,7 @@ def register_api_security_tools(mcp, counter, logger):
         Returns:
             JWT安全问题
         """
-        from modules.api_security import JWTTester, decode_jwt, quick_jwt_test
+        from core.api_security import JWTTester, decode_jwt, quick_jwt_test
 
         # 先解码查看基本信息
         decoded = decode_jwt(token)
@@ -74,7 +74,7 @@ def register_api_security_tools(mcp, counter, logger):
         Returns:
             CORS安全问题
         """
-        from modules.api_security import CORSTester
+        from core.api_security import CORSTester
 
         tester = CORSTester(url)
         results = tester.test()
@@ -97,7 +97,7 @@ def register_api_security_tools(mcp, counter, logger):
         Returns:
             GraphQL安全问题
         """
-        from modules.api_security import GraphQLTester
+        from core.api_security import GraphQLTester
 
         tester = GraphQLTester(url)
         results = tester.test()
@@ -120,7 +120,7 @@ def register_api_security_tools(mcp, counter, logger):
         Returns:
             WebSocket安全问题
         """
-        from modules.api_security import WebSocketTester
+        from core.api_security import WebSocketTester
 
         tester = WebSocketTester(url)
         results = tester.test()
@@ -144,7 +144,7 @@ def register_api_security_tools(mcp, counter, logger):
         Returns:
             OAuth安全问题
         """
-        from modules.api_security import OAuthTester
+        from core.api_security import OAuthTester
 
         tester = OAuthTester(url, client_id=client_id)
         results = tester.test()
@@ -167,7 +167,7 @@ def register_api_security_tools(mcp, counter, logger):
         Returns:
             安全头评分和建议
         """
-        from modules.api_security import SecurityHeadersTester
+        from core.api_security import SecurityHeadersTester
 
         tester = SecurityHeadersTester(url)
         results = tester.test()
@@ -197,7 +197,7 @@ def register_api_security_tools(mcp, counter, logger):
         Returns:
             综合API安全报告
         """
-        from modules.api_security import full_api_scan as _full_api_scan
+        from core.api_security import full_api_scan as _full_api_scan
 
         result = _full_api_scan(target, jwt_token=jwt_token)
 

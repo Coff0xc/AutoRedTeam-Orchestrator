@@ -24,7 +24,7 @@ extend-exclude = '''
 profile = "black"
 line_length = 100
 skip_gitignore = true
-known_first_party = ["core", "modules", "tools", "utils"]
+known_first_party = ["core", "modules", "handlers", "tools", "utils"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -54,7 +54,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["core", "modules", "tools", "utils"]
+source = ["core", "handlers", "tools", "utils"]
 omit = [
     "*/tests/*",
     "*/test_*.py",
@@ -218,5 +218,5 @@ autoredteam = "mcp_stdio_server:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core*", "modules*", "tools*", "utils*"]
+include = ["core*", "handlers*", "tools*", "utils*"]
 exclude = ["tests*", "scripts*", "backup*"]
