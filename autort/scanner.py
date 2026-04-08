@@ -151,13 +151,14 @@ class Scanner:
                     logger.warning("检测器 %s 执行失败: %s", getattr(detector, "name", "?"), e)
                 return []
 
-            # 并发执行所有检测器
-            import asyncio
+            # 并发执行所有检测器 (限流避免目标过载)
+            from utils.async_utils import gather_with_limit
 
-            tasks = [_run_detector(d) for d in detectors]
-            all_results = await asyncio.gather(*tasks)
+            coros = [_run_detector(d) for d in detectors]
+            all_results = await gather_with_limit(coros, limit=10, return_exceptions=False)
             for batch in all_results:
-                results.extend(batch)
+                if isinstance(batch, list):
+                    results.extend(batch)
 
             return results
         except Exception as e:
