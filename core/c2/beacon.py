@@ -173,9 +173,10 @@ class Beacon(BaseC2):
         self._register_default_handlers()
 
     def _generate_beacon_id(self) -> str:
-        """生成唯一 Beacon ID"""
-        unique_string = f"{socket.gethostname()}-{uuid.getnode()}-{os.getpid()}"
-        return hashlib.md5(unique_string.encode()).hexdigest()[:16]
+        """生成唯一 Beacon ID — 密码学安全随机"""
+        import secrets
+
+        return secrets.token_hex(8)
 
     def _collect_system_info(self) -> BeaconInfo:
         """收集系统信息"""
