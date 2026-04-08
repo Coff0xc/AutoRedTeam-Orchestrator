@@ -12,6 +12,8 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
+from utils.async_utils import gather_with_limit
+
 from .base import BasePhaseExecutor, PhaseResult
 
 # SSRF 防护常量
@@ -118,7 +120,12 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
                 resp = http_client.get(url)
                 return resp.text, resp.status_code, resp.elapsed, resp.headers
 
-            for idx, target_url in enumerate(targets):
+            scan_concurrency = self._clamp_config_int("scan_concurrency", 10, 1, 50)
+
+            async def _scan_single_target(idx: int, target_url: str):
+                """扫描单个目标 — 提取自原循环体，用于并行执行"""
+                target_findings: List[Dict[str, Any]] = []
+                target_errors: List[str] = []
                 self.state.add_checkpoint(step=idx, data={"current_target": target_url})
 
                 try:
@@ -189,13 +196,29 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
                                 finding["verification"] = verification
                             if cve_id:
                                 finding["cve_id"] = cve_id
-                            findings.append(finding)
-                            self.state.add_finding(finding)
+                            target_findings.append(finding)
 
                 except (OSError, ConnectionError, asyncio.TimeoutError) as e:
                     self.logger.exception("扫描 %s 失败: %s", target_url, e)
-                    errors.append(f"扫描 {target_url} 失败: {e}")
+                    target_errors.append(f"扫描 {target_url} 失败: {e}")
+
+                return target_findings, target_errors
+
+            # 并行扫描所有目标，限制并发数
+            scan_coros = [
+                _scan_single_target(idx, url) for idx, url in enumerate(targets)
+            ]
+            all_results = await gather_with_limit(scan_coros, limit=scan_concurrency)
+
+            for result_item in all_results:
+                if isinstance(result_item, Exception):
+                    errors.append(f"扫描任务异常: {result_item}")
                     continue
+                target_findings, target_errors = result_item
+                findings.extend(target_findings)
+                errors.extend(target_errors)
+                for finding in target_findings:
+                    self.state.add_finding(finding)
 
             return PhaseResult(
                 success=len(errors) == 0,

@@ -1,0 +1,32 @@
+# AutoRedTeam Security Scan — 示例 workflow
+# 将此文件复制到使用方项目的 .github/workflows/ 目录下
+#
+# 前置条件:
+#   1. 在仓库 Settings > Secrets 中添加 SCAN_TARGET (目标 URL)
+#   2. 确保仓库已开启 GitHub Advanced Security (SARIF 上传需要)
+
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target URL to scan'
+        required: true
+
+jobs:
+  autort-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write  # SARIF 上传所需
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AutoRedTeam Scan
+        uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1
+        with:
+          target: ${{ github.event.inputs.target || secrets.SCAN_TARGET }}
+          severity-threshold: high
+          output-format: sarif

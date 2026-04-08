@@ -1,0 +1,57 @@
+name: 'AutoRedTeam Security Scan'
+description: 'AI-driven penetration testing in your CI pipeline'
+branding:
+  icon: 'shield'
+  color: 'red'
+
+inputs:
+  target:
+    description: 'Target URL to scan'
+    required: true
+  scan-type:
+    description: 'Scan type: detect | recon | full'
+    required: false
+    default: 'detect'
+  categories:
+    description: 'Detection categories (comma-separated): sqli,xss,ssrf,...'
+    required: false
+    default: ''
+  severity-threshold:
+    description: 'Minimum severity to fail: info/low/medium/high/critical'
+    required: false
+    default: 'high'
+  output-format:
+    description: 'Output format: json | sarif'
+    required: false
+    default: 'sarif'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    - name: Install AutoRedTeam
+      shell: bash
+      run: |
+        pip install -r ${{ github.action_path }}/requirements.txt
+        pip install typer
+
+    - name: Run Scan
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        ARGS="--ci --format ${{ inputs.output-format }} --severity-threshold ${{ inputs.severity-threshold }} --exit-code"
+        if [ -n "${{ inputs.categories }}" ]; then
+          ARGS="$ARGS -c ${{ inputs.categories }}"
+        fi
+        python -m cli.main detect "${{ inputs.target }}" $ARGS -o results.sarif || true
+
+    - name: Upload SARIF
+      if: always() && inputs.output-format == 'sarif'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: results.sarif

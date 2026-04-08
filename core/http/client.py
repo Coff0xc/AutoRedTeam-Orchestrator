@@ -19,6 +19,7 @@ from typing import (
     Optional,
     Union,
 )
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +157,10 @@ class HTTPClient:
         middlewares: Optional[List[Any]] = None,
         ssrf_protection: bool = True,
         allow_private: bool = False,
+        rate_limit: Optional[float] = None,
+        circuit_breaker_enabled: bool = False,
+        circuit_breaker_threshold: int = 5,
+        circuit_breaker_timeout: float = 30.0,
     ):
         """
         初始化 HTTP 客户端
@@ -165,6 +170,10 @@ class HTTPClient:
             middlewares: 中间件列表
             ssrf_protection: 是否启用 SSRF 防护 (默认启用)
             allow_private: 是否允许访问私有网络地址 (仅在 ssrf_protection=True 时生效)
+            rate_limit: 速率限制 (每秒请求数)，None 表示不限速
+            circuit_breaker_enabled: 是否启用按 host 维度的熔断器
+            circuit_breaker_threshold: 熔断器失败阈值
+            circuit_breaker_timeout: 熔断器超时时间 (秒)
         """
         self.config = config or HTTPConfig()
         self.middleware_chain = MiddlewareChain()
@@ -184,6 +193,55 @@ class HTTPClient:
 
         # SSL 警告标志
         self._ssl_warning_shown = False
+
+        # 速率限制 (来自 core.concurrency)
+        self._rate_limiter: Optional[Any] = None
+        if rate_limit is not None and rate_limit > 0:
+            try:
+                from core.concurrency import AdaptiveRateLimiter
+
+                self._rate_limiter = AdaptiveRateLimiter(initial_rate=rate_limit)
+                logger.debug("HTTP 客户端限流已启用: %.1f req/s", rate_limit)
+            except ImportError:
+                logger.warning("core.concurrency 不可用，跳过限流初始化")
+
+        # 按 host 维度的熔断器
+        self._circuit_breaker_enabled = circuit_breaker_enabled
+        self._circuit_breaker_threshold = circuit_breaker_threshold
+        self._circuit_breaker_timeout = circuit_breaker_timeout
+        self._circuit_breakers: Dict[str, Any] = {}
+
+    def _get_host_breaker(self, url: str) -> Optional[Any]:
+        """获取指定 URL 对应 host 的熔断器
+
+        Args:
+            url: 请求 URL
+
+        Returns:
+            CircuitBreaker 实例，或 None (未启用)
+        """
+        if not self._circuit_breaker_enabled:
+            return None
+
+        try:
+            host = urlparse(url).netloc or url
+        except Exception:
+            host = url
+
+        if host not in self._circuit_breakers:
+            try:
+                from core.concurrency import CircuitBreaker
+
+                self._circuit_breakers[host] = CircuitBreaker(
+                    failure_threshold=self._circuit_breaker_threshold,
+                    timeout=self._circuit_breaker_timeout,
+                    name=f"http:{host}",
+                )
+            except ImportError:
+                logger.warning("core.concurrency 不可用，跳过熔断器初始化")
+                return None
+
+        return self._circuit_breakers[host]
 
     def _warn_ssl_disabled(self) -> None:
         """发出 SSL 禁用警告"""
@@ -443,6 +501,19 @@ class HTTPClient:
         # 执行请求中间件
         request_ctx = self.middleware_chain.process_request(request_ctx)
 
+        # 熔断器检查 (按 host 维度)
+        breaker = self._get_host_breaker(url)
+        if breaker and not breaker.is_call_permitted():
+            from .exceptions import ConnectionError as HTTPConnectionError
+
+            raise HTTPConnectionError(
+                f"熔断器已打开，目标 host 暂时不可用", url=url
+            )
+
+        # 速率限制
+        if self._rate_limiter:
+            self._rate_limiter.acquire(timeout=request_ctx.timeout)
+
         # 重试循环
         max_attempts = self.config.retry.max_retries + 1
         last_exception: Optional[Exception] = None
@@ -508,11 +579,23 @@ class HTTPClient:
                         f"[HTTP] {response.status_code} {method} {url} " f"({elapsed * 1000:.2f}ms)"
                     )
 
+                # 记录成功 (限流器 + 熔断器)
+                if self._rate_limiter:
+                    self._rate_limiter.record_success()
+                if breaker:
+                    breaker.record_success()
+
                 return response
 
             except Exception as e:
                 last_exception = e
                 elapsed = time.time() - start_time
+
+                # 记录失败 (限流器 + 熔断器)
+                if self._rate_limiter:
+                    self._rate_limiter.record_failure()
+                if breaker:
+                    breaker.record_failure(e)
 
                 # 尝试通过中间件处理异常
                 fallback = self.middleware_chain.process_exception(e, request_ctx)
@@ -593,6 +676,19 @@ class HTTPClient:
         # 执行请求中间件 (异步)
         request_ctx = await self.middleware_chain.async_process_request(request_ctx)
 
+        # 熔断器检查 (按 host 维度)
+        breaker = self._get_host_breaker(url)
+        if breaker and not breaker.is_call_permitted():
+            from .exceptions import ConnectionError as HTTPConnectionError
+
+            raise HTTPConnectionError(
+                f"熔断器已打开，目标 host 暂时不可用", url=url
+            )
+
+        # 异步速率限制
+        if self._rate_limiter:
+            await self._rate_limiter.async_acquire(timeout=request_ctx.timeout)
+
         # 重试循环
         max_attempts = self.config.retry.max_retries + 1
         last_exception: Optional[Exception] = None
@@ -662,11 +758,23 @@ class HTTPClient:
                         f"[HTTP] {response.status_code} {method} {url} " f"({elapsed * 1000:.2f}ms)"
                     )
 
+                # 记录成功 (限流器 + 熔断器)
+                if self._rate_limiter:
+                    self._rate_limiter.record_success()
+                if breaker:
+                    breaker.record_success()
+
                 return response
 
             except Exception as e:
                 last_exception = e
                 elapsed = time.time() - start_time
+
+                # 记录失败 (限流器 + 熔断器)
+                if self._rate_limiter:
+                    self._rate_limiter.record_failure()
+                if breaker:
+                    breaker.record_failure(e)
 
                 # 尝试通过中间件处理异常
                 fallback = await self.middleware_chain.async_process_exception(e, request_ctx)
