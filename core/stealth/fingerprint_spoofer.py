@@ -60,16 +60,110 @@ class TLSFingerprint:
     # JA3 指纹 (自动计算)
     _ja3_hash: Optional[str] = None
 
+    # IANA TLS 版本号映射
+    TLS_VERSION_MAP: Dict[str, int] = field(default_factory=lambda: {
+        "SSLv3": 768,
+        "TLSv1.0": 769,
+        "TLSv1.1": 770,
+        "TLSv1.2": 771,
+        "TLSv1.3": 772,
+    })
+
+    # IANA Cipher Suite 编号映射 (常见套件)
+    CIPHER_SUITE_MAP: Dict[str, int] = field(default_factory=lambda: {
+        "TLS_AES_128_GCM_SHA256": 4865,
+        "TLS_AES_256_GCM_SHA384": 4866,
+        "TLS_CHACHA20_POLY1305_SHA256": 4867,
+        "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256": 49195,
+        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256": 49199,
+        "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384": 49196,
+        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384": 49200,
+        "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256": 52393,
+        "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256": 52392,
+        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA": 49161,
+        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA": 49171,
+        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA": 49162,
+        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA": 49172,
+        "TLS_RSA_WITH_AES_128_GCM_SHA256": 156,
+        "TLS_RSA_WITH_AES_256_GCM_SHA384": 157,
+        "TLS_RSA_WITH_AES_128_CBC_SHA": 47,
+        "TLS_RSA_WITH_AES_256_CBC_SHA": 53,
+        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384": 49188,
+        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256": 49187,
+        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384": 49192,
+        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256": 49191,
+        "TLS_RSA_WITH_AES_256_CBC_SHA256": 61,
+        "TLS_RSA_WITH_AES_128_CBC_SHA256": 60,
+        "TLS_EMPTY_RENEGOTIATION_INFO": 255,
+    })
+
+    # IANA 椭圆曲线 ID 映射
+    ELLIPTIC_CURVE_MAP: Dict[str, int] = field(default_factory=lambda: {
+        "x25519": 29,
+        "secp256r1": 23,
+        "secp384r1": 24,
+        "secp521r1": 25,
+    })
+
+    # IANA EC Point Format 映射
+    EC_POINT_FORMAT_MAP: Dict[str, int] = field(default_factory=lambda: {
+        "uncompressed": 0,
+        "ansiX962_compressed_prime": 1,
+        "ansiX962_compressed_char2": 2,
+    })
+
+    @property
+    def ja3_string(self) -> str:
+        """
+        构建 JA3 原始字符串 (用于计算哈希前的明文)
+
+        JA3 规范 (salesforce/ja3):
+          TLSVersion,Ciphers,Extensions,EllipticCurves,EllipticCurvePointFormats
+        各字段内部用 '-' 分隔, 字段间用 ',' 分隔
+        示例: 769,47-53-5-10-49161-49162-49171-49172-50-56-19-4,0-10-11,23-24-25,0
+        """
+        # 1) TLS 版本 → IANA 数字
+        tls_ver = self.TLS_VERSION_MAP.get(self.tls_version, 771)
+
+        # 2) Cipher Suites → IANA 数字列表
+        ciphers = []
+        for cs in self.cipher_suites:
+            if isinstance(cs, int):
+                ciphers.append(cs)
+            else:
+                ciphers.append(self.CIPHER_SUITE_MAP.get(cs, 0))
+        cipher_str = "-".join(str(c) for c in ciphers)
+
+        # 3) Extensions → 数字列表
+        ext_str = "-".join(str(e) for e in self.extensions)
+
+        # 4) Elliptic Curves → IANA 数字列表
+        curves = []
+        for ec in self.elliptic_curves:
+            if isinstance(ec, int):
+                curves.append(ec)
+            else:
+                curves.append(self.ELLIPTIC_CURVE_MAP.get(ec, 0))
+        curve_str = "-".join(str(c) for c in curves)
+
+        # 5) EC Point Formats → 数字列表
+        points = []
+        for pf in self.ec_point_formats:
+            if isinstance(pf, int):
+                points.append(pf)
+            else:
+                points.append(self.EC_POINT_FORMAT_MAP.get(pf, 0))
+        point_str = "-".join(str(p) for p in points)
+
+        return f"{tls_ver},{cipher_str},{ext_str},{curve_str},{point_str}"
+
     @property
     def ja3_hash(self) -> str:
-        """计算 JA3 指纹哈希"""
+        """计算 JA3 指纹 MD5 哈希"""
         if self._ja3_hash:
             return self._ja3_hash
 
-        # JA3 = TLSVersion,Ciphers,Extensions,EllipticCurves,ECPointFormats
-        # 这里是简化版本，实际 JA3 需要从原始 ClientHello 计算
-        ja3_string = f"{self.tls_version},{','.join(self.cipher_suites[:10])}"
-        self._ja3_hash = hashlib.md5(ja3_string.encode()).hexdigest()
+        self._ja3_hash = hashlib.md5(self.ja3_string.encode()).hexdigest()
         return self._ja3_hash
 
 
@@ -239,12 +333,27 @@ class BrowserProfileFactory:
             accept_language="en-US,en;q=0.9",
             accept_encoding="gzip, deflate, br",
             tls_fingerprint=TLSFingerprint(
-                tls_version="TLSv1.3",
+                tls_version="TLSv1.2",
                 cipher_suites=[
                     "TLS_AES_128_GCM_SHA256",
                     "TLS_AES_256_GCM_SHA384",
                     "TLS_CHACHA20_POLY1305_SHA256",
+                    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+                    "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+                    "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+                    "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+                    "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+                    "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+                    "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+                    "TLS_RSA_WITH_AES_128_GCM_SHA256",
+                    "TLS_RSA_WITH_AES_256_GCM_SHA384",
+                    "TLS_RSA_WITH_AES_128_CBC_SHA",
+                    "TLS_RSA_WITH_AES_256_CBC_SHA",
                 ],
+                extensions=[0, 23, 65281, 10, 11, 35, 16, 5, 13, 18, 51, 45, 43, 27, 17513],
+                elliptic_curves=["x25519", "secp256r1", "secp384r1"],
+                ec_point_formats=["uncompressed"],
                 alpn_protocols=["h2", "http/1.1"],
             ),
             http2_settings={
@@ -278,12 +387,29 @@ class BrowserProfileFactory:
             accept_language="en-US,en;q=0.5",
             accept_encoding="gzip, deflate, br",
             tls_fingerprint=TLSFingerprint(
-                tls_version="TLSv1.3",
+                tls_version="TLSv1.2",
                 cipher_suites=[
                     "TLS_AES_128_GCM_SHA256",
                     "TLS_CHACHA20_POLY1305_SHA256",
                     "TLS_AES_256_GCM_SHA384",
+                    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+                    "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+                    "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+                    "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+                    "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+                    "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+                    "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+                    "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+                    "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+                    "TLS_RSA_WITH_AES_128_GCM_SHA256",
+                    "TLS_RSA_WITH_AES_256_GCM_SHA384",
+                    "TLS_RSA_WITH_AES_128_CBC_SHA",
+                    "TLS_RSA_WITH_AES_256_CBC_SHA",
                 ],
+                extensions=[0, 23, 65281, 10, 11, 35, 16, 5, 34, 51, 43, 13, 45, 28],
+                elliptic_curves=["x25519", "secp256r1", "secp384r1", "secp521r1"],
+                ec_point_formats=["uncompressed"],
                 alpn_protocols=["h2", "http/1.1"],
             ),
             http2_settings={
@@ -309,12 +435,36 @@ class BrowserProfileFactory:
             accept_language="en-US,en;q=0.9",
             accept_encoding="gzip, deflate, br",
             tls_fingerprint=TLSFingerprint(
-                tls_version="TLSv1.3",
+                tls_version="TLSv1.2",
                 cipher_suites=[
                     "TLS_AES_128_GCM_SHA256",
                     "TLS_AES_256_GCM_SHA384",
                     "TLS_CHACHA20_POLY1305_SHA256",
+                    "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+                    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                    "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+                    "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+                    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+                    "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+                    "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384",
+                    "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
+                    "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+                    "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+                    "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
+                    "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+                    "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+                    "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+                    "TLS_RSA_WITH_AES_256_GCM_SHA384",
+                    "TLS_RSA_WITH_AES_128_GCM_SHA256",
+                    "TLS_RSA_WITH_AES_256_CBC_SHA256",
+                    "TLS_RSA_WITH_AES_128_CBC_SHA256",
+                    "TLS_RSA_WITH_AES_256_CBC_SHA",
+                    "TLS_RSA_WITH_AES_128_CBC_SHA",
+                    "TLS_EMPTY_RENEGOTIATION_INFO",
                 ],
+                extensions=[0, 23, 65281, 10, 11, 16, 5, 13, 18, 51, 45, 43, 27],
+                elliptic_curves=["x25519", "secp256r1", "secp384r1"],
+                ec_point_formats=["uncompressed"],
                 alpn_protocols=["h2", "http/1.1"],
             ),
             http2_settings={
@@ -407,18 +557,91 @@ class FingerprintSpoofer:
             "ja3_fingerprint": self.ja3_spoofer.get_ja3_fingerprint(),
         }
 
-    def apply_to_session(self, session) -> None:
+    def apply_to_session(self, session) -> Any:
         """
-        将指纹配置应用到 requests.Session
+        将指纹配置应用到 HTTP session (requests.Session 或 httpx.Client)
+
+        设置浏览器特征 Headers、SSL Context、TLS 配置。
+        返回配置好的 session 实例。
 
         Args:
-            session: requests.Session 实例
-        """
-        session.headers.update(self.get_headers())
+            session: requests.Session 或 httpx.Client 实例
 
-        # 注意: requests 默认不支持自定义 SSL Context
-        # 需要使用 HTTPAdapter 或其他方式
-        logger.info("Applied %s fingerprint to session", self.profile.browser_type.value)
+        Returns:
+            配置好的 session 实例
+        """
+        headers = self.get_headers()
+        ssl_context = self.get_ssl_context()
+
+        # 检测 session 类型并分别处理
+        session_type = type(session).__module__ + "." + type(session).__qualname__
+
+        # --- httpx.Client / httpx.AsyncClient ---
+        if "httpx" in session_type:
+            try:
+                session.headers.update(headers)
+                # httpx 通过 _transport 设置 SSL
+                if hasattr(session, '_transport') and session._transport is not None:
+                    if hasattr(session._transport, '_ssl_context'):
+                        session._transport._ssl_context = ssl_context
+                logger.info(
+                    "已应用 %s 指纹到 httpx session (JA3: %s)",
+                    self.profile.browser_type.value,
+                    self.profile.tls_fingerprint.ja3_hash[:16],
+                )
+            except Exception as e:
+                logger.warning("httpx session 指纹应用部分失败: %s", e)
+                # Headers 至少要设置成功
+                try:
+                    session.headers.update(headers)
+                except Exception:
+                    pass
+
+        # --- requests.Session ---
+        elif "requests" in session_type:
+            session.headers.update(headers)
+
+            # 尝试挂载自定义 SSL 适配器
+            try:
+                from requests.adapters import HTTPAdapter as RequestsHTTPAdapter
+                from urllib3.util.ssl_ import create_urllib3_context
+
+                class _FingerprintAdapter(RequestsHTTPAdapter):
+                    """内部适配器: 将自定义 SSL Context 注入 urllib3"""
+
+                    def __init__(self, ctx, **kwargs):
+                        self._ctx = ctx
+                        super().__init__(**kwargs)
+
+                    def init_poolmanager(self, *args, **kwargs):
+                        kwargs["ssl_context"] = self._ctx
+                        return super().init_poolmanager(*args, **kwargs)
+
+                adapter = _FingerprintAdapter(ssl_context)
+                session.mount("https://", adapter)
+                logger.info(
+                    "已应用 %s 指纹到 requests session (JA3: %s)",
+                    self.profile.browser_type.value,
+                    self.profile.tls_fingerprint.ja3_hash[:16],
+                )
+            except ImportError:
+                logger.warning(
+                    "requests/urllib3 不可用, 仅应用 Headers 指纹"
+                )
+        else:
+            # 通用回退: 尝试设置 headers 属性
+            if hasattr(session, "headers"):
+                if isinstance(session.headers, dict):
+                    session.headers.update(headers)
+                elif hasattr(session.headers, "update"):
+                    session.headers.update(headers)
+            logger.info(
+                "已应用 %s Headers 指纹到 %s session",
+                self.profile.browser_type.value,
+                type(session).__name__,
+            )
+
+        return session
 
 
 class HTTPAdapter:
