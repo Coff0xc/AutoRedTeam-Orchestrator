@@ -28,14 +28,14 @@ except ImportError:
     HAS_HTTPX = False
 
 try:
-    pass
+    import aiohttp
 
     HAS_AIOHTTP = True
 except ImportError:
     HAS_AIOHTTP = False
 
 try:
-    pass
+    import requests as _requests_lib
 
     HAS_REQUESTS = True
 except ImportError:

