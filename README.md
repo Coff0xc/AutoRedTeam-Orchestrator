@@ -21,8 +21,8 @@
   <img src="https://img.shields.io/badge/Version-3.1.0-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=flat-square" alt="MCP">
-  <img src="https://img.shields.io/badge/Tools-131-FF6B6B?style=flat-square" alt="Tools">
-  <img src="https://img.shields.io/badge/Tests-1963-4CAF50?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Tools-132-FF6B6B?style=flat-square" alt="Tools">
+  <img src="https://img.shields.io/badge/Tests-1980-4CAF50?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License">
 </p>
 
@@ -35,16 +35,18 @@
 
 ## 为什么选择 AutoRedTeam？
 
-**唯一不依赖外部工具的 AI 渗透测试框架。** 26 个漏洞检测器全部纯 Python 实现——无需安装 nmap、sqlmap、nuclei 即可工作。
+**唯一不依赖外部工具的 AI 渗透测试框架。** 26 个漏洞检测器全部纯 Python 实现，外部工具（sqlmap/nuclei/ffuf）自动下载内置，无需手动安装。
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                AutoRedTeam-Orchestrator v3.1.0                   │
 ├──────────────────────────────────────────────────────────────────┤
-│  ● 131 MCP 工具          ● 26 漏洞检测器     ● 1963 测试用例    │
+│  ● 132 MCP 工具          ● 26 漏洞检测器     ● 1980 测试用例    │
 │  ● 纯 Python Nuclei 引擎 ● MCTS 攻击规划     ● SQLite 知识图谱  │
 │  ● LLM 增强决策          ● Docker 沙箱       ● SARIF CI/CD 集成 │
 │  ● SDK + CLI + MCP 三层  ● 横向移动/C2/提权  ● OOB 误报验证     │
+│  ● 生产级 C2 Server      ● 工具自动下载内置  ● LaZagne 凭据集成 │
+│  ● PostExploit 执行层    ● 统一引擎路由器    ● 被动侦察 6 源    │
 ├──────────────────────────────────────────────────────────────────┤
 │  三种使用方式:                                                    │
 │    1. MCP — Cursor / Windsurf / Kiro / Claude Desktop / Claude Code │
