@@ -237,6 +237,60 @@ class Scanner:
             logger.error("subdomain_enum 失败: %s", e)
             return [{"success": False, "error": str(e)}]
 
+    async def nuclei_scan(
+        self,
+        tags: Optional[List[str]] = None,
+        severity: Optional[List[str]] = None,
+        template_dir: Optional[str] = None,
+        concurrency: int = 10,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Nuclei 模板扫描
+
+        使用纯 Python Nuclei 引擎扫描目标，无需 nuclei 二进制。
+
+        Args:
+            tags: 模板标签过滤（如 ["cve", "rce"]）
+            severity: 严重性过滤（如 ["high", "critical"]）
+            template_dir: 模板目录路径（默认自动搜索）
+            concurrency: 最大并发数
+            limit: 最大加载模板数
+
+        Returns:
+            扫描结果字典
+        """
+        try:
+            from core.detectors.nuclei_engine import NucleiEngine
+
+            engine = NucleiEngine(template_dir=template_dir)
+            loaded = engine.load_templates(tags=tags, severity=severity, limit=limit)
+
+            if loaded == 0:
+                return {
+                    "success": True,
+                    "findings": [],
+                    "templates_loaded": 0,
+                    "message": "未找到匹配的 Nuclei 模板",
+                }
+
+            findings = await engine.scan(
+                target=self.target,
+                tags=tags,
+                severity=severity,
+                concurrency=concurrency,
+            )
+
+            return {
+                "success": True,
+                "url": self.target,
+                "templates_loaded": loaded,
+                "findings": findings,
+                "total_findings": len(findings),
+            }
+        except Exception as e:
+            logger.error("nuclei_scan 失败: %s", e)
+            return {"success": False, "error": str(e)}
+
     def _resolve_ip(self) -> str:
         """从 target 提取或解析 IP 地址"""
         import socket

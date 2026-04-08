@@ -317,18 +317,84 @@ def _register_vuln_scan(mcp, logger):
     return vuln_scan
 
 
+def _register_nuclei_scan(mcp, logger):
+    """注册 Nuclei 模板扫描工具 (nuclei_scan)
+
+    纯 Python 解析 Nuclei YAML 模板，无需 nuclei 二进制。
+    """
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def nuclei_scan(
+        url: str,
+        tags: Optional[List[str]] = None,
+        severity: Optional[List[str]] = None,
+        template_dir: Optional[str] = None,
+        concurrency: int = 10,
+        limit: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Nuclei 模板扫描 - 使用 Nuclei 社区模板检测漏洞（纯Python，无需二进制）
+
+        支持 185,000+ Nuclei YAML 模板，按 tag/severity 过滤。
+
+        Args:
+            url: 目标URL
+            tags: 模板标签过滤（如 ["cve", "rce"]）
+            severity: 严重性过滤（如 ["high", "critical"]）
+            template_dir: 模板目录路径（默认自动搜索）
+            concurrency: 最大并发数
+            limit: 最大加载模板数
+
+        Returns:
+            扫描结果
+        """
+        from core.detectors.nuclei_engine import NucleiEngine
+
+        engine = NucleiEngine(template_dir=template_dir)
+        loaded = engine.load_templates(tags=tags, severity=severity, limit=limit)
+
+        if loaded == 0:
+            return {
+                "success": True,
+                "findings": [],
+                "templates_loaded": 0,
+                "message": "未找到匹配的 Nuclei 模板",
+            }
+
+        findings = await engine.scan(
+            target=url,
+            tags=tags,
+            severity=severity,
+            concurrency=concurrency,
+        )
+
+        return {
+            "success": True,
+            "url": url,
+            "templates_loaded": loaded,
+            "findings": findings,
+            "total_findings": len(findings),
+        }
+
+    return nuclei_scan
+
+
 def register_detector_tools(mcp, counter, logger):
     """使用工厂模式注册所有检测器工具
 
-    包含 1 个综合扫描工具 (vuln_scan) + N 个单检测器工具 (工厂生成)
+    包含 1 个综合扫描工具 (vuln_scan) + N 个单检测器工具 (工厂生成) + 1 个 nuclei_scan
     """
     # 综合扫描工具 (特殊逻辑，单独注册)
     _register_vuln_scan(mcp, logger)
+
+    # Nuclei 模板扫描工具
+    _register_nuclei_scan(mcp, logger)
 
     # 单检测器工具 (工厂批量注册)
     for config in DETECTOR_CONFIGS:
         create_detector_tool(config, mcp, logger)
 
-    total = 1 + len(DETECTOR_CONFIGS)  # vuln_scan + factory tools
+    total = 2 + len(DETECTOR_CONFIGS)  # vuln_scan + nuclei_scan + factory tools
     counter.add("detector", total)
     logger.info("[Detector] 已注册 %d 个漏洞检测工具 (工厂模式)", total)
