@@ -1,0 +1,21 @@
+id: test-xss-reflected
+
+info:
+  name: Test Reflected XSS Detection
+  author: autoredteam-test
+  severity: medium
+  tags: xss,test
+  description: 测试用反射型 XSS 检测模板
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/search?q=%3Cscript%3Ealert(1)%3C/script%3E"
+    matchers-condition: and
+    matchers:
+      - type: word
+        words:
+          - "<script>alert(1)</script>"
+      - type: status
+        status:
+          - 200

@@ -179,6 +179,42 @@ def report(
     _output(result, output)
 
 
+# ──────────────────────────── nuclei ────────────────────────────
+
+
+@app.command()
+def nuclei(
+    target: str = typer.Argument(..., help="目标 URL"),
+    tags: Optional[str] = typer.Option(None, "--tags", "-t", help="模板标签（逗号分隔），如 cve,rce"),
+    severity: Optional[str] = typer.Option(
+        None, "--severity", "-s", help="严重性过滤（逗号分隔），如 high,critical"
+    ),
+    template_dir: Optional[str] = typer.Option(
+        None, "--template-dir", "-d", help="模板目录路径"
+    ),
+    concurrency: int = typer.Option(10, "--concurrency", "-c", help="最大并发数"),
+    limit: Optional[int] = typer.Option(None, "--limit", "-n", help="最大模板数"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """Nuclei 模板扫描 — 纯Python引擎，无需nuclei二进制"""
+    from autort import Scanner
+
+    tag_list = [t.strip() for t in tags.split(",")] if tags else None
+    sev_list = [s.strip() for s in severity.split(",")] if severity else None
+
+    scanner = Scanner(target)
+    result = asyncio.run(
+        scanner.nuclei_scan(
+            tags=tag_list,
+            severity=sev_list,
+            template_dir=template_dir,
+            concurrency=concurrency,
+            limit=limit,
+        )
+    )
+    _output(result, output)
+
+
 # ──────────────────────────── tools ────────────────────────────
 
 
