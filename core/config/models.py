@@ -154,6 +154,17 @@ class AIConfig(BaseModel):
     base_estimate_minutes: int = 30
 
 
+class LLMConfig(BaseModel):
+    """统一 LLM Provider 配置 (对应 core.llm.provider 环境变量)"""
+
+    provider: str = "none"  # openai / anthropic / ollama / deepseek / none
+    model: str = ""  # 空字符串表示使用 provider 默认模型
+    api_key: str = ""
+    base_url: str = ""
+    temperature: float = 0.3
+    max_tokens: int = 2000
+
+
 class ToolManagerConfig(BaseModel):
     """外部工具管理器配置 (对应 core.defaults.ToolManagerDefaults)"""
 
@@ -275,6 +286,7 @@ class AutoRTConfig(BaseModel):
     dns: DNSConfig = Field(default_factory=DNSConfig)
     performance: PerformanceConfig = Field(default_factory=PerformanceConfig)
     ai: AIConfig = Field(default_factory=AIConfig)
+    llm: LLMConfig = Field(default_factory=LLMConfig)
     tool_manager: ToolManagerConfig = Field(default_factory=ToolManagerConfig)
     git: GitConfig = Field(default_factory=GitConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)

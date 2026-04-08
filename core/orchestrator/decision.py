@@ -744,6 +744,62 @@ class DecisionEngine:
                 analysis["key_findings"].append(f"检测到WAF: {waf}")
                 analysis["recommendations"].append("使用WAF绕过技术")
 
+        # LLM 增强: 对结果进行二次研判 (可选, provider=none 时跳过)
+        analysis = self._llm_enhance_analysis(phase, result, analysis)
+
+        return analysis
+
+    def _llm_enhance_analysis(
+        self,
+        phase: "PentestPhase",
+        result: Dict[str, Any],
+        analysis: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """LLM 增强分析 — 对规则引擎结果进行二次研判
+
+        当 LLM 不可用时直接返回原始 analysis (零影响)。
+        """
+        try:
+            from core.llm import get_llm
+            from core.llm.prompts import DECISION_PROMPT, SECURITY_SYSTEM_PROMPT
+        except ImportError:
+            return analysis
+
+        llm = get_llm()
+        if not llm.available:
+            return analysis
+
+        # 构造上下文摘要
+        findings = result.get("findings", [])
+        findings_summary = ", ".join(
+            f'{f.get("type", "unknown")}({f.get("severity", "?")})'
+            for f in findings[:10]
+        ) or "无"
+
+        threat_ctx = self.threat_context
+        prompt = DECISION_PROMPT.format(
+            current_phase=phase.value,
+            findings_summary=findings_summary,
+            waf_detected=threat_ctx.waf_detected if threat_ctx else False,
+            defense_score=threat_ctx.defense_score if threat_ctx else 0,
+            access_level=len(self.state.access_list),
+            failed_attempts=len(self._failed_paths),
+        )
+
+        llm_result = llm.complete_json(prompt, system=SECURITY_SYSTEM_PROMPT)
+        if llm_result:
+            analysis["llm_enhanced"] = True
+            if llm_result.get("recommended_action"):
+                analysis["recommendations"].append(llm_result["recommended_action"])
+            if llm_result.get("evasion_tips"):
+                analysis["recommendations"].extend(llm_result["evasion_tips"][:3])
+            if llm_result.get("tools_to_use"):
+                analysis["next_actions"].extend(llm_result["tools_to_use"][:5])
+            analysis["llm_assessment"] = llm_result
+            self.logger.info("LLM 增强分析完成, 推荐: %s", llm_result.get("recommended_action"))
+        else:
+            analysis["llm_enhanced"] = False
+
         return analysis
 
     def get_attack_summary(self) -> Dict[str, Any]:

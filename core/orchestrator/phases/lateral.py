@@ -9,6 +9,8 @@ import asyncio
 import logging
 from typing import Any, Dict, List
 
+from utils.async_utils import gather_with_limit
+
 from .base import BasePhaseExecutor, PhaseResult
 
 logger = logging.getLogger(__name__)
@@ -79,61 +81,106 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
             attempted = 0
             results: Dict[str, List[Dict[str, Any]]] = {}
 
-            for target in targets[:max_targets]:
-                target_success = False
-                for cred in self.state.credentials[:max_creds]:
-                    attempted += 1
-                    try:
-                        creds = ensure_credentials(cred)
-                    except (ValueError, TypeError) as e:
-                        errors.append(f"无效凭证: {e}")
-                        continue
+            lateral_concurrency = self._clamp_config_int("lateral_concurrency", 5, 1, 20)
+            # 记录已成功的目标，避免冗余尝试
+            successful_targets: set = set()
+
+            async def _try_lateral(target: str, cred: Any) -> Dict[str, Any]:
+                """尝试对单个 (target, cred) 对进行横向移动"""
+                # 如果该目标已有成功结果，跳过
+                if target in successful_targets:
+                    return {"target": target, "skipped": True}
+
+                try:
+                    creds = ensure_credentials(cred)
+                except (ValueError, TypeError) as e:
+                    return {"target": target, "error": f"无效凭证: {e}"}
+
+                try:
+                    module = await asyncio.to_thread(
+                        auto_lateral, target, creds, lateral_config, preferred_methods
+                    )
+                    if not module:
+                        return {"target": target, "success": False, "no_module": True}
 
                     try:
-                        module = await asyncio.to_thread(
-                            auto_lateral, target, creds, lateral_config, preferred_methods
+                        result = await asyncio.to_thread(module.execute, command)
+                    finally:
+                        await asyncio.to_thread(module.disconnect)
+
+                    return {
+                        "target": target,
+                        "result": result,
+                        "cred": cred,
+                        "success": result.success,
+                    }
+                except (OSError, ConnectionError, asyncio.TimeoutError) as e:
+                    self.logger.exception("横向移动失败: %s - %s", target, e)
+                    return {"target": target, "error": f"横向移动失败 {target}: {e}"}
+
+            # 构建所有 (target, cred) 对的协程
+            lateral_coros = [
+                _try_lateral(t, c)
+                for t in targets[:max_targets]
+                for c in self.state.credentials[:max_creds]
+            ]
+            attempted = len(lateral_coros)
+
+            lateral_results = await gather_with_limit(
+                lateral_coros, limit=lateral_concurrency
+            )
+
+            # 汇总结果，保持原语义：每个目标只记录第一次成功
+            for item in lateral_results:
+                if isinstance(item, Exception):
+                    errors.append(f"横向移动任务异常: {item}")
+                    continue
+                if item.get("skipped"):
+                    continue
+
+                target = item["target"]
+
+                if "error" in item:
+                    errors.append(item["error"])
+                    continue
+
+                if item.get("no_module"):
+                    continue
+
+                result = item.get("result")
+                if result:
+                    results.setdefault(target, []).append(result.to_dict())
+
+                    if result.success and target not in successful_targets:
+                        successful_targets.add(target)
+                        success_count += 1
+                        cred = item.get("cred")
+                        access = AccessInfo(
+                            host=target,
+                            method=f"lateral:{result.method or 'auto'}",
+                            privilege_level="unknown",
+                            credentials=self._redact_credential(
+                                cred if isinstance(cred, dict) else None
+                            ),
+                            session_token=None,
+                            notes=self._sanitize_output(result.output),
                         )
-                        if not module:
-                            continue
-
-                        try:
-                            result = await asyncio.to_thread(module.execute, command)
-                        finally:
-                            await asyncio.to_thread(module.disconnect)
-
-                        results.setdefault(target, []).append(result.to_dict())
-
-                        if result.success:
-                            success_count += 1
-                            target_success = True
-                            access = AccessInfo(
-                                host=target,
-                                method=f"lateral:{result.method or 'auto'}",
-                                privilege_level="unknown",
-                                credentials=self._redact_credential(
-                                    cred if isinstance(cred, dict) else None
+                        self.state.add_access(access)
+                        findings.append(
+                            {
+                                "type": "lateral_movement",
+                                "severity": "high",
+                                "title": f"横向移动成功: {target}",
+                                "description": self._sanitize_output(
+                                    result.output, max_length=500
                                 ),
-                                session_token=None,
-                                notes=self._sanitize_output(result.output),
-                            )
-                            self.state.add_access(access)
-                            findings.append(
-                                {
-                                    "type": "lateral_movement",
-                                    "severity": "high",
-                                    "title": f"横向移动成功: {target}",
-                                    "description": self._sanitize_output(
-                                        result.output, max_length=500
-                                    ),
-                                    "phase": "lateral_movement",
-                                }
-                            )
-                            break
-                    except (OSError, ConnectionError, asyncio.TimeoutError) as e:
-                        self.logger.exception("横向移动失败: %s - %s", target, e)
-                        errors.append(f"横向移动失败 {target}: {e}")
+                                "phase": "lateral_movement",
+                            }
+                        )
 
-                if not target_success:
+            # 为未成功的目标添加失败记录
+            for target in targets[:max_targets]:
+                if target not in successful_targets and target not in results:
                     results.setdefault(target, []).append(
                         {"success": False, "error": "所有凭证均失败"}
                     )

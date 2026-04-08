@@ -70,6 +70,16 @@ def detect(
         None, "--category", "-c", help="检测类别（逗号分隔），如 sqli,xss,ssrf"
     ),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+    format: str = typer.Option(
+        "json", "--format", "-f", help="输出格式: json/sarif"
+    ),
+    ci: bool = typer.Option(False, "--ci", help="CI 模式: 精简输出 + 非零退出码"),
+    severity_threshold: str = typer.Option(
+        "high", "--severity-threshold", help="CI 失败阈值: info/low/medium/high/critical"
+    ),
+    exit_code: bool = typer.Option(
+        False, "--exit-code", help="发现漏洞时返回非零退出码"
+    ),
 ):
     """漏洞检测 — 扫描目标漏洞"""
     from autort import Scanner
@@ -77,7 +87,33 @@ def detect(
     categories = [c.strip() for c in category.split(",")] if category else None
     scanner = Scanner(target)
     result = asyncio.run(scanner.detect_vulns(categories=categories))
-    _output(result, output)
+
+    # CI 模式隐含 --exit-code
+    if ci:
+        exit_code = True
+
+    # SARIF 格式转换
+    if format.lower() == "sarif":
+        from core.reporting.sarif import findings_to_sarif
+
+        sarif_data = findings_to_sarif(result if isinstance(result, list) else [result])
+        _output(sarif_data, output)
+    else:
+        _output(result, output)
+
+    # CI 模式: 输出精简摘要
+    if ci:
+        _ci_summary(result, severity_threshold)
+
+    # 退出码: 发现达到阈值的漏洞时返回非零
+    if exit_code:
+        from core.reporting.sarif import severity_meets_threshold
+
+        findings = result if isinstance(result, list) else [result]
+        for f in findings:
+            sev = str(f.get("severity", "")).lower()
+            if sev and severity_meets_threshold(sev, severity_threshold):
+                raise typer.Exit(2)
 
 
 # ──────────────────────────── exploit ────────────────────────────
@@ -240,6 +276,36 @@ def version():
 
 
 # ──────────────────────────── helpers ────────────────────────────
+
+
+def _ci_summary(findings, threshold: str):
+    """CI 模式: 输出精简漏洞摘要到 stderr"""
+    from core.reporting.sarif import SEVERITY_ORDER, severity_meets_threshold
+
+    if not isinstance(findings, list):
+        return
+
+    counts: dict = {}
+    exceeded = 0
+    for f in findings:
+        sev = str(f.get("severity", "unknown")).lower()
+        counts[sev] = counts.get(sev, 0) + 1
+        if severity_meets_threshold(sev, threshold):
+            exceeded += 1
+
+    # 按 severity 降序输出
+    sorted_sevs = sorted(counts.keys(), key=lambda s: SEVERITY_ORDER.get(s, -1), reverse=True)
+    parts = [f"{s}: {counts[s]}" for s in sorted_sevs]
+    summary = " | ".join(parts) if parts else "none"
+
+    typer.echo(f"[CI] Findings: {summary}", err=True)
+    if exceeded > 0:
+        typer.echo(
+            f"[CI] {exceeded} finding(s) meet threshold ({threshold}), exit code 2",
+            err=True,
+        )
+    else:
+        typer.echo(f"[CI] No findings meet threshold ({threshold})", err=True)
 
 
 def _output(data, filepath: Optional[str]):
