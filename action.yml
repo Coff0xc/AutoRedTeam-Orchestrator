@@ -42,13 +42,18 @@ runs:
 
     - name: Run Scan
       shell: bash
+      env:
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_FORMAT: ${{ inputs.output-format }}
+        INPUT_SEVERITY: ${{ inputs.severity-threshold }}
+        INPUT_CATEGORIES: ${{ inputs.categories }}
       run: |
         cd ${{ github.action_path }}
-        ARGS="--ci --format ${{ inputs.output-format }} --severity-threshold ${{ inputs.severity-threshold }} --exit-code"
-        if [ -n "${{ inputs.categories }}" ]; then
-          ARGS="$ARGS -c ${{ inputs.categories }}"
+        ARGS="--ci --format $INPUT_FORMAT --severity-threshold $INPUT_SEVERITY --exit-code"
+        if [ -n "$INPUT_CATEGORIES" ]; then
+          ARGS="$ARGS -c $INPUT_CATEGORIES"
         fi
-        python -m cli.main detect "${{ inputs.target }}" $ARGS -o results.sarif || true
+        python -m cli.main detect "$INPUT_TARGET" $ARGS -o results.sarif || true
 
     - name: Upload SARIF
       if: always() && inputs.output-format == 'sarif'

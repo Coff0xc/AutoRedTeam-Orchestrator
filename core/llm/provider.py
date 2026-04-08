@@ -226,16 +226,22 @@ class LLMProvider:
 
 
 # ---------------------------------------------------------------------------
-# 全局单例
+# 全局单例 (线程安全)
 # ---------------------------------------------------------------------------
+import threading
+
 _provider: Optional[LLMProvider] = None
+_provider_lock = threading.Lock()
 
 
 def get_llm() -> LLMProvider:
-    """获取全局 LLMProvider 单例"""
+    """获取全局 LLMProvider 单例 (线程安全)"""
     global _provider
-    if _provider is None:
-        _provider = LLMProvider()
+    if _provider is not None:
+        return _provider
+    with _provider_lock:
+        if _provider is None:
+            _provider = LLMProvider()
     return _provider
 
 

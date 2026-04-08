@@ -87,9 +87,7 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
 
             async def _try_lateral(target: str, cred: Any) -> Dict[str, Any]:
                 """尝试对单个 (target, cred) 对进行横向移动"""
-                # 如果该目标已有成功结果，跳过
-                if target in successful_targets:
-                    return {"target": target, "skipped": True}
+                # 注意: 去重在结果聚合阶段处理, 而非此处 (避免并发共享状态)
 
                 try:
                     creds = ensure_credentials(cred)
