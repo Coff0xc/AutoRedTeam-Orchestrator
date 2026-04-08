@@ -133,22 +133,31 @@ class Scanner:
                 detectors = DetectorFactory.create_all(detector_config)
 
             results = []
-            for detector in detectors:
+
+            async def _run_detector(detector):
+                """执行单个检测器"""
                 try:
                     if hasattr(detector, "async_detect"):
                         result = await detector.async_detect(self.target)
                     else:
                         result = detector.detect(self.target)
-
                     if result:
                         items = result if isinstance(result, list) else [result]
-                        for item in items:
-                            results.append(
-                                item.to_dict() if hasattr(item, "to_dict") else item
-                            )
+                        return [
+                            item.to_dict() if hasattr(item, "to_dict") else item
+                            for item in items
+                        ]
                 except Exception as e:
                     logger.warning("检测器 %s 执行失败: %s", getattr(detector, "name", "?"), e)
-                    continue
+                return []
+
+            # 并发执行所有检测器
+            import asyncio
+
+            tasks = [_run_detector(d) for d in detectors]
+            all_results = await asyncio.gather(*tasks)
+            for batch in all_results:
+                results.extend(batch)
 
             return results
         except Exception as e:

@@ -241,16 +241,23 @@ def _build_config() -> AutoRTConfig:
     return config
 
 
+# 线程安全单例
+_config_lock = __import__("threading").Lock()
+
+
 def get_config() -> AutoRTConfig:
     """
-    获取全局配置单例
+    获取全局配置单例 (线程安全)
 
     Returns:
         AutoRTConfig 实例
     """
     global _config
-    if _config is None:
-        _config = _build_config()
+    if _config is not None:
+        return _config
+    with _config_lock:
+        if _config is None:
+            _config = _build_config()
     return _config
 
 
