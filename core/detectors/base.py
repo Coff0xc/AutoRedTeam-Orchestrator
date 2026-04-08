@@ -87,7 +87,7 @@ class BaseDetector(ABC):
 
         Args:
             config: 检测器配置，会与默认配置合并
-                enable_fp_filter: 启用误报过滤 (默认 False)
+                enable_fp_filter: 启用误报过滤 (默认 True)
                 enable_advanced_verify: 启用高级验证 (默认 False)
         """
         defaults = self._load_defaults()
@@ -413,7 +413,7 @@ class BaseDetector(ABC):
         # 误报过滤: 当启用且检测到漏洞时，自动检查是否为误报
         if (
             result.vulnerable
-            and self.config.get("enable_fp_filter", False)
+            and self.config.get("enable_fp_filter", True)
             and response is not None
         ):
             fp_result = self._check_false_positive(response)

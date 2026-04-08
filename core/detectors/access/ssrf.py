@@ -209,6 +209,13 @@ class SSRFDetector(BaseDetector):
         # 识别 URL 参数
         url_params = self._identify_url_params(params)
 
+        # 获取基线响应 — 用于通用内部访问检测时排除服务器对任意输入返回相同响应的情况
+        try:
+            baseline_resp = self.http_client.get(url, params=params, headers=headers)
+            self._baseline_body = baseline_resp.text if baseline_resp else ""
+        except Exception:
+            self._baseline_body = ""
+
         for param_name in url_params:
             # 检测 AWS 元数据访问
             if self.check_aws:
@@ -420,10 +427,20 @@ class SSRFDetector(BaseDetector):
                             extra={"ssrf_type": "internal_access", "target": target},
                         )
 
-                # 检查响应是否有意义的内容
+                # 检查响应是否有意义的内容 — 需排除服务器对任意输入都返回相同响应的情况
                 if response.status_code == 200 and len(response.text) > 100:
-                    # 检查是否包含 HTML/JSON 内容
-                    if any(
+                    # 与基线响应对比: 如果响应与基线高度相似, 说明服务器忽略了我们的 payload
+                    is_different_from_baseline = True
+                    if hasattr(self, "_baseline_body") and self._baseline_body:
+                        from difflib import SequenceMatcher
+
+                        similarity = SequenceMatcher(
+                            None, self._baseline_body[:2000], response.text[:2000]
+                        ).ratio()
+                        if similarity > 0.9:
+                            is_different_from_baseline = False
+
+                    if is_different_from_baseline and any(
                         marker in response.text.lower()
                         for marker in ["<html", "<!doctype", '{"', "{"]
                     ):

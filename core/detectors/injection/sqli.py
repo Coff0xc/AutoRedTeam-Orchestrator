@@ -361,30 +361,67 @@ class SQLiDetector(BaseDetector):
 
             elapsed = time.time() - start_time
 
-            # 如果响应时间超过阈值，可能存在时间盲注
+            # 如果响应时间超过阈值，进行双重验证以排除网络抖动
             if elapsed >= self.TIME_THRESHOLD:
-                request_info = self._build_request_info(
-                    method=method,
-                    url=url,
-                    headers=headers,
-                    params=test_params if method == "GET" else None,
-                    data=test_params if method != "GET" else None,
-                )
-                response_info = self._build_response_info(response)
-                return self._create_result(
-                    url=url,
-                    vulnerable=True,
-                    param=param_name,
-                    payload=payload,
-                    evidence=f"响应延迟 {elapsed:.2f} 秒（阈值 {self.TIME_THRESHOLD} 秒）",
-                    confidence=0.85,
-                    verified=True,
-                    request=request_info,
-                    response=response_info,
-                    remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
-                    references=["https://owasp.org/www-community/attacks/Blind_SQL_Injection"],
-                    extra={"injection_type": "time-based", "delay": elapsed},
-                )
+                # 二次验证: 重新发送相同 payload, 两次都超时才确认
+                try:
+                    start2 = time.time()
+                    if method == "GET":
+                        self.http_client.get(url, params=test_params, headers=headers)
+                    else:
+                        self.http_client.post(url, data=test_params, headers=headers)
+                    elapsed2 = time.time() - start2
+                except Exception:
+                    elapsed2 = time.time() - start2
+
+                if elapsed2 >= self.TIME_THRESHOLD:
+                    # 两次都超时 — 高置信度
+                    request_info = self._build_request_info(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        params=test_params if method == "GET" else None,
+                        data=test_params if method != "GET" else None,
+                    )
+                    response_info = self._build_response_info(response)
+                    return self._create_result(
+                        url=url,
+                        vulnerable=True,
+                        param=param_name,
+                        payload=payload,
+                        evidence=f"双重验证: 延迟 {elapsed:.2f}s + {elapsed2:.2f}s（阈值 {self.TIME_THRESHOLD}s）",
+                        confidence=0.90,
+                        verified=True,
+                        request=request_info,
+                        response=response_info,
+                        remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
+                        references=["https://owasp.org/www-community/attacks/Blind_SQL_Injection"],
+                        extra={"injection_type": "time-based", "delay": elapsed, "delay2": elapsed2},
+                    )
+                else:
+                    # 只有一次超时 — 低置信度, 可能是网络抖动
+                    request_info = self._build_request_info(
+                        method=method,
+                        url=url,
+                        headers=headers,
+                        params=test_params if method == "GET" else None,
+                        data=test_params if method != "GET" else None,
+                    )
+                    response_info = self._build_response_info(response)
+                    return self._create_result(
+                        url=url,
+                        vulnerable=True,
+                        param=param_name,
+                        payload=payload,
+                        evidence=f"单次延迟 {elapsed:.2f}s, 二次验证 {elapsed2:.2f}s (未超阈值)",
+                        confidence=0.60,
+                        verified=False,
+                        request=request_info,
+                        response=response_info,
+                        remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
+                        references=["https://owasp.org/www-community/attacks/Blind_SQL_Injection"],
+                        extra={"injection_type": "time-based", "delay": elapsed, "delay2": elapsed2},
+                    )
         except DetectorTimeoutError as e:
             # 超时可能是时间盲注成功的信号，需要进一步验证
             elapsed = time.time() - start_time
@@ -488,7 +525,10 @@ class SQLiDetector(BaseDetector):
                 false_len = len(false_response.text)
 
                 # 如果真假条件响应明显不同，可能存在布尔盲注
-                if abs(true_len - false_len) > 50 and abs(true_len - baseline_length) < 50:
+                # 使用百分比阈值而非绝对字节数, 避免动态页面误报和小响应漏报
+                diff_ratio = abs(true_len - false_len) / max(1, baseline_length)
+                baseline_drift = abs(true_len - baseline_length) / max(1, baseline_length)
+                if diff_ratio > 0.1 and baseline_drift < 0.15:
                     request_info = self._build_request_info(
                         method=method,
                         url=url,
