@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -242,7 +243,7 @@ def _build_config() -> AutoRTConfig:
 
 
 # 线程安全单例
-_config_lock = __import__("threading").Lock()
+_config_lock = threading.Lock()
 
 
 def get_config() -> AutoRTConfig:
