@@ -23,10 +23,12 @@ from .models import (
     Severity,
     SimilarityMatch,
 )
+from .storage import SQLiteKnowledgeStore
 
 __all__ = [
     "KnowledgeManager",
     "InMemoryGraphStore",
+    "SQLiteKnowledgeStore",
     "KnowledgeEntity",
     "KnowledgeRelation",
     "EntityType",

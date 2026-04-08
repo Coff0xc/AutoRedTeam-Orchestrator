@@ -12,8 +12,9 @@ from typing import Any, Dict, List, Optional
 
 
 class EntityType(Enum):
-    """实体类型"""
+    """实体类型（17 种，覆盖完整攻击面图谱）"""
 
+    # --- 原有 8 种 ---
     TARGET = "target"  # 目标（IP/域名/URL）
     SERVICE = "service"  # 服务（HTTP/SSH/FTP等）
     VULNERABILITY = "vulnerability"  # 漏洞
@@ -22,6 +23,17 @@ class EntityType(Enum):
     TOOL = "tool"  # 工具
     FINDING = "finding"  # 发现
     SESSION = "session"  # 会话
+
+    # --- 新增 9 种 ---
+    PORT = "port"  # 端口
+    DOMAIN = "domain"  # 域名
+    SUBDOMAIN = "subdomain"  # 子域名
+    TECHNOLOGY = "technology"  # 技术栈 / 指纹
+    WAF = "waf"  # WAF / 防护设备
+    ENDPOINT = "endpoint"  # API 端点 / URL 路径
+    PARAMETER = "parameter"  # 请求参数
+    CERTIFICATE = "certificate"  # TLS/SSL 证书
+    DNS_RECORD = "dns_record"  # DNS 记录
 
 
 class RelationType(Enum):
@@ -48,6 +60,17 @@ class RelationType(Enum):
     # 会话关系
     DISCOVERED_IN = "discovered_in"  # Finding -> Session
     TARGETS = "targets"  # Session -> Target
+
+    # --- 新增关系（对应扩展实体类型） ---
+    HAS_PORT = "has_port"  # Target -> Port
+    HAS_SUBDOMAIN = "has_subdomain"  # Domain -> Subdomain
+    RUNS_TECHNOLOGY = "runs_technology"  # Service -> Technology
+    PROTECTED_BY = "protected_by"  # Target -> WAF
+    HAS_ENDPOINT = "has_endpoint"  # Service -> Endpoint
+    HAS_PARAMETER = "has_parameter"  # Endpoint -> Parameter
+    HAS_CERTIFICATE = "has_certificate"  # Domain -> Certificate
+    HAS_DNS_RECORD = "has_dns_record"  # Domain -> DNS_Record
+    EXPLOITED_BY = "exploited_by"  # Vulnerability -> Finding (exploit result)
 
 
 class Severity(Enum):

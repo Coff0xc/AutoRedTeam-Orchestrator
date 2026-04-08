@@ -24,6 +24,7 @@ from .models import (
     RelationType,
     SimilarityMatch,
 )
+from .storage import SQLiteKnowledgeStore
 
 logger = logging.getLogger(__name__)
 
@@ -370,12 +371,26 @@ class KnowledgeManager:
 
     MAX_ACTION_HISTORY = 10000
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        config: Optional[Dict[str, Any]] = None,
+        backend: str = "memory",
+        db_path: str = "data/knowledge.db",
+    ):
         self.config = config or {}
-        self._store = InMemoryGraphStore()
-        self._action_history: List[Dict[str, Any]] = []
+        self._backend_type = backend
 
-        logger.info("知识图谱管理器初始化完成 (内存存储)")
+        if backend == "sqlite":
+            self._sqlite_store = SQLiteKnowledgeStore(db_path)
+            # 内存存储仍然保留，用于 BFS 等操作的兼容层
+            self._store = InMemoryGraphStore()
+            logger.info("知识图谱管理器初始化完成 (SQLite: %s)", db_path)
+        else:
+            self._sqlite_store = None
+            self._store = InMemoryGraphStore()
+            logger.info("知识图谱管理器初始化完成 (内存存储)")
+
+        self._action_history: List[Dict[str, Any]] = []
 
     def _generate_id(self, prefix: str = "e") -> str:
         """生成唯一 ID"""
@@ -404,6 +419,15 @@ class KnowledgeManager:
         )
 
         self._store.add_entity(entity)
+
+        # 同步到 SQLite
+        if self._sqlite_store:
+            self._sqlite_store.add_entity(
+                entity_type=EntityType.TARGET.value,
+                name=target,
+                properties=entity.properties,
+            )
+
         logger.debug("存储目标: %s (%s)", target, entity_id)
         return entity_id
 
@@ -882,12 +906,62 @@ class KnowledgeManager:
             "action_history_size": len(self._action_history),
         }
 
-    def export_graph(self) -> Dict[str, Any]:
-        """导出完整图数据"""
+    def export_graph(self, fmt: str = "dict") -> Dict[str, Any] | str:
+        """导出完整图数据
+
+        Args:
+            fmt: 导出格式
+                - "dict": Python dict（默认，向后兼容）
+                - "json": JSON 字符串（节点+边）
+                - "dot":  Graphviz DOT 格式
+
+        Returns:
+            dict（fmt="dict"）或 str（fmt="json"/"dot"）
+        """
+        if self._sqlite_store and fmt in ("json", "dot"):
+            return self._sqlite_store.export_graph(fmt)
+
+        if fmt in ("json", "dot"):
+            # 内存后端也支持 json/dot 导出
+            import json as _json
+
+            data = self._store.export_to_dict()
+            if fmt == "json":
+                return _json.dumps(data, ensure_ascii=False, indent=2, default=str)
+            # dot
+            lines = [
+                "digraph KnowledgeGraph {",
+                "  rankdir=LR;",
+                "  node [shape=box];",
+            ]
+            for e in data["entities"]:
+                label = f'{e["type"]}\\n{e["name"]}'
+                lines.append(f'  "{e["id"]}" [label="{label}"];')
+            for r in data["relations"]:
+                lines.append(
+                    f'  "{r["source_id"]}" -> "{r["target_id"]}" '
+                    f'[label="{r["relation_type"]}"];'
+                )
+            lines.append("}")
+            return "\n".join(lines)
+
+        # 默认 dict 返回（向后兼容）
         return self._store.export_to_dict()
 
     def clear(self):
         """清空所有数据"""
         self._store.clear()
+        if self._sqlite_store:
+            self._sqlite_store.clear()
         self._action_history.clear()
         logger.info("知识图谱已清空")
+
+    @property
+    def sqlite_store(self) -> Optional["SQLiteKnowledgeStore"]:
+        """获取 SQLite 后端（如果启用）"""
+        return self._sqlite_store
+
+    def close(self):
+        """关闭后端连接"""
+        if self._sqlite_store:
+            self._sqlite_store.close()

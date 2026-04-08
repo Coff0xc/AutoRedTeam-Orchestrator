@@ -39,7 +39,7 @@ class TestEntityType:
         assert EntityType.SESSION.value == "session"
 
     def test_type_count(self):
-        assert len(EntityType) == 8
+        assert len(EntityType) == 17
 
 
 class TestRelationType:
@@ -52,7 +52,7 @@ class TestRelationType:
         assert RelationType.GRANTS_ACCESS.value == "grants_access"
 
     def test_type_count(self):
-        assert len(RelationType) == 12
+        assert len(RelationType) == 21
 
 
 class TestSeverity:
