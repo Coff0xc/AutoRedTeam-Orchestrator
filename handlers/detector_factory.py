@@ -122,6 +122,60 @@ DETECTOR_CONFIGS: List[DetectorConfig] = [
         description="Host头注入检测 - 检测Host Header Injection漏洞",
         vuln_type="支持: Host覆盖、X-Forwarded-Host、端口注入、URL覆盖",
     ),
+    # ── 以下为 Phase 3 新增 (原 detector_handlers.py 中的 10 个检测器) ──
+    DetectorConfig(
+        name="ldap_scan",
+        detector_class="LDAPiDetector",
+        description="LDAP注入检测 - 检测LDAP注入漏洞",
+    ),
+    DetectorConfig(
+        name="open_redirect_scan",
+        detector_class="OpenRedirectDetector",
+        description="开放重定向检测 - 检测URL重定向漏洞",
+    ),
+    DetectorConfig(
+        name="info_disclosure_scan",
+        detector_class="InfoDisclosureDetector",
+        description="信息泄露检测 - 检测敏感信息泄露",
+        vuln_type="检测: 错误信息泄露、目录列表、敏感文件暴露等",
+    ),
+    DetectorConfig(
+        name="csrf_scan",
+        detector_class="CSRFDetector",
+        description="CSRF跨站请求伪造检测 - 检测CSRF防护缺失或配置问题",
+    ),
+    DetectorConfig(
+        name="auth_bypass_scan",
+        detector_class="AuthBypassDetector",
+        description="认证绕过检测 - 检测身份认证绕过漏洞",
+    ),
+    DetectorConfig(
+        name="weak_password_scan",
+        detector_class="WeakPasswordDetector",
+        description="弱密码检测 - 检测弱密码和默认凭据",
+    ),
+    DetectorConfig(
+        name="session_scan",
+        detector_class="SessionDetector",
+        description="会话安全检测 - 检测会话管理漏洞",
+        vuln_type="检测: 会话固定、会话劫持、Cookie安全属性缺失等",
+    ),
+    DetectorConfig(
+        name="upload_scan",
+        detector_class="FileUploadDetector",
+        description="文件上传漏洞检测 - 检测文件上传安全问题",
+        vuln_type="检测: 文件类型绕过、路径穿越、恶意文件上传等",
+    ),
+    DetectorConfig(
+        name="lfi_scan",
+        detector_class="LFIDetector",
+        description="本地文件包含检测 - 检测LFI漏洞",
+    ),
+    DetectorConfig(
+        name="deserialize_scan",
+        detector_class="DeserializeDetector",
+        description="反序列化漏洞检测 - 检测不安全的反序列化",
+    ),
 ]
 
 
@@ -162,10 +216,7 @@ def create_detector_tool(
         注册到 MCP 的工具函数
     """
 
-    @tool(mcp, name=config.name)
-    @validate_inputs(url="url")
-    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
-    async def detector_tool(
+    async def _detect(
         url: str, params: Optional[Dict[str, str]] = None, **kwargs
     ) -> Dict[str, Any]:
         # 动态导入检测器
@@ -188,23 +239,96 @@ def create_detector_tool(
             "findings": findings,
         }
 
-    # 设置文档字符串
+    # 设置函数元信息（在装饰器应用前）
+    _detect.__name__ = config.name
+    _detect.__qualname__ = config.name
     doc = f"{config.description}\n\n"
     if config.vuln_type:
         doc += f"{config.vuln_type}\n\n"
     doc += "Args:\n    url: 目标URL\n    params: 请求参数\n\nReturns:\n    检测结果"
-    detector_tool.__doc__ = doc
+    _detect.__doc__ = doc
 
-    return detector_tool
+    # 手动应用装饰器链 (内→外: handle_errors → validate_inputs → tool)
+    wrapped = handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)(
+        _detect
+    )
+    wrapped = validate_inputs(url="url")(wrapped)
+    wrapped = tool(mcp, name=config.name)(wrapped)
+
+    return wrapped
 
 
-def register_detector_tools_v2(mcp, counter, logger):
-    """使用工厂模式注册所有检测器工具（新版）
+def _register_vuln_scan(mcp, logger):
+    """注册综合漏洞扫描工具 (vuln_scan)
 
-    相比原版减少约 200 行重复代码
+    此工具使用 CompositeDetector，不适合工厂模式，单独注册。
     """
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def vuln_scan(
+        url: str,
+        params: Optional[Dict[str, str]] = None,
+        detectors: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """综合漏洞扫描 - 检测多种Web漏洞
+
+        支持: SQL注入、XSS、命令注入、SSRF、路径遍历、XXE等
+
+        Args:
+            url: 目标URL
+            params: 请求参数 (例: {"id": "1", "name": "test"})
+            detectors: 要使用的检测器 (默认: owasp_top10)
+
+        Returns:
+            发现的漏洞列表
+        """
+        from core.detectors import DetectorFactory, DetectorPresets
+
+        if detectors:
+            composite = DetectorFactory.create_composite(detectors)
+        else:
+            composite = DetectorPresets.owasp_top10()
+
+        results = await composite.async_detect(url, params=params or {})
+
+        vulnerabilities = [
+            {
+                "type": r.vuln_type,
+                "severity": r.severity.value,
+                "param": r.param,
+                "payload": r.payload,
+                "evidence": r.evidence[:200] if r.evidence else None,
+                "remediation": r.remediation,
+            }
+            for r in results
+            if r.vulnerable
+        ]
+
+        return {
+            "success": True,
+            "url": url,
+            "vulnerabilities": vulnerabilities,
+            "total_vulns": len(vulnerabilities),
+            "detectors_used": detectors or ["owasp_top10"],
+        }
+
+    return vuln_scan
+
+
+def register_detector_tools(mcp, counter, logger):
+    """使用工厂模式注册所有检测器工具
+
+    包含 1 个综合扫描工具 (vuln_scan) + N 个单检测器工具 (工厂生成)
+    """
+    # 综合扫描工具 (特殊逻辑，单独注册)
+    _register_vuln_scan(mcp, logger)
+
+    # 单检测器工具 (工厂批量注册)
     for config in DETECTOR_CONFIGS:
         create_detector_tool(config, mcp, logger)
 
-    counter.add("detector", len(DETECTOR_CONFIGS))
-    logger.info("[Detector] 已注册 %d 个漏洞检测工具 (工厂模式)", len(DETECTOR_CONFIGS))
+    total = 1 + len(DETECTOR_CONFIGS)  # vuln_scan + factory tools
+    counter.add("detector", total)
+    logger.info("[Detector] 已注册 %d 个漏洞检测工具 (工厂模式)", total)

