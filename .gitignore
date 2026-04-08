@@ -78,3 +78,8 @@ data/admin_key.txt
 # Claude audit artifacts
 .claude-audit*
 .claude-security*
+
+# Auto-downloaded tools (managed by tools/downloader.py)
+tools/sqlmap/
+tools/nuclei-templates/
+tools/bin/
