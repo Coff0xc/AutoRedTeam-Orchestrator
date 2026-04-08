@@ -58,8 +58,8 @@ class BaseDetector(ABC):
 
     # 默认配置 - 使用集中常量
     default_config: Dict[str, Any] = {
-        "timeout": 30,  # see core.defaults.DetectorDefaults.TIMEOUT
-        "max_payloads": 50,  # see core.defaults.DetectorDefaults.MAX_PAYLOADS
+        "timeout": 30,  # see core.config.DetectorConfig
+        "max_payloads": 50,  # see core.config.DetectorConfig
         "verify_ssl": False,
         "follow_redirects": True,
         "max_redirects": 5,
@@ -69,16 +69,17 @@ class BaseDetector(ABC):
     def _load_defaults(cls) -> Dict[str, Any]:
         """从集中配置加载默认值"""
         try:
-            from core.defaults import DetectorDefaults
+            from core.config import get_config
 
+            cfg = get_config().detector
             return {
-                "timeout": DetectorDefaults.TIMEOUT,
-                "max_payloads": DetectorDefaults.MAX_PAYLOADS,
+                "timeout": cfg.timeout,
+                "max_payloads": cfg.max_payloads,
                 "verify_ssl": False,
                 "follow_redirects": True,
                 "max_redirects": 5,
             }
-        except ImportError:
+        except Exception:
             return cls.default_config
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -279,7 +280,7 @@ class BaseDetector(ABC):
         mutated: List[str] = []
         try:
             # 使用统一的 Payload 模块
-            from modules.payload import PayloadMutator
+            from core.payload import PayloadMutator
 
             for payload in payloads:
                 mutated.extend(PayloadMutator.mutate(payload, waf=waf_type))
