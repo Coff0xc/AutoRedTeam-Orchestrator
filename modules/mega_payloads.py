@@ -850,7 +850,7 @@ class MegaPayloads:
                     result.extend(v)
             return result
 
-        return data.get(category, [])
+        return cast(List[Any], data.get(category, []))
 
     @classmethod
     def count(cls) -> dict:

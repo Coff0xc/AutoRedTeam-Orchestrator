@@ -229,7 +229,7 @@ class CSRFDetector(BaseDetector):
         Returns:
             检测结果列表
         """
-        results = []
+        results: List[DetectionResult] = []
 
         # 获取基线响应（正常请求）
         try:

@@ -510,8 +510,8 @@ class SessionManager:
             Dict: 统计字典
         """
         with self._session_lock:
-            status_counts = {}
-            phase_counts = {}
+            status_counts: Dict[str, int] = {}
+            phase_counts: Dict[str, int] = {}
             total_vulns = 0
 
             for ctx in self._sessions.values():

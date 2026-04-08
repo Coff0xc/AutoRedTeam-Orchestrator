@@ -528,7 +528,7 @@ class NucleiSource(CVESource):
         """获取最近的 CVE 模板"""
         logger.info("[Nuclei] 获取最近更新的模板 (days=%s)", days)
 
-        entries = []
+        entries: List[CVEEntry] = []
         await self._rate_limiter.acquire()
 
         # 获取 CVE 目录下的文件树

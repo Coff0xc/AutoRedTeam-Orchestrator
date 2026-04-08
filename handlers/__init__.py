@@ -4,7 +4,7 @@ AutoRedTeam MCP Handlers
 
 此模块将原 mcp_stdio_server.py 中的工具按功能拆分为独立模块:
 - recon_handlers: 侦察工具 (8个)
-- detector_handlers: 漏洞检测工具 (11个)
+- detector_handlers: 漏洞检测工具 (21个, 含10个新激活检测器)
 - cve_handlers: CVE相关工具 (8个)
 - api_security_handlers: API安全工具 (7个)
 - cloud_security_handlers: 云安全工具 (3个)
@@ -18,7 +18,12 @@ AutoRedTeam MCP Handlers
 - report_handlers: 报告工具 (2个)
 - ai_handlers: AI辅助工具 (3个)
 - misc_handlers: 杂项工具 (3个)
-- external_tools_handlers: 外部工具集成 (8个) [新增]
+- external_tools_handlers: 外部工具集成 (8个)
+- parallel_handlers: 并发扫描工具 (1个)
+- knowledge_handlers: 知识图谱工具 (3个)
+- mcts_handlers: MCTS攻击规划工具 (1个)
+- prompt_handlers: MCP提示模板 (6个)
+- resource_handlers: MCP资源端点 (4个)
 """
 
 from .ad_handlers import register_ad_tools
@@ -28,13 +33,18 @@ from .cloud_security_handlers import register_cloud_security_tools
 from .cve_handlers import register_cve_tools
 from .detector_handlers import register_detector_tools
 from .external_tools_handlers import register_external_tools
+from .knowledge_handlers import register_knowledge_tools
 from .lateral_handlers import register_lateral_tools
+from .mcts_handlers import register_mcts_tools
 from .misc_handlers import register_misc_tools
 from .orchestration_handlers import register_orchestration_tools
+from .parallel_handlers import register_parallel_tools
 from .persistence_handlers import register_persistence_tools
+from .prompt_handlers import register_prompt_handlers
 from .recon_handlers import register_recon_tools
 from .redteam_handlers import register_redteam_tools
 from .report_handlers import register_report_tools
+from .resource_handlers import register_resource_handlers
 from .session_handlers import register_session_tools
 from .supply_chain_handlers import register_supply_chain_tools
 
@@ -55,6 +65,11 @@ __all__ = [
     "register_ai_tools",
     "register_misc_tools",
     "register_external_tools",
+    "register_parallel_tools",
+    "register_knowledge_tools",
+    "register_mcts_tools",
+    "register_prompt_handlers",
+    "register_resource_handlers",
 ]
 
 
@@ -83,6 +98,11 @@ def register_all_handlers(mcp, counter, logger):
         ("AI辅助工具", register_ai_tools),
         ("杂项工具", register_misc_tools),
         ("外部工具集成", register_external_tools),
+        ("并发扫描", register_parallel_tools),
+        ("知识图谱", register_knowledge_tools),
+        ("MCTS攻击规划", register_mcts_tools),
+        ("MCP提示模板", register_prompt_handlers),
+        ("MCP资源端点", register_resource_handlers),
     ]
 
     for name, register_func in handlers:

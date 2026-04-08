@@ -27,7 +27,7 @@ impacket>=0.11.0,<0.12.0
 # Required for AES encryption for payload obfuscation
 pycryptodome>=3.20.0,<4.0.0
 websockets>=12.0,<13.0
-cryptography>=42.0.0,<45.0.0
+cryptography>=46.0.6,<48.0.0  # CVE-2026-26007 (ECDH subgroup), CVE-2026-34073 (X.509 bypass)
 
 # Utilities (核心功能)
 pyyaml>=6.0.0,<7.0.0

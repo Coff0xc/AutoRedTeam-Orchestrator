@@ -257,7 +257,7 @@ class PrototypePollutionDetector(BaseDetector):
         通过 URL 查询参数注入 __proto__ payload，
         检查响应 HTML/JS 中是否包含可利用的客户端代码模式。
         """
-        results = []
+        results: List[DetectionResult] = []
 
         # 先获取基线响应
         baseline_resp = self._safe_request("GET", url)

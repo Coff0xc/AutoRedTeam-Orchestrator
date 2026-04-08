@@ -166,6 +166,7 @@ class AuthManager:
         self.keys: Dict[str, APIKey] = {}
         self.audit_logs: List[AuditLog] = []
         self.rate_limit_tracker: Dict[str, List[float]] = {}
+        self.max_rate_limit_keys: int = 10000
 
         self._load_keys()
         logger.info("认证管理器初始化完成")
@@ -427,13 +428,29 @@ class AuthManager:
             for log in logs
         ]
 
+    def _hash_key_with_salt(self, secret: str, salt: Optional[bytes] = None) -> str:
+        """使用PBKDF2加盐哈希密钥"""
+        if salt is None:
+            salt = secrets.token_bytes(16)
+        derived = hashlib.pbkdf2_hmac("sha256", secret.encode(), salt, 100000)
+        return salt.hex() + ":" + derived.hex()
+
     def _hash_key(self, secret: str) -> str:
-        """哈希密钥"""
-        return hashlib.sha256(secret.encode()).hexdigest()
+        """哈希密钥（加盐PBKDF2）"""
+        return self._hash_key_with_salt(secret)
 
     def _verify_key_hash(self, secret: str, key_hash: str) -> bool:
-        """验证密钥哈希"""
-        return hmac.compare_digest(self._hash_key(secret), key_hash)
+        """验证密钥哈希（兼容旧plain SHA256和新加盐格式）"""
+        if ":" in key_hash:
+            # 新格式: salt_hex:derived_hex
+            salt_hex, expected_hex = key_hash.split(":", 1)
+            salt = bytes.fromhex(salt_hex)
+            derived = hashlib.pbkdf2_hmac("sha256", secret.encode(), salt, 100000)
+            return hmac.compare_digest(derived.hex(), expected_hex)
+        else:
+            # 旧格式: plain SHA256（向后兼容）
+            plain_hash = hashlib.sha256(secret.encode()).hexdigest()
+            return hmac.compare_digest(plain_hash, key_hash)
 
     def _check_rate_limit(self, key_id: str, limit: int) -> bool:
         """检查速率限制"""
@@ -447,6 +464,20 @@ class AuthManager:
             ]
         else:
             self.rate_limit_tracker[key_id] = []
+
+        # 防止tracker无限增长：超过阈值时淘汰最旧的一半
+        if len(self.rate_limit_tracker) > self.max_rate_limit_keys:
+            sorted_keys = sorted(
+                self.rate_limit_tracker.keys(),
+                key=lambda k: (
+                    max(self.rate_limit_tracker[k]) if self.rate_limit_tracker[k] else 0
+                ),
+            )
+            for k in sorted_keys[: len(sorted_keys) // 2]:
+                del self.rate_limit_tracker[k]
+            logger.warning(
+                "速率限制tracker已清理，当前key数: %d", len(self.rate_limit_tracker)
+            )
 
         # 检查限制
         if len(self.rate_limit_tracker[key_id]) >= limit:

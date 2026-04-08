@@ -684,7 +684,7 @@ class PoCEngine:
         Returns:
             提取的数据
         """
-        extracted = {}
+        extracted: Dict[str, Any] = {}
 
         for extractor in extractors:
             if extractor.internal:

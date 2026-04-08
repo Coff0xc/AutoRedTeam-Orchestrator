@@ -480,7 +480,7 @@ class ProxyChainManager:
         self._chains: Dict[str, ProxyChain] = {}
         self._pool = pool
         self._load_balance = load_balance
-        self._chain_queue = deque()  # 用于 round-robin
+        self._chain_queue: deque[str] = deque()  # 用于 round-robin
 
     def create_chain(
         self, name: str, strategy: ChainStrategy = ChainStrategy.DYNAMIC, **kwargs

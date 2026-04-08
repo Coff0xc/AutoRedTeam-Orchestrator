@@ -125,7 +125,7 @@ class SudoBypass:
         Returns:
             SudoEntry 列表
         """
-        entries = []
+        entries: List[SudoEntry] = []
 
         try:
             if password:

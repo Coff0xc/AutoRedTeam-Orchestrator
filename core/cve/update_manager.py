@@ -18,7 +18,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
 import aiohttp
 
@@ -257,7 +257,7 @@ class CVEUpdateManager:
         try:
             async with session.get(url, headers=headers, timeout=30, ssl=False) as resp:
                 if resp.status == 200:
-                    return await resp.json()
+                    return cast(Dict, await resp.json())
                 elif resp.status == 403:
                     logger.warning("API访问受限 [%s]: %s", source, url)
                     return None

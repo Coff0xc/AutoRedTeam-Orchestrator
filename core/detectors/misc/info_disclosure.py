@@ -6,7 +6,7 @@
 
 import logging
 import re
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, cast
 from urllib.parse import urljoin, urlparse
 
 from ..base import BaseDetector
@@ -416,4 +416,4 @@ class InfoDisclosureDetector(BaseDetector):
 
     def get_payloads(self) -> List[str]:
         """获取检测器使用的 payload 列表"""
-        return self.sensitive_paths
+        return cast(List[str], self.sensitive_paths)

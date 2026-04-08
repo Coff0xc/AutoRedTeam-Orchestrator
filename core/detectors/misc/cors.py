@@ -5,7 +5,7 @@ CORS 配置检测器
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urlparse
 
 from ..base import BaseDetector
@@ -326,4 +326,4 @@ class CORSDetector(BaseDetector):
 
     def get_payloads(self) -> List[str]:
         """获取检测器使用的 payload 列表"""
-        return self.test_origins
+        return cast(List[str], self.test_origins)

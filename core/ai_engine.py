@@ -205,7 +205,7 @@ class AIDecisionEngine:
         self, target: str, target_type: str, context: Dict[str, Any]
     ) -> Dict[str, Any]:
         """分析攻击面"""
-        surface = {"entry_points": [], "potential_weaknesses": [], "hardening_indicators": []}
+        surface: Dict[str, Any] = {"entry_points": [], "potential_weaknesses": [], "hardening_indicators": []}
 
         if target_type == "ip":
             surface["entry_points"] = ["开放端口", "运行服务", "管理接口"]

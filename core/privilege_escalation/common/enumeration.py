@@ -618,7 +618,7 @@ class PrivilegeEnumerator:
 
     def _check_service_permissions(self) -> List[Dict[str, Any]]:
         """检查服务权限配置"""
-        vectors = []
+        vectors: List[Dict[str, Any]] = []
 
         # 此处实现服务权限检查逻辑
         # 省略详细实现

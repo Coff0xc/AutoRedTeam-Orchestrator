@@ -357,11 +357,11 @@ def circuit_breaker(
 
         @functools.wraps(fn)
         def sync_wrapper(*args: Any, **kwargs: Any) -> T:
-            return breaker.call(fn, *args, **kwargs)
+            return cast(T, breaker.call(fn, *args, **kwargs))
 
         @functools.wraps(fn)
         async def async_wrapper(*args: Any, **kwargs: Any) -> T:
-            return await breaker.async_call(fn, *args, **kwargs)
+            return cast(T, await breaker.async_call(fn, *args, **kwargs))
 
         # 保存熔断器引用以便外部访问
         wrapper = async_wrapper if asyncio.iscoroutinefunction(fn) else sync_wrapper

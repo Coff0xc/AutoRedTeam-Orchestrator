@@ -215,7 +215,7 @@ class KerberosClient:
         if value == 0:
             return bytes([tag, 1, 0])
 
-        result = []
+        result: List[int] = []
         temp = value
         while temp > 0:
             result.insert(0, temp & 0xFF)
@@ -583,7 +583,7 @@ class KerberosAttacker:
         Returns:
             AttackResult包含有效凭证
         """
-        valid_creds = []
+        valid_creds: List[str] = []
 
         self._log(f"Password spraying {len(usernames)} users with password: {password[:2]}***")
 

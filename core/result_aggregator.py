@@ -121,12 +121,12 @@ class ResultAggregator:
             }
 
         # 按严重程度统计
-        by_severity = defaultdict(int)
+        by_severity: defaultdict[str, int] = defaultdict(int)
         for r in self.results:
             by_severity[r.severity] += 1
 
         # 按类型统计
-        by_type = defaultdict(int)
+        by_type: defaultdict[str, int] = defaultdict(int)
         for r in self.results:
             by_type[r.vuln_type] += 1
 

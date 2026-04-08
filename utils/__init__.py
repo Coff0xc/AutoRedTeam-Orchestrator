@@ -2,454 +2,218 @@
 """
 AutoRedTeam-Orchestrator 工具函数层
 
-提供统一的工具函数接口，包括：
-- logger: 日志系统
-- config: 配置管理
-- validators: 输入验证
-- encoding: 编码工具
-- crypto: 加密工具
-- file_utils: 文件操作
-- net_utils: 网络工具
-- async_utils: 异步工具
-- decorators: 装饰器集合
+提供统一的工具函数接口。所有导入采用惰性加载 (lazy import),
+避免 `import utils` 时产生不必要的副作用。
 
 使用示例:
-    from utils import (
-        get_logger, logger,
-        get_config,
-        validate_url, validate_ip,
-        base64_encode, url_encode,
-        md5, sha256, random_string,
-        safe_write, safe_read, temp_file,
-        is_port_open, resolve_hostname,
-        run_sync, gather_with_limit,
-        timer, retry, cache, rate_limit
-    )
+    from utils import validate_url, md5, safe_write
+    from utils import get_logger, logger
 """
 
-# =============================================================================
-# Async Utils - 异步工具
-# =============================================================================
-from utils.async_utils import (
-    AsyncBatcher,
-    AsyncThrottle,
-    async_filter,
-    async_first,
-    async_map,
-    async_race,
-)
-from utils.async_utils import async_retry as async_retry_util
-from utils.async_utils import (
-    ensure_async,
-    ensure_sync,
-    gather_with_limit,
-    run_in_executor,
-    run_sync,
-    timeout_wrapper,
-)
+from __future__ import annotations
 
-# =============================================================================
-# Config - 配置管理
-# =============================================================================
-from utils.config import (
-    GlobalConfig,
-    get_config,
-    get_config_value,
-    reload_config,
-    set_config,
-)
-
-# =============================================================================
-# Crypto - 加密工具
-# =============================================================================
-from utils.crypto import (
-    blake2b,
-    blake2s,
-    caesar_cipher,
-    hash_file,
-    hmac_md5,
-    hmac_sha1,
-    hmac_sha256,
-    hmac_sha512,
-    md5,
-    password_strength,
-    random_bytes,
-    random_hex,
-    random_int,
-    random_string,
-    random_token,
-    random_uuid,
-    rolling_xor,
-    sha1,
-    sha256,
-    sha384,
-    sha512,
-    single_byte_xor,
-    verify_hmac,
-    vigenere_cipher,
-    xor_encrypt,
-    xor_encrypt_str,
-)
-
-# =============================================================================
-# Decorators - 装饰器集合
-# =============================================================================
-from utils.decorators import (
-    async_retry,
-    async_timer,
-    cache,
-    cache_result,
-    deprecated,
-    log_execution,
-    measure_time,
-    memoize,
-    rate_limit,
-    retry,
-    safe_execute,
-    singleton,
-    synchronized,
-    timer,
-    validate_args,
-)
-
-# =============================================================================
-# Encoding - 编码工具
-# =============================================================================
-from utils.encoding import (
-    MultiEncoder,
-    ascii_decode,
-    ascii_encode,
-    base64_decode,
-    base64_decode_str,
-    base64_encode,
-    base64_url_decode,
-    base64_url_encode,
-    binary_decode,
-    binary_encode,
-    double_url_encode,
-    hex_decode,
-    hex_decode_str,
-    hex_encode,
-    html_decode,
-    html_encode,
-    html_encode_all,
-    html_encode_hex,
-    multi_encode,
-    octal_encode,
-    rot13,
-    unicode_decode,
-    unicode_encode,
-    unicode_encode_wide,
-    url_decode,
-    url_decode_plus,
-    url_encode,
-    url_encode_all,
-    url_encode_plus,
-)
-
-# =============================================================================
-# File Utils - 文件操作
-# =============================================================================
-from utils.file_utils import (
-    copy_file,
-    create_temp_dir,
-    create_temp_file,
-    delete_dir,
-    delete_file,
-    ensure_dir,
-    file_info,
-    find_files,
-    get_project_root,
-    get_temp_dir,
-    iter_dirs,
-    iter_files,
-    move_file,
-    safe_read,
-    safe_read_bytes,
-    safe_read_json,
-    safe_write,
-    safe_write_json,
-    temp_dir,
-    temp_file,
-)
-
-# =============================================================================
-# Logger - 日志系统
-# =============================================================================
-from utils.logger import (
-    ColoredFormatter,
-    SecureFileHandler,
-    add_file_handler,
-    get_logger,
-    logger,
-    set_log_level,
-    setup_logger,
-)
-
-# =============================================================================
-# Net Utils - 网络工具
-# =============================================================================
-from utils.net_utils import (
-    cidr_to_hosts,
-    extract_domain,
-    extract_root_domain,
-    get_all_local_ips,
-    get_fqdn,
-    get_hostname,
-    get_local_ip,
-    get_service_banner,
-    ip_in_network,
-    is_loopback_ip,
-    is_port_open,
-    is_private_ip,
-    is_reserved_ip,
-    is_valid_mac,
-    normalize_url,
-    parse_port_range,
-    parse_target,
-    resolve_hostname,
-    reverse_dns,
-    scan_ports,
-)
-
-# =============================================================================
-# 向后兼容导入
-# =============================================================================
-# 保持与旧版本的兼容性
-from utils.report_generator import ReportGenerator
-
-# =============================================================================
-# Responses - 统一响应格式化
-# =============================================================================
-from utils.responses import error as resp_error
-from utils.responses import import_error as resp_import_error
-from utils.responses import success as resp_success
-from utils.responses import tool_not_found as resp_tool_not_found
-from utils.responses import validation_error as resp_validation_error
-from utils.scan_monitor import (
-    ScanStatus,
-    ScanTask,
-    cancel_scan,
-    get_scan_status,
-    list_running_scans,
-    run_monitored_scan,
-    scan_monitor,
-)
-from utils.terminal_output import TerminalLogger, run_with_realtime_output, terminal
-
-# =============================================================================
-# Tool Checker - 工具可用性检查（带缓存）
-# =============================================================================
-from utils.tool_checker import ToolChecker
-
-# =============================================================================
-# Validators - 输入验证
-# =============================================================================
-from utils.validators import (
-    InputValidator,
-    ValidationError,
-    sanitize_command,
-    sanitize_filename,
-    sanitize_path,
-    validate_and_raise,
-    validate_cidr,
-    validate_domain,
-    validate_email,
-    validate_ip,
-    validate_ipv4,
-    validate_ipv6,
-    validate_port,
-    validate_port_range,
-    validate_url,
-)
-
-# =============================================================================
-# 公共导出
-# =============================================================================
-__all__ = [
-    # Logger
-    "get_logger",
-    "setup_logger",
-    "set_log_level",
-    "add_file_handler",
-    "logger",
-    "ColoredFormatter",
-    "SecureFileHandler",
-    # Config
-    "GlobalConfig",
-    "get_config",
-    "set_config",
-    "reload_config",
-    "get_config_value",
-    # Validators
-    "ValidationError",
-    "validate_url",
-    "validate_ip",
-    "validate_ipv4",
-    "validate_ipv6",
-    "validate_cidr",
-    "validate_port",
-    "validate_port_range",
-    "validate_domain",
-    "validate_email",
-    "sanitize_path",
-    "sanitize_command",
-    "sanitize_filename",
-    "InputValidator",
-    "validate_and_raise",
-    # Encoding
-    "base64_encode",
-    "base64_decode",
-    "base64_decode_str",
-    "base64_url_encode",
-    "base64_url_decode",
-    "hex_encode",
-    "hex_decode",
-    "hex_decode_str",
-    "url_encode",
-    "url_decode",
-    "url_encode_plus",
-    "url_decode_plus",
-    "url_encode_all",
-    "double_url_encode",
-    "html_encode",
-    "html_decode",
-    "html_encode_all",
-    "html_encode_hex",
-    "unicode_encode",
-    "unicode_decode",
-    "unicode_encode_wide",
-    "rot13",
-    "binary_encode",
-    "binary_decode",
-    "octal_encode",
-    "ascii_encode",
-    "ascii_decode",
-    "MultiEncoder",
-    "multi_encode",
-    # Crypto
-    "md5",
-    "sha1",
-    "sha256",
-    "sha384",
-    "sha512",
-    "blake2b",
-    "blake2s",
-    "hash_file",
-    "hmac_md5",
-    "hmac_sha1",
-    "hmac_sha256",
-    "hmac_sha512",
-    "verify_hmac",
-    "random_string",
-    "random_bytes",
-    "random_hex",
-    "random_int",
-    "random_uuid",
-    "random_token",
-    "xor_encrypt",
-    "xor_encrypt_str",
-    "single_byte_xor",
-    "rolling_xor",
-    "caesar_cipher",
-    "vigenere_cipher",
-    "password_strength",
-    # File Utils
-    "ensure_dir",
-    "safe_write",
-    "safe_read",
-    "safe_read_bytes",
-    "safe_read_json",
-    "safe_write_json",
-    "temp_file",
-    "temp_dir",
-    "create_temp_file",
-    "create_temp_dir",
-    "iter_files",
-    "iter_dirs",
-    "copy_file",
-    "move_file",
-    "delete_file",
-    "delete_dir",
-    "file_info",
-    "find_files",
-    "get_project_root",
-    "get_temp_dir",
-    # Net Utils
-    "is_port_open",
-    "scan_ports",
-    "resolve_hostname",
-    "reverse_dns",
-    "get_local_ip",
-    "get_all_local_ips",
-    "get_hostname",
-    "get_fqdn",
-    "parse_target",
-    "cidr_to_hosts",
-    "ip_in_network",
-    "is_private_ip",
-    "is_reserved_ip",
-    "is_loopback_ip",
-    "parse_port_range",
-    "normalize_url",
-    "extract_domain",
-    "extract_root_domain",
-    "get_service_banner",
-    "is_valid_mac",
-    # Async Utils
-    "run_sync",
-    "ensure_async",
-    "ensure_sync",
-    "gather_with_limit",
-    "timeout_wrapper",
-    "async_retry_util",
-    "run_in_executor",
-    "async_map",
-    "async_filter",
-    "AsyncThrottle",
-    "AsyncBatcher",
-    "async_first",
-    "async_race",
-    # Decorators
-    "timer",
-    "async_timer",
-    "retry",
-    "async_retry",
-    "cache",
-    "deprecated",
-    "synchronized",
-    "rate_limit",
-    "log_execution",
-    "safe_execute",
-    "singleton",
-    "validate_args",
-    "memoize",
-    "measure_time",
-    "cache_result",
-    # 向后兼容
-    "ReportGenerator",
-    "terminal",
-    "TerminalLogger",
-    "run_with_realtime_output",
-    "scan_monitor",
-    "run_monitored_scan",
-    "get_scan_status",
-    "cancel_scan",
-    "list_running_scans",
-    "ScanStatus",
-    "ScanTask",
-    # Responses - 统一响应格式化
-    "resp_success",
-    "resp_error",
-    "resp_tool_not_found",
-    "resp_validation_error",
-    "resp_import_error",
-    # Tool Checker - 工具检查
-    "ToolChecker",
-]
-
-# =============================================================================
-# 版本信息
-# =============================================================================
 __version__ = "3.0.2"
 __author__ = "AutoRedTeam"
+
+# ── 惰性导入映射: attr_name → (module_path, original_name | None) ──
+
+_LAZY_IMPORTS: dict[str, tuple[str, str | None]] = {
+    # Logger
+    "get_logger": ("utils.logger", None),
+    "setup_logger": ("utils.logger", None),
+    "set_log_level": ("utils.logger", None),
+    "add_file_handler": ("utils.logger", None),
+    "logger": ("utils.logger", None),
+    "configure_root_logger": ("utils.logger", None),
+    "ColoredFormatter": ("utils.logger", None),
+    "SecureFileHandler": ("utils.logger", None),
+    # Config
+    "GlobalConfig": ("utils.config", None),
+    "get_config": ("utils.config", None),
+    "set_config": ("utils.config", None),
+    "reload_config": ("utils.config", None),
+    "get_config_value": ("utils.config", None),
+    # Validators
+    "ValidationError": ("utils.validators", None),
+    "validate_url": ("utils.validators", None),
+    "validate_ip": ("utils.validators", None),
+    "validate_ipv4": ("utils.validators", None),
+    "validate_ipv6": ("utils.validators", None),
+    "validate_cidr": ("utils.validators", None),
+    "validate_port": ("utils.validators", None),
+    "validate_port_range": ("utils.validators", None),
+    "validate_domain": ("utils.validators", None),
+    "validate_email": ("utils.validators", None),
+    "sanitize_path": ("utils.validators", None),
+    "sanitize_command": ("utils.validators", None),
+    "sanitize_filename": ("utils.validators", None),
+    "InputValidator": ("utils.validators", None),
+    "validate_and_raise": ("utils.validators", None),
+    # Encoding
+    "base64_encode": ("utils.encoding", None),
+    "base64_decode": ("utils.encoding", None),
+    "base64_decode_str": ("utils.encoding", None),
+    "base64_url_encode": ("utils.encoding", None),
+    "base64_url_decode": ("utils.encoding", None),
+    "hex_encode": ("utils.encoding", None),
+    "hex_decode": ("utils.encoding", None),
+    "hex_decode_str": ("utils.encoding", None),
+    "url_encode": ("utils.encoding", None),
+    "url_decode": ("utils.encoding", None),
+    "url_encode_plus": ("utils.encoding", None),
+    "url_decode_plus": ("utils.encoding", None),
+    "url_encode_all": ("utils.encoding", None),
+    "double_url_encode": ("utils.encoding", None),
+    "html_encode": ("utils.encoding", None),
+    "html_decode": ("utils.encoding", None),
+    "html_encode_all": ("utils.encoding", None),
+    "html_encode_hex": ("utils.encoding", None),
+    "unicode_encode": ("utils.encoding", None),
+    "unicode_decode": ("utils.encoding", None),
+    "unicode_encode_wide": ("utils.encoding", None),
+    "rot13": ("utils.encoding", None),
+    "binary_encode": ("utils.encoding", None),
+    "binary_decode": ("utils.encoding", None),
+    "octal_encode": ("utils.encoding", None),
+    "ascii_encode": ("utils.encoding", None),
+    "ascii_decode": ("utils.encoding", None),
+    "MultiEncoder": ("utils.encoding", None),
+    "multi_encode": ("utils.encoding", None),
+    # Crypto
+    "md5": ("utils.crypto", None),
+    "sha1": ("utils.crypto", None),
+    "sha256": ("utils.crypto", None),
+    "sha384": ("utils.crypto", None),
+    "sha512": ("utils.crypto", None),
+    "blake2b": ("utils.crypto", None),
+    "blake2s": ("utils.crypto", None),
+    "hash_file": ("utils.crypto", None),
+    "hmac_md5": ("utils.crypto", None),
+    "hmac_sha1": ("utils.crypto", None),
+    "hmac_sha256": ("utils.crypto", None),
+    "hmac_sha512": ("utils.crypto", None),
+    "verify_hmac": ("utils.crypto", None),
+    "random_string": ("utils.crypto", None),
+    "random_bytes": ("utils.crypto", None),
+    "random_hex": ("utils.crypto", None),
+    "random_int": ("utils.crypto", None),
+    "random_uuid": ("utils.crypto", None),
+    "random_token": ("utils.crypto", None),
+    "xor_encrypt": ("utils.crypto", None),
+    "xor_encrypt_str": ("utils.crypto", None),
+    "single_byte_xor": ("utils.crypto", None),
+    "rolling_xor": ("utils.crypto", None),
+    "caesar_cipher": ("utils.crypto", None),
+    "vigenere_cipher": ("utils.crypto", None),
+    "password_strength": ("utils.crypto", None),
+    # File Utils
+    "ensure_dir": ("utils.file_utils", None),
+    "safe_write": ("utils.file_utils", None),
+    "safe_read": ("utils.file_utils", None),
+    "safe_read_bytes": ("utils.file_utils", None),
+    "safe_read_json": ("utils.file_utils", None),
+    "safe_write_json": ("utils.file_utils", None),
+    "temp_file": ("utils.file_utils", None),
+    "temp_dir": ("utils.file_utils", None),
+    "create_temp_file": ("utils.file_utils", None),
+    "create_temp_dir": ("utils.file_utils", None),
+    "iter_files": ("utils.file_utils", None),
+    "iter_dirs": ("utils.file_utils", None),
+    "copy_file": ("utils.file_utils", None),
+    "move_file": ("utils.file_utils", None),
+    "delete_file": ("utils.file_utils", None),
+    "delete_dir": ("utils.file_utils", None),
+    "file_info": ("utils.file_utils", None),
+    "find_files": ("utils.file_utils", None),
+    "get_project_root": ("utils.file_utils", None),
+    "get_temp_dir": ("utils.file_utils", None),
+    # Net Utils
+    "is_port_open": ("utils.net_utils", None),
+    "scan_ports": ("utils.net_utils", None),
+    "resolve_hostname": ("utils.net_utils", None),
+    "reverse_dns": ("utils.net_utils", None),
+    "get_local_ip": ("utils.net_utils", None),
+    "get_all_local_ips": ("utils.net_utils", None),
+    "get_hostname": ("utils.net_utils", None),
+    "get_fqdn": ("utils.net_utils", None),
+    "parse_target": ("utils.net_utils", None),
+    "cidr_to_hosts": ("utils.net_utils", None),
+    "ip_in_network": ("utils.net_utils", None),
+    "is_private_ip": ("utils.net_utils", None),
+    "is_reserved_ip": ("utils.net_utils", None),
+    "is_loopback_ip": ("utils.net_utils", None),
+    "parse_port_range": ("utils.net_utils", None),
+    "normalize_url": ("utils.net_utils", None),
+    "extract_domain": ("utils.net_utils", None),
+    "extract_root_domain": ("utils.net_utils", None),
+    "get_service_banner": ("utils.net_utils", None),
+    "is_valid_mac": ("utils.net_utils", None),
+    # Async Utils
+    "run_sync": ("utils.async_utils", None),
+    "ensure_async": ("utils.async_utils", None),
+    "ensure_sync": ("utils.async_utils", None),
+    "gather_with_limit": ("utils.async_utils", None),
+    "timeout_wrapper": ("utils.async_utils", None),
+    "async_retry_util": ("utils.async_utils", "async_retry"),
+    "run_in_executor": ("utils.async_utils", None),
+    "async_map": ("utils.async_utils", None),
+    "async_filter": ("utils.async_utils", None),
+    "AsyncThrottle": ("utils.async_utils", None),
+    "AsyncBatcher": ("utils.async_utils", None),
+    "async_first": ("utils.async_utils", None),
+    "async_race": ("utils.async_utils", None),
+    # Decorators
+    "timer": ("utils.decorators", None),
+    "async_timer": ("utils.decorators", None),
+    "retry": ("utils.decorators", None),
+    "async_retry": ("utils.decorators", None),
+    "cache": ("utils.decorators", None),
+    "deprecated": ("utils.decorators", None),
+    "synchronized": ("utils.decorators", None),
+    "rate_limit": ("utils.decorators", None),
+    "log_execution": ("utils.decorators", None),
+    "safe_execute": ("utils.decorators", None),
+    "singleton": ("utils.decorators", None),
+    "validate_args": ("utils.decorators", None),
+    "memoize": ("utils.decorators", None),
+    "measure_time": ("utils.decorators", None),
+    "cache_result": ("utils.decorators", None),
+    # Report
+    "ReportGenerator": ("utils.report_generator", None),
+    # Terminal
+    "terminal": ("utils.terminal_output", None),
+    "TerminalLogger": ("utils.terminal_output", None),
+    "run_with_realtime_output": ("utils.terminal_output", None),
+    # Scan Monitor
+    "scan_monitor": ("utils.scan_monitor", None),
+    "run_monitored_scan": ("utils.scan_monitor", None),
+    "get_scan_status": ("utils.scan_monitor", None),
+    "cancel_scan": ("utils.scan_monitor", None),
+    "list_running_scans": ("utils.scan_monitor", None),
+    "ScanStatus": ("utils.scan_monitor", None),
+    "ScanTask": ("utils.scan_monitor", None),
+    # Responses
+    "resp_success": ("utils.responses", "success"),
+    "resp_error": ("utils.responses", "error"),
+    "resp_tool_not_found": ("utils.responses", "tool_not_found"),
+    "resp_validation_error": ("utils.responses", "validation_error"),
+    "resp_import_error": ("utils.responses", "import_error"),
+    # Tool Checker
+    "ToolChecker": ("utils.tool_checker", None),
+}
+
+__all__ = list(_LAZY_IMPORTS.keys())
+
+
+def __getattr__(name: str):
+    """惰性加载: 仅在首次访问属性时才导入对应模块"""
+    if name in _LAZY_IMPORTS:
+        module_path, original_name = _LAZY_IMPORTS[name]
+        import importlib
+
+        mod = importlib.import_module(module_path)
+        attr = getattr(mod, original_name or name)
+        # 缓存到模块命名空间, 后续访问不再经过 __getattr__
+        globals()[name] = attr
+        return attr
+    raise AttributeError(f"module 'utils' has no attribute {name!r}")

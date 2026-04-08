@@ -65,7 +65,7 @@ def patch_mcp_tool(mcp) -> Callable[..., Any]:
     tool_wrapper._tool_result_patched = True  # type: ignore[attr-defined]
     tool_wrapper._original_tool = original_tool  # type: ignore[attr-defined]
     mcp.tool = tool_wrapper
-    return original_tool
+    return cast(Callable[..., Any], original_tool)
 
 
 def restore_mcp_tool(mcp, original_tool: Callable[..., Any]) -> None:

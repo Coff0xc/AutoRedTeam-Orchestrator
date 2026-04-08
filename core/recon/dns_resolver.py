@@ -158,6 +158,20 @@ class DNSResolver:
 
         self._logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
+    @staticmethod
+    def _validate_domain(domain: str) -> None:
+        """验证域名格式 (defense-in-depth)"""
+        import re
+
+        if not domain or len(domain) > 253:
+            raise ValueError("域名长度无效: %s" % domain[:50])
+        pattern = (
+            r"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?"
+            r"(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$"
+        )
+        if not re.match(pattern, domain):
+            raise ValueError("域名格式无效: %s" % domain[:50])
+
     def resolve(self, hostname: str) -> List[str]:
         """解析域名到IP地址（A记录）
 
@@ -308,6 +322,8 @@ class DNSResolver:
         results: List[Tuple[int, str]] = []
 
         try:
+            self._validate_domain(domain)
+
             if platform.system() == "Windows":
                 cmd = ["nslookup", "-type=mx", domain]
             else:
@@ -350,6 +366,8 @@ class DNSResolver:
         results: List[str] = []
 
         try:
+            self._validate_domain(domain)
+
             if platform.system() == "Windows":
                 cmd = ["nslookup", "-type=ns", domain]
             else:
@@ -383,6 +401,8 @@ class DNSResolver:
         results: List[str] = []
 
         try:
+            self._validate_domain(domain)
+
             if platform.system() == "Windows":
                 cmd = ["nslookup", "-type=txt", domain]
             else:
