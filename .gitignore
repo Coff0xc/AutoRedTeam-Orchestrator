@@ -70,3 +70,11 @@ data/admin_key.txt
 # 密钥文件
 .master_key
 .claude-audit-*.md
+
+# IDE
+.vscode/
+.idea/
+
+# Claude audit artifacts
+.claude-audit*
+.claude-security*
