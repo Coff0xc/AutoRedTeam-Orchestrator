@@ -35,6 +35,7 @@ from .models import (
     ToolsConfig,
     WordlistsConfig,
 )
+from core.sandbox.config import SandboxConfig
 
 __all__ = [
     # 加载器
@@ -65,4 +66,5 @@ __all__ = [
     "ReportingConfig",
     "ToolsConfig",
     "ScanningConfig",
+    "SandboxConfig",
 ]

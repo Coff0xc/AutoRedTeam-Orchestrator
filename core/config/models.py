@@ -22,6 +22,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
+from core.sandbox.config import SandboxConfig  # noqa: E402 — 沙箱配置
+
 
 # ---------------------------------------------------------------------------
 # 子模型
@@ -286,6 +288,9 @@ class AutoRTConfig(BaseModel):
     reporting: ReportingConfig = Field(default_factory=ReportingConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
     scanning: ScanningConfig = Field(default_factory=ScanningConfig)
+
+    # 沙箱隔离
+    sandbox: SandboxConfig = Field(default_factory=SandboxConfig)
 
     # API 密钥 (独立存储)
     api_keys: Dict[str, str] = Field(default_factory=dict)
