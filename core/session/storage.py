@@ -141,10 +141,10 @@ class SessionStorage:
             with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
-            # 原子性替换（Windows 需要先删除目标文件）
-            if filepath.exists():
-                filepath.unlink()
-            temp_path.rename(filepath)
+            # 原子性替换 — os.replace 在所有平台上都是原子操作
+            import os
+
+            os.replace(str(temp_path), str(filepath))
 
             logger.debug("会话上下文已保存: %s", filepath)
             return filepath

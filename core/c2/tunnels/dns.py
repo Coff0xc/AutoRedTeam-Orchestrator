@@ -248,12 +248,15 @@ class DNSTunnel(BaseTunnel):
             self._resolver.resolve(query_name, "A")
             return True
         except dns.resolver.NXDOMAIN:
-            # 预期的响应 - 数据已发送
+            # NXDOMAIN = 服务器收到了查询 (数据已到达权威 DNS)
             return True
         except dns.resolver.NoAnswer:
+            # NoAnswer = 服务器收到查询但无 A 记录 (数据仍然到达了)
             return True
         except dns.resolver.Timeout:
-            return True
+            # Timeout = 数据可能未到达, 标记为失败以触发重传
+            logger.warning("DNS tunnel 超时, 数据可能未送达: %s", query_name[:50])
+            return False
         except Exception as e:
             logger.debug("DNS query failed: %s", e)
             return False
