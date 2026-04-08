@@ -57,11 +57,32 @@ class LocalExecutor:
             CommandResult
         """
         effective_timeout = timeout if timeout is not None else self._config.timeout
-        # 使用当前 Python 解释器路径，保证跨平台兼容
-        escaped = script.replace("'", "'\\''")
-        cmd = '%s -c "%s"' % (sys.executable, script.replace('"', '\\"'))
         logger.info("本地执行 Python 脚本, 长度=%d", len(script))
-        return self._execute(cmd, timeout=effective_timeout)
+        # 直接传 list 避免 shell 注入
+        start_time = time.monotonic()
+        try:
+            proc = subprocess.run(
+                [sys.executable, "-c", script],
+                shell=False,
+                capture_output=True,
+                text=True,
+                timeout=effective_timeout,
+            )
+            duration = time.monotonic() - start_time
+            return CommandResult(
+                stdout=proc.stdout,
+                stderr=proc.stderr,
+                exit_code=proc.returncode,
+                duration=duration,
+            )
+        except subprocess.TimeoutExpired:
+            duration = time.monotonic() - start_time
+            return CommandResult(
+                stdout="", stderr="Python 脚本执行超时", exit_code=-1, duration=duration,
+            )
+        except Exception as e:
+            duration = time.monotonic() - start_time
+            return CommandResult(stdout="", stderr=str(e), exit_code=-1, duration=duration)
 
     def run_tool(
         self,
@@ -83,9 +104,32 @@ class LocalExecutor:
         parts = [tool_name]
         if args:
             parts.extend(args)
-        cmd = " ".join(parts)
         logger.info("本地执行工具: %s, 参数: %s", tool_name, args)
-        return self._execute(cmd, timeout=effective_timeout)
+        # 直接传 list 避免 shell 注入
+        start_time = time.monotonic()
+        try:
+            proc = subprocess.run(
+                parts,
+                shell=False,
+                capture_output=True,
+                text=True,
+                timeout=effective_timeout,
+            )
+            duration = time.monotonic() - start_time
+            return CommandResult(
+                stdout=proc.stdout,
+                stderr=proc.stderr,
+                exit_code=proc.returncode,
+                duration=duration,
+            )
+        except subprocess.TimeoutExpired:
+            duration = time.monotonic() - start_time
+            return CommandResult(
+                stdout="", stderr="工具执行超时", exit_code=-1, duration=duration,
+            )
+        except Exception as e:
+            duration = time.monotonic() - start_time
+            return CommandResult(stdout="", stderr=str(e), exit_code=-1, duration=duration)
 
     @staticmethod
     def _execute(cmd: str, timeout: int) -> CommandResult:
