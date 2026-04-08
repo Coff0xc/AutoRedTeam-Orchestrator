@@ -194,6 +194,13 @@ class XSSDetector(BaseDetector):
         results = []
         tested_payloads: Set[str] = set()
 
+        # 获取基线响应 — 用于排除页面自身已有的标签 (降低部分反射误报)
+        try:
+            baseline_resp = self.http_client.get(url, params=params, headers=headers)
+            self._baseline_body = baseline_resp.text if baseline_resp else ""
+        except Exception:
+            self._baseline_body = ""
+
         for param_name, original_value in params.items():
             # 跳过安全相关参数
             if self._should_skip_param(param_name):
@@ -376,9 +383,14 @@ class XSSDetector(BaseDetector):
                 return ("pattern", match.group(0)[:200])
 
         # 检查部分反射（payload 特征字符）
+        # 必须排除基线响应中已存在的标签，否则 <script> 等页面自身标签导致误报
         dangerous_chars = ["<script", "<img", "<svg", "onerror=", "onload=", "javascript:"]
+        baseline_lower = self._baseline_body.lower() if hasattr(self, "_baseline_body") and self._baseline_body else ""
         for char in dangerous_chars:
             if char in payload.lower() and char in response_text.lower():
+                # 关键: 如果基线中已包含此标签，不算反射
+                if char in baseline_lower:
+                    continue
                 idx = response_text.lower().find(char)
                 start = max(0, idx - 30)
                 end = min(len(response_text), idx + 80)
