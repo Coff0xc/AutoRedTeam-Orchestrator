@@ -52,6 +52,12 @@ from .loader import (
     reload_payloads,
 )
 
+# JSON Payload DB (延迟加载)
+from .loader import (
+    PayloadDB,
+    get_payload_db,
+)
+
 # 变异器
 from .mutator import (
     MUTATION_DESCRIPTIONS,
@@ -138,6 +144,9 @@ __all__ = [
     "load_payloads",
     "get_payload_list",
     "reload_payloads",
+    # JSON Payload DB
+    "PayloadDB",
+    "get_payload_db",
 ]
 
 __version__ = "2.0.0"

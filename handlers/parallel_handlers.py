@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from core.security import require_dangerous_auth
 
-from .error_handling import ErrorCategory, extract_target, handle_errors
+from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
 from .tooling import tool
 
 
@@ -24,6 +24,7 @@ def register_parallel_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_dangerous_auth
+    @validate_inputs(target="urls")
     @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_target)
     async def parallel_scan(
         urls: List[str],

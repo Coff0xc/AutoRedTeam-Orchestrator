@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional
 # 授权中间件
 from core.security import require_critical_auth
 
-from .error_handling import ErrorCategory, handle_errors
+from .error_handling import ErrorCategory, handle_errors, validate_inputs
 from .tooling import tool
 
 
@@ -32,6 +32,7 @@ def register_ad_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_critical_auth
+    @validate_inputs(target="dc_ip")
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def ad_enumerate(
         domain: str,
@@ -114,6 +115,7 @@ def register_ad_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_critical_auth
+    @validate_inputs(target="dc_ip")
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def ad_kerberos_attack(
         domain: str,
@@ -194,6 +196,7 @@ def register_ad_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_critical_auth
+    @validate_inputs(target="dc_ip")
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def ad_spn_scan(
         domain: str,

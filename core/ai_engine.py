@@ -12,7 +12,79 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel, Field, ValidationError
+
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# LLM 输出 Pydantic Schema — 防止 Prompt 注入 / 格式异常
+# ---------------------------------------------------------------------------
+
+
+class LLMAttackSuggestion(BaseModel):
+    """LLM返回的攻击建议 — Pydantic schema 验证，防止 Prompt 注入"""
+
+    attack_type: str = Field(..., max_length=100)
+    tool_name: str = Field(..., max_length=100)
+    priority: str = Field(..., pattern=r"^(critical|high|medium|low|info)$")
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    reason: str = Field(..., max_length=500)
+    params: dict = Field(default_factory=dict)
+
+
+class LLMAnalysisResponse(BaseModel):
+    """LLM分析响应的标准 schema"""
+
+    suggestions: List[LLMAttackSuggestion] = Field(default_factory=list, max_length=20)
+    risk_assessment: Optional[str] = Field(None, max_length=1000)
+
+
+def _parse_llm_json(raw: str) -> Optional[Dict[str, Any]]:
+    """从 LLM 原始文本中提取 JSON 块并返回 dict，解析失败返回 None
+
+    支持 ```json ... ``` 包裹和裸 JSON。
+    """
+    text = raw.strip()
+    # 处理 ```json ... ``` 格式
+    if "```json" in text:
+        try:
+            start = text.index("```json") + 7
+            end = text.index("```", start)
+            text = text[start:end].strip()
+        except ValueError:
+            pass
+    elif "```" in text:
+        try:
+            start = text.index("```") + 3
+            end = text.index("```", start)
+            text = text[start:end].strip()
+        except ValueError:
+            pass
+    try:
+        return json.loads(text)
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+
+def validate_llm_response(raw_text: str) -> Optional[LLMAnalysisResponse]:
+    """验证 LLM 返回文本是否符合 LLMAnalysisResponse schema
+
+    Args:
+        raw_text: LLM 原始响应文本
+
+    Returns:
+        验证通过的 LLMAnalysisResponse，失败返回 None
+    """
+    parsed = _parse_llm_json(raw_text)
+    if parsed is None:
+        logger.warning("LLM 响应 JSON 解析失败，将回退到本地规则引擎")
+        return None
+    try:
+        return LLMAnalysisResponse.model_validate(parsed)
+    except ValidationError as e:
+        logger.warning("LLM 响应 schema 验证失败: %s，将回退到本地规则引擎", e)
+        return None
 
 
 class RiskLevel(Enum):
@@ -650,7 +722,7 @@ class AIDecisionEngine:
         return text[:max_length]
 
     def _ai_enhance_analysis(self, target: str, context: Dict, analysis: Dict) -> Dict[str, Any]:
-        """AI增强分析"""
+        """AI增强分析 — 通过 Pydantic schema 验证 LLM 输出，防止 Prompt 注入"""
         client = self._get_client()
 
         # 清理输入防止 prompt 注入（基础防护: 控制字符/换行/截断）
@@ -662,20 +734,30 @@ class AIDecisionEngine:
         )
         analysis_type = self._sanitize_input(str(analysis.get("type", "")), max_length=50)
 
-        prompt = f"""作为红队安全专家,分析以下目标并提供深度见解:
+        prompt = f"""作为红队安全专家,分析以下目标并提供攻击建议。
 
 目标: {safe_target}
 类型: {analysis_type}
 上下文: {safe_context}
 
-请严格按以下格式提供安全分析（仅回答安全相关内容）:
-1. 潜在的高价值攻击路径
-2. 可能被忽略的攻击面
-3. 特定于该目标类型的高级攻击技术
-4. OPSEC建议
+请严格以以下 JSON schema 返回结果（不要添加任何额外字段）:
+{{
+  "suggestions": [
+    {{
+      "attack_type": "攻击类型 (max 100字符)",
+      "tool_name": "推荐工具名 (max 100字符)",
+      "priority": "critical|high|medium|low|info",
+      "confidence": 0.0-1.0,
+      "reason": "推荐理由 (max 500字符)",
+      "params": {{}}
+    }}
+  ],
+  "risk_assessment": "整体风险评估 (max 1000字符)"
+}}
 
-以JSON格式返回结果。"""
+仅回答安全相关内容，以纯 JSON 格式返回。"""
 
+        raw_text: Optional[str] = None
         try:
             if self.provider == "openai":
                 response = client.chat.completions.create(
@@ -683,14 +765,14 @@ class AIDecisionEngine:
                     messages=[
                         {
                             "role": "system",
-                            "content": "你是一个安全分析助手，只回答与网络安全分析相关的问题。",
+                            "content": "你是一个安全分析助手，只回答与网络安全分析相关的问题。以纯JSON格式回答。",
                         },
                         {"role": "user", "content": prompt},
                     ],
                     temperature=0.3,
                     timeout=30,
                 )
-                return {"insights": response.choices[0].message.content}
+                raw_text = response.choices[0].message.content
             elif self.provider == "anthropic":
                 response = client.messages.create(
                     model=self.model,
@@ -698,12 +780,72 @@ class AIDecisionEngine:
                     messages=[{"role": "user", "content": prompt}],
                     timeout=30,
                 )
-                return {"insights": response.content[0].text}
+                raw_text = response.content[0].text
         except Exception as e:
             logger.error("AI调用失败: %s", e)
             return {"error": str(e)}
 
-        return {}
+        if not raw_text:
+            return {}
+
+        # 通过 Pydantic schema 验证 LLM 输出
+        validated = validate_llm_response(raw_text)
+        if validated is not None:
+            return {
+                "insights": validated.model_dump(),
+                "validated": True,
+            }
+
+        # Schema 验证失败 — 回退到本地规则引擎的基础分析
+        logger.warning("LLM 输出未通过 schema 验证，使用本地规则引擎回退")
+        return {
+            "insights": self._local_fallback_analysis(target, analysis),
+            "validated": False,
+            "fallback": True,
+        }
+
+    def _local_fallback_analysis(self, target: str, analysis: Dict) -> Dict[str, Any]:
+        """当 LLM 输出 schema 验证失败时的本地规则引擎回退
+
+        基于目标类型提供静态攻击建议，不依赖 LLM。
+        """
+        target_type = analysis.get("type", "unknown")
+        fallback_map: Dict[str, List[Dict[str, Any]]] = {
+            "ip": [
+                {
+                    "attack_type": "端口扫描与服务识别",
+                    "tool_name": "nmap_scan",
+                    "priority": "high",
+                    "confidence": 0.8,
+                    "reason": "IP目标优先执行端口扫描发现攻击面",
+                    "params": {},
+                }
+            ],
+            "url": [
+                {
+                    "attack_type": "Web漏洞扫描",
+                    "tool_name": "nuclei",
+                    "priority": "high",
+                    "confidence": 0.7,
+                    "reason": "URL目标优先执行Web漏洞扫描",
+                    "params": {},
+                }
+            ],
+            "domain": [
+                {
+                    "attack_type": "子域名枚举",
+                    "tool_name": "subfinder",
+                    "priority": "high",
+                    "confidence": 0.8,
+                    "reason": "域名目标优先枚举子域名扩大攻击面",
+                    "params": {},
+                }
+            ],
+        }
+        return {
+            "suggestions": fallback_map.get(target_type, []),
+            "risk_assessment": "本地规则引擎评估 — LLM 不可用",
+        }
 
     def suggest_tool(self, context: Dict[str, Any]) -> str:
         """根据上下文推荐工具"""

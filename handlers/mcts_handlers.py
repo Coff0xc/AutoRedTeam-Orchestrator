@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 # 授权中间件
 from core.security import require_critical_auth
 
-from .error_handling import ErrorCategory, extract_target, handle_errors
+from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
 from .tooling import tool
 
 
@@ -26,6 +26,7 @@ def register_mcts_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_critical_auth
+    @validate_inputs(target="target")
     @handle_errors(logger, ErrorCategory.REDTEAM, extract_target)
     async def plan_attack_path(
         target: str,

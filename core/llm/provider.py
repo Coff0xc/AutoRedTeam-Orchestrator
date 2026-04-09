@@ -125,11 +125,19 @@ class LLMProvider:
         system: str = "",
         temperature: float = 0.1,
         max_tokens: int = 2000,
+        schema: type | None = None,
     ) -> Optional[Dict[str, Any]]:
         """调用 LLM 并期望 JSON 响应
 
+        Args:
+            prompt: 用户提示词
+            system: 系统提示词 (可选)
+            temperature: 温度参数
+            max_tokens: 最大生成 token 数
+            schema: 可选 Pydantic BaseModel 子类，用于验证响应格式
+
         Returns:
-            解析后的 dict，或 None (不可用/解析失败)
+            解析后的 dict，或 None (不可用/解析失败/schema 验证失败)
         """
         import json
 
@@ -147,10 +155,21 @@ class LLMProvider:
                 start = result.index("```") + 3
                 end = result.index("```", start)
                 result = result[start:end].strip()
-            return json.loads(result)
+            parsed = json.loads(result)
         except (json.JSONDecodeError, ValueError) as e:
             logger.warning("LLM JSON 解析失败: %s", e)
             return None
+
+        # 如果提供了 Pydantic schema，执行验证
+        if schema is not None:
+            try:
+                validated = schema.model_validate(parsed)
+                return validated.model_dump()
+            except Exception as e:
+                logger.warning("LLM 响应 schema 验证失败 (%s): %s", schema.__name__, e)
+                return None
+
+        return parsed
 
     def _litellm_call(
         self, prompt: str, system: str, temperature: float, max_tokens: int

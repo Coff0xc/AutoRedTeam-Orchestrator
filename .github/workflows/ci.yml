@@ -65,6 +65,11 @@ jobs:
         continue-on-error: true  # langchain 0.1.x has known CVEs; upgrade to 0.2+ is a breaking change
         run: pip-audit -r requirements.txt
 
+      - name: Security audit (pip-audit)
+        run: |
+          pip install pip-audit
+          pip-audit --strict --desc 2>&1 || true  # non-blocking for now
+
       - name: Check for hardcoded secrets
         run: |
           pip install detect-secrets
@@ -99,7 +104,7 @@ jobs:
             --cov=core --cov=handlers --cov=utils --cov=autort --cov=cli \
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing \
-            --cov-fail-under=40 \
+            --cov-fail-under=50 \
             --ignore=tests/test_performance_integration.py \
             --ignore=tests/test_modules_jwt.py \
             -m "not slow and not integration and not network" \

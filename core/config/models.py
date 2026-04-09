@@ -216,12 +216,41 @@ class CacheConfig(BaseModel):
     ttl: int = 3600
 
 
+# ---------------------------------------------------------------------------
+# 法律免责声明
+# ---------------------------------------------------------------------------
+
+LEGAL_DISCLAIMER = (
+    "\u26a0\ufe0f WARNING: This tool is for AUTHORIZED penetration testing only. "
+    "Unauthorized use may violate applicable laws. "
+    "Ensure you have written permission before testing any target."
+)
+
+# ---------------------------------------------------------------------------
+# RFC 1918 + 云元数据 + 环回地址 — 默认阻止列表
+# ---------------------------------------------------------------------------
+
+_DEFAULT_BLOCKED_TARGETS: List[str] = [
+    # 环回地址
+    "127.0.0.1",
+    "localhost",
+    "::1",
+    # 云元数据端点
+    "169.254.169.254",
+    "metadata.google.internal",
+    # RFC 1918 内网网段
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16",
+]
+
+
 class SecurityConfig(BaseModel):
     """安全配置 (对应 config.yaml security 段)"""
 
     allowed_targets: List[str] = Field(default_factory=list)
     blocked_targets: List[str] = Field(
-        default_factory=lambda: ["127.0.0.1", "localhost"]
+        default_factory=lambda: list(_DEFAULT_BLOCKED_TARGETS)
     )
     dangerous_operations: List[str] = Field(
         default_factory=lambda: ["exploit", "brute_force", "dos"]
