@@ -115,6 +115,14 @@ def main():
     # 注册所有工具
     register_all_tools()
 
+    # 法律声明
+    try:
+        from core.config.models import LEGAL_DISCLAIMER
+
+        logger.warning(LEGAL_DISCLAIMER)
+    except ImportError:
+        logger.warning("⚠️ This tool is for AUTHORIZED penetration testing only.")
+
     # 显示安全配置
     try:
         from core.security.mcp_auth_middleware import _auth_config
