@@ -27,6 +27,7 @@ from __future__ import annotations
 import functools
 import inspect
 import logging
+import re
 from enum import Enum
 from typing import Any, Callable, Dict, Optional, Tuple, Type, cast
 
@@ -305,6 +306,33 @@ def handle_errors(
     return decorator
 
 
+# 内部路径/类名清洗模式（防止错误消息泄露服务器内部信息给 MCP 客户端）
+_PATH_PATTERNS = re.compile(
+    r"(?:"
+    r"[A-Za-z]:\\(?:[^\s\\/:*?\"<>|]+\\)+"   # Windows 绝对路径
+    r"|/(?:home|usr|opt|var|tmp|etc|root)/\S+"  # Unix 绝对路径
+    r")",
+)
+_CLASS_PREFIX_PATTERN = re.compile(r"\b[a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*){2,}\b", re.IGNORECASE)
+
+
+def _sanitize_error_message(msg: str) -> str:
+    """清洗错误消息，移除内部文件路径和深层模块限定名
+
+    保留可读性，用 <path> 替换路径，截断过长消息。
+    """
+    sanitized = _PATH_PATTERNS.sub("<path>", msg)
+    # 仅替换 3+ 层级的模块限定名（如 core.security.mcp_security.SSRFError），保留短名
+    sanitized = _CLASS_PREFIX_PATTERN.sub(
+        lambda m: m.group().rsplit(".", 1)[-1] if m.group().count(".") >= 2 else m.group(),
+        sanitized,
+    )
+    # 截断过长消息
+    if len(sanitized) > 500:
+        sanitized = sanitized[:497] + "..."
+    return sanitized
+
+
 def _handle_exception(
     exc: Exception,
     logger: logging.Logger,
@@ -331,7 +359,10 @@ def _handle_exception(
         except Exception:
             logger.warning("Suppressed exception in error handling", exc_info=True)
 
-    return format_error_response(str(exc), error_type, context)
+    # 清洗错误消息：移除内部路径和类名，避免信息泄露
+    error_msg = _sanitize_error_message(str(exc))
+
+    return format_error_response(error_msg, error_type, context)
 
 
 # ==================== 便捷上下文提取器 ====================

@@ -62,11 +62,12 @@ class TestCLIHelp:
         assert result.exit_code == 0
 
     def test_no_args_shows_help(self):
-        """无参数调用应显示帮助信息"""
+        """无参数调用应显示帮助/用法信息"""
         from cli.main import app
 
         result = runner.invoke(app, [])
-        assert result.exit_code == 0
+        # Typer 在无命令时返回 exit_code 0 或 2（取决于版本/配置）
+        assert result.exit_code in (0, 2)
         assert "AutoRedTeam" in result.output or "Usage" in result.output
 
 

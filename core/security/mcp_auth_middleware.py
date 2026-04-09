@@ -348,7 +348,16 @@ _env_mode = os.getenv("AUTOREDTEAM_AUTH_MODE", "strict").lower()
 if _env_mode == "strict":
     _auth_config["mode"] = AuthMode.STRICT
 elif _env_mode == "disabled":
-    _auth_config["mode"] = AuthMode.DISABLED
+    # 与 set_auth_mode() 保持一致：仅测试环境允许 DISABLED
+    _is_test = os.getenv("AUTOREDTEAM_ENV") == "test" or os.getenv("PYTEST_CURRENT_TEST")
+    if _is_test:
+        _auth_config["mode"] = AuthMode.DISABLED
+    else:
+        logger.warning(
+            "拒绝初始化DISABLED模式：仅允许在测试环境中禁用授权 "
+            "(需设置 AUTOREDTEAM_ENV=test 或 PYTEST_CURRENT_TEST)"
+        )
+        _auth_config["mode"] = AuthMode.STRICT
 elif _env_mode == "permissive":
     _auth_config["mode"] = AuthMode.PERMISSIVE
 else:

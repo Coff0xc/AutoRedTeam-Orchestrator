@@ -5,7 +5,7 @@
 
 from typing import Any, Dict
 
-from .error_handling import ErrorCategory, extract_file_path, handle_errors
+from .error_handling import ErrorCategory, extract_file_path, handle_errors, validate_inputs
 from .tooling import tool
 
 
@@ -19,6 +19,7 @@ def register_supply_chain_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
+    @validate_inputs(project_path="path")
     @handle_errors(logger, category=ErrorCategory.SUPPLY_CHAIN, context_extractor=extract_file_path)
     async def sbom_generate(project_path: str, output_format: str = "cyclonedx") -> Dict[str, Any]:
         """生成SBOM - 生成软件物料清单
@@ -45,6 +46,7 @@ def register_supply_chain_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @validate_inputs(project_path="path")
     @handle_errors(logger, category=ErrorCategory.SUPPLY_CHAIN, context_extractor=extract_file_path)
     async def dependency_audit(project_path: str) -> Dict[str, Any]:
         """依赖审计 - 检查项目依赖的已知漏洞
@@ -70,6 +72,7 @@ def register_supply_chain_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @validate_inputs(config_path="path")
     @handle_errors(logger, category=ErrorCategory.SUPPLY_CHAIN, context_extractor=extract_file_path)
     async def cicd_scan(config_path: str) -> Dict[str, Any]:
         """CI/CD配置扫描 - 检测CI/CD配置安全问题

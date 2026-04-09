@@ -19,6 +19,7 @@ def register_cloud_security_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
+    @validate_inputs(manifest_path="path")
     @handle_errors(logger, category=ErrorCategory.CLOUD)
     async def k8s_scan(
         manifest_path: Optional[str] = None, namespace: str = "default"

@@ -859,10 +859,10 @@ class CredentialDumper:
                                     for cred in creds:
                                         if isinstance(cred, dict) and cred.get("Password"):
                                             self.credentials.append(
-                                                CredentialInfo(
+                                                Credential(
                                                     cred_type=CredentialType.PASSWORD,
                                                     source=f"lazagne/{category}",
-                                                    target=cred.get("URL", cred.get("Host", "")),
+                                                    host=cred.get("URL", cred.get("Host", "")),
                                                     username=cred.get("Login", cred.get("Username", "")),
                                                     password=cred.get("Password", ""),
                                                     extra={"lazagne_category": category},
