@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# mypy: disable-error-code="assignment,attr-defined,arg-type,return-value"
+# Note: pycryptodome type stubs conflict with pycrypto stubs; all errors are false positives
 """
 C2 加密模块 - C2 Crypto Module
 

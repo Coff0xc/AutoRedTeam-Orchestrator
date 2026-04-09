@@ -86,7 +86,7 @@ class PipelineContext:
 # CMS/框架专用弱口令字典
 # ⚠️ 警告: 这是内置的后备字典，仅包含公开的默认凭据
 # 建议: 生产环境应使用外部字典文件或专业密码库
-FALLBACK_CREDENTIALS = {
+FALLBACK_CREDENTIALS: Dict[str, Any] = {
     "_meta": {
         "data_source": "builtin_fallback",
         "description": "内置后备凭据字典，仅包含公开的默认密码",
@@ -293,7 +293,7 @@ class VulnerabilityPipeline:
         Returns:
             流水线执行结果
         """
-        results = {"target": self.target, "phases": {}, "summary": {}}
+        results: Dict[str, Any] = {"target": self.target, "phases": {}, "summary": {}}
 
         # Phase 1: 指纹识别
         self.context.current_phase = PipelinePhase.FINGERPRINT
@@ -441,7 +441,7 @@ class VulnerabilityPipeline:
         if self.manager:
             exec_id = self.manager.monitor.start_execution("weak_password_detect")
 
-        results = {"success": True, "tested_cms": [], "weak_credentials": [], "exposed_panels": []}
+        results: Dict[str, Any] = {"success": True, "tested_cms": [], "weak_credentials": [], "exposed_panels": []}
 
         base_url = self.target.rstrip("/")
 
@@ -454,7 +454,7 @@ class VulnerabilityPipeline:
 
         for cms in targets:
             if cms in CMS_DEFAULT_CREDENTIALS:
-                cms_config = CMS_DEFAULT_CREDENTIALS[cms]
+                cms_config: Dict[str, Any] = CMS_DEFAULT_CREDENTIALS[cms]
                 results["tested_cms"].append(cms)
 
                 for endpoint in cms_config.get("endpoints", []):
@@ -565,7 +565,7 @@ class VulnerabilityPipeline:
         if self.manager:
             exec_id = self.manager.monitor.start_execution("targeted_vuln_scan")
 
-        results = {"success": True, "vulnerabilities": [], "targeted_checks": []}
+        results: Dict[str, Any] = {"success": True, "vulnerabilities": [], "targeted_checks": []}
 
         # 根据CMS选择针对性检测
         cms_vulns = {

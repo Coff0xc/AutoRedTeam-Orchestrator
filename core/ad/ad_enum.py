@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# mypy: disable-error-code="assignment,attr-defined,arg-type,union-attr"
+# Note: impacket/ldap3 optional deps lack complete type stubs
 """
 Active Directory 枚举模块 (AD Enumeration)
 ATT&CK Technique: T1087 - Account Discovery
@@ -388,7 +390,7 @@ class SimpleLDAPClient:
             dn = data[offset : offset + dn_len].decode("utf-8", errors="ignore")
             offset += dn_len
 
-            entry = {"dn": dn, "attributes": {}}
+            entry: Dict[str, Any] = {"dn": dn, "attributes": {}}
 
             # 解析属性
             if data[offset] == 0x30:

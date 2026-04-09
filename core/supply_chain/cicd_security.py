@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class CICDSecurityScanner:
     """CI/CD安全扫描器"""
 
     # GitHub Actions危险模式
-    GITHUB_DANGEROUS_PATTERNS = [
+    GITHUB_DANGEROUS_PATTERNS: List[Dict[str, Any]] = [
         # 直接使用不受信任的输入 (命令注入)
         {
             "pattern": (
@@ -127,7 +127,7 @@ class CICDSecurityScanner:
     ]
 
     # 硬编码敏感信息模式
-    HARDCODED_SECRET_PATTERNS = [
+    HARDCODED_SECRET_PATTERNS: List[Tuple[str, str]] = [
         (r'(password|passwd|pwd)\s*[=:]\s*["\'][^"\']+["\']', "密码"),
         (r'(api[_-]?key|apikey)\s*[=:]\s*["\'][^"\']+["\']', "API密钥"),
         (r'(secret[_-]?key|secretkey)\s*[=:]\s*["\'][^"\']+["\']', "Secret密钥"),
@@ -140,7 +140,7 @@ class CICDSecurityScanner:
     ]
 
     # GitLab CI危险模式
-    GITLAB_DANGEROUS_PATTERNS = [
+    GITLAB_DANGEROUS_PATTERNS: List[Dict[str, Any]] = [
         {
             "pattern": r"when:\s*manual",
             "type": CICDVulnType.INSECURE_PERMISSION,
@@ -305,7 +305,7 @@ class CICDSecurityScanner:
             return findings
 
         # Jenkins特定危险模式
-        jenkins_patterns = [
+        jenkins_patterns: List[Dict[str, Any]] = [
             {
                 "pattern": r'sh\s*["\'].*\$\{.*\}',
                 "type": CICDVulnType.COMMAND_INJECTION,
