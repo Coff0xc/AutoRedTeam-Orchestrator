@@ -28,6 +28,25 @@ app = typer.Typer(
 )
 
 
+def _show_disclaimer() -> None:
+    """启动时显示法律声明"""
+    try:
+        from core.config.models import LEGAL_DISCLAIMER
+
+        typer.echo(LEGAL_DISCLAIMER, err=True)
+    except ImportError:
+        typer.echo("⚠️ For AUTHORIZED penetration testing only.", err=True)
+
+
+# 注册启动回调
+@app.callback(invoke_without_command=True)
+def main_callback(ctx: typer.Context) -> None:
+    """AutoRedTeam CLI — 启动时显示法律声明"""
+    if ctx.invoked_subcommand is None:
+        return  # no_args_is_help 会处理
+    _show_disclaimer()
+
+
 # ──────────────────────────── scan ────────────────────────────
 
 
