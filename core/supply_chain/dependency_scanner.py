@@ -246,7 +246,7 @@ class DependencyScanner:
         Returns:
             扫描结果
         """
-        result = {
+        result: Dict[str, Any] = {
             "scanned": 0,
             "vulnerable": 0,
             "vulnerabilities": [],

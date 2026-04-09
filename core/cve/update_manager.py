@@ -18,7 +18,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import aiohttp
 
@@ -231,7 +231,7 @@ class CVEUpdateManager:
 
     async def _rate_limit(self, source: str):
         """速率限制器"""
-        limiter = self.rate_limiters[source]
+        limiter: Dict[str, Any] = self.rate_limiters[source]
         config = limiter["config"]
         now = datetime.now()
 
@@ -746,7 +746,7 @@ class CVEUpdateManager:
             cursor = conn.cursor()
 
             query = "SELECT * FROM cve_index WHERE 1=1"
-            params = []
+            params: List[Any] = []
 
             if keyword:
                 query += " AND (cve_id LIKE ? OR description LIKE ?)"

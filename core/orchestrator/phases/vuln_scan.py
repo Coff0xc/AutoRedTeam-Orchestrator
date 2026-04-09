@@ -46,13 +46,13 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
     description = "漏洞扫描与检测"
 
     @property
-    def phase(self):
+    def phase(self):  # type: ignore[override]
         from ..state import PentestPhase
 
         return PentestPhase.VULN_SCAN
 
     @property
-    def required_phases(self):
+    def required_phases(self):  # type: ignore[override]
         from ..state import PentestPhase
 
         return (PentestPhase.RECON,)
@@ -413,7 +413,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
                         data = body_str
                 elif "application/x-www-form-urlencoded" in content_type or "=" in body_str:
                     parsed = parse_qs(body_str, keep_blank_values=True)
-                    data = {k: v[0] if len(v) == 1 else v for k, v in parsed.items()}
+                    data = {k: v[0] if len(v) == 1 else v for k, v in parsed.items()}  # type: ignore[assignment]
                 else:
                     data = body_str
 
@@ -485,7 +485,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
             }
 
         summary = await asyncio.to_thread(
-            verifier.verify_with_statistics,
+            verifier.verify_with_statistics,  # type: ignore[attr-defined]
             vuln_type=result.vuln_type,
             url=url,
             param=result.param or "",
@@ -500,7 +500,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
 
         confidence_score = float(summary.confidence_score)
         filtered_out = (
-            confidence_score < verifier.CONFIDENCE_THRESHOLDS["medium"] and not summary.is_confirmed
+            confidence_score < verifier.CONFIDENCE_THRESHOLDS["medium"] and not summary.is_confirmed  # type: ignore[attr-defined]
         )
 
         return {

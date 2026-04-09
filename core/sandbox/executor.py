@@ -15,11 +15,11 @@ from core.sandbox.config import CommandResult, SandboxConfig
 
 # 尝试导入 docker SDK（可选依赖）
 try:
-    import docker  # type: ignore[import-untyped]  # noqa: F401
+    import docker  # noqa: F401
 
     DOCKER_AVAILABLE = True
 except ImportError:
-    docker = None  # type: ignore[assignment]
+    docker = None  # noqa: F811
     DOCKER_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class DockerExecutor:
 
     def __init__(self, config: SandboxConfig) -> None:
         self._config = config
-        self._client: Optional[docker.DockerClient] = None  # type: ignore[name-defined]
+        self._client: Optional[docker.DockerClient] = None
         self._ensure_client()
 
     def _ensure_client(self) -> None:
@@ -46,8 +46,8 @@ class DockerExecutor:
                 "docker SDK 未安装，请执行: pip install docker"
             )
         try:
-            self._client = docker.from_env()  # type: ignore[union-attr]
-            self._client.ping()  # type: ignore[union-attr]
+            self._client = docker.from_env()
+            self._client.ping()
             logger.info("Docker 客户端连接成功")
         except Exception as e:
             raise RuntimeError("无法连接 Docker 守护进程: %s" % e) from e

@@ -42,7 +42,7 @@ try:
     HAS_CRYPTO = True
 except ImportError:
     try:
-        from Crypto.Cipher import AES
+        from Crypto.Cipher import AES  # type: ignore[no-redef]
 
         HAS_CRYPTO = True
     except ImportError:
@@ -804,7 +804,7 @@ class CredentialDumper:
         import subprocess
         import sys
 
-        result = DumpResult(source="lazagne", platform=self.os_type)
+        result = DumpResult(source="lazagne", success=False)
 
         # 查找 LaZagne
         lazagne_path = shutil.which("lazagne") or shutil.which("laZagne")
@@ -857,20 +857,19 @@ class CredentialDumper:
                                 if isinstance(creds, list):
                                     for cred in creds:
                                         if isinstance(cred, dict) and cred.get("Password"):
-                                            self.credentials.append(
+                                            result.credentials.append(
                                                 Credential(
                                                     cred_type=CredentialType.PASSWORD,
                                                     source=f"lazagne/{category}",
-                                                    host=cred.get("URL", cred.get("Host", "")),
-                                                    username=cred.get("Login", cred.get("Username", "")),
+                                                    host=cred.get("URL", cred.get("Host", "")) or "",
+                                                    username=cred.get("Login", cred.get("Username", "")) or "",
                                                     password=cred.get("Password", ""),
                                                     extra={"lazagne_category": category},
                                                 )
                                             )
-                                            result.count += 1
 
                 result.success = True
-                self._log("LaZagne 提取完成: %d 条凭据", result.count)
+                self._log("LaZagne 提取完成: %d 条凭据" % len(result.credentials))
 
             elif proc.stderr:
                 result.error = proc.stderr[:500]

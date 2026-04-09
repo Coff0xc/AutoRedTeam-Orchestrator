@@ -204,7 +204,7 @@ class ProtocolCodec:
         Returns:
             (处理后的载荷, 标志位)
         """
-        flags = MessageFlags.NONE
+        flags: int = MessageFlags.NONE
 
         # JSON 序列化
         json_data = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
@@ -467,7 +467,7 @@ class ProtocolCodec:
         """
         if isinstance(data, bytes):
             payload = data
-            flags = MessageFlags.NONE
+            flags: int = MessageFlags.NONE
 
             if self.compress and len(payload) > 100:
                 compressed = zlib.compress(payload, level=6)
@@ -602,6 +602,7 @@ class HTTPProtocolAdapter:
         if isinstance(body, str):
             body = json.loads(body)
 
+        assert isinstance(body, dict)
         encoded = body.get("data") or body.get("d", "")
         return self.encoder.base64_decode(encoded)
 
@@ -635,6 +636,7 @@ class HTTPProtocolAdapter:
         if isinstance(body, str):
             body = json.loads(body)
 
+        assert isinstance(body, dict)
         encoded = body.get("data", "")
         if not encoded:
             return b""

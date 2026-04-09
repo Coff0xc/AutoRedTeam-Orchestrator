@@ -13,6 +13,8 @@ import logging
 import tempfile
 from pathlib import Path
 
+from typing import Any, Optional
+
 from ..base import (
     BaseExfiltration,
     ExfilChannel,
@@ -37,11 +39,11 @@ class SMBExfiltration(BaseExfiltration):
 
     def __init__(self, config: ExfilConfig):
         super().__init__(config)
-        self._conn = None
+        self._conn: Any = None
         self._share = "C$"
         self._remote_path = ""
         self._buffer = b""
-        self._temp_file = None
+        self._temp_file: Optional[str] = None
 
     def connect(self) -> bool:
         """建立 SMB 连接"""

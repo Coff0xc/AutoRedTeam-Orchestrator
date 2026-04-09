@@ -12,7 +12,7 @@
 
 import logging
 import math
-from typing import Callable, List, Tuple
+from typing import Callable, Dict, List, Sequence, Tuple
 
 from .models import StatisticalVerification
 
@@ -131,7 +131,7 @@ class StatisticalVerifier:
         confidence_score = (1 - p_value) * positive_ratio if is_significant else p_value * 0.1
 
         # 详细信息
-        details = [
+        details: List[Dict] = [
             {"mean_base": mean_base, "std_base": std_base},
             {"mean_payload": mean_payload, "std_payload": std_payload},
             {"t_statistic": t_stat, "p_value": p_value},
@@ -257,13 +257,13 @@ class StatisticalVerifier:
             recommendation=recommendation,
         )
 
-    def _mean(self, data: List[float]) -> float:
+    def _mean(self, data: Sequence[float]) -> float:
         """计算均值"""
         if not data:
             return 0.0
         return sum(data) / len(data)
 
-    def _std(self, data: List[float]) -> float:
+    def _std(self, data: Sequence[float]) -> float:
         """计算标准差"""
         if len(data) < 2:
             return 0.0
@@ -271,7 +271,7 @@ class StatisticalVerifier:
         variance = sum((x - mean) ** 2 for x in data) / (len(data) - 1)
         return math.sqrt(variance)
 
-    def _welch_ttest(self, sample1: List[float], sample2: List[float]) -> Tuple[float, float]:
+    def _welch_ttest(self, sample1: Sequence[float], sample2: Sequence[float]) -> Tuple[float, float]:
         """Welch's t-test (不假设方差相等)
 
         Returns:

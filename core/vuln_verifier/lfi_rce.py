@@ -1,3 +1,4 @@
+# mypy: disable-error-code="attr-defined"
 #!/usr/bin/env python3
 """
 LFI (Local File Inclusion) 和 RCE (Remote Code Execution) 验证模块

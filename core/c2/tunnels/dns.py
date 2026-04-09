@@ -22,7 +22,7 @@ import secrets
 import socket
 import struct
 import time
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from ..base import BaseTunnel, C2Config
 from ..encoding import C2Encoder, ChunkEncoder
@@ -97,7 +97,7 @@ class DNSTunnel(BaseTunnel):
         # 会话状态
         self._session_id = self._generate_session_id()
         self._sequence = 0
-        self._resolver = None
+        self._resolver: Any = None
 
         # 响应缓冲
         self._response_buffer: Dict[int, str] = {}

@@ -403,7 +403,7 @@ class CVESearchEngine:
             (SQL 查询, 参数列表)
         """
         conditions = []
-        params = []
+        params: List[Any] = []
 
         # 关键词搜索
         if search_filter.keyword:

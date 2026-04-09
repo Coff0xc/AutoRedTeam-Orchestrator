@@ -7,7 +7,7 @@ JS 分析引擎 - 自动提取 API 端点、路由、敏感信息
 
 import asyncio
 import re
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Set
 from urllib.parse import urljoin, urlparse
 
 import aiohttp
@@ -116,7 +116,7 @@ class JSAnalyzer:
         return routes
 
     @classmethod
-    def extract_secrets(cls, js_content: str) -> List[Dict[str, str]]:
+    def extract_secrets(cls, js_content: str) -> List[Dict[str, Any]]:
         """
         提取敏感信息
 
@@ -200,7 +200,7 @@ class JSAnalyzer:
         Returns:
             分析结果字典
         """
-        results = {
+        results: Dict[str, Any] = {
             "target": url,
             "js_files": [],
             "endpoints": set(),
@@ -287,7 +287,7 @@ class JSAnalyzer:
         cls, session: aiohttp.ClientSession, js_url: str, timeout: int
     ) -> Dict:
         """分析单个 JS 文件"""
-        result = {"url": js_url, "endpoints": set(), "routes": set(), "secrets": []}
+        result: Dict[str, Any] = {"url": js_url, "endpoints": set(), "routes": set(), "secrets": []}
 
         js_content = await cls._fetch_content(session, js_url, timeout)
         if js_content:

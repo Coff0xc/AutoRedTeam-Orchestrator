@@ -100,7 +100,7 @@ class AutoPentestOrchestrator:
         self.state.config = self.config.to_dict()
 
         self.decision_engine = DecisionEngine(self.state)
-        self._storage = None
+        self._storage: Any = None
         self._progress_callback: Optional[Callable] = None
         self._state_lock = asyncio.Lock()  # 并发保护锁
         self._has_critical_failure = False  # 跟踪关键阶段失败
@@ -140,7 +140,7 @@ class AutoPentestOrchestrator:
         else:
             start_idx = 0
 
-        results = {}
+        results: Dict[str, Any] = {}
         self._has_critical_failure = False  # 重置失败标志
 
         try:
@@ -223,7 +223,7 @@ class AutoPentestOrchestrator:
         if config:
             phase_config.update(config)
 
-        executor = executor_class(self.state, phase_config)
+        executor = executor_class(self.state, phase_config)  # type: ignore[abstract]
 
         if not executor.can_execute():
             missing = executor.get_missing_requirements()
@@ -312,7 +312,7 @@ class AutoPentestOrchestrator:
         """汇总发现"""
         findings = self.state.findings
 
-        summary = {
+        summary: Dict[str, Any] = {
             "total": len(findings),
             "critical": len([f for f in findings if f.get("severity") == "critical"]),
             "high": len([f for f in findings if f.get("severity") == "high"]),

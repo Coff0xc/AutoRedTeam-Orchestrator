@@ -163,13 +163,13 @@ class LLMProvider:
         # 如果提供了 Pydantic schema，执行验证
         if schema is not None:
             try:
-                validated = schema.model_validate(parsed)
-                return validated.model_dump()
+                validated = schema.model_validate(parsed)  # type: ignore[attr-defined]
+                return validated.model_dump()  # type: ignore[no-any-return]
             except Exception as e:
                 logger.warning("LLM 响应 schema 验证失败 (%s): %s", schema.__name__, e)
                 return None
 
-        return parsed
+        return parsed  # type: ignore[no-any-return]
 
     def _litellm_call(
         self, prompt: str, system: str, temperature: float, max_tokens: int
@@ -195,7 +195,7 @@ class LLMProvider:
             kwargs["api_base"] = self.base_url
 
         response = litellm.completion(**kwargs)
-        return response.choices[0].message.content
+        return response.choices[0].message.content  # type: ignore[no-any-return]
 
     def _direct_call(
         self, prompt: str, system: str, temperature: float, max_tokens: int
@@ -220,11 +220,11 @@ class LLMProvider:
         messages.append({"role": "user", "content": prompt})
         resp = client.chat.completions.create(
             model=self.model,
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
             temperature=temperature,
             max_tokens=max_tokens,
         )
-        return resp.choices[0].message.content
+        return resp.choices[0].message.content  # type: ignore[return-value]
 
     def _anthropic_call(
         self, prompt: str, system: str, temperature: float, max_tokens: int
@@ -241,7 +241,7 @@ class LLMProvider:
         if system:
             kwargs["system"] = system
         resp = client.messages.create(**kwargs)
-        return resp.content[0].text
+        return resp.content[0].text  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

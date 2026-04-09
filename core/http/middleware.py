@@ -753,8 +753,8 @@ class MiddlewareChain:
             if m.name == middleware_name:
                 self._middlewares.pop(i)
                 return True
-        for i, m in enumerate(self._async_middlewares):
-            if m.name == middleware_name:
+        for i, am in enumerate(self._async_middlewares):
+            if am.name == middleware_name:
                 self._async_middlewares.pop(i)
                 return True
         return False
@@ -791,35 +791,35 @@ class MiddlewareChain:
     async def async_process_request(self, request: RequestContext) -> RequestContext:
         """异步执行所有中间件的请求处理"""
         # 先执行同步中间件（用 to_thread 包装避免阻塞事件循环）
-        for middleware in self._middlewares:
-            request = await asyncio.to_thread(middleware.process_request, request)
+        for sync_mw in self._middlewares:
+            request = await asyncio.to_thread(sync_mw.process_request, request)
         # 再执行异步中间件
-        for middleware in self._async_middlewares:
-            request = await middleware.process_request(request)
+        for async_mw in self._async_middlewares:
+            request = await async_mw.process_request(request)
         return request
 
     async def async_process_response(
         self, response: ResponseContext, request: RequestContext
     ) -> ResponseContext:
         """异步执行所有中间件的响应处理 (逆序)"""
-        for middleware in reversed(self._async_middlewares):
-            response = await middleware.process_response(response, request)
+        for async_mw in reversed(self._async_middlewares):
+            response = await async_mw.process_response(response, request)
         # 同步中间件用 to_thread 包装
-        for middleware in reversed(self._middlewares):
-            response = await asyncio.to_thread(middleware.process_response, response, request)
+        for sync_mw in reversed(self._middlewares):
+            response = await asyncio.to_thread(sync_mw.process_response, response, request)
         return response
 
     async def async_process_exception(
         self, exception: Exception, request: RequestContext
     ) -> Optional[ResponseContext]:
         """异步执行所有中间件的异常处理"""
-        for middleware in reversed(self._async_middlewares):
-            result = await middleware.process_exception(exception, request)
+        for async_mw in reversed(self._async_middlewares):
+            result = await async_mw.process_exception(exception, request)
             if result is not None:
                 return result
         # 同步中间件用 to_thread 包装
-        for middleware in reversed(self._middlewares):
-            result = await asyncio.to_thread(middleware.process_exception, exception, request)
+        for sync_mw in reversed(self._middlewares):
+            result = await asyncio.to_thread(sync_mw.process_exception, exception, request)
             if result is not None:
                 return result
         return None
