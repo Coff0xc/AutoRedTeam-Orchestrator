@@ -11,7 +11,7 @@ import secrets
 import string
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class WindowsPersistence:
         self._execute = execute
         self._random_prefix = "".join(secrets.choice(string.ascii_letters) for _ in range(4))
 
-    def _execute_install(self, result) -> "PersistenceResult":
+    def _execute_install(self, result: "PersistenceResult") -> "PersistenceResult":
         """如果 execute=True，执行安装命令并更新结果"""
         if not self._execute:
             return result
@@ -500,7 +500,7 @@ def windows_persist(
     """
     persistence = WindowsPersistence()
 
-    method_map = {
+    method_map: Dict[str, Callable[..., PersistenceResult]] = {
         "registry": persistence.registry_run,
         "registry_ps": persistence.registry_run_powershell,
         "task": persistence.scheduled_task,
@@ -521,9 +521,9 @@ def windows_persist(
     if method == "bits":
         if "payload_url" not in kwargs:
             return {"success": False, "error": "BITS method requires payload_url"}
-        result = persistence.bits_job(kwargs["payload_url"], payload_path, name)
+        persist_result = persistence.bits_job(kwargs["payload_url"], payload_path, name)
     elif method in method_map:
-        result = (
+        persist_result = (
             method_map[method](payload_path, name, **kwargs)
             if name
             else method_map[method](payload_path, **kwargs)
@@ -532,15 +532,15 @@ def windows_persist(
         return {"success": False, "error": f"Unknown method: {method}"}
 
     return {
-        "success": result.success,
-        "method": result.method,
-        "location": result.location,
-        "cleanup_command": result.cleanup_command,
-        "error": result.error,
+        "success": persist_result.success,
+        "method": persist_result.method,
+        "location": persist_result.location,
+        "cleanup_command": persist_result.cleanup_command,
+        "error": persist_result.error,
     }
 
 
-def list_persistence_methods() -> List[Dict[str, str]]:
+def list_persistence_methods() -> List[Dict[str, Any]]:
     """列出所有可用的持久化方法"""
     return [
         {

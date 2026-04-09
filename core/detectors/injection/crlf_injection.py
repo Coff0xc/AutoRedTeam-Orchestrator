@@ -18,7 +18,7 @@ CRLF Injection 检测器
 """
 
 import logging
-from typing import List
+from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 from ..base import BaseDetector
@@ -28,7 +28,7 @@ from ..result import DetectionResult, DetectorType, Severity
 logger = logging.getLogger(__name__)
 
 # CRLF 注入 payload — 多种编码变体绕过过滤
-CRLF_PAYLOADS = [
+CRLF_PAYLOADS: List[Dict[str, Any]] = [
     # 标准 CRLF
     {
         "payload": "%0d%0aX-Injected: crlf_test_{nonce}",

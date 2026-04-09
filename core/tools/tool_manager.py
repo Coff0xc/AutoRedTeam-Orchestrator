@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 # 尝试加载 YAML
 try:
-    import yaml
+    import yaml  # type: ignore[import-untyped]
 
     HAS_YAML = True
 except ImportError:
@@ -128,7 +128,7 @@ class ResultParser:
 
             # 主机信息
             for host in root.findall("host"):
-                host_info = {
+                host_info: Dict[str, Any] = {
                     "status": "unknown",
                     "addresses": [],
                     "hostnames": [],
@@ -160,7 +160,7 @@ class ResultParser:
                 ports = host.find("ports")
                 if ports is not None:
                     for port in ports.findall("port"):
-                        port_info = {
+                        port_info: Dict[str, Any] = {
                             "port": int(port.get("portid", 0)),
                             "protocol": port.get("protocol", "tcp"),
                             "state": "unknown",
@@ -245,7 +245,7 @@ class ResultParser:
     @staticmethod
     def parse_sqlmap_output(output: str) -> Dict[str, Any]:
         """解析 SQLMap 输出"""
-        result = {
+        result: Dict[str, Any] = {
             "vulnerable": False,
             "injection_points": [],
             "dbms": None,
@@ -572,7 +572,7 @@ class ToolManager:
 
     def _load_config(self) -> Dict[str, Any]:
         """加载配置文件"""
-        config = self.DEFAULT_CONFIG.copy()
+        config: Dict[str, Any] = self.DEFAULT_CONFIG.copy()
 
         if HAS_YAML and Path(self.config_path).exists():
             try:
@@ -708,6 +708,8 @@ class ToolManager:
 
     def _get_tool_version(self, info: ToolInfo) -> Optional[str]:
         """获取工具版本"""
+        if info.path is None:
+            return None
         try:
             if info.is_python_script:
                 cmd = [sys.executable, info.path, "--version"]
@@ -894,7 +896,7 @@ class ToolManager:
             Tuple[命令列表, 元数据字典]
             元数据包含临时文件路径等需要后续处理的信息
         """
-        cmd = [info.path]
+        cmd: List[str] = [info.path or ""]
         metadata: Dict[str, Any] = {}
 
         # 添加预设参数

@@ -14,7 +14,6 @@ ATT&CK Technique: T1552 - Unsecured Credentials
 """
 
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Set
+from typing import Any, Dict, Generator, List, Optional, Set, Union
 
 
 class SecretType(Enum):
@@ -530,7 +529,7 @@ class PasswordFinder:
         self._log(f"Scan complete. Scanned {file_count} files, found {len(self.findings)} secrets.")
         return self.findings
 
-    def scan_git_history(self, repo_path: str, max_commits: int = 100) -> List[SecretFinding]:
+    def scan_git_history(self, repo_path: Union[str, Path], max_commits: int = 100) -> List[SecretFinding]:
         """
         扫描Git历史中的敏感信息
 
@@ -624,7 +623,7 @@ class PasswordFinder:
 
     def get_summary(self) -> Dict[str, Any]:
         """获取扫描摘要"""
-        summary = {
+        summary: Dict[str, Any] = {
             "total_findings": len(self.findings),
             "by_type": {},
             "by_confidence": {"high": 0, "medium": 0, "low": 0},
@@ -671,7 +670,7 @@ class PasswordFinder:
         """
         导出为SARIF格式 (GitHub/GitLab安全报告兼容)
         """
-        sarif = {
+        sarif: Dict[str, Any] = {
             "version": "2.1.0",
             "$schema": (  # noqa: E501
                 "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master"

@@ -28,7 +28,7 @@ class CommandWhitelist:
     """命令白名单配置"""
 
     command: str
-    allowed_args: List[str] = None  # None表示允许所有参数
+    allowed_args: Optional[List[str]] = None  # None表示允许所有参数
     max_args: int = 50
     require_absolute_path: bool = False
     description: str = ""
@@ -594,20 +594,20 @@ class SandboxExecutor:
                         import resource
 
                         # 内存限制（虚拟内存）
-                        resource.setrlimit(resource.RLIMIT_AS, (max_memory, max_memory))
+                        resource.setrlimit(resource.RLIMIT_AS, (max_memory, max_memory))  # type: ignore[attr-defined]
 
                         # CPU时间限制
                         cpu_time = max(1, int(timeout * (max_cpu / 100)))
-                        resource.setrlimit(resource.RLIMIT_CPU, (cpu_time, cpu_time))
+                        resource.setrlimit(resource.RLIMIT_CPU, (cpu_time, cpu_time))  # type: ignore[attr-defined]
 
                         # 文件描述符限制
-                        resource.setrlimit(resource.RLIMIT_NOFILE, (max_fds, max_fds))
+                        resource.setrlimit(resource.RLIMIT_NOFILE, (max_fds, max_fds))  # type: ignore[attr-defined]
 
                         # 子进程数限制
-                        resource.setrlimit(resource.RLIMIT_NPROC, (max_procs, max_procs))
+                        resource.setrlimit(resource.RLIMIT_NPROC, (max_procs, max_procs))  # type: ignore[attr-defined]
 
                         # 核心转储限制（禁止）
-                        resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+                        resource.setrlimit(resource.RLIMIT_CORE, (0, 0))  # type: ignore[attr-defined]
 
                     except ImportError:
                         pass  # resource模块不可用
@@ -616,7 +616,7 @@ class SandboxExecutor:
 
                     # 创建新的进程组（用于信号隔离）
                     try:
-                        os.setsid()
+                        os.setsid()  # type: ignore[attr-defined]
                     except (OSError, PermissionError):
                         pass
 
@@ -655,7 +655,7 @@ class SandboxExecutor:
 
             # 5. 执行命令
             logger.debug("沙箱执行: %s", " ".join(cmd))
-            result = subprocess.run(cmd, **run_kwargs)
+            result = subprocess.run(cmd, **run_kwargs)  # type: ignore[call-overload]
 
             return {
                 "success": result.returncode == 0,

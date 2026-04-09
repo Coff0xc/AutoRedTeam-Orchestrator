@@ -209,7 +209,7 @@ class StandardReconEngine(BaseReconEngine):
 
         解析目标URL，提取主机名、端口等信息。
         """
-        data = {}
+        data: Dict[str, Any] = {}
         errors = []
 
         try:
@@ -233,7 +233,7 @@ class StandardReconEngine(BaseReconEngine):
 
         获取目标的IP地址和DNS记录。
         """
-        data = {}
+        data: Dict[str, Any] = {}
         errors = []
 
         try:
@@ -273,7 +273,7 @@ class StandardReconEngine(BaseReconEngine):
 
         扫描目标的开放端口。
         """
-        data = {}
+        data: Dict[str, Any] = {}
         errors = []
 
         if not self.result.ip_addresses:
@@ -342,7 +342,7 @@ class StandardReconEngine(BaseReconEngine):
 
         识别Web服务器、框架、CMS等。
         """
-        data = {}
+        data: Dict[str, Any] = {}
         errors = []
 
         try:
@@ -382,7 +382,7 @@ class StandardReconEngine(BaseReconEngine):
 
         基于Wappalyzer规则识别技术栈。
         """
-        data = {}
+        data: Dict[str, Any] = {}
         errors = []
 
         try:
@@ -417,7 +417,7 @@ class StandardReconEngine(BaseReconEngine):
 
         检测是否存在WAF/防火墙。
         """
-        data = {}
+        data: Dict[str, Any] = {}
         errors = []
 
         try:
@@ -458,7 +458,7 @@ class StandardReconEngine(BaseReconEngine):
 
         通过字典暴破发现子域名。
         """
-        data = {}
+        data: Dict[str, Any] = {}
         errors = []
 
         try:
@@ -506,7 +506,7 @@ class StandardReconEngine(BaseReconEngine):
 
         扫描Web目录和文件。
         """
-        data = {}
+        data: Dict[str, Any] = {}
         errors = []
 
         try:
@@ -548,7 +548,7 @@ class StandardReconEngine(BaseReconEngine):
 
         扫描敏感文件和配置泄露。
         """
-        data = {}
+        data: Dict[str, Any] = {}
         errors = []
 
         try:
@@ -636,7 +636,7 @@ class StandardReconEngine(BaseReconEngine):
 
         汇总结果，生成报告摘要。
         """
-        data = {}
+        data: Dict[str, Any] = {}
 
         # 统计发现
         severity_count = {s.value: 0 for s in Severity}

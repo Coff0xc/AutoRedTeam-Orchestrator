@@ -163,7 +163,7 @@ class HTTPTunnel(BaseTunnel):
             }
 
             headers = {
-                "X-Session": self._session_id,
+                "X-Session": self._session_id or "",
                 "X-Request-ID": str(uuid.uuid4())[:8],
             }
 
@@ -200,7 +200,7 @@ class HTTPTunnel(BaseTunnel):
             self._rate_limit()
 
             headers = {
-                "X-Session": self._session_id,
+                "X-Session": self._session_id or "",
             }
 
             response = self._get(self.config.task_path, headers=headers, timeout=timeout)
@@ -309,15 +309,16 @@ class HTTPTunnel(BaseTunnel):
         timeout = timeout or self.config.timeout
 
         try:
-            if HAS_HTTP_CLIENT and hasattr(self._client, "get"):
+            if HAS_HTTP_CLIENT and self._client is not None and hasattr(self._client, "get"):
                 return self._client.get(url, headers=headers, params=params, timeout=timeout)
-            elif HAS_REQUESTS:
+            elif HAS_REQUESTS and self._client is not None:
                 return self._client.get(
                     url, headers=headers, params=params, timeout=timeout, verify=False
                 )
         except Exception as e:
             logger.debug("GET %s failed: %s", path, e)
             return None
+        return None
 
     def _post(
         self,
@@ -332,17 +333,18 @@ class HTTPTunnel(BaseTunnel):
         timeout = timeout or self.config.timeout
 
         try:
-            if HAS_HTTP_CLIENT and hasattr(self._client, "post"):
+            if HAS_HTTP_CLIENT and self._client is not None and hasattr(self._client, "post"):
                 return self._client.post(
                     url, headers=headers, json=json, data=data, timeout=timeout
                 )
-            elif HAS_REQUESTS:
+            elif HAS_REQUESTS and self._client is not None:
                 return self._client.post(
                     url, headers=headers, json=json, data=data, timeout=timeout, verify=False
                 )
         except Exception as e:
             logger.debug("POST %s failed: %s", path, e)
             return None
+        return None
 
     def _is_success(self, response: Any) -> bool:
         """检查响应是否成功"""
@@ -420,7 +422,7 @@ class StealthHTTPTunnel(HTTPTunnel):
         encoded = self.encoder.url_safe_encode(data)
 
         headers = {
-            "X-Session": self._session_id,
+            "X-Session": self._session_id or "",
             "Cookie": f"session={self._session_id}; data={encoded}",
         }
 
@@ -433,7 +435,7 @@ class StealthHTTPTunnel(HTTPTunnel):
         encoded = self.encoder.base64_encode(data)
 
         headers = {
-            "X-Session": self._session_id,
+            "X-Session": self._session_id or "",
             "X-Custom-Data": encoded,
             "X-Timestamp": str(int(time.time())),
         }
