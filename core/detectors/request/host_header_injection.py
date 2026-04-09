@@ -67,7 +67,7 @@ class HostHeaderInjectionDetector(BaseDetector):
             return results
 
         original_host = parsed.hostname
-        nonce = hashlib.md5(f"{url}{time.time()}".encode()).hexdigest()[:10]
+        nonce = hashlib.md5(f"{url}{time.time()}".encode(), usedforsecurity=False).hexdigest()[:10]
 
         # 获取基线响应
         baseline_resp = self._safe_request("GET", url)

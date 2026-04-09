@@ -299,7 +299,7 @@ class BaseExfiltration(ABC):
         start_time = time.time()
 
         # 计算原始数据哈希
-        file_hash = hashlib.sha256(data).hexdigest()
+        file_hash = hashlib.sha256(data, usedforsecurity=False).hexdigest()
         total_size = len(data)
 
         # 初始化进度

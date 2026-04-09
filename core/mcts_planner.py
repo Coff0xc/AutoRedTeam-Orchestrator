@@ -124,7 +124,7 @@ class AttackState:
             f"{self.access_level}|"
             f"{sorted(self.completed_actions)}"
         )
-        self._hash_cache = hashlib.md5(state_str.encode()).hexdigest()[:12]
+        self._hash_cache = hashlib.md5(state_str.encode(), usedforsecurity=False).hexdigest()[:12]
         return self._hash_cache
 
     def clone(self) -> "AttackState":

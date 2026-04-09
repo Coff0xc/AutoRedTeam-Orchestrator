@@ -143,7 +143,7 @@ class DynamicContentNormalizer:
         """获取内容指纹（忽略动态部分）"""
         normalized = self.normalize(content)
         structure = self.extract_static_structure(normalized)
-        return hashlib.md5(structure.encode()).hexdigest()
+        return hashlib.md5(structure.encode(), usedforsecurity=False).hexdigest()
 
 
 class SPADetector:
@@ -509,7 +509,7 @@ class FalsePositiveFilter:
 
         # 计算规范化内容的哈希
         normalized = self.normalizer.normalize(responses[0]["body"])
-        content_hash = hashlib.md5(normalized.encode()).hexdigest()
+        content_hash = hashlib.md5(normalized.encode(), usedforsecurity=False).hexdigest()
         structure = self.normalizer.extract_static_structure(normalized)
 
         baseline = ResponseBaseline(

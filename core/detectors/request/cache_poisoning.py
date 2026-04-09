@@ -94,7 +94,7 @@ class CachePoisoningDetector(BaseDetector):
             return results
 
         # 生成本次检测的唯一 nonce
-        nonce = hashlib.md5(f"{url}{time.time()}".encode()).hexdigest()[:12]
+        nonce = hashlib.md5(f"{url}{time.time()}".encode(), usedforsecurity=False).hexdigest()[:12]
 
         # 1. 检测是否存在缓存层
         has_cache = self._detect_cache_layer(url)
@@ -121,7 +121,7 @@ class CachePoisoningDetector(BaseDetector):
 
     def _generate_cache_buster(self) -> str:
         """生成唯一的 cache buster 参数值"""
-        return hashlib.md5(str(time.time()).encode()).hexdigest()[:8]
+        return hashlib.md5(str(time.time()).encode(), usedforsecurity=False).hexdigest()[:8]
 
     def _add_cache_buster(self, url: str) -> str:
         """给 URL 添加 cache buster 参数以避免命中已有缓存"""

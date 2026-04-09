@@ -815,7 +815,7 @@ class FingerprintEngine:
                 content = resp.read()
                 if content:
                     # 计算MD5哈希
-                    md5_hash = hashlib.md5(content).hexdigest()
+                    md5_hash = hashlib.md5(content, usedforsecurity=False).hexdigest()
                     # 计算Base64编码后的哈希（类似Shodan）
                     return md5_hash
 

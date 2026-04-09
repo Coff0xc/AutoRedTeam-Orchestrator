@@ -83,7 +83,7 @@ class WindowsPersistence:
 
             proc = subprocess.run(
                 install_cmd,
-                shell=True,
+                shell=True,  # nosec B602  # persistence install requires shell pipeline
                 capture_output=True,
                 text=True,
                 timeout=30,

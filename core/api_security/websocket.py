@@ -416,7 +416,7 @@ class WebSocketTester(BaseAPITester):
     def _compute_accept_key(self, key: str) -> str:
         """计算WebSocket Accept密钥"""
         concat = key + self.WS_MAGIC
-        sha1 = hashlib.sha1(concat.encode()).digest()
+        sha1 = hashlib.sha1(concat.encode(), usedforsecurity=False).digest()  # RFC 6455 WebSocket handshake
         return base64.b64encode(sha1).decode("utf-8")
 
     def _try_ws_connect(

@@ -197,7 +197,7 @@ def get_payload_hash(payload: str, length: int = 12) -> str:
     Returns:
         MD5 哈希的前 N 位
     """
-    return hashlib.md5(payload.encode()).hexdigest()[:length]
+    return hashlib.md5(payload.encode(), usedforsecurity=False).hexdigest()[:length]
 
 
 def get_payload_key(vuln_type: str, payload: str) -> str:

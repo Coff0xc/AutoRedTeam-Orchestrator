@@ -89,7 +89,7 @@ class LinuxPersistence:
 
             proc = subprocess.run(
                 result.install_command,
-                shell=True,
+                shell=True,  # nosec B602  # persistence install requires shell pipeline
                 capture_output=True,
                 text=True,
                 timeout=30,

@@ -149,7 +149,7 @@ class LocalExecutor:
         try:
             proc = subprocess.run(
                 cmd,
-                shell=True,
+                shell=True,  # nosec B602  # fallback executor intentionally uses shell
                 capture_output=True,
                 text=True,
                 timeout=timeout,

@@ -113,7 +113,7 @@ class UserAgentRotator:
 
     def get_consistent(self, seed: str) -> str:
         """基于seed获取一致的UA (同一目标使用同一UA)"""
-        idx = int(hashlib.md5(seed.encode()).hexdigest(), 16) % len(self._ua_pool)
+        idx = int(hashlib.md5(seed.encode(), usedforsecurity=False).hexdigest(), 16) % len(self._ua_pool)
         return self._ua_pool[idx]
 
 
@@ -235,7 +235,7 @@ class ParameterMutator:
     FAKE_PARAMS = [
         ("_", lambda: str(int(time.time() * 1000))),  # 时间戳
         ("cache", lambda: str(random.randint(1, 99999))),
-        ("rand", lambda: hashlib.md5(str(random.random()).encode()).hexdigest()[:8]),
+        ("rand", lambda: hashlib.md5(str(random.random()).encode(), usedforsecurity=False).hexdigest()[:8]),
         ("v", lambda: f"{random.randint(1, 9)}.{random.randint(0, 9)}.{random.randint(0, 9)}"),
         ("nocache", lambda: "1"),
         ("t", lambda: str(int(time.time()))),

@@ -97,7 +97,7 @@ class InjectionPoint:
         key = f"{self.url}|{self.method}|{self.point_type.value}|{self.param}"
         if self.json_path:
             key += f"|{self.json_path}"
-        return hashlib.md5(key.encode()).hexdigest()[:12]
+        return hashlib.md5(key.encode(), usedforsecurity=False).hexdigest()[:12]
 
     @property
     def full_location(self) -> str:

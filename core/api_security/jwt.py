@@ -661,7 +661,7 @@ class JWTTester(BaseAPITester):
 
         # HMAC-SHA256签名
         signature = hmac.new(
-            secret.encode("utf-8"), message.encode("utf-8"), hashlib.sha256
+            secret.encode("utf-8"), message.encode("utf-8"), hashlib.sha256  # nosec B324  # HMAC-SHA256 for JWT signing (security purpose)
         ).digest()
 
         signature_b64 = self._base64url_encode(signature)
@@ -690,7 +690,7 @@ class JWTTester(BaseAPITester):
             message = f"{header_b64}.{payload_b64}"
 
             if algorithm == "HS256":
-                hash_func = hashlib.sha256
+                hash_func = hashlib.sha256  # nosec B324  # HMAC hash for JWT signature verification
             elif algorithm == "HS384":
                 hash_func = hashlib.sha384
             elif algorithm == "HS512":

@@ -96,7 +96,7 @@ def _parse_jwt(token: str) -> Optional[Dict[str, Any]]:
 
 def _sign_hs256(message: str, secret: str) -> str:
     """使用 HS256 签名"""
-    sig = hmac.new(secret.encode(), message.encode(), hashlib.sha256).digest()
+    sig = hmac.new(secret.encode(), message.encode(), hashlib.sha256).digest()  # nosec B324  # HMAC-SHA256 for JWT HS256 signing in vuln testing
     return _b64_encode(sig)
 
 

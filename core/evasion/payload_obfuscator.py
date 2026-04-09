@@ -134,7 +134,7 @@ class AESEncoder(BaseEncoder):
         if not HAS_CRYPTO:
             raise ImportError("pycryptodome required for AES")
         self.key = key or self._generate_key()
-        self._key_bytes = hashlib.sha256(self.key.encode()).digest()
+        self._key_bytes = hashlib.sha256(self.key.encode()).digest()  # nosec B324  # AES key derivation from passphrase
 
     def _generate_key(self, length: int = 32) -> str:
         """生成密码学安全的随机密钥"""
@@ -160,7 +160,7 @@ from Crypto.Util.Padding import unpad
 import hashlib
 
 def _ad({var_name}, k):
-    kb = hashlib.sha256(k.encode()).digest()
+    kb = hashlib.sha256(k.encode()).digest()  # nosec B324  # generated decoder: AES key derivation
     iv, enc = {var_name}[:16], {var_name}[16:]
     c = AES.new(kb, AES.MODE_CBC, iv)
     return unpad(c.decrypt(enc), 16)

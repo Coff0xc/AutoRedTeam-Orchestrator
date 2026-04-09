@@ -101,7 +101,7 @@ class Credential:
     def unique_id(self) -> str:
         """生成唯一标识"""
         key = f"{self.username}:{self.secret_type.value}:{self.host}:{self.service}"
-        return hashlib.md5(key.encode()).hexdigest()[:16]
+        return hashlib.md5(key.encode(), usedforsecurity=False).hexdigest()[:16]
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -270,7 +270,7 @@ class VulnFinding:
     def _generate_id(self) -> str:
         """生成漏洞唯一ID"""
         key = f"{self.vuln_type}:{self.url}:{self.param}:{self.payload}"
-        return hashlib.md5(key.encode()).hexdigest()[:16]
+        return hashlib.md5(key.encode(), usedforsecurity=False).hexdigest()[:16]
 
     @property
     def is_critical(self) -> bool:

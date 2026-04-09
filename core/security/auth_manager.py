@@ -449,7 +449,7 @@ class AuthManager:
             return hmac.compare_digest(derived.hex(), expected_hex)
         else:
             # 旧格式: plain SHA256（向后兼容）
-            plain_hash = hashlib.sha256(secret.encode()).hexdigest()
+            plain_hash = hashlib.sha256(secret.encode()).hexdigest()  # nosec B324  # SHA256 for API key verification (legacy format)
             return hmac.compare_digest(plain_hash, key_hash)
 
     def _check_rate_limit(self, key_id: str, limit: int) -> bool:

@@ -66,7 +66,7 @@ class OOBIntegratedVerifier:
         """
         unique_id = secrets.token_hex(16)
         # 生成短 hash 用于 URL
-        short_hash = hashlib.md5(f"{vuln_type}:{url}:{param}".encode()).hexdigest()[:8]
+        short_hash = hashlib.md5(f"{vuln_type}:{url}:{param}".encode(), usedforsecurity=False).hexdigest()[:8]
 
         if self.callback_server:
             callback_url = f"{self.callback_server}/{unique_id}/{short_hash}"

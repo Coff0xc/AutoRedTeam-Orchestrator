@@ -87,7 +87,7 @@ class ChunkedTransfer:
 
     def _calculate_checksum(self, data: bytes) -> str:
         """计算MD5校验和"""
-        return hashlib.md5(data).hexdigest()
+        return hashlib.md5(data, usedforsecurity=False).hexdigest()
 
     def split_data(self, data: bytes) -> List[dict]:
         """

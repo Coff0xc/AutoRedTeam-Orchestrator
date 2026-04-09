@@ -163,7 +163,7 @@ class TLSFingerprint:
         if self._ja3_hash:
             return self._ja3_hash
 
-        self._ja3_hash = hashlib.md5(self.ja3_string.encode()).hexdigest()
+        self._ja3_hash = hashlib.md5(self.ja3_string.encode(), usedforsecurity=False).hexdigest()
         return self._ja3_hash
 
 
