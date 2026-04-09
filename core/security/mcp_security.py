@@ -62,6 +62,8 @@ class ValidationResult:
     errors: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     sanitized_value: Any = None
+    # DNS 解析后的 IP 列表，用于 DNS pinning 防止 TOCTOU/DNS rebinding 攻击
+    resolved_ips: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -69,6 +71,7 @@ class ValidationResult:
             "errors": self.errors,
             "warnings": self.warnings,
             "sanitized_value": self.sanitized_value,
+            "resolved_ips": self.resolved_ips,
         }
 
 
@@ -455,6 +458,8 @@ class InputValidator:
                             valid=False,
                             errors=["URL 主机为私有 IP 地址"],
                         )
+                    # 主机名本身是 IP 地址，直接记录用于 DNS pinning
+                    return ValidationResult(valid=True, resolved_ips=[str(ip)])
                 except ValueError:
                     # hostname 是域名，解析 DNS 检查是否指向私有 IP（防止 DNS rebinding）
                     try:
@@ -468,6 +473,9 @@ class InputValidator:
                                         f"URL 域名 {hostname} 解析到私有 IP 地址 {sockaddr[0]}"
                                     ],
                                 )
+                        # DNS 解析通过，记录已验证的 IP 用于 DNS pinning（防止 TOCTOU）
+                        pinned_ips = [sockaddr[0] for _, _, _, _, sockaddr in addrinfo]
+                        return ValidationResult(valid=True, resolved_ips=pinned_ips)
                     except socket.gaierror:
                         # fail-close: DNS 解析失败时拒绝请求，防止绕过 SSRF 检查
                         logger.warning("SSRF 检查: 无法解析域名 %s，拒绝请求", hostname)

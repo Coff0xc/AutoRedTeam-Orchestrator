@@ -126,8 +126,8 @@ class AttackKnowledgeGraph:
     }
 
 
-class AIDecisionEngine:
-    """AI智能决策引擎"""
+class RuleBasedAttackPlanner:
+    """基于规则的攻击规划引擎（原 AIDecisionEngine，重命名以避免与 ai_engine.py 同名类冲突）"""
 
     def __init__(self, history_file: Optional[Path] = None):
         self.knowledge_graph = AttackKnowledgeGraph()
@@ -389,13 +389,13 @@ class AIDecisionEngine:
 
 
 # 全局实例
-_engine_instance: Optional[AIDecisionEngine] = None
+_engine_instance: Optional[RuleBasedAttackPlanner] = None
 
 
 _engine_lock = threading.Lock()
 
 
-def get_decision_engine() -> AIDecisionEngine:
+def get_decision_engine() -> RuleBasedAttackPlanner:
     """获取决策引擎单例（线程安全）"""
     global _engine_instance
     with _engine_lock:
@@ -404,7 +404,7 @@ def get_decision_engine() -> AIDecisionEngine:
             from pathlib import Path
 
             history_path = Path(tempfile.gettempdir()) / "autored_history.json"
-            _engine_instance = AIDecisionEngine(history_file=history_path)
+            _engine_instance = RuleBasedAttackPlanner(history_file=history_path)
         return _engine_instance
 
 
@@ -413,3 +413,7 @@ def reset_decision_engine() -> None:
     global _engine_instance
     with _engine_lock:
         _engine_instance = None
+
+
+# 向后兼容别名（已弃用，避免外部代码破损）
+AIDecisionEngine = RuleBasedAttackPlanner
