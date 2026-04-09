@@ -11,7 +11,7 @@ SQL注入验证模块
 
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from .models import VerificationResult
 
@@ -20,6 +20,36 @@ logger = logging.getLogger(__name__)
 
 class SQLiVerifierMixin:
     """SQL注入验证混入类"""
+
+    # -- Stubs for methods provided by BaseVerifier when mixed in --
+    def _prepare_base_request(
+        self,
+        url: str,
+        method: str = "GET",
+        headers: Optional[Dict[str, str]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        data: Optional[Any] = None,
+        json_data: Optional[Any] = None,
+    ) -> Tuple[str, Optional[str], Dict[str, str]]:
+        raise NotImplementedError
+
+    def _request(
+        self,
+        url: str,
+        method: str = "GET",
+        data: Optional[Any] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> Tuple[Optional[str], int, float, int]:
+        raise NotImplementedError
+
+    def _prepare_request(
+        self, url: str, param: str, payload: str, method: str = "GET",
+        headers: Optional[Dict[str, str]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        data: Optional[Any] = None,
+        json_data: Optional[Any] = None,
+    ) -> Tuple[str, Optional[str], Dict[str, str]]:
+        raise NotImplementedError
 
     def verify_sqli_time_based(
         self,

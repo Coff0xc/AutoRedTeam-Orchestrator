@@ -10,7 +10,7 @@ import secrets
 import string
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -644,7 +644,7 @@ def linux_persist(command: str, method: str = "crontab", **kwargs) -> Dict[str, 
     """
     persistence = LinuxPersistence()
 
-    method_map = {
+    method_map: Dict[str, Callable[..., PersistenceResult]] = {
         "crontab": persistence.crontab,
         "systemd": persistence.systemd_service,
         "bashrc": persistence.bashrc,
@@ -659,25 +659,25 @@ def linux_persist(command: str, method: str = "crontab", **kwargs) -> Dict[str, 
     }
 
     if method == "systemd_timer":
-        result = persistence.systemd_timer(command, **kwargs)
-        return {"success": True, "method": method, **result}
+        timer_result = persistence.systemd_timer(command, **kwargs)
+        return {"success": True, "method": method, **timer_result}
 
     if method in method_map:
-        result = method_map[method](command, **kwargs)
+        persist_result = method_map[method](command, **kwargs)
         return {
-            "success": result.success,
-            "method": result.method,
-            "location": result.location,
-            "install_command": result.install_command,
-            "cleanup_command": result.cleanup_command,
-            "content": result.content,
-            "error": result.error,
+            "success": persist_result.success,
+            "method": persist_result.method,
+            "location": persist_result.location,
+            "install_command": persist_result.install_command,
+            "cleanup_command": persist_result.cleanup_command,
+            "content": persist_result.content,
+            "error": persist_result.error,
         }
 
     return {"success": False, "error": f"Unknown method: {method}"}
 
 
-def list_linux_persistence_methods() -> List[Dict[str, str]]:
+def list_linux_persistence_methods() -> List[Dict[str, Any]]:
     """列出所有可用的 Linux 持久化方法"""
     return [
         {

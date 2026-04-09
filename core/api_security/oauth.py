@@ -197,7 +197,7 @@ class OAuthTester(BaseAPITester):
                 )
 
         if vulnerable_payloads:
-            result = self._create_result(
+            test_result = self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.OAUTH_REDIRECT,
                 severity=Severity.CRITICAL,
@@ -217,7 +217,7 @@ class OAuthTester(BaseAPITester):
                     "4. 验证完整URI包括路径和查询参数"
                 ),
             )
-            return result
+            return test_result
 
         return None
 
@@ -235,7 +235,7 @@ class OAuthTester(BaseAPITester):
         # 测试不带state参数
         result_no_state = self._send_auth_request(include_state=False)
 
-        if result_no_state.get("success") and result_no_state.get("status_code") < 400:
+        if result_no_state.get("success") and result_no_state.get("status_code", 999) < 400:
             self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.OAUTH_CSRF,
@@ -257,7 +257,7 @@ class OAuthTester(BaseAPITester):
         # 测试空state
         result_empty_state = self._send_auth_request(state="")
 
-        if result_empty_state.get("success") and result_empty_state.get("status_code") < 400:
+        if result_empty_state.get("success") and result_empty_state.get("status_code", 999) < 400:
             self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.OAUTH_CSRF,
@@ -284,7 +284,7 @@ class OAuthTester(BaseAPITester):
         # 测试不带PKCE参数
         result_no_pkce = self._send_auth_request(include_pkce=False)
 
-        if result_no_pkce.get("success") and result_no_pkce.get("status_code") < 400:
+        if result_no_pkce.get("success") and result_no_pkce.get("status_code", 999) < 400:
             # 检查是否为公开客户端
             # 对于公开客户端，PKCE是强制的（根据OAuth 2.1）
 
@@ -333,12 +333,12 @@ class OAuthTester(BaseAPITester):
         for scope in elevated_scopes:
             result = self._send_auth_request(scope=scope)
 
-            if result.get("success") and result.get("status_code") < 400:
+            if result.get("success") and result.get("status_code", 999) < 400:
                 # 检查响应中是否包含扩展的scope
                 accepted_scopes.append(scope)
 
         if accepted_scopes:
-            result = self._create_result(
+            test_result = self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.OAUTH_SCOPE_MANIPULATION,
                 severity=Severity.HIGH,
@@ -352,7 +352,7 @@ class OAuthTester(BaseAPITester):
                     "4. 实施最小权限原则"
                 ),
             )
-            return result
+            return test_result
 
         return None
 
@@ -417,7 +417,7 @@ class OAuthTester(BaseAPITester):
         # 测试是否支持隐式流
         result = self._send_auth_request(response_type="token")
 
-        if result.get("success") and result.get("status_code") < 400:
+        if result.get("success") and result.get("status_code", 999) < 400:
             self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.OAUTH_TOKEN_LEAK,
@@ -441,7 +441,7 @@ class OAuthTester(BaseAPITester):
         # 测试response_type=token id_token（OIDC隐式流）
         result_oidc = self._send_auth_request(response_type="token id_token")
 
-        if result_oidc.get("success") and result_oidc.get("status_code") < 400:
+        if result_oidc.get("success") and result_oidc.get("status_code", 999) < 400:
             self._create_result(
                 vulnerable=True,
                 vuln_type=APIVulnType.OAUTH_TOKEN_LEAK,
