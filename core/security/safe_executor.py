@@ -37,6 +37,12 @@ class CommandWhitelist:
 class SafeExecutor:
     """安全命令执行器"""
 
+    # python -m 允许执行的模块白名单（极度限制，防止 python -m http.server 等滥用）
+    PYTHON_ALLOWED_MODULES: frozenset = frozenset()
+
+    # python 只允许的安全参数（版本查询）
+    PYTHON_SAFE_ARGS: frozenset = frozenset({"--version", "-V"})
+
     # 默认白名单命令
     DEFAULT_WHITELIST = {
         # 网络扫描工具
@@ -297,8 +303,43 @@ class SafeExecutor:
                 if arg not in whitelist.allowed_args:
                     raise SecurityError(f"参数不在白名单中: {arg}")
 
+        # python/python3 的 -m 参数需要额外验证模块白名单
+        if whitelist.command in ("python", "python3"):
+            self._validate_python_args(args)
+
         # 基本安全检查
         self._basic_validation([whitelist.command] + args)
+
+    def _validate_python_args(self, args: List[str]):
+        """
+        验证 python/python3 的参数安全性
+
+        禁止 -m 执行非白名单模块，禁止 -c 执行任意代码。
+        仅允许 --version / -V 等安全参数。
+
+        Args:
+            args: 参数列表（不含命令本身）
+
+        Raises:
+            SecurityError: 参数验证失败
+        """
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if arg == "-m":
+                # -m 后面必须跟模块名
+                if i + 1 >= len(args):
+                    raise SecurityError("python -m 缺少模块名")
+                module_name = args[i + 1]
+                if module_name not in self.PYTHON_ALLOWED_MODULES:
+                    raise SecurityError(
+                        "python -m %s 不在允许的模块白名单中" % module_name
+                    )
+                i += 2
+                continue
+            elif arg == "-c":
+                raise SecurityError("python -c 执行任意代码被禁止")
+            i += 1
 
     def _basic_validation(self, cmd: List[str]):
         """

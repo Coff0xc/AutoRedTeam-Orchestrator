@@ -100,7 +100,8 @@ class InMemoryGraphStore:
 
     def get_entity(self, entity_id: str) -> Optional[KnowledgeEntity]:
         """获取实体"""
-        return self._entities.get(entity_id)
+        with self._lock:
+            return self._entities.get(entity_id)
 
     def update_entity(self, entity_id: str, properties: Dict[str, Any]) -> bool:
         """更新实体属性"""
@@ -172,7 +173,8 @@ class InMemoryGraphStore:
 
     def get_relation(self, relation_id: str) -> Optional[KnowledgeRelation]:
         """获取关系"""
-        return self._relations.get(relation_id)
+        with self._lock:
+            return self._relations.get(relation_id)
 
     def _delete_relation(self, relation_id: str) -> bool:
         """删除关系"""
@@ -192,30 +194,31 @@ class InMemoryGraphStore:
         limit: int = 100,
     ) -> List[KnowledgeEntity]:
         """查找实体"""
-        candidates: Optional[Set[str]] = None
+        with self._lock:
+            candidates: Optional[Set[str]] = None
 
-        # 按类型过滤
-        if entity_type:
-            candidates = self._type_index.get(entity_type, set()).copy()
+            # 按类型过滤
+            if entity_type:
+                candidates = self._type_index.get(entity_type, set()).copy()
 
-        # 按属性过滤
-        if properties:
-            for key, value in properties.items():
-                idx_key = f"{key}:{value}"
-                prop_ids = self._property_index.get(idx_key, set())
+            # 按属性过滤
+            if properties:
+                for key, value in properties.items():
+                    idx_key = f"{key}:{value}"
+                    prop_ids = self._property_index.get(idx_key, set())
 
-                if candidates is None:
-                    candidates = prop_ids.copy()
-                else:
-                    candidates &= prop_ids
+                    if candidates is None:
+                        candidates = prop_ids.copy()
+                    else:
+                        candidates &= prop_ids
 
-        if candidates is None:
-            candidates = set(self._entities.keys())
+            if candidates is None:
+                candidates = set(self._entities.keys())
 
-        entities = [
-            self._entities[eid] for eid in list(candidates)[:limit] if eid in self._entities
-        ]
-        return entities
+            entities = [
+                self._entities[eid] for eid in list(candidates)[:limit] if eid in self._entities
+            ]
+            return entities
 
     def find_relations(
         self,
@@ -224,27 +227,28 @@ class InMemoryGraphStore:
         relation_type: Optional[RelationType] = None,
     ) -> List[KnowledgeRelation]:
         """查找关系"""
-        if source_id:
-            rel_ids = self._outgoing_index.get(source_id, set())
-        elif target_id:
-            rel_ids = self._incoming_index.get(target_id, set())
-        else:
-            rel_ids = set(self._relations.keys())
+        with self._lock:
+            if source_id:
+                rel_ids = self._outgoing_index.get(source_id, set())
+            elif target_id:
+                rel_ids = self._incoming_index.get(target_id, set())
+            else:
+                rel_ids = set(self._relations.keys())
 
-        relations = []
-        for rid in rel_ids:
-            rel = self._relations.get(rid)
-            if rel is None:
-                continue
-            if relation_type and rel.relation_type != relation_type:
-                continue
-            if source_id and rel.source_id != source_id:
-                continue
-            if target_id and rel.target_id != target_id:
-                continue
-            relations.append(rel)
+            relations = []
+            for rid in rel_ids:
+                rel = self._relations.get(rid)
+                if rel is None:
+                    continue
+                if relation_type and rel.relation_type != relation_type:
+                    continue
+                if source_id and rel.source_id != source_id:
+                    continue
+                if target_id and rel.target_id != target_id:
+                    continue
+                relations.append(rel)
 
-        return relations
+            return relations
 
     def find_paths(
         self,
@@ -297,53 +301,58 @@ class InMemoryGraphStore:
         relation_type: Optional[RelationType] = None,
     ) -> List[Tuple[KnowledgeEntity, KnowledgeRelation]]:
         """获取邻居节点"""
-        neighbors = []
+        with self._lock:
+            neighbors = []
 
-        if direction in ("out", "both"):
-            for rel_id in self._outgoing_index.get(entity_id, set()):
-                rel = self._relations.get(rel_id)
-                if rel and (relation_type is None or rel.relation_type == relation_type):
-                    target = self._entities.get(rel.target_id)
-                    if target:
-                        neighbors.append((target, rel))
+            if direction in ("out", "both"):
+                for rel_id in self._outgoing_index.get(entity_id, set()):
+                    rel = self._relations.get(rel_id)
+                    if rel and (relation_type is None or rel.relation_type == relation_type):
+                        target = self._entities.get(rel.target_id)
+                        if target:
+                            neighbors.append((target, rel))
 
-        if direction in ("in", "both"):
-            for rel_id in self._incoming_index.get(entity_id, set()):
-                rel = self._relations.get(rel_id)
-                if rel and (relation_type is None or rel.relation_type == relation_type):
-                    source = self._entities.get(rel.source_id)
-                    if source:
-                        neighbors.append((source, rel))
+            if direction in ("in", "both"):
+                for rel_id in self._incoming_index.get(entity_id, set()):
+                    rel = self._relations.get(rel_id)
+                    if rel and (relation_type is None or rel.relation_type == relation_type):
+                        source = self._entities.get(rel.source_id)
+                        if source:
+                            neighbors.append((source, rel))
 
-        return neighbors
+            return neighbors
 
     @property
     def entity_count(self) -> int:
         """实体总数"""
-        return len(self._entities)
+        with self._lock:
+            return len(self._entities)
 
     @property
     def relation_count(self) -> int:
         """关系总数"""
-        return len(self._relations)
+        with self._lock:
+            return len(self._relations)
 
     def clear(self):
         """清空所有数据"""
-        self._entities.clear()
-        self._relations.clear()
-        self._entity_order.clear()
-        self._relation_order.clear()
-        self._type_index.clear()
-        self._outgoing_index.clear()
-        self._incoming_index.clear()
-        self._property_index.clear()
+        with self._lock:
+            self._entities.clear()
+            self._relations.clear()
+            self._entity_order.clear()
+            self._relation_order.clear()
+            self._type_index.clear()
+            self._outgoing_index.clear()
+            self._incoming_index.clear()
+            self._property_index.clear()
 
     def export_to_dict(self) -> Dict[str, Any]:
         """导出为字典（用于序列化）"""
-        return {
-            "entities": [e.to_dict() for e in self._entities.values()],
-            "relations": [r.to_dict() for r in self._relations.values()],
-        }
+        with self._lock:
+            return {
+                "entities": [e.to_dict() for e in self._entities.values()],
+                "relations": [r.to_dict() for r in self._relations.values()],
+            }
 
 
 class KnowledgeManager:

@@ -30,7 +30,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .base import BaseC2, BeaconInfo, C2Config, C2Status, Task, TaskResult, TaskTypes
 from .crypto import C2Crypto
@@ -85,6 +85,11 @@ class BeaconConfig(C2Config):
         )
     )
     max_command_length: int = 4096  # 命令最大长度
+
+    # 路径安全配置 — 限制文件操作的允许目录
+    allowed_paths: List[str] = field(
+        default_factory=lambda: [tempfile.gettempdir()]
+    )
 
     def __post_init__(self):
         """初始化后处理"""
@@ -722,10 +727,45 @@ class Beacon(BaseC2):
         """返回当前目录"""
         return os.getcwd()
 
+    def _validate_path(self, path: str) -> Tuple[bool, str]:
+        """验证路径是否在允许的目录范围内
+
+        防止被恶意 C2 服务器利用进行任意文件读写。
+
+        Args:
+            path: 待验证的文件/目录路径
+
+        Returns:
+            (True, 解析后的绝对路径) 或 (False, 错误信息)
+        """
+        from pathlib import Path as _Path
+
+        try:
+            resolved = _Path(path).resolve()
+        except (OSError, ValueError, RuntimeError) as e:
+            return False, f"路径解析失败: {e}"
+
+        for allowed in self.config.allowed_paths:
+            try:
+                allowed_resolved = _Path(allowed).resolve()
+                resolved.relative_to(allowed_resolved)
+                return True, str(resolved)
+            except (ValueError, OSError, RuntimeError):
+                continue
+
+        return False, (
+            f"路径 {resolved} 不在允许范围内 "
+            f"(allowed_paths={self.config.allowed_paths})"
+        )
+
     def _handle_cd(self, path: str) -> str:
         """切换目录"""
+        valid, msg = self._validate_path(path)
+        if not valid:
+            logger.warning("cd 路径验证失败: %s", msg)
+            return f"[Error] Path denied: {msg}"
         try:
-            os.chdir(path)
+            os.chdir(msg)  # msg 是解析后的绝对路径
             return os.getcwd()
         except (OSError, FileNotFoundError, PermissionError) as e:
             return f"[Error] Cannot change directory: {e}"
@@ -753,8 +793,12 @@ class Beacon(BaseC2):
 
     def _handle_cat(self, path: str) -> str:
         """读取文件内容"""
+        valid, msg = self._validate_path(path)
+        if not valid:
+            logger.warning("cat 路径验证失败: %s", msg)
+            return f"[Error] Path denied: {msg}"
         try:
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
+            with open(msg, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
             return content[: self.config.max_output_size]
         except (OSError, FileNotFoundError, PermissionError) as e:
@@ -784,11 +828,16 @@ class Beacon(BaseC2):
             if not path or not content_b64:
                 return "[Error] Missing path or content"
 
+            valid, msg = self._validate_path(path)
+            if not valid:
+                logger.warning("upload 路径验证失败: %s", msg)
+                return f"[Error] Path denied: {msg}"
+
             content = base64.b64decode(content_b64)
-            with open(path, "wb") as f:
+            with open(msg, "wb") as f:
                 f.write(content)
 
-            return f"Uploaded {len(content)} bytes to {path}"
+            return f"Uploaded {len(content)} bytes to {msg}"
 
         except (OSError, PermissionError) as e:
             return f"[Error] Cannot write file: {e}"
@@ -797,14 +846,18 @@ class Beacon(BaseC2):
 
     def _handle_download(self, path: str) -> Dict[str, Any]:
         """从目标下载文件"""
+        valid, msg = self._validate_path(path)
+        if not valid:
+            logger.warning("download 路径验证失败: %s", msg)
+            return {"error": f"Path denied: {msg}"}
         try:
             import base64
 
-            with open(path, "rb") as f:
+            with open(msg, "rb") as f:
                 content = f.read()
 
             return {
-                "path": path,
+                "path": msg,
                 "content": base64.b64encode(content).decode(),
                 "size": len(content),
             }

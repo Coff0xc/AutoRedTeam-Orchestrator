@@ -5,6 +5,8 @@ CVE工具处理器
 
 from typing import Any, Dict, List, Optional
 
+from core.security import require_critical_auth
+
 from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
 from .tooling import tool
 
@@ -100,6 +102,7 @@ def register_cve_tools(mcp, counter, logger):
         return {"success": True, "stats": stats}
 
     @tool(mcp)
+    @require_critical_auth
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.CVE, context_extractor=extract_target)
     async def poc_execute(
@@ -164,6 +167,7 @@ def register_cve_tools(mcp, counter, logger):
     # ==================== CVE 自动利用工具 ====================
 
     @tool(mcp)
+    @require_critical_auth
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.CVE, context_extractor=extract_target)
     async def cve_auto_exploit(
@@ -204,6 +208,7 @@ def register_cve_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @require_critical_auth
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.CVE, context_extractor=extract_target)
     async def cve_exploit_with_desc(

@@ -420,8 +420,11 @@ def _get_validator(validation_type: str) -> Callable[[str], bool]:
         return validators.get(validation_type, lambda x: True)
 
     except ImportError:
-        # validators 模块不可用时返回始终通过的验证器
-        return lambda x: True
+        # validators 模块不可用时返回始终拒绝的验证器（fail-closed）
+        logging.getLogger(__name__).error(
+            "utils.validators 导入失败，所有输入验证将拒绝通过。请检查依赖安装"
+        )
+        return lambda x: False
 
 
 def _validate_target_auto(

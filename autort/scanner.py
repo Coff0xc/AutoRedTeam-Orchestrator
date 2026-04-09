@@ -37,8 +37,68 @@ class Scanner:
     """
 
     def __init__(self, target: str, config: Optional[Dict[str, Any]] = None):
+        self._validate_target(target)
         self.target = target
         self._config = config or {}
+
+    @staticmethod
+    def _validate_target(target: str) -> None:
+        """验证目标格式（URL / IP / 域名）
+
+        优先使用 utils.validators 中的验证函数；
+        如果导入失败，则回退到基础正则校验。
+
+        Raises:
+            ValueError: 目标格式无效
+        """
+        if not target or not isinstance(target, str):
+            raise ValueError("目标不能为空")
+        target = target.strip()
+        try:
+            from utils.validators import validate_url, validate_ip, validate_domain
+
+            if target.startswith(("http://", "https://")):
+                if validate_url(target):
+                    return
+                raise ValueError(
+                    "无效的 URL 格式: %s（需要 http/https 协议和有效的主机名）" % target
+                )
+
+            if validate_ip(target):
+                return
+            if validate_domain(target):
+                return
+
+            raise ValueError(
+                "无效的目标格式: %s（支持 URL / IP / 域名）" % target
+            )
+
+        except ImportError:
+            # validators 模块不可用时使用基础正则校验
+            import re as _re
+
+            _url_re = _re.compile(
+                r"^https?://[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?(:\d{1,5})?(/.*)?$"
+            )
+            _ip_re = _re.compile(
+                r"^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}"
+                r"(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$"
+            )
+            _domain_re = _re.compile(
+                r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+"
+                r"[a-zA-Z]{2,}$"
+            )
+
+            if _url_re.match(target):
+                return
+            if _ip_re.match(target):
+                return
+            if _domain_re.match(target):
+                return
+
+            raise ValueError(
+                "无效的目标格式: %s（支持 URL / IP / 域名）" % target
+            )
 
     async def full_recon(self) -> Dict[str, Any]:
         """执行完整10阶段侦察

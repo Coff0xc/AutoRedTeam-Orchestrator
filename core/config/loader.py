@@ -270,11 +270,13 @@ def reload_config() -> AutoRTConfig:
         新的 AutoRTConfig 实例
     """
     global _config
-    _config = _build_config()
+    with _config_lock:
+        _config = _build_config()
     return _config
 
 
 def reset_config() -> None:
     """重置配置单例（主要用于测试）"""
     global _config
-    _config = None
+    with _config_lock:
+        _config = None

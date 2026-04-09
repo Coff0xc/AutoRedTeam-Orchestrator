@@ -3,10 +3,14 @@
 包含: generate_report, export_findings
 """
 
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .error_handling import ErrorCategory, handle_errors, validate_inputs
 from .tooling import tool
+
+# 允许的报告输出目录（相对于项目根）
+_ALLOWED_REPORT_DIRS = ("reports", "data", "logs")
 
 
 def register_report_tools(mcp, counter, logger):
@@ -52,7 +56,26 @@ def register_report_tools(mcp, counter, logger):
             return {"success": False, "error": f"不支持的报告格式: {format}"}
 
         if output_path:
-            with open(output_path, "w", encoding="utf-8") as f:
+            # 路径安全校验：防止路径遍历写入任意文件
+            resolved = Path(output_path).resolve()
+            project_root = Path(__file__).resolve().parent.parent
+            allowed = False
+            for allowed_dir in _ALLOWED_REPORT_DIRS:
+                try:
+                    resolved.relative_to(project_root / allowed_dir)
+                    allowed = True
+                    break
+                except ValueError:
+                    continue
+            if not allowed:
+                return {
+                    "success": False,
+                    "error": f"输出路径不在允许的目录中。允许的目录: {', '.join(_ALLOWED_REPORT_DIRS)}",
+                }
+            # 确保父目录存在
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(resolved, "w", encoding="utf-8") as f:
                 if isinstance(report, dict):
                     import json
 
