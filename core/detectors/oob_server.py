@@ -27,11 +27,15 @@ import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import UDPServer, BaseRequestHandler
 from typing import TYPE_CHECKING, Any, Dict, Optional
+from urllib.parse import parse_qs
 
 if TYPE_CHECKING:
     from .advanced_verifier import OOBCallbackManager
 
 logger = logging.getLogger(__name__)
+
+# 预编译 token 格式验证正则（16 位十六进制）
+_TOKEN_RE = re.compile(r"[0-9a-fA-F]{16}")
 
 # ==================== HTTP 回调监听器 ====================
 
@@ -81,11 +85,10 @@ class _OOBHTTPHandler(BaseHTTPRequestHandler):
 
         # 策略 2: 查询参数 ?token=<token_id>
         if query_string:
-            for param in query_string.split("&"):
-                if "=" in param:
-                    key, value = param.split("=", 1)
-                    if key.lower() == "token" and self._is_valid_token(value):
-                        candidates.append(value)
+            params = parse_qs(query_string)
+            for val in params.get("token", []):
+                if self._is_valid_token(val):
+                    candidates.append(val)
 
         # 策略 3: Host 头子域名
         host = self.headers.get("Host", "")
@@ -104,7 +107,7 @@ class _OOBHTTPHandler(BaseHTTPRequestHandler):
     @staticmethod
     def _is_valid_token(value: str) -> bool:
         """检查是否为有效的 token 格式（16 位十六进制）"""
-        return bool(re.fullmatch(r"[0-9a-fA-F]{16}", value))
+        return bool(_TOKEN_RE.fullmatch(value))
 
     def _build_trigger_data(self) -> Dict[str, Any]:
         """构建触发数据（请求详情）"""
@@ -126,10 +129,12 @@ class _OOBHTTPHandler(BaseHTTPRequestHandler):
             return
 
         candidates = self._extract_tokens()
-        trigger_data = self._build_trigger_data()
+        trigger_data = None
         matched = False
 
         for token_id in candidates:
+            if trigger_data is None:
+                trigger_data = self._build_trigger_data()
             if self.oob_manager.mark_triggered(token_id, trigger_data):
                 matched = True
                 log = self.oob_logger or logger
@@ -143,6 +148,8 @@ class _OOBHTTPHandler(BaseHTTPRequestHandler):
                 break  # 命中第一个即可
 
         if not matched and candidates:
+            if trigger_data is None:
+                trigger_data = self._build_trigger_data()
             log = self.oob_logger or logger
             log.debug(
                 "OOB HTTP 请求未匹配: candidates=%s, 来源=%s",
@@ -297,6 +304,20 @@ class _OOBDNSHandler(BaseRequestHandler):
         return query_name, query_type_str
 
     @staticmethod
+    def _extract_query_section(query_data: bytes) -> bytes:
+        """提取 DNS 查询部分（从偏移 12 到 QTYPE+QCLASS 结束）"""
+        offset = 12
+        while offset < len(query_data):
+            length = query_data[offset]
+            if length == 0:
+                offset += 1
+                break
+            offset += 1 + length
+        # QTYPE + QCLASS
+        offset += 4
+        return query_data[12:offset]
+
+    @staticmethod
     def _build_dns_response(query_data: bytes, query_name: str, matched: bool) -> bytes:  # noqa: ARG004
         """构建 DNS 响应包
 
@@ -313,6 +334,7 @@ class _OOBDNSHandler(BaseRequestHandler):
 
         # 事务 ID
         transaction_id = query_data[:2]
+        query_section = _OOBDNSHandler._extract_query_section(query_data)
 
         if matched:
             # 返回 A 记录: 127.0.0.1
@@ -320,20 +342,6 @@ class _OOBDNSHandler(BaseRequestHandler):
             flags = struct.pack("!H", 0x8180)
             # QDCOUNT=1, ANCOUNT=1, NSCOUNT=0, ARCOUNT=0
             counts = struct.pack("!HHHH", 1, 1, 0, 0)
-
-            # 复制原始查询部分
-            # 从偏移 12 开始到查询名结束 + QTYPE(2) + QCLASS(2)
-            query_section = b""
-            offset = 12
-            while offset < len(query_data):
-                length = query_data[offset]
-                if length == 0:
-                    offset += 1
-                    break
-                offset += 1 + length
-            # QTYPE + QCLASS
-            offset += 4
-            query_section = query_data[12:offset]
 
             # 应答部分: 指针 + TYPE A + CLASS IN + TTL + RDLENGTH + 127.0.0.1
             answer = (
@@ -350,17 +358,6 @@ class _OOBDNSHandler(BaseRequestHandler):
             # NXDOMAIN 响应
             flags = struct.pack("!H", 0x8183)  # 标准响应, NXDOMAIN
             counts = struct.pack("!HHHH", 1, 0, 0, 0)
-
-            # 复制查询部分
-            offset = 12
-            while offset < len(query_data):
-                length = query_data[offset]
-                if length == 0:
-                    offset += 1
-                    break
-                offset += 1 + length
-            offset += 4
-            query_section = query_data[12:offset]
 
             return transaction_id + flags + counts + query_section
 

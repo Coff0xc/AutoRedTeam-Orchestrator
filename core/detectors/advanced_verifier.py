@@ -111,6 +111,7 @@ class OOBCallbackManager:
         self.callback_server = callback_server
         self._tokens: Dict[str, OOBToken] = {}
         self._lock = threading.Lock()
+        self._listener: Optional["OOBCallbackServer"] = None
 
     def generate_token(
         self,
@@ -226,7 +227,7 @@ class OOBCallbackManager:
         """
         from .oob_server import OOBCallbackServer
 
-        if hasattr(self, "_listener") and self._listener and self._listener.running:
+        if self._listener and self._listener.running:
             raise RuntimeError("OOB 监听器已在运行")
 
         self._listener = OOBCallbackServer(
@@ -242,7 +243,7 @@ class OOBCallbackManager:
 
     def stop_listener(self):
         """停止内置 OOB 回调监听器"""
-        if hasattr(self, "_listener") and self._listener:
+        if self._listener:
             self._listener.stop()
             self._listener = None
             logger.info("OOB 回调监听器已停止")

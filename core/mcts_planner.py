@@ -868,14 +868,15 @@ class MCTSPlanner:
             path = Path(tempfile.gettempdir()) / "autored_history.json"
 
         history: Dict[str, Dict] = {}
-        if path.exists():
-            try:
-                import json
+        try:
+            import json
 
-                with open(path, "r", encoding="utf-8") as f:
-                    history = json.load(f)
-                logger.info("加载历史数据用于MCTS校准: %s (%d条记录)", path, len(history))
-            except Exception as e:
-                logger.warning("加载历史数据失败，使用基础概率: %s", e)
+            with open(path, "r", encoding="utf-8") as f:
+                history = json.load(f)
+            logger.info("加载历史数据用于MCTS校准: %s (%d条记录)", path, len(history))
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            logger.warning("加载历史数据失败，使用基础概率: %s", e)
 
         return self.plan(initial_state, iterations, history=history if history else None)
