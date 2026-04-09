@@ -55,10 +55,16 @@ def _sanitize_params(params: dict[str, Any]) -> dict[str, Any]:
     return sanitized
 
 
+_audit_dir_ensured = False  # 缓存 mkdir 状态，避免每次调用 stat
+
+
 def _write_audit_record(record: dict[str, Any]) -> None:
     """追加写入一条审计日志记录到 JSONL 文件"""
+    global _audit_dir_ensured
     try:
-        _AUDIT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        if not _audit_dir_ensured:
+            _AUDIT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+            _audit_dir_ensured = True
         with open(_AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
     except Exception as e:
