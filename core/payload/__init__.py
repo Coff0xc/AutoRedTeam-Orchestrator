@@ -44,18 +44,14 @@ from .engine import (
     smart_select_payloads,
 )
 
-# YAML Payload 加载器
+# YAML Payload 加载器 + JSON Payload DB (延迟加载)
 from .loader import (
+    PayloadDB,
+    get_payload_db,
     get_payload_list,
     load_all_payloads,
     load_payloads,
     reload_payloads,
-)
-
-# JSON Payload DB (延迟加载)
-from .loader import (
-    PayloadDB,
-    get_payload_db,
 )
 
 # 变异器

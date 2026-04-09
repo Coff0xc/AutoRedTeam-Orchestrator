@@ -17,6 +17,7 @@ import asyncio
 import hashlib
 import ipaddress
 import json
+import re
 import logging
 import os
 import platform
@@ -71,20 +72,40 @@ class BeaconConfig(C2Config):
 
     # 命令安全配置
     command_validation: bool = True  # 是否启用命令验证
-    command_blacklist: frozenset = field(
+    max_command_length: int = 4096  # 命令最大长度
+
+    # 命令安全等级: "restricted" | "standard" | "unrestricted"
+    command_mode: str = "restricted"
+
+    # restricted 模式下允许的命令白名单（仅检查基础命令名）
+    command_whitelist: frozenset = field(
         default_factory=lambda: frozenset(
             {
-                "rm -rf /",
-                "rm -rf /*",
-                "mkfs",
-                "dd if=/dev/zero",
-                ":(){ :|:& };:",
-                "format c:",
-                "> /dev/sda",
+                # 信息收集（只读）
+                "whoami", "id", "hostname", "uname", "ipconfig", "ifconfig",
+                "ip", "netstat", "ss", "arp", "route", "cat", "type",
+                "dir", "ls", "pwd", "echo", "set", "env", "printenv",
+                "systeminfo", "ver", "date", "uptime", "df", "free",
+                "ps", "tasklist", "wmic", "reg", "net",
+                # 网络工具
+                "ping", "nslookup", "dig", "traceroute", "tracert",
+                "curl", "wget",
             }
         )
     )
-    max_command_length: int = 4096  # 命令最大长度
+
+    # standard 模式下额外阻止的危险模式（正则表达式）
+    dangerous_patterns: List[str] = field(
+        default_factory=lambda: [
+            r"rm\s+(-[rf]+\s+)?/",         # rm 变体（目标为根目录）
+            r"mkfs",                         # 磁盘格式化
+            r"dd\s+if=",                     # 磁盘写入
+            r">\s*/dev/sd",                  # 覆写磁盘设备
+            r"format\s+[a-zA-Z]:",           # Windows format
+            r":\(\)\s*\{",                   # fork bomb
+            r"shutdown|reboot|halt|poweroff", # 系统控制命令
+        ]
+    )
 
     # 路径安全配置 — 限制文件操作的允许目录
     allowed_paths: List[str] = field(
@@ -94,6 +115,22 @@ class BeaconConfig(C2Config):
     def __post_init__(self):
         """初始化后处理"""
         super().__post_init__()
+
+        # 向后兼容：如果用户仍设置了旧的 command_blacklist 属性，记录弃用警告
+        if hasattr(self, "command_blacklist"):
+            logger.warning(
+                "[Deprecated] command_blacklist 已弃用，请迁移到 command_mode + "
+                "command_whitelist/dangerous_patterns。黑名单将被忽略。"
+            )
+
+        # 校验 command_mode
+        valid_modes = {"restricted", "standard", "unrestricted"}
+        if self.command_mode not in valid_modes:
+            logger.warning(
+                "无效的 command_mode '%s'，回退到 'restricted'",
+                self.command_mode,
+            )
+            self.command_mode = "restricted"
 
         # 同步端点配置
         self.checkin_path = self.checkin_endpoint
@@ -658,10 +695,29 @@ class Beacon(BaseC2):
                 )
 
             cmd_lower = command.lower().strip()
-            for blocked in self.config.command_blacklist:
-                if blocked in cmd_lower:
-                    logger.warning("命令匹配黑名单规则: %s", blocked)
-                    return "[Error] Command blocked by security policy"
+            # 提取基础命令名，去掉路径前缀（如 /usr/bin/ls -> ls）
+            base_cmd = command.strip().split()[0].lower() if command.strip() else ""
+            base_cmd = base_cmd.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+
+            if self.config.command_mode == "restricted":
+                # 白名单模式：仅允许已知安全命令
+                if base_cmd not in self.config.command_whitelist:
+                    logger.warning(
+                        "Restricted 模式: 命令 '%s' 不在白名单中", base_cmd
+                    )
+                    return (
+                        f"[Error] Command '{base_cmd}' not in whitelist"
+                        f" (mode=restricted)"
+                    )
+            elif self.config.command_mode == "standard":
+                # 标准模式：使用正则阻止已知危险模式
+                for pattern in self.config.dangerous_patterns:
+                    if re.search(pattern, cmd_lower):
+                        logger.warning(
+                            "Standard 模式: 命令匹配危险模式: %s", pattern
+                        )
+                        return "[Error] Command blocked by security policy"
+            # unrestricted: 不检查（仅限明确授权场景）
 
         logger.info("Beacon 执行命令: %s", command[:100])  # 只记录前100字符
 

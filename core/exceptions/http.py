@@ -68,19 +68,23 @@ class HTTPError(AutoRedTeamError):
         return result
 
 
-class ConnectionError(HTTPError):
+class AutoRTConnectionError(HTTPError):
     """
     连接错误
 
     当无法建立TCP连接、DNS解析失败、网络不可达时抛出。
 
     示例:
-        >>> raise ConnectionError("无法连接到目标服务器", url="https://target.com")
-        >>> raise ConnectionError("DNS解析失败", details={"hostname": "unknown.local"})
+        >>> raise AutoRTConnectionError("无法连接到目标服务器", url="https://target.com")
+        >>> raise AutoRTConnectionError("DNS解析失败", details={"hostname": "unknown.local"})
     """
 
 
-class TimeoutError(HTTPError):
+# 向后兼容别名（已弃用 — 会 shadow Python 内置 ConnectionError）
+ConnectionError = AutoRTConnectionError  # noqa: A001
+
+
+class AutoRTTimeoutError(HTTPError):
     """
     超时错误
 
@@ -103,6 +107,10 @@ class TimeoutError(HTTPError):
         self.timeout = timeout
         if timeout is not None:
             self.details["timeout"] = timeout
+
+
+# 向后兼容别名（已弃用 — 会 shadow Python 内置 TimeoutError）
+TimeoutError = AutoRTTimeoutError  # noqa: A001
 
 
 class SSLError(HTTPError):
@@ -148,8 +156,10 @@ NetworkError = HTTPError
 
 __all__ = [
     "HTTPError",
-    "ConnectionError",
-    "TimeoutError",
+    "AutoRTConnectionError",
+    "AutoRTTimeoutError",
+    "ConnectionError",  # 向后兼容别名
+    "TimeoutError",  # 向后兼容别名
     "SSLError",
     "ProxyError",
     # 向后兼容

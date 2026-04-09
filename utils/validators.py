@@ -356,7 +356,7 @@ def sanitize_command(cmd: str, strict: bool = True) -> str:
         cmd: 原始命令
         strict: 严格模式 (默认True)
                 - True: 如果包含危险字符则抛出 ValidationError
-                - False: 移除危险字符 (不推荐，可能被绕过)
+                - False: [已弃用] 移除危险字符，存在绕过风险，行为等同 strict=True
 
     Returns:
         清理后的命令
@@ -406,12 +406,19 @@ def sanitize_command(cmd: str, strict: bool = True) -> str:
                 raise ValidationError(f"命令包含危险字符: {repr(char)}", field="command")
         return cmd.strip()
     else:
-        # 宽松模式：移除危险字符 (不推荐)
-        logger.warning("sanitize_command 使用宽松模式 - 可能存在绕过风险")
-        result = cmd
+        # 宽松模式已弃用 — 行为降级为严格模式，仅记录弃用警告
+        import warnings
+
+        warnings.warn(
+            "sanitize_command(strict=False) 已弃用，存在安全绕过风险。"
+            "已自动升级为 strict=True 行为。请更新调用代码。",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         for char in dangerous_chars:
-            result = result.replace(char, "")
-        return result.strip()
+            if char in cmd:
+                raise ValidationError(f"命令包含危险字符: {repr(char)}", field="command")
+        return cmd.strip()
 
 
 def sanitize_filename(filename: str) -> str:
