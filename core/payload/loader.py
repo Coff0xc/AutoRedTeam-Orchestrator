@@ -125,14 +125,11 @@ class PayloadDB:
         self._lock = threading.Lock()
 
     def _ensure_loaded(self) -> Dict[str, Any]:
-        """确保 JSON 已加载到内存 (双重检查锁)"""
+        """确保 JSON 已加载到内存 (双重检查锁，直接 open 避免 TOCTOU)"""
         if self._full_db is None:
             with self._lock:
                 if self._full_db is None:
-                    if not self._db_path.exists():
-                        logger.warning("Payload DB 文件不存在: %s", self._db_path)
-                        self._full_db = {}
-                    else:
+                    try:
                         with open(self._db_path, "r", encoding="utf-8") as f:
                             self._full_db = json.load(f)
                         logger.debug(
@@ -140,6 +137,12 @@ class PayloadDB:
                             self._db_path,
                             len(self._full_db),
                         )
+                    except FileNotFoundError:
+                        logger.warning("Payload DB 文件不存在: %s", self._db_path)
+                        self._full_db = {}
+                    except json.JSONDecodeError as e:
+                        logger.error("Payload DB 解析失败: %s — %s", self._db_path, e)
+                        self._full_db = {}
         return self._full_db
 
     def get_category(self, category: str) -> Dict[str, Any]:

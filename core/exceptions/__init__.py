@@ -127,6 +127,8 @@ from .exploit import (
 # HTTP 错误
 from .http import NetworkError  # 向后兼容别名
 from .http import (
+    AutoRTConnectionError,
+    AutoRTTimeoutError,
     ConnectionError,
     HTTPError,
     ProxyError,

@@ -97,7 +97,7 @@ class BeaconConfig(C2Config):
     # standard 模式下额外阻止的危险模式（正则表达式）
     dangerous_patterns: List[str] = field(
         default_factory=lambda: [
-            r"rm\s+(-[rf]+\s+)?/",         # rm 变体（目标为根目录）
+            r"rm\s+(-\w+\s+)*/(|\*)",      # rm 变体（目标为根目录，含拆分参数）
             r"mkfs",                         # 磁盘格式化
             r"dd\s+if=",                     # 磁盘写入
             r">\s*/dev/sd",                  # 覆写磁盘设备
@@ -131,6 +131,11 @@ class BeaconConfig(C2Config):
                 self.command_mode,
             )
             self.command_mode = "restricted"
+
+        # 预编译危险模式正则（避免每次命令执行时重编译）
+        self._compiled_dangerous_patterns = [
+            re.compile(p) for p in self.dangerous_patterns
+        ]
 
         # 同步端点配置
         self.checkin_path = self.checkin_endpoint
@@ -710,11 +715,11 @@ class Beacon(BaseC2):
                         f" (mode=restricted)"
                     )
             elif self.config.command_mode == "standard":
-                # 标准模式：使用正则阻止已知危险模式
-                for pattern in self.config.dangerous_patterns:
-                    if re.search(pattern, cmd_lower):
+                # 标准模式：使用预编译正则阻止已知危险模式
+                for compiled_re in self.config._compiled_dangerous_patterns:
+                    if compiled_re.search(cmd_lower):
                         logger.warning(
-                            "Standard 模式: 命令匹配危险模式: %s", pattern
+                            "Standard 模式: 命令匹配危险模式: %s", compiled_re.pattern
                         )
                         return "[Error] Command blocked by security policy"
             # unrestricted: 不检查（仅限明确授权场景）

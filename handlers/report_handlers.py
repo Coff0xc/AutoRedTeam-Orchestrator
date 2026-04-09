@@ -11,6 +11,7 @@ from .tooling import tool
 
 # 允许的报告输出目录（相对于项目根）
 _ALLOWED_REPORT_DIRS = ("reports", "data", "logs")
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def register_report_tools(mcp, counter, logger):
@@ -58,11 +59,10 @@ def register_report_tools(mcp, counter, logger):
         if output_path:
             # 路径安全校验：防止路径遍历写入任意文件
             resolved = Path(output_path).resolve()
-            project_root = Path(__file__).resolve().parent.parent
             allowed = False
             for allowed_dir in _ALLOWED_REPORT_DIRS:
                 try:
-                    resolved.relative_to(project_root / allowed_dir)
+                    resolved.relative_to(_PROJECT_ROOT / allowed_dir)
                     allowed = True
                     break
                 except ValueError:
