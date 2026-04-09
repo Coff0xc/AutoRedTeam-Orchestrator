@@ -307,17 +307,19 @@ class _OOBDNSHandler(BaseRequestHandler):
     def _extract_query_section(query_data: bytes) -> bytes:
         """提取 DNS 查询部分（从偏移 12 到 QTYPE+QCLASS 结束）"""
         data_len = len(query_data)
+        if data_len < 12:
+            return b""
         offset = 12
         while offset < data_len:
             length = query_data[offset]
             if length == 0:
                 offset += 1
                 break
-            # 防止越界读取
+            # 恶意或截断的 DNS 包可能使 label length 超出剩余数据
             if offset + 1 + length > data_len:
                 break
             offset += 1 + length
-        # QTYPE(2) + QCLASS(2)，钳位到数据边界
+        # QTYPE+QCLASS 在截断包中可能不完整
         offset = min(offset + 4, data_len)
         return query_data[12:offset]
 
