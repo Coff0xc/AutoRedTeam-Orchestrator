@@ -119,7 +119,7 @@ def ensure_sync(func: Callable[..., Union[T, Awaitable[T]]]) -> Callable[..., T]
         同步函数
     """
     if not asyncio.iscoroutinefunction(func):
-        return func
+        return cast(Callable[..., T], func)
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs) -> T:
@@ -129,7 +129,7 @@ def ensure_sync(func: Callable[..., Union[T, Awaitable[T]]]) -> Callable[..., T]
 
 
 async def gather_with_limit(
-    coros: Sequence[Coroutine[Any, Any, T]], limit: int = 10, return_exceptions: bool = True
+    coros: Sequence[Awaitable[T]], limit: int = 10, return_exceptions: bool = True
 ) -> List[Union[T, Exception]]:
     """
     带并发限制的 asyncio.gather
@@ -152,7 +152,7 @@ async def gather_with_limit(
     """
     semaphore = asyncio.Semaphore(limit)
 
-    async def limited_coro(coro: Coroutine[Any, Any, T], index: int) -> tuple:
+    async def limited_coro(coro: Awaitable[T], index: int) -> tuple:
         async with semaphore:
             try:
                 result = await coro
@@ -169,15 +169,15 @@ async def gather_with_limit(
     completed = await asyncio.gather(*tasks, return_exceptions=return_exceptions)
 
     # 按原始顺序排列结果
-    results = [None] * len(coros)
+    results: list[Union[T, Exception, None]] = [None] * len(coros)
     for item in completed:
-        if isinstance(item, Exception):
+        if isinstance(item, BaseException):
             # gather本身的异常（不应该发生，因为我们已经处理了）
             raise item
         index, result, error = item
         results[index] = error if error is not None else result
 
-    return results
+    return cast(List[Union[T, Exception]], results)
 
 
 async def timeout_wrapper(

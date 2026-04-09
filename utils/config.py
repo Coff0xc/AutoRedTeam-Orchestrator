@@ -26,7 +26,7 @@ import os
 import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Callable, Dict, List, Optional, cast
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ class GlobalConfig:
         config_data = {}
 
         # 环境变量映射
-        env_mapping = {
+        env_mapping: Dict[str, tuple[str, Callable[[str], Any]]] = {
             "AUTOREDT_DEBUG": ("debug", lambda x: x.lower() in ("true", "1", "yes")),
             "AUTOREDT_LOG_LEVEL": ("log_level", str),
             "AUTOREDT_LOG_DIR": ("log_dir", Path),
@@ -206,7 +206,7 @@ class GlobalConfig:
 
             if path.suffix in (".yaml", ".yml"):
                 try:
-                    import yaml
+                    import yaml  # type: ignore[import-untyped]
 
                     return cast(Dict[str, Any], yaml.safe_load(content) or {})
                 except ImportError:

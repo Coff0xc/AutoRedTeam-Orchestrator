@@ -9,6 +9,7 @@ import logging
 import threading
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from .context import ContextStatus, ScanContext, ScanPhase
@@ -34,6 +35,7 @@ class SessionManager:
 
     _instance: Optional["SessionManager"] = None
     _lock = threading.Lock()
+    _initialized: bool = False
 
     def __new__(cls, *args, **kwargs) -> "SessionManager":
         """单例模式实现"""
@@ -74,7 +76,7 @@ class SessionManager:
             self._cleanup_counter = 0  # 清理计数器
 
             # 存储
-            self._storage = SessionStorage(storage_dir) if storage_dir else SessionStorage()
+            self._storage = SessionStorage(Path(storage_dir)) if storage_dir else SessionStorage(None)
             self._auto_save = auto_save
 
             # 事件回调

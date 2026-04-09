@@ -434,7 +434,7 @@ class SessionStorage:
             "total_size_mb": round(total_size / (1024 * 1024), 2),
         }
 
-    def export_all(self, output_path: Path) -> Path:
+    def export_all(self, output_path: "str | Path") -> Path:
         """
         导出所有会话数据
 
@@ -444,7 +444,7 @@ class SessionStorage:
         Returns:
             Path: 导出文件路径
         """
-        export_data = {
+        export_data: Dict[str, Any] = {
             "exported_at": datetime.now().isoformat(),
             "storage_version": "1.0",
             "contexts": {},

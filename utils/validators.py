@@ -873,8 +873,8 @@ def require_auth(func: Callable) -> Callable:
         from core.security.auth_manager import AuthManager
 
         if not hasattr(_get_auth_manager, "_instance"):
-            _get_auth_manager._instance = AuthManager()
-        return _get_auth_manager._instance
+            _get_auth_manager._instance = AuthManager()  # type: ignore[attr-defined]
+        return _get_auth_manager._instance  # type: ignore[attr-defined]
 
     def _extract_api_key(kwargs: Dict[str, Any]) -> Optional[str]:
         return kwargs.get("api_key") or os.environ.get("AUTOREDTEAM_API_KEY")

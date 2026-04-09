@@ -11,7 +11,7 @@ Kubernetes 安全相关常量
 这些常量被多个 Kubernetes 安全模块共享。
 """
 
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Set
 
 # ============================================================
 # 危险容器能力 (Capabilities)
@@ -148,7 +148,7 @@ PSS_RESTRICTED_VIOLATIONS: Dict[str, str] = {
 # ============================================================
 
 # 推荐的安全上下文配置
-RECOMMENDED_SECURITY_CONTEXT: Dict[str, any] = {
+RECOMMENDED_SECURITY_CONTEXT: Dict[str, Any] = {
     "runAsNonRoot": True,
     "readOnlyRootFilesystem": True,
     "allowPrivilegeEscalation": False,

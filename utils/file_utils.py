@@ -210,8 +210,8 @@ def temp_file(
     if dir:
         dir = str(dir)
 
-    fd, temp_path = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=dir)
-    temp_path = Path(temp_path)
+    fd, _temp_str = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=dir)
+    temp_path = Path(_temp_str)
 
     try:
         os.close(fd)  # 关闭文件描述符，允许后续操作
@@ -273,8 +273,8 @@ def create_temp_file(
     if dir:
         dir = str(dir)
 
-    fd, temp_path = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=dir)
-    temp_path = Path(temp_path)
+    fd, _temp_str = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=dir)
+    temp_path = Path(_temp_str)
     os.close(fd)
 
     if content is not None:
@@ -322,15 +322,15 @@ def iter_files(
         匹配的文件Path对象
     """
     directory = Path(directory)
-    exclude_dirs = set(exclude_dirs or [])
+    exclude_dirs_set: set[str] = set(exclude_dirs or [])
 
     if recursive:
         # 递归匹配
         for item in directory.rglob(pattern):
             # 检查是否在排除目录中
-            if exclude_dirs:
+            if exclude_dirs_set:
                 parts = item.relative_to(directory).parts
-                if any(part in exclude_dirs for part in parts[:-1]):
+                if any(part in exclude_dirs_set for part in parts[:-1]):
                     continue
 
             if item.is_file():
@@ -357,15 +357,15 @@ def iter_dirs(
         子目录Path对象
     """
     directory = Path(directory)
-    exclude = set(exclude or [])
+    _exclude: set[str] = set(exclude or [])
 
     if recursive:
         for item in directory.rglob("*"):
-            if item.is_dir() and item.name not in exclude:
+            if item.is_dir() and item.name not in _exclude:
                 yield item
     else:
         for item in directory.iterdir():
-            if item.is_dir() and item.name not in exclude:
+            if item.is_dir() and item.name not in _exclude:
                 yield item
 
 
@@ -504,11 +504,12 @@ def file_info(path: Union[str, Path]) -> dict:
 
 def _human_readable_size(size: int) -> str:
     """转换为人类可读的大小"""
+    fsize: float = float(size)
     for unit in ["B", "KB", "MB", "GB", "TB"]:
-        if size < 1024:
-            return f"{size:.2f} {unit}"
-        size /= 1024
-    return f"{size:.2f} PB"
+        if fsize < 1024:
+            return f"{fsize:.2f} {unit}"
+        fsize /= 1024
+    return f"{fsize:.2f} PB"
 
 
 def find_files(
