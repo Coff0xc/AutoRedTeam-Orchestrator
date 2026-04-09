@@ -438,7 +438,9 @@ class AdaptiveRateLimiter:
         Returns:
             是否获取成功
         """
-        return self._bucket.acquire(tokens=1, timeout=timeout)
+        with self._lock:
+            bucket = self._bucket
+        return bucket.acquire(tokens=1, timeout=timeout)
 
     def try_acquire(self) -> bool:
         """
@@ -447,7 +449,9 @@ class AdaptiveRateLimiter:
         Returns:
             是否获取成功
         """
-        return self._bucket.try_acquire(tokens=1)
+        with self._lock:
+            bucket = self._bucket
+        return bucket.try_acquire(tokens=1)
 
     async def async_acquire(self, timeout: Optional[float] = None) -> bool:
         """
@@ -459,7 +463,9 @@ class AdaptiveRateLimiter:
         Returns:
             是否获取成功
         """
-        return await self._bucket.async_acquire(tokens=1, timeout=timeout)
+        with self._lock:
+            bucket = self._bucket
+        return await bucket.async_acquire(tokens=1, timeout=timeout)
 
     @property
     def current_rate(self) -> float:

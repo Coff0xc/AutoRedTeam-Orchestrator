@@ -241,13 +241,22 @@ class DynamicThreadPool:
                     )
 
     def _resize_pool(self, new_size: int) -> None:
-        """调整线程池大小"""
-        # ThreadPoolExecutor 不支持动态调整，需要创建新的
-        # 这里使用 _max_workers 属性进行软调整
+        """调整线程池大小
+
+        通过创建新的 ThreadPoolExecutor 替换旧的，避免依赖 CPython 私有属性
+        _max_workers。此方法始终在 self._lock 保护下由 _adjust_pool_size 调用。
+        """
         if self._executor is not None:
-            self._executor._max_workers = new_size
+            old_executor = self._executor
+            self._executor = ThreadPoolExecutor(
+                max_workers=new_size,
+                thread_name_prefix=f"{self.name}-worker",
+            )
             self._current_workers = new_size
             self._metrics.update_peak_workers(new_size)
+            # 旧执行器不阻塞关闭：已提交的任务继续运行直到完成，
+            # 但不再接受新任务
+            old_executor.shutdown(wait=False)
 
     def submit(
         self,
