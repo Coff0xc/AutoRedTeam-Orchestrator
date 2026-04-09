@@ -35,7 +35,7 @@ import threading
 import time
 import warnings
 from collections import OrderedDict
-from typing import Any, Callable, Dict, Optional, TypeVar, Union, cast
+from typing import Any, Awaitable, Callable, Dict, Optional, TypeVar, Union, cast
 
 T = TypeVar("T")
 
@@ -68,12 +68,12 @@ def timer(func: Callable[..., T]) -> Callable[..., T]:
         result = func(*args, **kwargs)
         elapsed = time.perf_counter() - start
         logger.info("%s 执行时间: %.4f秒", func.__name__, elapsed)
-        return cast(T, result)
+        return result
 
     return wrapper
 
 
-def async_timer(func: Callable[..., T]) -> Callable[..., T]:
+def async_timer(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
     """
     异步计时装饰器
 
@@ -90,7 +90,7 @@ def async_timer(func: Callable[..., T]) -> Callable[..., T]:
         result = await func(*args, **kwargs)
         elapsed = time.perf_counter() - start
         logger.info("%s 执行时间: %.4f秒", func.__name__, elapsed)
-        return cast(T, result)
+        return result
 
     return wrapper
 
@@ -171,7 +171,7 @@ def async_retry(
         装饰器函数
     """
 
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+    def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs) -> T:
             current_delay = delay
@@ -179,7 +179,7 @@ def async_retry(
 
             for attempt in range(1, max_attempts + 1):
                 try:
-                    return cast(T, await func(*args, **kwargs))
+                    return await func(*args, **kwargs)
                 except exceptions as e:
                     last_exception = e
                     logger.warning(

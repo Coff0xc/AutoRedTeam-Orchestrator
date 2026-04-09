@@ -445,7 +445,7 @@ class AttackChainEngine:
                             if port:
                                 node.params["port"] = port
 
-    def _add_web_attack_nodes(self, chain: AttackChain, parent_node: AttackNode, port: int):
+    def _add_web_attack_nodes(self, chain: AttackChain, parent_node: AttackNode, port: Optional[int]):
         """添加Web攻击节点"""
         target = chain.target
         base_url = f"http://{target}:{port}" if port != 80 else f"http://{target}"
@@ -465,7 +465,7 @@ class AttackChainEngine:
                 )
             )
 
-    def get_chain_status(self, chain_id: str) -> Dict[str, Any]:
+    def get_chain_status(self, chain_id: str) -> Optional[Dict[str, Any]]:
         """获取攻击链状态"""
         chain = self.chains.get(chain_id)
         if not chain:

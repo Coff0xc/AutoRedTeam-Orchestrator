@@ -25,7 +25,7 @@ from typing import Dict, List, Optional
 try:
     from utils.terminal_output import terminal
 except ImportError:
-    from terminal_output import terminal
+    from terminal_output import terminal  # type: ignore[no-redef]
 
 
 class ScanStatus(Enum):
@@ -145,7 +145,7 @@ class ScanMonitor:
                 task.process.wait(timeout=5)
             except Exception:
                 try:
-                    os.kill(task.process.pid, signal.SIGKILL)
+                    os.kill(task.process.pid, getattr(signal, "SIGKILL", signal.SIGTERM))
                 except Exception:
                     logging.getLogger(__name__).warning("Suppressed exception", exc_info=True)
 
@@ -247,6 +247,7 @@ class ScanMonitor:
                 task.process.wait(timeout=task.timeout)
             except subprocess.TimeoutExpired:
                 self._timeout_task(task, f"执行超时 ({task.timeout}s)")
+                assert task.result is not None  # _timeout_task 总是设置 result
                 return task.result
 
             # 等待IO线程
@@ -318,7 +319,7 @@ class ScanMonitor:
         if not task:
             return None
 
-        elapsed = 0
+        elapsed: float = 0
         if task.start_time:
             end = task.end_time or datetime.now()
             elapsed = (end - task.start_time).total_seconds()
@@ -339,7 +340,9 @@ class ScanMonitor:
         running = []
         for task_id, task in self.tasks.items():
             if task.status == ScanStatus.RUNNING:
-                running.append(self.get_task_status(task_id))
+                status = self.get_task_status(task_id)
+                if status is not None:
+                    running.append(status)
         return running
 
     def cleanup_old_tasks(self, max_age_hours: int = 24):

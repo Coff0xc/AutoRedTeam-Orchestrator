@@ -81,7 +81,7 @@ class ColoredFormatter(logging.Formatter):
                 return True
             except Exception:
                 # 检查环境变量
-                return os.environ.get("TERM") or os.environ.get("ANSICON")
+                return bool(os.environ.get("TERM") or os.environ.get("ANSICON"))
 
         # Unix系统通常支持
         return True

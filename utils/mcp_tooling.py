@@ -42,7 +42,7 @@ _SENSITIVE_KEYS: frozenset[str] = frozenset({
 
 def _sanitize_params(params: dict[str, Any]) -> dict[str, Any]:
     """脱敏敏感参数，返回安全副本"""
-    sanitized = {}
+    sanitized: dict[str, Any] = {}
     for key, value in params.items():
         if key.lower() in _SENSITIVE_KEYS:
             sanitized[key] = "***REDACTED***"

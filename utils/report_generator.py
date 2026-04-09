@@ -106,7 +106,7 @@ class ReportGenerator:
         """准备新版扫描上下文或结果对象的报告数据"""
         session_id = getattr(source, "session_id", "unknown")
         target_value = getattr(source, "target", None)
-        if hasattr(target_value, "value"):
+        if target_value is not None and hasattr(target_value, "value"):
             target_value = target_value.value
         metadata = getattr(source, "metadata", {})
         if not isinstance(metadata, dict):

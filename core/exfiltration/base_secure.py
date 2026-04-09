@@ -61,7 +61,7 @@ class SecureFileExfiltrator(ABC):
                 allowed_base = Path(self.config.allowed_base_path).resolve(strict=True)
                 if not allowed_base.is_dir():
                     raise ValueError("allowed_base_path must be a directory")
-                self._allowed_base = allowed_base
+                self._allowed_base: Optional[Path] = allowed_base
             except (OSError, ValueError) as e:
                 logger.error("Invalid allowed_base_path: %s", e)
                 raise ValueError("Configuration error: invalid allowed_base_path")
@@ -252,8 +252,8 @@ class SecureFileExfiltrator(ABC):
         """
         # 1. 验证路径安全性
         validated_path, error = self._validate_file_path(file_path)
-        if error:
-            return ExfilResult(success=False, channel=self.channel, error=error)
+        if error or validated_path is None:
+            return ExfilResult(success=False, channel=self.channel, error=error or "Invalid path")
 
         # 2. 安全读取文件
         try:

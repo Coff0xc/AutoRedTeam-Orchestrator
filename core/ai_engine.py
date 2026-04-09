@@ -62,7 +62,8 @@ def _parse_llm_json(raw: str) -> Optional[Dict[str, Any]]:
         except ValueError:
             pass
     try:
-        return json.loads(text)
+        result: Optional[Dict[str, Any]] = json.loads(text)
+        return result
     except (json.JSONDecodeError, ValueError):
         return None
 

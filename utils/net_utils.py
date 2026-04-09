@@ -119,9 +119,9 @@ def resolve_hostname(hostname: str, ipv6: bool = False) -> List[str]:
         results = socket.getaddrinfo(hostname, None, family)
 
         # 提取唯一IP
-        ips = set()
+        ips: set[str] = set()
         for result in results:
-            ip = result[4][0]
+            ip = str(result[4][0])
             ips.add(ip)
 
         return list(ips)
