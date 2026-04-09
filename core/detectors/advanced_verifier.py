@@ -36,9 +36,12 @@ import uuid
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 from .false_positive_filter import DynamicContentNormalizer, FalsePositiveFilter
+
+if TYPE_CHECKING:
+    from .oob_server import OOBCallbackServer
 
 logger = logging.getLogger(__name__)
 
@@ -199,6 +202,50 @@ class OOBCallbackManager:
     def token_count(self) -> int:
         with self._lock:
             return len(self._tokens)
+
+    def start_listener(
+        self,
+        http_port: int = 8899,
+        dns_port: int = 8853,
+        bind_address: str = "0.0.0.0",
+        enable_dns: bool = False,
+    ) -> "OOBCallbackServer":
+        """启动内置 OOB 回调监听器
+
+        Args:
+            http_port: HTTP 监听端口
+            dns_port: DNS 监听端口
+            bind_address: 绑定地址
+            enable_dns: 是否启用 DNS 监听
+
+        Returns:
+            OOBCallbackServer 实例
+
+        Raises:
+            RuntimeError: 监听器已在运行
+        """
+        from .oob_server import OOBCallbackServer
+
+        if hasattr(self, "_listener") and self._listener and self._listener.running:
+            raise RuntimeError("OOB 监听器已在运行")
+
+        self._listener = OOBCallbackServer(
+            manager=self,
+            http_port=http_port,
+            dns_port=dns_port,
+            bind_address=bind_address,
+            enable_dns=enable_dns,
+        )
+        self._listener.start()
+        logger.info("OOB 回调监听器已通过 OOBCallbackManager 启动: HTTP 端口=%d", http_port)
+        return self._listener
+
+    def stop_listener(self):
+        """停止内置 OOB 回调监听器"""
+        if hasattr(self, "_listener") and self._listener:
+            self._listener.stop()
+            self._listener = None
+            logger.info("OOB 回调监听器已停止")
 
 
 class PayloadVariantGenerator:
@@ -371,7 +418,7 @@ class AdvancedVerifier:
                 continue
 
             # 比较 payload 响应与基线
-            for pr_body, pr_status, pr_time in payload_responses:
+            for pr_body, pr_status, _pr_time in payload_responses:
                 pr_normalized = self.normalizer.normalize(pr_body)
 
                 # 与每个基线比较
@@ -469,8 +516,8 @@ class AdvancedVerifier:
 
             for _ in range(num_trials):
                 try:
-                    t_body, t_status, t_time = request_func(url, true_payload)
-                    f_body, f_status, f_time = request_func(url, false_payload)
+                    t_body, t_status, _t_time = request_func(url, true_payload)
+                    f_body, f_status, _f_time = request_func(url, false_payload)
                     true_responses.append((t_body, t_status))
                     false_responses.append((f_body, f_status))
                 except Exception:

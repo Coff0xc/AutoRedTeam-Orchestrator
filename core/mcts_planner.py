@@ -448,6 +448,8 @@ class AttackSimulator:
     """攻击模拟器
 
     模拟攻击动作执行的结果（用于 MCTS 的 simulation 阶段）
+
+    支持从历史执行数据校准成功概率，使用贝叶斯先验混合基础概率与经验概率。
     """
 
     # 动作类型的基础成功率
@@ -464,15 +466,94 @@ class AttackSimulator:
         ActionType.CREDENTIAL_DUMP: 0.50,
     }
 
+    # 历史记录键 -> ActionType 映射
+    _HISTORY_TO_ACTION_MAP = {
+        "recon": ActionType.PORT_SCAN,
+        "port_scan": ActionType.PORT_SCAN,
+        "service_detect": ActionType.SERVICE_DETECT,
+        "sqli_detect": ActionType.VULN_SCAN,
+        "xss_detect": ActionType.WEB_SCAN,
+        "lfi_detect": ActionType.WEB_SCAN,
+        "ssrf_detect": ActionType.VULN_SCAN,
+        "brute_force": ActionType.BRUTE_FORCE,
+        "ssh_brute": ActionType.BRUTE_FORCE,
+        "exploit": ActionType.EXPLOIT,
+        "rce_detect": ActionType.EXPLOIT,
+        "privilege_escalation": ActionType.PRIVESC,
+        "lateral_move": ActionType.LATERAL_MOVE,
+        "credential_dump": ActionType.CREDENTIAL_DUMP,
+        "data_exfil": ActionType.DATA_EXFIL,
+    }
+
     def __init__(self, seed: Optional[int] = None):
         self._rng = random.Random(seed)
+        self._calibrated_rates: Dict[ActionType, float] = {}
+
+    def calibrate_from_history(
+        self,
+        history: Dict[str, Dict],
+        min_samples: int = 10,
+        prior_weight: float = 10.0,
+    ) -> None:
+        """从历史执行数据校准成功概率
+
+        使用贝叶斯先验将基础概率与经验概率混合，避免小样本过拟合。
+
+        Args:
+            history: {attack_type: {"success": int, "fail": int, "total_time": float}}
+                     格式与 RuleBasedAttackPlanner.attack_history 一致
+            min_samples: 最小样本数，低于此值不参与校准
+            prior_weight: 先验权重，控制基础概率的影响力
+        """
+        # 按 ActionType 聚合历史数据（多个历史键可映射到同一 ActionType）
+        aggregated: Dict[ActionType, Dict[str, int]] = {}
+
+        for hist_key, stats in history.items():
+            action_type = self._HISTORY_TO_ACTION_MAP.get(hist_key)
+            if action_type is None:
+                continue
+
+            success = stats.get("success", 0)
+            fail = stats.get("fail", 0)
+
+            if action_type not in aggregated:
+                aggregated[action_type] = {"success": 0, "fail": 0}
+            aggregated[action_type]["success"] += success
+            aggregated[action_type]["fail"] += fail
+
+        # 计算校准概率
+        self._calibrated_rates.clear()
+        for action_type, counts in aggregated.items():
+            n = counts["success"] + counts["fail"]
+            if n < min_samples:
+                continue
+
+            base = self.BASE_SUCCESS_RATES.get(action_type, 0.5)
+            empirical = counts["success"] / n
+            calibrated = (base * prior_weight + empirical * n) / (prior_weight + n)
+
+            self._calibrated_rates[action_type] = calibrated
+            logger.debug(
+                "校准成功率: %s base=%.2f empirical=%.2f (n=%d) -> calibrated=%.3f",
+                action_type.value,
+                base,
+                empirical,
+                n,
+                calibrated,
+            )
+
+    def get_success_rate(self, action_type: ActionType) -> float:
+        """获取动作类型的成功概率（优先使用校准值）"""
+        if action_type in self._calibrated_rates:
+            return self._calibrated_rates[action_type]
+        return self.BASE_SUCCESS_RATES.get(action_type, 0.5)
 
     def simulate_action(self, state: AttackState, action: Action) -> AttackState:
         """模拟执行一个动作，返回新状态"""
         new_state = state.clone()
         new_state.completed_actions.add(action.name)
 
-        success_rate = self.BASE_SUCCESS_RATES.get(action.type, 0.5)
+        success_rate = self.get_success_rate(action.type)
 
         if self._rng.random() < success_rate:
             self._apply_success(new_state, action)
@@ -550,6 +631,7 @@ class MCTSPlanner:
         max_depth: 最大搜索深度
         seed: 随机种子（用于可复现性）
         use_transposition: 是否使用转置表缓存
+        history: 历史攻击数据，格式同 RuleBasedAttackPlanner.attack_history
     """
 
     def __init__(
@@ -558,6 +640,7 @@ class MCTSPlanner:
         max_depth: int = 10,
         seed: Optional[int] = None,
         use_transposition: bool = True,
+        history: Optional[Dict[str, Dict]] = None,
     ):
         self.exploration_weight = exploration_weight
         self.max_depth = max_depth
@@ -567,26 +650,34 @@ class MCTSPlanner:
         self._use_transposition = use_transposition
         self._transposition_table: Dict[str, float] = {}  # state_hash -> reward
 
+        if history:
+            self.simulator.calibrate_from_history(history)
+
     def plan(
         self,
         initial_state: AttackState,
         iterations: int = 100,
+        history: Optional[Dict[str, Dict]] = None,
     ) -> Dict[str, Any]:
         """执行 MCTS 规划
 
         Args:
             initial_state: 初始攻击状态
             iterations: MCTS 迭代次数
+            history: 可选的历史攻击数据，传入时会在本次规划前重新校准成功率
 
         Returns:
             包含推荐动作序列和统计信息的字典
         """
+        if history:
+            self.simulator.calibrate_from_history(history)
+
         logger.debug("MCTS规划开始: %d次迭代, 最大深度=%d", iterations, self.max_depth)
 
         root = MCTSNode(state=initial_state)
         self._transposition_table.clear()  # 每次规划清空缓存
 
-        for i in range(iterations):
+        for _ in range(iterations):
             node = self._select(root)
             if not node.is_terminal:
                 node = self._expand(node)
@@ -748,3 +839,43 @@ class MCTSPlanner:
         """
         result = self.plan(root_state, iterations)
         return cast(List[Dict[Any, Any]], result["recommended_actions"])
+
+    def plan_with_history(
+        self,
+        initial_state: AttackState,
+        iterations: int = 100,
+        history_file: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """使用 RuleBasedAttackPlanner 的历史数据进行规划
+
+        便捷方法：自动加载历史文件并校准成功率后执行 MCTS 规划。
+
+        Args:
+            initial_state: 初始攻击状态
+            iterations: MCTS 迭代次数
+            history_file: 历史数据文件路径，为 None 时使用默认路径
+
+        Returns:
+            包含推荐动作序列和统计信息的字典
+        """
+        from pathlib import Path
+
+        if history_file:
+            path = Path(history_file)
+        else:
+            import tempfile
+
+            path = Path(tempfile.gettempdir()) / "autored_history.json"
+
+        history: Dict[str, Dict] = {}
+        if path.exists():
+            try:
+                import json
+
+                with open(path, "r", encoding="utf-8") as f:
+                    history = json.load(f)
+                logger.info("加载历史数据用于MCTS校准: %s (%d条记录)", path, len(history))
+            except Exception as e:
+                logger.warning("加载历史数据失败，使用基础概率: %s", e)
+
+        return self.plan(initial_state, iterations, history=history if history else None)
