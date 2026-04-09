@@ -181,7 +181,6 @@ class _SqlmapWrapper:
 
     async def scan(self, target: str, **kwargs) -> dict:
         import asyncio
-        import json
         import subprocess
         import sys
 

@@ -14,8 +14,6 @@ Prompts (6个):
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
-
 
 def register_prompt_handlers(mcp, counter, logger):
     """注册 MCP Prompt 处理器

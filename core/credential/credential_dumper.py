@@ -791,7 +791,6 @@ class CredentialDumper:
         else:
             return json.dumps(data, indent=2, ensure_ascii=False)
 
-
     def dump_lazagne(self) -> DumpResult:
         """
         LaZagne 集成 — 调用 LaZagne 进行全平台凭据提取
@@ -813,7 +812,7 @@ class CredentialDumper:
         # 尝试作为 Python 模块调用
         if not lazagne_path:
             try:
-                import lazagne as _lz
+                import lazagne as _lz  # noqa: F401
 
                 lazagne_path = "module"
             except ImportError:

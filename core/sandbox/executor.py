@@ -9,22 +9,13 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 from core.sandbox.config import CommandResult, SandboxConfig
 
-if TYPE_CHECKING:
-    import docker  # type: ignore[import-untyped]
-
 # 尝试导入 docker SDK（可选依赖）
 try:
-    import docker  # type: ignore[import-untyped]
-    from docker.errors import (  # type: ignore[import-untyped]
-        APIError,
-        ContainerError,
-        DockerException,
-        ImageNotFound,
-    )
+    import docker  # type: ignore[import-untyped]  # noqa: F401
 
     DOCKER_AVAILABLE = True
 except ImportError:

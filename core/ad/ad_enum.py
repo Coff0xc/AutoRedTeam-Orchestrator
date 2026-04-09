@@ -13,13 +13,9 @@ ATT&CK Technique: T1087 - Account Discovery
 注意: 仅用于授权的渗透测试和安全研究
 """
 
-import logging
-from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 import base64
 import json
+import logging
 import re
 import socket
 import ssl
@@ -27,6 +23,8 @@ import struct
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 class ADObjectType(Enum):

@@ -11,9 +11,12 @@ import logging
 import subprocess
 import sys
 import time
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from core.sandbox.config import CommandResult, SandboxConfig
+
+if TYPE_CHECKING:
+    from core.sandbox.executor import DockerExecutor
 
 logger = logging.getLogger(__name__)
 

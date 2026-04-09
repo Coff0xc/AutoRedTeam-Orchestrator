@@ -436,7 +436,7 @@ class KerberosAttacks:
         Returns:
             AttackResult包含生成的票据
         """
-        from impacket.krb5.ticket import Ticket as TicketClass
+        from impacket.krb5.ticket import Ticket as TicketClass  # noqa: F401
 
         if groups is None:
             # 默认高权限组
@@ -458,10 +458,9 @@ class KerberosAttacks:
                 nt_hash = bytes.fromhex(krbtgt_hash)
 
             # 使用 impacket ticketer 生成 Golden Ticket
-            from impacket.krb5 import constants as krb5_constants
-            from impacket.krb5.types import KerberosTime, Principal
+            from impacket.krb5 import constants as krb5_constants  # noqa: F401
+            from impacket.krb5.types import KerberosTime, Principal  # noqa: F401
 
-            import datetime
             import os
 
             # 构建 ticketer 命令参数 — 通过 impacket 的 ticketer 模块
@@ -574,7 +573,7 @@ class KerberosAttacks:
         Returns:
             AttackResult包含生成的票据
         """
-        from impacket.krb5.ticket import Ticket as TicketClass
+        from impacket.krb5.ticket import Ticket as TicketClass  # noqa: F401
 
         if groups is None:
             groups = [513, 512, 520, 518, 519]

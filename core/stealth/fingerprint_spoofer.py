@@ -604,7 +604,7 @@ class FingerprintSpoofer:
             # 尝试挂载自定义 SSL 适配器
             try:
                 from requests.adapters import HTTPAdapter as RequestsHTTPAdapter
-                from urllib3.util.ssl_ import create_urllib3_context
+                from urllib3.util.ssl_ import create_urllib3_context  # noqa: F401
 
                 class _FingerprintAdapter(RequestsHTTPAdapter):
                     """内部适配器: 将自定义 SSL Context 注入 urllib3"""

@@ -12,8 +12,6 @@ Resources (4个):
 
 from __future__ import annotations
 
-import json
-from typing import Any, Dict
 
 def register_resource_handlers(mcp, counter, logger):
     """注册 MCP Resource 处理器
@@ -65,7 +63,6 @@ def register_resource_handlers(mcp, counter, logger):
     def list_registered_tools() -> dict:
         """获取已注册工具列表"""
         try:
-            tools = mcp.list_tools()
             # list_tools 可能返回 awaitable，如果是同步调用则直接用计数
             if hasattr(counter, "counts"):
                 return {

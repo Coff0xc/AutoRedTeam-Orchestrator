@@ -8,7 +8,7 @@
 - DANGEROUS: kg_attack_paths (攻击路径分析)
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 # 授权中间件
 from core.security import require_dangerous_auth, require_moderate_auth

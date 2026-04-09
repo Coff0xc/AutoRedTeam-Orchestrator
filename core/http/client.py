@@ -507,7 +507,7 @@ class HTTPClient:
             from .exceptions import ConnectionError as HTTPConnectionError
 
             raise HTTPConnectionError(
-                f"熔断器已打开，目标 host 暂时不可用", url=url
+                "熔断器已打开，目标 host 暂时不可用", url=url
             )
 
         # 速率限制
@@ -682,7 +682,7 @@ class HTTPClient:
             from .exceptions import ConnectionError as HTTPConnectionError
 
             raise HTTPConnectionError(
-                f"熔断器已打开，目标 host 暂时不可用", url=url
+                "熔断器已打开，目标 host 暂时不可用", url=url
             )
 
         # 异步速率限制

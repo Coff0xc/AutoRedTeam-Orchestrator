@@ -17,7 +17,6 @@ import asyncio
 import logging
 import re
 import ssl
-import struct
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 

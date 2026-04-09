@@ -14,21 +14,17 @@ Beacon 通信模块 - Beacon Communication Module
 """
 
 import asyncio
-import hashlib
 import ipaddress
-import json
 import re
 import logging
 import os
 import platform
-import secrets
 import socket
 import ssl
 import subprocess
 import tempfile
 import threading
 import time
-import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
@@ -103,7 +99,7 @@ class BeaconConfig(C2Config):
             r">\s*/dev/sd",                  # 覆写磁盘设备
             r"format\s+[a-zA-Z]:",           # Windows format
             r":\(\)\s*\{",                   # fork bomb
-            r"shutdown|reboot|halt|poweroff", # 系统控制命令
+            r"shutdown|reboot|halt|poweroff",  # 系统控制命令
         ]
     )
 
