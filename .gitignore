@@ -32,6 +32,7 @@ reports/*.json
 reports/*.md
 data/*.db
 data/*.sqlite
+data/operation_audit.jsonl
 data/sessions/
 config/config.yaml
 config/api_keys.yaml

@@ -31,7 +31,14 @@ class SQLiVerifierMixin:
         data: Optional[Any] = None,
         json_data: Optional[Any] = None,
     ) -> Tuple[str, Optional[str], Dict[str, str]]:
-        raise NotImplementedError
+        return super()._prepare_base_request(  # type: ignore[attr-defined]
+            url=url,
+            method=method,
+            headers=headers,
+            params=params,
+            data=data,
+            json_data=json_data,
+        )
 
     def _request(
         self,
@@ -40,7 +47,12 @@ class SQLiVerifierMixin:
         data: Optional[Any] = None,
         headers: Optional[Dict[str, str]] = None,
     ) -> Tuple[Optional[str], int, float, int]:
-        raise NotImplementedError
+        return super()._request(  # type: ignore[attr-defined]
+            url=url,
+            method=method,
+            data=data,
+            headers=headers,
+        )
 
     def _prepare_request(
         self, url: str, param: str, payload: str, method: str = "GET",
@@ -49,7 +61,16 @@ class SQLiVerifierMixin:
         data: Optional[Any] = None,
         json_data: Optional[Any] = None,
     ) -> Tuple[str, Optional[str], Dict[str, str]]:
-        raise NotImplementedError
+        return super()._prepare_request(  # type: ignore[attr-defined]
+            url=url,
+            param=param,
+            payload=payload,
+            method=method,
+            headers=headers,
+            params=params,
+            data=data,
+            json_data=json_data,
+        )
 
     def verify_sqli_time_based(
         self,

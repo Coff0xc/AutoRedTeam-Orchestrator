@@ -23,6 +23,12 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
+
+def _retry_sleep(delay: float) -> None:
+    """Sleep hook for sync retry backoff; tests patch this without touching global time."""
+    time.sleep(delay)
+
+
 # 尝试导入 httpx
 try:
     import httpx
@@ -621,7 +627,7 @@ class HTTPClient:
                         f"[Retry] {method} {url} (异常: {exc_type}, "
                         f"第 {attempt} 次, 等待 {delay:.2f}s)"
                     )
-                    time.sleep(delay)
+                    _retry_sleep(delay)
                     continue
 
                 # 无法重试，转换并抛出异常

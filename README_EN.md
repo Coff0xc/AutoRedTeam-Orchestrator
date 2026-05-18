@@ -56,7 +56,7 @@
 
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
-- [Tool Matrix](#tool-matrix-131-mcp-tools)
+- [Tool Matrix](#tool-matrix-132-mcp-tools)
 - [Key Features](#key-features)
   - [Pure Python Security Engines](#pure-python-security-engines)
   - [Full Red Team Kill Chain](#full-red-team-kill-chain)
@@ -158,7 +158,7 @@ autort report <session_id> -f html
 AI Editor (Cursor / Windsurf / Kiro / Claude Desktop / Claude Code)
         |  MCP Protocol (JSON-RPC over stdio)
         v
-mcp_stdio_server.py ---- FastMCP("AutoRedTeam")  [131 tools registered]
+mcp_stdio_server.py ---- FastMCP("AutoRedTeam")  [132 tools registered]
         |
    handlers/  (21 handler modules)
         |
@@ -209,7 +209,7 @@ mcp_stdio_server.py ---- FastMCP("AutoRedTeam")  [131 tools registered]
 
 ---
 
-## Tool Matrix (131 MCP Tools)
+## Tool Matrix (132 MCP Tools)
 
 | Category | Count | Handler File | Key Tools |
 |----------|------:|--------------|-----------|
@@ -379,7 +379,7 @@ Add to `claude_desktop_config.json`:
 claude mcp add redteam python /absolute/path/to/mcp_stdio_server.py
 ```
 
-Once connected, all 131 tools are available to the AI editor. Simply describe your security testing task in natural language.
+Once connected, all 132 tools are available to the AI editor. Simply describe your security testing task in natural language.
 
 ---
 

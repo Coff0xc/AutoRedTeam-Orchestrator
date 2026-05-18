@@ -160,7 +160,7 @@ autort report SESSION-ID --format html -o report.html
               │                    │                    │
               ▼                    ▼                    ▼
     ┌─────────────────────────────────────────────────────────┐
-    │                    handlers/ (131 tools)                 │
+    │                    handlers/ (132 tools)                 │
     │   recon(8) detector(27) cve(8) exploit(12) lateral(9)   │
     │   redteam(14) ad(3) persistence(3) cloud(3) api(7) ... │
     └──────────────────────┬──────────────────────────────────┘
@@ -204,7 +204,7 @@ autort report SESSION-ID --format html -o report.html
 | **会话/报告/AI** | 9 | `session_create`, `generate_report`, `smart_analyze` |
 | **知识图谱/MCTS** | 4 | `kg_store`, `kg_query`, `kg_attack_paths`, `plan_attack_path` |
 | **并发/资源/提示** | 11 | `parallel_scan` + 4 MCP Resources + 6 MCP Prompts |
-| **总计** | **131** | |
+| **总计** | **132** | |
 
 ---
 

@@ -153,6 +153,7 @@ dependencies = [
     "aiohttp>=3.9.0",
     "pyyaml>=6.0.0",
     "pydantic>=2.6.0",
+    "typer>=0.9.0",
 ]
 
 [project.optional-dependencies]
