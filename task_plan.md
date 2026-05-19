@@ -34,6 +34,7 @@
 | 12. AI 红队基础层落地 | complete | 新增 agent runtime、AI red-team scenario/runner、dry-run CLI、示例配置和测试 |
 | 13. AI 红队 MCP 接入 | complete | 将 dry-run runner 接入 MCP handler，形成 CLI + core + MCP 三层入口 |
 | 14. AI 工具攻击面静态盘点 | complete | 新增 MCP/handler 静态扫描核心、CLI/MCP 入口和测试；只读解析，不执行工具 |
+| 15. AI handler 高风险授权收紧 | complete | 根据 AI surface 结果给高风险 AI 工具补 dangerous auth，并验证缺省无 key 阻断 |
 
 ## 验收标准
 
@@ -51,3 +52,4 @@
 - 2026-05-19：第一批代码落地只实现 dry-run 与计划层，不执行真实目标调用、模型调用、shell、外部扫描或攻击工具。高风险能力后续只能作为带 `ActionPolicy`、`HumanGate` 和 scope policy 的受控 Action 接入。
 - 2026-05-19：MCP 新增 `ai_redteam_run_scenario`，仅支持声明式场景 dry-run 计划；实测 MCP 注册工具数变为 133。README/README_EN 已同步工具数。
 - 2026-05-19：AI surface 静态扫描只解析 handler 源码和装饰器，不导入 handler、不注册工具、不执行 payload。该能力用于发现缺失 auth/scope/human gate 的候选点，不能等同于动态安全验证。
+- 2026-05-19：`attack_chain_plan` 与 `smart_payload` 虽然偏规划/生成，但输出会辅助攻击链和 payload，因此按危险级 MCP 工具处理，缺省无 API key 时必须阻断。

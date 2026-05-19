@@ -6,6 +6,8 @@ AI辅助工具处理器
 
 from typing import Any, Dict, Optional
 
+from core.security import require_dangerous_auth
+
 from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
 from .tooling import tool
 
@@ -40,6 +42,7 @@ def register_ai_tools(mcp, counter, logger):
         return {"success": True, "target": target, "analysis": result}
 
     @tool(mcp)
+    @require_dangerous_auth
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.AI, context_extractor=extract_target)
     async def attack_chain_plan(
@@ -95,6 +98,7 @@ def register_ai_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @require_dangerous_auth
     @handle_errors(logger, category=ErrorCategory.AI)
     async def smart_payload(
         vuln_type: str, context: Optional[Dict[str, Any]] = None, waf_detected: bool = False

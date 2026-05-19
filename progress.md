@@ -302,3 +302,25 @@
 - 静态扫描结果是候选风险盘点，不代表真实漏洞确认。
 - 不覆盖 factory 动态生成的每一个 detector 实例，只覆盖源码中的显式工具定义和工厂入口。
 - 不执行真实目标请求、模型调用、shell、扫描器或利用器。
+
+## 2026-05-19 阶段 15：AI handler 高风险授权收紧
+
+### 本轮已做
+
+- 给 `handlers/ai_handlers.py` 中的 `attack_chain_plan` 增加 `require_dangerous_auth`。
+- 给 `handlers/ai_handlers.py` 中的 `smart_payload` 增加 `require_dangerous_auth`。
+- 补充测试，显式切回 STRICT auth mode，确认无 `AUTOREDTEAM_API_KEY` / `MCP_API_KEY` 时高风险 AI 工具返回 `AUTH_REQUIRED`。
+
+### 验证记录
+
+| 命令 | 结果 |
+| --- | --- |
+| `python -m py_compile handlers\\ai_handlers.py tests\\test_handlers_ai.py` | 通过 |
+| pytest wrapper: `tests/test_handlers_ai.py tests/test_ai_surface.py -q` | 7 passed |
+| `scan_handler_surface('handlers/ai_handlers.py')` | 5 个工具，`issue_count=0`；`attack_chain_plan` 和 `smart_payload` 均为 `auth_level=dangerous` |
+| `scan_handler_surface('handlers')` | 整体 handler issue_count 从 13 降为 10 |
+| MCP 注册计数命令 | 通过；总计 `134`，其中 `ai=5` |
+
+### 下一步候选
+
+- 继续处理 AI surface 剩余 10 个 issue，优先看 `knowledge_handlers.py`、`parallel_handlers.py`、`cloud_security_handlers.py` 等是否缺少 validator/auth。

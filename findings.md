@@ -328,3 +328,16 @@
 - 该扫描器只给“候选风险”和“建议 gate”，不是漏洞证明。
 - 动态 factory 生成工具不会逐个展开，只统计源码中的显式 `@tool` 函数。
 - 后续若根据扫描结果收紧 auth，需要逐项确认产品可用性和测试覆盖。
+
+## 阶段 15：AI handler 高风险授权收紧
+
+| 主题 | 证据等级 | 发现 |
+| --- | --- | --- |
+| 高风险 AI 工具授权 | 已验证 | `attack_chain_plan` 与 `smart_payload` 已增加 `require_dangerous_auth`。 |
+| 默认阻断 | 已验证 | 测试在 STRICT auth mode 且无 API key 时调用两个工具，均返回 `AUTH_REQUIRED`。 |
+| 静态扫描修复效果 | 已验证 | `scan_handler_surface('handlers/ai_handlers.py')` 输出 `issue_count=0`，两个高风险工具均显示 `auth_level=dangerous`。 |
+| 整体剩余问题 | 已验证 | `scan_handler_surface('handlers')` 的整体 issue_count 从 13 降至 10。 |
+
+### 剩余候选
+
+- 剩余 issue 需要逐个看上下文，不应机械加 auth；下一步优先检查是否为 target/url 参数缺少 `validate_inputs`，或 critical 工具缺少 critical auth。

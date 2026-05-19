@@ -66,6 +66,30 @@ async def test_ai_redteam_run_scenario_rejects_missing_input():
 
 
 @pytest.mark.asyncio
+async def test_high_risk_ai_tools_require_authorization_without_api_key(monkeypatch):
+    from core.security.mcp_auth_middleware import AuthMode, _auth_config
+
+    registered_tools, _, _ = _register_ai_tools()
+    monkeypatch.delenv("AUTOREDTEAM_API_KEY", raising=False)
+    monkeypatch.delenv("MCP_API_KEY", raising=False)
+    original_mode = _auth_config["mode"]
+    _auth_config["mode"] = AuthMode.STRICT
+
+    try:
+        payload_result = await registered_tools["smart_payload"](vuln_type="xss")
+        chain_result = await registered_tools["attack_chain_plan"](target="http://example.com")
+    finally:
+        _auth_config["mode"] = original_mode
+
+    assert payload_result["success"] is False
+    assert chain_result["success"] is False
+    assert payload_result["data"]["code"] == "AUTH_REQUIRED"
+    assert chain_result["data"]["code"] == "AUTH_REQUIRED"
+    assert "CRITICAL/DANGEROUS" in payload_result["error"]
+    assert "CRITICAL/DANGEROUS" in chain_result["error"]
+
+
+@pytest.mark.asyncio
 async def test_ai_surface_scan_handlers_static_scan():
     registered_tools, _, _ = _register_ai_tools()
 
@@ -74,5 +98,6 @@ async def test_ai_surface_scan_handlers_static_scan():
     assert result["success"] is True
     assert result["data"]["summary"]["tools_scanned"] >= 5
     assert result["data"]["summary"]["risk_counts"]["moderate"] >= 1
+    assert result["data"]["summary"]["issue_count"] == 0
     names = {finding["tool_name"] for finding in result["data"]["findings"]}
     assert "ai_surface_scan_handlers" in names
