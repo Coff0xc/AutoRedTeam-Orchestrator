@@ -26,6 +26,7 @@ def register_api_security_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
+    @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.API_SECURITY)
     async def jwt_scan(token: str, target: Optional[str] = None) -> Dict[str, Any]:
         """JWT安全扫描 - 检测JWT令牌的安全问题

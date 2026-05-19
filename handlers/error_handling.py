@@ -620,14 +620,22 @@ def _do_validation(
                 continue
             value = str(value)
 
-        # 字符串类型验证
-        if isinstance(value, str):
+        values = list(value) if isinstance(value, (list, tuple, set)) else [value]
+
+        for item in values:
+            if item is None or item == "":
+                continue
+
+            # 字符串类型验证
+            if not isinstance(item, str):
+                continue
+
             validator_name = _VALIDATION_TYPES.get(validation_type, validation_type)
             validator = _get_validator(validator_name)
 
-            if not validator(value):
+            if not validator(item):
                 return format_error_response(
-                    f"参数 '{param_name}' 验证失败: '{value}' 不是有效的 {validation_type}",
+                    f"参数 '{param_name}' 验证失败: '{item}' 不是有效的 {validation_type}",
                     "ValidationError",
                     {param_name: value},
                 )

@@ -324,3 +324,26 @@
 ### 下一步候选
 
 - 继续处理 AI surface 剩余 10 个 issue，优先看 `knowledge_handlers.py`、`parallel_handlers.py`、`cloud_security_handlers.py` 等是否缺少 validator/auth。
+
+## 2026-05-19 阶段 16：Handler surface 剩余缺口清零
+
+### 本轮已做
+
+- `kg_store` 从 moderate auth 升为 critical auth，因为该写入路径支持 credential 等敏感实体。
+- `cve_generate_poc` 增加 dangerous auth，因为它会生成可执行 PoC 模板。
+- `credential_spray` 增加 `validate_inputs(targets="target")`，并扩展 `validate_inputs` 支持 list/tuple/set 参数逐项校验。
+- `jwt_scan` 增加 target 参数校验。
+- 修正 `core.ai_surface.scanner` 对 `targets: Dict` 这类利用配置参数的误报，并将 read-only `poc_list` 降为 low 风险。
+
+### 验证记录
+
+| 命令 | 结果 |
+| --- | --- |
+| `python -m py_compile core\\ai_surface\\scanner.py handlers\\error_handling.py handlers\\knowledge_handlers.py handlers\\lateral_handlers.py handlers\\api_security_handlers.py handlers\\cve_handlers.py tests\\test_ai_surface.py tests\\test_handlers_lateral.py` | 通过 |
+| pytest wrapper: `tests/test_ai_surface.py tests/test_handlers_lateral.py tests/test_handlers_cve.py tests/test_handlers_init.py -q` | 69 passed |
+| `scan_handler_surface('handlers')` | 扫描 23 个 handler 文件、99 个静态工具定义；`issue_count=0` |
+
+### 剩余风险
+
+- 静态扫描器只能识别源码层面的 auth/validator/风险词，不证明所有运行时路径安全。
+- 本轮没有跑全量测试；验证面覆盖了受影响 handler、surface scanner 和 handler 注册。

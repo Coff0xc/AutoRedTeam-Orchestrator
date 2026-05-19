@@ -5,7 +5,7 @@ CVE工具处理器
 
 from typing import Any, Dict, List, Optional
 
-from core.security import require_critical_auth
+from core.security import require_critical_auth, require_dangerous_auth
 
 from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
 from .tooling import tool
@@ -256,6 +256,7 @@ def register_cve_tools(mcp, counter, logger):
         }
 
     @tool(mcp)
+    @require_dangerous_auth
     @handle_errors(logger, category=ErrorCategory.CVE)
     async def cve_generate_poc(
         cve_id: str, description: str, severity: str = "medium"

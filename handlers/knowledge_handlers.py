@@ -3,7 +3,7 @@
 提供: kg_store (存储实体), kg_query (查询实体), kg_attack_paths (攻击路径)
 
 授权级别:
-- MODERATE: kg_store (写入操作)
+- CRITICAL: kg_store (可写入凭据等敏感实体)
 - 无: kg_query (只读查询)
 - DANGEROUS: kg_attack_paths (攻击路径分析)
 """
@@ -11,7 +11,7 @@
 from typing import Any, Dict, Optional
 
 # 授权中间件
-from core.security import require_dangerous_auth, require_moderate_auth
+from core.security import require_critical_auth, require_dangerous_auth
 
 from .error_handling import ErrorCategory, extract_target, handle_errors
 from .tooling import tool
@@ -40,7 +40,7 @@ def register_knowledge_tools(mcp, counter, logger):
     """
 
     @tool(mcp)
-    @require_moderate_auth
+    @require_critical_auth
     @handle_errors(logger, ErrorCategory.MISC, extract_target)
     async def kg_store(
         entity_type: str,

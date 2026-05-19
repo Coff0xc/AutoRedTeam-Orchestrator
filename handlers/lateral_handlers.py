@@ -462,6 +462,7 @@ def register_lateral_tools(mcp, counter, logger):
 
     @tool(mcp)
     @require_critical_auth
+    @validate_inputs(targets="target")
     @handle_errors(logger, ErrorCategory.REDTEAM)
     async def credential_spray(
         targets: List[str],

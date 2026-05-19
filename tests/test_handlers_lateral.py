@@ -661,6 +661,21 @@ class TestCredentialSprayTool:
             assert "error" in result
 
     @pytest.mark.asyncio
+    async def test_spray_rejects_invalid_target_list_item(self):
+        """测试凭证喷洒会校验目标列表中的每个目标"""
+        registered_tools, _, _ = _make_mcp_and_register()
+
+        result = await registered_tools["credential_spray"](
+            targets=["192.168.1.100", "localhost"],
+            usernames=["admin"],
+            passwords=["P@ss"],
+        )
+
+        assert result["success"] is False
+        assert result["error_type"] == "ValidationError"
+        assert "targets" in result["error"]
+
+    @pytest.mark.asyncio
     async def test_spray_cartesian_product(self):
         """测试凭证喷洒的笛卡尔积计算"""
         registered_tools, _, _ = _make_mcp_and_register()

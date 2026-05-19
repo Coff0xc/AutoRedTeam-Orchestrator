@@ -341,3 +341,19 @@
 ### 剩余候选
 
 - 剩余 issue 需要逐个看上下文，不应机械加 auth；下一步优先检查是否为 target/url 参数缺少 `validate_inputs`，或 critical 工具缺少 critical auth。
+
+## 阶段 16：Handler surface 剩余缺口清零
+
+| 主题 | 证据等级 | 发现 |
+| --- | --- | --- |
+| 敏感知识图谱写入 | 已验证 | `kg_store` 支持 credential 等实体写入，已从 `require_moderate_auth` 升为 `require_critical_auth`。 |
+| PoC 生成授权 | 已验证 | `cve_generate_poc` 已增加 `require_dangerous_auth`，避免无授权生成可复用 PoC 模板。 |
+| 批量目标校验 | 已验证 | `validate_inputs` 支持 list/tuple/set 逐项校验，`credential_spray` 已接入 `targets="target"`。 |
+| JWT target 校验 | 已验证 | `jwt_scan` 已对可选 `target` 参数接入目标校验。 |
+| 静态扫描精度 | 已验证 | `core.ai_surface.scanner` 会忽略 `targets: Dict` 这类配置参数，避免把 exploit 配置误判为 URL 目标；read-only `poc_list` 降为 low 风险。 |
+| 整体结果 | 已验证 | `scan_handler_surface('handlers')` 输出 `issue_count=0`。 |
+
+### 验证
+
+- `python -m py_compile ...` 通过。
+- pytest wrapper 覆盖 `tests/test_ai_surface.py tests/test_handlers_lateral.py tests/test_handlers_cve.py tests/test_handlers_init.py -q`，结果 69 passed。

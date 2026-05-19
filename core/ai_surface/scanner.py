@@ -139,22 +139,23 @@ class _HandlerToolVisitor(ast.NodeVisitor):
         self, node: ast.AsyncFunctionDef, decorators: List[str]
     ) -> SurfaceFinding:
         parameters = _parameter_names(node)
+        annotations = _parameter_annotations(node)
         called_names = sorted(_called_names(node))
         doc = ast.get_docstring(node) or ""
         description = doc.strip().splitlines()[0] if doc.strip() else ""
         auth_level, auth_risk = _auth_level(decorators)
-        risk_terms, term_risk = _risk_terms(
-            [node.name, description, " ".join(parameters), " ".join(called_names)]
-        )
+        risk_terms, term_risk = _risk_terms([node.name, description, " ".join(called_names)])
+        target_params = _target_params_needing_validation(parameters, annotations)
 
         risk_level = max_risk(auth_risk, term_risk)
-        if _has_target_param(parameters):
+        if target_params:
             risk_level = max_risk(risk_level, SurfaceRiskLevel.MODERATE)
+        risk_level = _downgrade_read_only_risk(node.name, risk_level, risk_terms, target_params)
         if risk_level == SurfaceRiskLevel.INFO and description:
             risk_level = SurfaceRiskLevel.LOW
 
-        issues = _issues(risk_level, auth_level, decorators, parameters, risk_terms)
-        recommendations = _recommendations(risk_level, auth_level, parameters, issues)
+        issues = _issues(risk_level, auth_level, decorators, target_params, risk_terms)
+        recommendations = _recommendations(risk_level, auth_level, target_params, issues)
         return SurfaceFinding(
             tool_name=node.name,
             file_path=str(self.file_path),
@@ -199,6 +200,21 @@ def _parameter_names(node: ast.AsyncFunctionDef) -> List[str]:
     return names
 
 
+def _parameter_annotations(node: ast.AsyncFunctionDef) -> Dict[str, str]:
+    annotations: Dict[str, str] = {}
+    args = list(node.args.args) + list(node.args.kwonlyargs)
+    for arg in args:
+        if arg.annotation is None:
+            annotations[arg.arg] = ""
+        else:
+            annotations[arg.arg] = ast.unparse(arg.annotation).lower()
+    if node.args.vararg:
+        annotations[node.args.vararg.arg] = ""
+    if node.args.kwarg:
+        annotations[node.args.kwarg.arg] = ""
+    return annotations
+
+
 def _called_names(node: ast.AsyncFunctionDef) -> Iterable[str]:
     for child in ast.walk(node):
         if isinstance(child, ast.Call):
@@ -231,15 +247,42 @@ def _risk_terms(chunks: List[str]) -> Tuple[List[str], SurfaceRiskLevel]:
     return terms, risk
 
 
-def _has_target_param(parameters: List[str]) -> bool:
-    return bool(TARGET_PARAMS.intersection({item.lower() for item in parameters}))
+def _target_params_needing_validation(
+    parameters: List[str], annotations: Dict[str, str]
+) -> List[str]:
+    target_params: List[str] = []
+    for parameter in parameters:
+        name = parameter.lower()
+        if name not in TARGET_PARAMS:
+            continue
+        annotation = annotations.get(parameter, "")
+        if "dict" in annotation:
+            continue
+        target_params.append(parameter)
+    return target_params
+
+
+def _downgrade_read_only_risk(
+    tool_name: str,
+    risk_level: SurfaceRiskLevel,
+    risk_terms: List[str],
+    target_params: List[str],
+) -> SurfaceRiskLevel:
+    if target_params or RISK_ORDER[risk_level] < RISK_ORDER[SurfaceRiskLevel.HIGH]:
+        return risk_level
+    name = tool_name.lower()
+    read_only = any(token in name for token in ("list", "search", "stats", "status", "query"))
+    active = any(token in name for token in ("execute", "exploit", "generate", "spray", "start"))
+    if read_only and not active and set(risk_terms).issubset({"poc"}):
+        return SurfaceRiskLevel.LOW
+    return risk_level
 
 
 def _issues(
     risk_level: SurfaceRiskLevel,
     auth_level: str,
     decorators: List[str],
-    parameters: List[str],
+    target_params: List[str],
     risk_terms: List[str],
 ) -> List[str]:
     issues: List[str] = []
@@ -255,9 +298,7 @@ def _issues(
         issues.append("high_risk_tool_without_dangerous_auth")
     if risk_level == SurfaceRiskLevel.CRITICAL and auth_level != "critical":
         issues.append("critical_tool_without_critical_auth")
-    if _has_target_param(parameters) and not any(
-        name.endswith("validate_inputs") for name in decorators
-    ):
+    if target_params and not any(name.endswith("validate_inputs") for name in decorators):
         issues.append("target_input_without_handler_validator")
     if "payload" in risk_terms and auth_level == "none":
         issues.append("payload_generation_without_auth_gate")
@@ -267,7 +308,7 @@ def _issues(
 def _recommendations(
     risk_level: SurfaceRiskLevel,
     auth_level: str,
-    parameters: List[str],
+    target_params: List[str],
     issues: List[str],
 ) -> List[str]:
     recommendations: List[str] = []
@@ -279,7 +320,7 @@ def _recommendations(
         recommendations.append("Add validate_inputs for target/url-like parameters.")
     if RISK_ORDER[risk_level] >= RISK_ORDER[SurfaceRiskLevel.HIGH]:
         recommendations.append("Require HumanGate before any active execution path.")
-    if _has_target_param(parameters):
+    if target_params:
         recommendations.append("Apply scope policy, rate limits, and audit logging.")
     if auth_level == "none" and not recommendations:
         recommendations.append("Keep as local/static or document execution boundary.")
