@@ -169,5 +169,21 @@ def register_ai_tools(mcp, counter, logger):
 
         return scan_handler_surface(path).to_dict()
 
-    counter.add("ai", 5)
-    logger.info("[AI] 已注册 5 个AI辅助工具")
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    async def ai_surface_scan_skills(path: str) -> Dict[str, Any]:
+        """Agent Skill/插件提示静态盘点 - 发现危险指令和敏感能力边界"""
+        from core.ai_surface import scan_skill_surface
+
+        return scan_skill_surface(path).to_dict()
+
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    async def ai_surface_scan_mcp_config(path: str) -> Dict[str, Any]:
+        """MCP 配置静态盘点 - 发现泛化命令运行时和敏感 env key"""
+        from core.ai_surface import scan_mcp_config
+
+        return scan_mcp_config(path).to_dict()
+
+    counter.add("ai", 7)
+    logger.info("[AI] 已注册 7 个AI辅助工具")

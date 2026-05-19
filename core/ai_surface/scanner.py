@@ -1,4 +1,4 @@
-"""Static scanners for MCP handler attack surface.
+"""Static scanners for MCP, skill, and agent attack surface.
 
 The scanner is read-only. It parses Python handler files with ``ast`` and never
 imports handler modules, registers tools, calls targets, or executes payloads.
@@ -7,6 +7,7 @@ imports handler modules, registers tools, calls targets, or executes payloads.
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -82,6 +83,20 @@ TARGET_PARAMS = {
     "urls",
 }
 
+SKILL_RISK_TERMS: Dict[str, SurfaceRiskLevel] = {
+    "credential": SurfaceRiskLevel.CRITICAL,
+    "exfil": SurfaceRiskLevel.CRITICAL,
+    "persistence": SurfaceRiskLevel.CRITICAL,
+    "c2": SurfaceRiskLevel.CRITICAL,
+    "shell": SurfaceRiskLevel.HIGH,
+    "command": SurfaceRiskLevel.HIGH,
+    "network": SurfaceRiskLevel.HIGH,
+    "write": SurfaceRiskLevel.MODERATE,
+    "delete": SurfaceRiskLevel.MODERATE,
+    "token": SurfaceRiskLevel.MODERATE,
+    "secret": SurfaceRiskLevel.MODERATE,
+}
+
 
 def scan_handler_surface(path: str | Path = "handlers") -> SurfaceScanResult:
     """Scan MCP handler files for tool exposure and local risk gates."""
@@ -110,6 +125,104 @@ def scan_handler_surface(path: str | Path = "handlers") -> SurfaceScanResult:
     return result
 
 
+def scan_skill_surface(path: str | Path) -> SurfaceScanResult:
+    """Scan local agent skills or plugin prompts for risky instructions."""
+    root = Path(path)
+    if not root.exists():
+        raise FileNotFoundError(f"Skill scan path does not exist: {root}")
+    files = _iter_text_files(root)
+    result = SurfaceScanResult(root_path=str(root))
+    for file_path in files:
+        result.scanned_files += 1
+        try:
+            text = file_path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            result.warnings.append(f"{file_path}: {type(exc).__name__}: {exc}")
+            continue
+        risk_terms, risk_level = _risk_terms([text], catalog=SKILL_RISK_TERMS)
+        issues = []
+        if risk_level == SurfaceRiskLevel.CRITICAL:
+            issues.append("critical_skill_instruction_requires_review")
+        elif risk_level == SurfaceRiskLevel.HIGH:
+            issues.append("high_risk_skill_instruction_requires_review")
+        recommendations = [
+            "Require human review before installing or enabling this skill."
+        ] if issues else ["No high-risk instruction marker found."]
+        result.findings.append(
+            SurfaceFinding(
+                tool_name=file_path.stem,
+                file_path=str(file_path),
+                line=1,
+                risk_level=risk_level if risk_terms else SurfaceRiskLevel.LOW,
+                risk_terms=risk_terms,
+                issues=issues,
+                recommendations=recommendations,
+                description="Static skill/prompt instruction scan",
+                finding_type="skill_instruction",
+            )
+        )
+    result.findings.sort(
+        key=lambda item: (-RISK_ORDER[item.risk_level], item.file_path, item.line)
+    )
+    return result
+
+
+def scan_mcp_config(path: str | Path) -> SurfaceScanResult:
+    """Scan MCP JSON config for broad command exposure and env secrets."""
+    root = Path(path)
+    if not root.exists():
+        raise FileNotFoundError(f"MCP config path does not exist: {root}")
+    result = SurfaceScanResult(root_path=str(root), scanned_files=1)
+    try:
+        data = json.loads(root.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        result.warnings.append(f"{root}: {type(exc).__name__}: {exc}")
+        return result
+
+    servers = data.get("mcpServers") if isinstance(data, dict) else None
+    if not isinstance(servers, dict):
+        result.warnings.append("No mcpServers object found")
+        return result
+
+    for name, server in servers.items():
+        if not isinstance(server, dict):
+            continue
+        command = str(server.get("command", ""))
+        args = [str(item) for item in server.get("args", []) if item is not None]
+        env = server.get("env", {})
+        risk_terms, risk_level = _risk_terms([command, " ".join(args)])
+        issues = []
+        if command.lower() in {"powershell", "pwsh", "cmd", "bash", "sh", "python", "node"}:
+            risk_level = max_risk(risk_level, SurfaceRiskLevel.HIGH)
+            issues.append("mcp_server_uses_general_command_runtime")
+        if isinstance(env, dict):
+            secret_keys = [
+                key
+                for key in env
+                if any(token in key.lower() for token in ("key", "token", "secret", "password"))
+            ]
+            if secret_keys:
+                risk_level = max_risk(risk_level, SurfaceRiskLevel.MODERATE)
+                issues.append("mcp_server_env_contains_secret_like_keys")
+        result.findings.append(
+            SurfaceFinding(
+                tool_name=str(name),
+                file_path=str(root),
+                line=1,
+                risk_level=risk_level if risk_level != SurfaceRiskLevel.INFO else SurfaceRiskLevel.LOW,
+                risk_terms=risk_terms,
+                issues=issues,
+                recommendations=_mcp_config_recommendations(issues),
+                description=f"MCP server command: {command}",
+                finding_type="mcp_config",
+            )
+        )
+    result.findings.sort(
+        key=lambda item: (-RISK_ORDER[item.risk_level], item.file_path, item.tool_name)
+    )
+    return result
+
+
 def _iter_python_files(root: Path) -> List[Path]:
     if root.is_file():
         return [root] if root.suffix == ".py" else []
@@ -117,6 +230,19 @@ def _iter_python_files(root: Path) -> List[Path]:
         path
         for path in root.rglob("*.py")
         if "__pycache__" not in path.parts and path.name != "__init__.py"
+    )
+
+
+def _iter_text_files(root: Path) -> List[Path]:
+    suffixes = {".md", ".txt", ".yaml", ".yml", ".json", ".toml"}
+    if root.is_file():
+        return [root] if root.suffix.lower() in suffixes else []
+    return sorted(
+        path
+        for path in root.rglob("*")
+        if path.is_file()
+        and path.suffix.lower() in suffixes
+        and "__pycache__" not in path.parts
     )
 
 
@@ -236,15 +362,28 @@ def _auth_level(decorators: List[str]) -> Tuple[str, SurfaceRiskLevel]:
     return level, risk
 
 
-def _risk_terms(chunks: List[str]) -> Tuple[List[str], SurfaceRiskLevel]:
+def _risk_terms(
+    chunks: List[str], catalog: Optional[Dict[str, SurfaceRiskLevel]] = None
+) -> Tuple[List[str], SurfaceRiskLevel]:
     haystack = " ".join(chunks).lower().replace("-", "_")
     terms: List[str] = []
     risk = SurfaceRiskLevel.INFO
-    for term, term_risk in RISK_TERMS.items():
+    for term, term_risk in (catalog or RISK_TERMS).items():
         if term in haystack:
             terms.append(term)
             risk = max_risk(risk, term_risk)
     return terms, risk
+
+
+def _mcp_config_recommendations(issues: List[str]) -> List[str]:
+    recommendations: List[str] = []
+    if "mcp_server_uses_general_command_runtime" in issues:
+        recommendations.append("Prefer a narrow wrapper command with fixed arguments.")
+    if "mcp_server_env_contains_secret_like_keys" in issues:
+        recommendations.append("Use secret manager references and redact env from logs.")
+    if not recommendations:
+        recommendations.append("Review server command and env before enabling.")
+    return recommendations
 
 
 def _target_params_needing_validation(

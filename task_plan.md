@@ -38,6 +38,7 @@
 | 16. Handler surface 剩余缺口清零 | complete | 收紧 CVE/knowledge/lateral/API handler 边界，修正静态扫描误报，验证 issue_count=0 |
 | 17. AI red-team eval/report 基础能力 | complete | 补 promptfoo/garak/PyRIT 风格 catalog、strategy、scorer、report/CI，保持 dry-run |
 | 18. Agent runtime 平台骨架 | complete | 补 PentAGI/CAI/Decepticon 风格 memory、observability、benchmark、sandbox policy 计划层 |
+| 19. AI surface skills/MCP 配置扫描 | complete | 扩展 AI-Infra-Guard/Aguara 风格 skills 和 MCP config 静态安全扫描 |
 
 ## 验收标准
 
@@ -59,3 +60,4 @@
 - 2026-05-19：`kg_store` 可写入 credential 等敏感实体，因此按 critical auth 处理；`cve_generate_poc` 只生成不执行，但会产出 PoC 模板，因此按 dangerous auth 处理。
 - 2026-05-19：第一批“夺取能力”优先落地 eval/report 闭环，仍不启用真实模型调用或目标请求；scorer 先做本地规则检测。
 - 2026-05-19：Agent runtime 第二批只做可序列化计划层和指标层；sandbox policy 不启动容器、不执行命令。
+- 2026-05-19：AI surface 扩展到 skills/MCP config 时仍只做本地静态文本/JSON 分析，不安装 skill、不启动 MCP server。

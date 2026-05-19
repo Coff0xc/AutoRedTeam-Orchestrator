@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/Version-3.1.0-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=flat-square" alt="MCP">
-  <img src="https://img.shields.io/badge/Tools-134-FF6B6B?style=flat-square" alt="Tools">
+  <img src="https://img.shields.io/badge/Tools-136-FF6B6B?style=flat-square" alt="Tools">
   <img src="https://img.shields.io/badge/Tests-1980-4CAF50?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License">
 </p>
@@ -41,7 +41,7 @@
 ┌──────────────────────────────────────────────────────────────────┐
 │                AutoRedTeam-Orchestrator v3.1.0                   │
 ├──────────────────────────────────────────────────────────────────┤
-│  ● 134 MCP 工具          ● 26 漏洞检测器     ● 1980 测试用例    │
+│  ● 136 MCP 工具          ● 26 漏洞检测器     ● 1980 测试用例    │
 │  ● 纯 Python Nuclei 引擎 ● MCTS 攻击规划     ● SQLite 知识图谱  │
 │  ● LLM 增强决策          ● Docker 沙箱       ● SARIF CI/CD 集成 │
 │  ● SDK + CLI + MCP 三层  ● 横向移动/C2/提权  ● OOB 误报验证     │
@@ -160,7 +160,7 @@ autort report SESSION-ID --format html -o report.html
               │                    │                    │
               ▼                    ▼                    ▼
     ┌─────────────────────────────────────────────────────────┐
-    │                    handlers/ (134 tools)                 │
+    │                    handlers/ (136 tools)                 │
     │   recon(8) detector(27) cve(8) exploit(12) lateral(9)   │
     │   redteam(14) ad(3) persistence(3) cloud(3) api(7) ... │
     └──────────────────────┬──────────────────────────────────┘
@@ -201,10 +201,10 @@ autort report SESSION-ID --format html -o report.html
 | **云安全** | 3 | `k8s_scan`, `grpc_scan`, `aws_scan` |
 | **供应链** | 3 | `sbom_generate`, `dependency_audit`, `cicd_scan` |
 | **外部工具** | 8 | `ext_nmap_scan`, `ext_nuclei_scan`, `ext_sqlmap_scan`, `ext_ffuf_fuzz` |
-| **会话/报告/AI** | 11 | `session_create`, `generate_report`, `smart_analyze`, `ai_redteam_run_scenario`, `ai_surface_scan_handlers` |
+| **会话/报告/AI** | 13 | `session_create`, `generate_report`, `smart_analyze`, `ai_redteam_run_scenario`, `ai_surface_scan_handlers`, `ai_surface_scan_skills`, `ai_surface_scan_mcp_config` |
 | **知识图谱/MCTS** | 4 | `kg_store`, `kg_query`, `kg_attack_paths`, `plan_attack_path` |
 | **并发/资源/提示** | 11 | `parallel_scan` + 4 MCP Resources + 6 MCP Prompts |
-| **总计** | **134** | |
+| **总计** | **136** | |
 
 ---
 

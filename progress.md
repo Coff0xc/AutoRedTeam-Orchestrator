@@ -407,3 +407,31 @@
 - Runtime memory 当前是 run 内本地序列化记录，尚未接 SQLite/knowledge graph。
 - Observability 当前是本地 snapshot，尚未推送 Langfuse/OTel/Grafana。
 - Sandbox 当前是 policy object，尚未执行 Docker/local command。
+
+## 2026-05-19 阶段 19：AI surface skills/MCP 配置扫描
+
+### 阶段目标
+
+- 借鉴 AI-Infra-Guard / Aguara 的 AI infra / skills / MCP 静态安全扫描方向。
+- 不安装 skill、不启动 MCP server、不执行 command，仅做本地文件分析。
+
+### 本轮已做
+
+- `SurfaceFinding` 增加 `finding_type`，区分 `mcp_tool`、`skill_instruction`、`mcp_config`。
+- `core.ai_surface.scan_skill_surface()`：扫描 skill/prompt 文本中的 shell、credential、exfil、persistence 等高危指令。
+- `core.ai_surface.scan_mcp_config()`：扫描 MCP JSON 配置中的泛化命令运行时和 secret-like env key。
+- MCP 新增 `ai_surface_scan_skills`、`ai_surface_scan_mcp_config`，AI 工具数从 5 到 7，总工具数从 134 到 136。
+- README/README_EN 工具数同步到 136。
+
+### 验证记录
+
+| 命令 | 结果 |
+| --- | --- |
+| `python -m py_compile core\\ai_surface\\models.py core\\ai_surface\\scanner.py core\\ai_surface\\__init__.py handlers\\ai_handlers.py handlers\\__init__.py tests\\test_ai_surface.py tests\\test_handlers_ai.py` | 通过 |
+| pytest wrapper: `tests/test_ai_surface.py tests/test_handlers_ai.py tests/test_handlers_init.py -q` | 30 passed |
+| MCP 注册计数命令 | 通过；总计 `136`，其中 `ai=7` |
+
+### 当前边界
+
+- Skill scan 只是静态文本扫描，不判断上下文授权真实性。
+- MCP config scan 只分析本地 JSON，不连接 server。

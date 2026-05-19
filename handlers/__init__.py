@@ -16,7 +16,7 @@ AutoRedTeam MCP Handlers
 - ad_handlers: AD攻击工具 (3个)
 - session_handlers: 会话管理工具 (4个)
 - report_handlers: 报告工具 (2个)
-- ai_handlers: AI辅助工具 (5个)
+- ai_handlers: AI辅助工具 (7个)
 - misc_handlers: 杂项工具 (3个)
 - external_tools_handlers: 外部工具集成 (8个)
 - parallel_handlers: 并发扫描工具 (1个)

@@ -46,6 +46,7 @@ class SurfaceFinding:
     issues: List[str] = field(default_factory=list)
     recommendations: List[str] = field(default_factory=list)
     description: str = ""
+    finding_type: str = "mcp_tool"
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -60,6 +61,7 @@ class SurfaceFinding:
             "issues": self.issues,
             "recommendations": self.recommendations,
             "description": self.description,
+            "finding_type": self.finding_type,
         }
 
 

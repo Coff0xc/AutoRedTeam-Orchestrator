@@ -396,3 +396,22 @@
 ### 验证
 
 - pytest wrapper 覆盖 `tests/test_agent_runtime_platform.py tests/test_ai_redteam_runtime.py -q`，结果 13 passed。
+
+## 阶段 19：AI surface skills/MCP 配置扫描
+
+| 主题 | 证据等级 | 发现 |
+| --- | --- | --- |
+| Skill 静态扫描 | 已验证 | `scan_skill_surface()` 扫描 `.md/.txt/.yaml/.json/.toml` 中危险指令标记，不执行任何内容。 |
+| MCP config 静态扫描 | 已验证 | `scan_mcp_config()` 解析 MCP JSON，标记 powershell/cmd/bash/python/node 这类泛化运行时和 secret-like env key。 |
+| MCP 入口 | 已验证 | `ai_surface_scan_skills`、`ai_surface_scan_mcp_config` 已加入 AI handlers。 |
+| 工具计数 | 已验证 | MCP 注册命令输出总计 `136`，其中 `ai=7`；README/README_EN 已同步。 |
+
+### 阶段 19 边界
+
+- 不读取外部 skill 仓库，不安装插件，不启动 MCP server。
+- Secret-like env key 只报告 key 名，不输出 value 内容。
+
+### 验证
+
+- pytest wrapper 覆盖 `tests/test_ai_surface.py tests/test_handlers_ai.py tests/test_handlers_init.py -q`，结果 30 passed。
+- MCP 注册计数命令输出 136。

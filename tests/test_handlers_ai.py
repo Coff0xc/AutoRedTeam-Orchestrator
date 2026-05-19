@@ -26,8 +26,8 @@ def _register_ai_tools():
 def test_register_ai_tools_count():
     _, mock_counter, mock_logger = _register_ai_tools()
 
-    mock_counter.add.assert_called_once_with("ai", 5)
-    assert any("5 个AI辅助工具" in str(call) for call in mock_logger.info.call_args_list)
+    mock_counter.add.assert_called_once_with("ai", 7)
+    assert any("7 个AI辅助工具" in str(call) for call in mock_logger.info.call_args_list)
 
 
 @pytest.mark.asyncio
@@ -101,3 +101,32 @@ async def test_ai_surface_scan_handlers_static_scan():
     assert result["data"]["summary"]["issue_count"] == 0
     names = {finding["tool_name"] for finding in result["data"]["findings"]}
     assert "ai_surface_scan_handlers" in names
+
+
+@pytest.mark.asyncio
+async def test_ai_surface_scan_skills_static_scan(tmp_path):
+    registered_tools, _, _ = _register_ai_tools()
+    skill_file = tmp_path / "SKILL.md"
+    skill_file.write_text("Use shell command and read secret token.", encoding="utf-8")
+
+    result = await registered_tools["ai_surface_scan_skills"](path=str(tmp_path))
+
+    assert result["success"] is True
+    assert result["data"]["summary"]["issue_count"] >= 1
+    assert result["data"]["findings"][0]["finding_type"] == "skill_instruction"
+
+
+@pytest.mark.asyncio
+async def test_ai_surface_scan_mcp_config_static_scan(tmp_path):
+    registered_tools, _, _ = _register_ai_tools()
+    config_file = tmp_path / "mcp.json"
+    config_file.write_text(
+        '{"mcpServers":{"demo":{"command":"python","args":["server.py"],"env":{"API_KEY":"x"}}}}',
+        encoding="utf-8",
+    )
+
+    result = await registered_tools["ai_surface_scan_mcp_config"](path=str(config_file))
+
+    assert result["success"] is True
+    assert result["data"]["summary"]["issue_count"] == 2
+    assert result["data"]["findings"][0]["finding_type"] == "mcp_config"
