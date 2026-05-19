@@ -61,6 +61,14 @@ class TestCLIHelp:
         result = runner.invoke(app, ["pentest", "--help"])
         assert result.exit_code == 0
 
+    def test_ai_surface_help(self):
+        """ai-surface scan --help 应返回成功"""
+        from cli.main import app
+
+        result = runner.invoke(app, ["ai-surface", "scan", "--help"])
+        assert result.exit_code == 0
+        assert "path" in result.output.lower()
+
     def test_no_args_shows_help(self):
         """无参数调用应显示帮助/用法信息"""
         from cli.main import app

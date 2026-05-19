@@ -311,3 +311,20 @@
 - `core/ai_surface/`：MCP/skills/agent 工具边界扫描。
 - `core/ai_redteam/scorers/`：先实现本地规则类 scorer，例如 secret pattern、unsafe tool call、policy bypass marker。
 - `core/agent_runtime` 持久化：将 `AgentRunState` 输出落到 `data/runs/`，并默认脱敏。
+
+## 阶段 14：AI 工具攻击面静态盘点
+
+| 主题 | 证据等级 | 发现 |
+| --- | --- | --- |
+| 静态扫描核心 | 已验证 | `core/ai_surface/` 新增 `SurfaceFinding`、`SurfaceScanResult` 和 `scan_handler_surface()`，通过 AST 解析 handler 源码，不导入或执行目标模块。 |
+| CLI 入口 | 已验证 | `python -m cli.main ai-surface scan --path handlers\\ai_handlers.py` 成功输出 JSON；扫描 1 个文件、5 个工具。 |
+| MCP 入口 | 已验证 | `handlers/ai_handlers.py` 新增 `ai_surface_scan_handlers`，MCP 注册计数为 `134`，其中 `ai=5`。 |
+| 风险盘点结果 | 已验证 | `scan_handler_surface('handlers')` 扫描 23 个 handler 文件、99 个静态工具定义；risk counts: low 13、moderate 28、high 20、critical 38；issue_count 13。 |
+| 发现示例 | 已验证 | `handlers\\ai_handlers.py` 中 `attack_chain_plan` 和 `smart_payload` 被标记为 high 且无 dangerous auth，是下一轮可治理候选。 |
+| Windows 输出兼容 | 已验证 | 修复 CLI `_output` 在 cp1252 stdout 下打印中文 JSON 的 `UnicodeEncodeError`，改为 UTF-8 fallback。 |
+
+### 阶段 14 边界
+
+- 该扫描器只给“候选风险”和“建议 gate”，不是漏洞证明。
+- 动态 factory 生成工具不会逐个展开，只统计源码中的显式 `@tool` 函数。
+- 后续若根据扫描结果收紧 auth，需要逐项确认产品可用性和测试覆盖。

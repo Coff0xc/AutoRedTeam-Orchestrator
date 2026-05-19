@@ -276,3 +276,29 @@
 
 - 已清理 `__pycache__`、`.pytest_cache` 和 `data/operation_audit.jsonl`。
 - `reports/*.json` 检索结果仍按 `.gitignore` 忽略，不进入 git 状态。
+
+## 2026-05-19 阶段 14：AI 工具攻击面静态盘点
+
+### 本轮已做
+
+- 新增 `core/ai_surface/`，用 AST 静态解析 handler 文件中的 `@tool` MCP 工具、装饰器、参数、调用名和风险词。
+- 新增 CLI：`autort ai-surface scan --path handlers`，默认只读扫描，不导入或执行 handler。
+- 新增 MCP 工具：`ai_surface_scan_handlers`，AI 工具计数从 4 更新到 5，总 MCP 注册计数从 133 更新到 134。
+- 修复 CLI `_output` 在 Windows cp1252 stdout 下打印中文 JSON 触发 `UnicodeEncodeError` 的兼容问题。
+- 补充测试：`tests/test_ai_surface.py`、`tests/test_handlers_ai.py`、`tests/test_cli.py`。
+
+### 验证记录
+
+| 命令 | 结果 |
+| --- | --- |
+| `python -m py_compile core\\ai_surface\\__init__.py core\\ai_surface\\models.py core\\ai_surface\\scanner.py handlers\\ai_handlers.py handlers\\__init__.py cli\\main.py tests\\test_ai_surface.py tests\\test_handlers_ai.py tests\\test_cli.py` | 通过 |
+| pytest wrapper: `tests/test_ai_surface.py tests/test_handlers_ai.py tests/test_cli.py tests/test_handlers_init.py -q` | 35 passed |
+| `python -m cli.main ai-surface scan --path handlers\\ai_handlers.py` | 通过；扫描 1 个文件、5 个工具 |
+| MCP 注册计数命令 | 通过；总计 `134`，其中 `ai=5` |
+| `scan_handler_surface('handlers')` 汇总 | 扫描 23 个 handler 文件、99 个静态工具定义；risk counts: info 0 / low 13 / moderate 28 / high 20 / critical 38；issue_count 13 |
+
+### 当前边界
+
+- 静态扫描结果是候选风险盘点，不代表真实漏洞确认。
+- 不覆盖 factory 动态生成的每一个 detector 实例，只覆盖源码中的显式工具定义和工厂入口。
+- 不执行真实目标请求、模型调用、shell、扫描器或利用器。

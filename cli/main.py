@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -34,6 +35,14 @@ ai_redteam_app = typer.Typer(
     add_completion=False,
 )
 app.add_typer(ai_redteam_app, name="ai-redteam")
+
+ai_surface_app = typer.Typer(
+    name="ai-surface",
+    help="AI/MCP 工具攻击面静态盘点（只读，不执行工具）",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(ai_surface_app, name="ai-surface")
 
 
 def _show_disclaimer() -> None:
@@ -323,6 +332,26 @@ def ai_redteam_run(
     _output(result.to_dict(), output)
 
 
+# ──────────────────────────── ai-surface ────────────────────────────
+
+
+@ai_surface_app.command("scan")
+def ai_surface_scan(
+    path: str = typer.Option("handlers", "--path", "-p", help="handler 文件或目录"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """静态盘点 MCP/AI 工具边界 — 解析源码，不导入或执行 handler"""
+    from core.ai_surface import scan_handler_surface
+
+    try:
+        result = scan_handler_surface(path)
+    except (OSError, SyntaxError, UnicodeDecodeError, ValueError) as exc:
+        typer.echo(f"AI surface scan failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    _output(result.to_dict(), output)
+
+
 # ──────────────────────────── helpers ────────────────────────────
 
 
@@ -369,7 +398,10 @@ def _output(data, filepath: Optional[str]):
         path.write_text(text, encoding="utf-8")
         typer.echo(f"结果已保存到 {filepath}")
     else:
-        typer.echo(text)
+        try:
+            typer.echo(text)
+        except UnicodeEncodeError:
+            sys.stdout.buffer.write(text.encode("utf-8", errors="replace") + b"\n")
 
 
 def main():

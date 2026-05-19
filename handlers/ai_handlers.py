@@ -1,6 +1,7 @@
 """
 AI辅助工具处理器
-包含: smart_analyze, attack_chain_plan, smart_payload, ai_redteam_run_scenario
+包含: smart_analyze, attack_chain_plan, smart_payload, ai_redteam_run_scenario,
+     ai_surface_scan_handlers
 """
 
 from typing import Any, Dict, Optional
@@ -149,5 +150,20 @@ def register_ai_tools(mcp, counter, logger):
         result = AIRedTeamRunner(scenario_model).run()
         return result.to_dict()
 
-    counter.add("ai", 4)
-    logger.info("[AI] 已注册 4 个AI辅助工具")
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    async def ai_surface_scan_handlers(path: str = "handlers") -> Dict[str, Any]:
+        """AI/MCP 工具攻击面静态盘点 - 解析 handler 源码并输出风险边界
+
+        Args:
+            path: handler 文件或目录，默认扫描本仓库 handlers/
+
+        Returns:
+            静态风险盘点结果；不会导入 handler、注册工具、请求目标或执行 payload
+        """
+        from core.ai_surface import scan_handler_surface
+
+        return scan_handler_surface(path).to_dict()
+
+    counter.add("ai", 5)
+    logger.info("[AI] 已注册 5 个AI辅助工具")

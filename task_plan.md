@@ -33,6 +33,7 @@
 | 11. AI 自动化红队项目重筛 | complete | 将对照范围收窄到 AI 自动化红队、LLM 红队、AI 自动渗透平台和 Agentic pentest |
 | 12. AI 红队基础层落地 | complete | 新增 agent runtime、AI red-team scenario/runner、dry-run CLI、示例配置和测试 |
 | 13. AI 红队 MCP 接入 | complete | 将 dry-run runner 接入 MCP handler，形成 CLI + core + MCP 三层入口 |
+| 14. AI 工具攻击面静态盘点 | complete | 新增 MCP/handler 静态扫描核心、CLI/MCP 入口和测试；只读解析，不执行工具 |
 
 ## 验收标准
 
@@ -49,3 +50,4 @@
 - 2026-05-19：用户纠偏要求主要看 AI 自动化红队、AI 红队攻击、AI 自动化渗透平台。已将 `docs/peer-project-benchmark.md` 改为 AI 自动化红队专版，传统 Metasploit/Nuclei/ZAP/DefectDojo 只作为降权工程参考，不再进入主对照样本。
 - 2026-05-19：第一批代码落地只实现 dry-run 与计划层，不执行真实目标调用、模型调用、shell、外部扫描或攻击工具。高风险能力后续只能作为带 `ActionPolicy`、`HumanGate` 和 scope policy 的受控 Action 接入。
 - 2026-05-19：MCP 新增 `ai_redteam_run_scenario`，仅支持声明式场景 dry-run 计划；实测 MCP 注册工具数变为 133。README/README_EN 已同步工具数。
+- 2026-05-19：AI surface 静态扫描只解析 handler 源码和装饰器，不导入 handler、不注册工具、不执行 payload。该能力用于发现缺失 auth/scope/human gate 的候选点，不能等同于动态安全验证。

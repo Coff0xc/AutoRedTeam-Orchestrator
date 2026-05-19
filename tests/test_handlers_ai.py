@@ -26,8 +26,8 @@ def _register_ai_tools():
 def test_register_ai_tools_count():
     _, mock_counter, mock_logger = _register_ai_tools()
 
-    mock_counter.add.assert_called_once_with("ai", 4)
-    assert any("4 个AI辅助工具" in str(call) for call in mock_logger.info.call_args_list)
+    mock_counter.add.assert_called_once_with("ai", 5)
+    assert any("5 个AI辅助工具" in str(call) for call in mock_logger.info.call_args_list)
 
 
 @pytest.mark.asyncio
@@ -63,3 +63,16 @@ async def test_ai_redteam_run_scenario_rejects_missing_input():
     assert result["success"] is False
     assert result["error_type"] == "ValueError"
     assert "Provide either scenario or scenario_path" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_ai_surface_scan_handlers_static_scan():
+    registered_tools, _, _ = _register_ai_tools()
+
+    result = await registered_tools["ai_surface_scan_handlers"](path="handlers/ai_handlers.py")
+
+    assert result["success"] is True
+    assert result["data"]["summary"]["tools_scanned"] >= 5
+    assert result["data"]["summary"]["risk_counts"]["moderate"] >= 1
+    names = {finding["tool_name"] for finding in result["data"]["findings"]}
+    assert "ai_surface_scan_handlers" in names
