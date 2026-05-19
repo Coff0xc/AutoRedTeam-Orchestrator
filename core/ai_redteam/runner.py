@@ -14,7 +14,9 @@ from core.agent_runtime import (
     RunMode,
     Task,
 )
+from core.ai_redteam.catalog import unknown_items
 from core.ai_redteam.models import AIRedTeamRunResult, Attempt, Scenario, ScenarioMode, Score
+from core.ai_redteam.strategies import apply_strategy, build_probe_prompt
 
 
 class AIRedTeamRunner:
@@ -50,10 +52,25 @@ class AIRedTeamRunner:
         attempts: List[Attempt] = []
         scores: List[Score] = []
         warnings: List[str] = []
+        warnings.extend(
+            f"Unknown {kind}(s): {', '.join(items)}"
+            for kind, items in {
+                "probe": unknown_items("probe", [probe.probe_id for probe in self.scenario.probes]),
+                "strategy": unknown_items(
+                    "strategy", [strategy.strategy_id for strategy in self.scenario.strategies]
+                ),
+                "scorer": unknown_items(
+                    "scorer", [scorer.scorer_id for scorer in self.scenario.scorers]
+                ),
+            }.items()
+            if items
+        )
 
         for target in self.scenario.targets:
             for probe in self.scenario.probes:
                 for strategy in self.scenario.strategies:
+                    base_prompt = build_probe_prompt(probe.name)
+                    strategy_plan = apply_strategy(base_prompt, strategy.strategy_id)
                     attempt = Attempt(
                         target_id=target.target_id,
                         probe_id=probe.probe_id,
@@ -66,6 +83,7 @@ class AIRedTeamRunner:
                             "target": target.to_dict(),
                             "probe": probe.to_dict(),
                             "strategy": strategy.to_dict(),
+                            "strategy_plan": strategy_plan,
                             "dry_run": self.scenario.mode == ScenarioMode.DRY_RUN,
                         },
                         policy=ActionPolicy(
@@ -110,6 +128,7 @@ class AIRedTeamRunner:
                                 scorer_id=scorer.scorer_id,
                                 status="not_run",
                                 evidence=["dry-run: target response was not requested"],
+                                metadata={"strategy_plan": strategy_plan},
                             )
                         )
 

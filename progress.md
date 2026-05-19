@@ -347,3 +347,34 @@
 
 - 静态扫描器只能识别源码层面的 auth/validator/风险词，不证明所有运行时路径安全。
 - 本轮没有跑全量测试；验证面覆盖了受影响 handler、surface scanner 和 handler 注册。
+
+## 2026-05-19 阶段 17：AI red-team eval/report 基础能力
+
+### 阶段目标
+
+- 借鉴 promptfoo 的声明式配置、strategies、report/CI。
+- 借鉴 garak/PyRIT 的 probe/strategy/scorer 分层。
+- 保持 dry-run 和本地规则评测，不执行真实目标请求或模型调用。
+
+### 本轮已做
+
+- 新增 `core/ai_redteam/catalog.py`：内置 probes、strategies、scorers 元数据。
+- 新增 `core/ai_redteam/strategies.py`：direct、encoding、homoglyph、multi_turn 本地变换计划。
+- 新增 `core/ai_redteam/scorers.py`：secret leak、unsafe tool call、policy bypass、RAG leakage 本地规则 scorer。
+- 新增 `core/ai_redteam/report.py`：Markdown report、score summary、CI threshold 判断。
+- CLI `ai-redteam run` 增加 `--format json/markdown`、`--ci`、`--severity-threshold`。
+- CLI 新增 `ai-redteam catalog`。
+
+### 验证记录
+
+| 命令 | 结果 |
+| --- | --- |
+| `python -m py_compile core\\ai_redteam\\catalog.py core\\ai_redteam\\strategies.py core\\ai_redteam\\scorers.py core\\ai_redteam\\report.py core\\ai_redteam\\__init__.py core\\ai_redteam\\models.py core\\ai_redteam\\runner.py cli\\main.py tests\\test_ai_redteam_components.py tests\\test_ai_redteam_runtime.py` | 通过 |
+| pytest wrapper: `tests/test_ai_redteam_components.py tests/test_ai_redteam_runtime.py tests/test_cli.py -q` | 24 passed |
+| `python -m cli.main ai-redteam catalog` | 通过，输出 5 probes / 4 strategies / 4 scorers |
+| `python -m cli.main ai-redteam run config\\ai_redteam.example.yaml --format markdown` | 通过，输出 Markdown report；16 attempts、48 scores |
+
+### 当前边界
+
+- 当前 scorer 是本地规则，不调用外部模型。
+- 当前 runner 仍默认 dry-run，不请求 target、不执行工具。

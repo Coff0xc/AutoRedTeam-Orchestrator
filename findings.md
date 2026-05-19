@@ -357,3 +357,23 @@
 
 - `python -m py_compile ...` 通过。
 - pytest wrapper 覆盖 `tests/test_ai_surface.py tests/test_handlers_lateral.py tests/test_handlers_cve.py tests/test_handlers_init.py -q`，结果 69 passed。
+
+## 阶段 17：AI red-team eval/report 基础能力
+
+| 主题 | 证据等级 | 发现 |
+| --- | --- | --- |
+| 组件 catalog | 已验证 | `core/ai_redteam/catalog.py` 定义内置 probes、strategies、scorers，与 promptfoo/garak/PyRIT 的插件分层对齐。 |
+| Strategy 变换 | 已验证 | `core/ai_redteam/strategies.py` 支持 direct、encoding、homoglyph、multi_turn 的本地计划变换。 |
+| 本地 scorer | 已验证 | `core/ai_redteam/scorers.py` 支持 secret/tool/policy/RAG marker 规则检测，不调用外部模型。 |
+| Report/CI | 已验证 | `core/ai_redteam/report.py` 支持 Markdown report 和 CI threshold 判断。 |
+| CLI | 已验证 | `autort ai-redteam run` 支持 `--format`、`--ci`、`--severity-threshold`；新增 `autort ai-redteam catalog`。 |
+
+### 阶段 17 边界
+
+- 当前 scorer 只评估本地文本样本或未来 target response，不负责生成攻击 payload。
+- 当前 runner 仍是 dry-run，所有 target/model/tool 调用保持跳过。
+
+### 验证
+
+- pytest wrapper 覆盖 `tests/test_ai_redteam_components.py tests/test_ai_redteam_runtime.py tests/test_cli.py -q`，结果 24 passed。
+- CLI smoke 覆盖 `ai-redteam catalog` 和 example scenario Markdown report。

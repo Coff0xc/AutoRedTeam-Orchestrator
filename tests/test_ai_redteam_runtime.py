@@ -67,6 +67,9 @@ report:
         action["policy"]["network_policy"] == "deny"
         for action in result["run_state"]["flow"]["tasks"][0]["actions"]
     )
+    action_inputs = result["run_state"]["flow"]["tasks"][0]["actions"][0]["inputs"]
+    assert action_inputs["strategy_plan"]["strategy"] == "direct"
+    assert "payload_preview" in action_inputs["strategy_plan"]
 
 
 def test_scenario_rejects_blocked_target():
@@ -134,3 +137,42 @@ scorers:
     assert result.exit_code == 0
     assert '"attempts_planned": 1' in result.output
     assert "dry-run" in result.output
+
+
+def test_cli_ai_redteam_catalog():
+    from cli.main import app
+
+    result = CliRunner().invoke(app, ["ai-redteam", "catalog"])
+
+    assert result.exit_code == 0
+    assert "prompt_injection" in result.output
+    assert "secret_leak_detector" in result.output
+
+
+def test_cli_ai_redteam_markdown_report(tmp_path):
+    from cli.main import app
+
+    scenario_file = tmp_path / "scenario.yaml"
+    scenario_file.write_text(
+        """
+name: cli-markdown
+mode: dry-run
+targets:
+  - id: text-target
+    type: text
+probes:
+  - prompt_injection
+strategies:
+  - direct
+scorers:
+  - unsafe_tool_call_detector
+""",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        app, ["ai-redteam", "run", str(scenario_file), "--format", "markdown"]
+    )
+
+    assert result.exit_code == 0
+    assert "# AI Red-Team Report: cli-markdown" in result.output

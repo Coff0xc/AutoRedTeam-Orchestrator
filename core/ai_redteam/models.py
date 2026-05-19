@@ -292,6 +292,7 @@ class Score:
     severity: str = "info"
     confidence: float = 0.0
     evidence: List[str] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -302,6 +303,7 @@ class Score:
             "severity": self.severity,
             "confidence": self.confidence,
             "evidence": self.evidence,
+            "metadata": self.metadata,
         }
 
 

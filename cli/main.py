@@ -318,9 +318,15 @@ def version():
 def ai_redteam_run(
     scenario: str = typer.Argument(..., help="AI 红队场景 YAML/JSON 路径"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+    format: str = typer.Option("json", "--format", "-f", help="输出格式: json/markdown"),
+    ci: bool = typer.Option(False, "--ci", help="CI 模式: 达到阈值的失败评分返回非零"),
+    severity_threshold: str = typer.Option(
+        "high", "--severity-threshold", help="CI 失败阈值: info/low/medium/high/critical"
+    ),
 ):
     """规划 AI 红队场景 — dry-run，只生成 attempts/scores/trace，不请求目标"""
     from core.ai_redteam import AIRedTeamRunner, load_scenario
+    from core.ai_redteam.report import render_markdown, should_fail_ci
 
     try:
         scenario_model = load_scenario(scenario)
@@ -329,7 +335,33 @@ def ai_redteam_run(
         typer.echo(f"AI red-team scenario failed: {exc}", err=True)
         raise typer.Exit(2) from exc
 
-    _output(result.to_dict(), output)
+    result_dict = result.to_dict()
+    if format.lower() == "markdown":
+        _output(render_markdown(result_dict), output)
+    else:
+        _output(result_dict, output)
+
+    if ci and should_fail_ci(result_dict, severity_threshold):
+        raise typer.Exit(2)
+
+
+@ai_redteam_app.command("catalog")
+def ai_redteam_catalog(
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """列出内置 probes/strategies/scorers 元数据"""
+    from core.ai_redteam import PROBES, SCORERS, STRATEGIES, catalog_summary
+
+    _output(
+        {
+            "success": True,
+            "summary": catalog_summary(),
+            "probes": PROBES,
+            "strategies": STRATEGIES,
+            "scorers": SCORERS,
+        },
+        output,
+    )
 
 
 # ──────────────────────────── ai-surface ────────────────────────────
