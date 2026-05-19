@@ -70,6 +70,9 @@ report:
     action_inputs = result["run_state"]["flow"]["tasks"][0]["actions"][0]["inputs"]
     assert action_inputs["strategy_plan"]["strategy"] == "direct"
     assert "payload_preview" in action_inputs["strategy_plan"]
+    assert result["run_state"]["summary"]["memory_records"] == 1
+    assert "observability" in result["run_state"]["metadata"]
+    assert "benchmark" in result["run_state"]["metadata"]
 
 
 def test_scenario_rejects_blocked_target():

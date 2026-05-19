@@ -37,6 +37,7 @@
 | 15. AI handler 高风险授权收紧 | complete | 根据 AI surface 结果给高风险 AI 工具补 dangerous auth，并验证缺省无 key 阻断 |
 | 16. Handler surface 剩余缺口清零 | complete | 收紧 CVE/knowledge/lateral/API handler 边界，修正静态扫描误报，验证 issue_count=0 |
 | 17. AI red-team eval/report 基础能力 | complete | 补 promptfoo/garak/PyRIT 风格 catalog、strategy、scorer、report/CI，保持 dry-run |
+| 18. Agent runtime 平台骨架 | complete | 补 PentAGI/CAI/Decepticon 风格 memory、observability、benchmark、sandbox policy 计划层 |
 
 ## 验收标准
 
@@ -57,3 +58,4 @@
 - 2026-05-19：`attack_chain_plan` 与 `smart_payload` 虽然偏规划/生成，但输出会辅助攻击链和 payload，因此按危险级 MCP 工具处理，缺省无 API key 时必须阻断。
 - 2026-05-19：`kg_store` 可写入 credential 等敏感实体，因此按 critical auth 处理；`cve_generate_poc` 只生成不执行，但会产出 PoC 模板，因此按 dangerous auth 处理。
 - 2026-05-19：第一批“夺取能力”优先落地 eval/report 闭环，仍不启用真实模型调用或目标请求；scorer 先做本地规则检测。
+- 2026-05-19：Agent runtime 第二批只做可序列化计划层和指标层；sandbox policy 不启动容器、不执行命令。

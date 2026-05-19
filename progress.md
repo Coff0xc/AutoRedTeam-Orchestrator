@@ -378,3 +378,32 @@
 
 - 当前 scorer 是本地规则，不调用外部模型。
 - 当前 runner 仍默认 dry-run，不请求 target、不执行工具。
+
+## 2026-05-19 阶段 18：Agent runtime 平台骨架
+
+### 阶段目标
+
+- 借鉴 PentAGI/Decepticon 的 runtime 分层，补 memory、observability、benchmark、sandbox policy。
+- 借鉴 CAI 的 benchmark/guardrail 思路，但不启用真实外部执行。
+
+### 本轮已做
+
+- 新增 `core/agent_runtime/memory.py`：`MemoryRecord`、`RunMemory`。
+- 新增 `core/agent_runtime/observability.py`：本地 observability snapshot，统计 action status、risk、network policy。
+- 新增 `core/agent_runtime/benchmark.py`：本地 run summary benchmark 评分。
+- 新增 `core/agent_runtime/sandbox.py`：只描述 sandbox policy，不启动容器、不执行命令。
+- `AgentRunState` 增加 memory 记录。
+- `AIRedTeamRunner` 将 dry-run policy 写入 memory，并写入 observability/benchmark metadata。
+
+### 验证记录
+
+| 命令 | 结果 |
+| --- | --- |
+| `python -m py_compile core\\agent_runtime\\memory.py core\\agent_runtime\\observability.py core\\agent_runtime\\benchmark.py core\\agent_runtime\\sandbox.py core\\agent_runtime\\__init__.py core\\agent_runtime\\models.py core\\ai_redteam\\runner.py tests\\test_agent_runtime_platform.py tests\\test_ai_redteam_runtime.py` | 通过 |
+| pytest wrapper: `tests/test_agent_runtime_platform.py tests/test_ai_redteam_runtime.py -q` | 13 passed |
+
+### 当前边界
+
+- Runtime memory 当前是 run 内本地序列化记录，尚未接 SQLite/knowledge graph。
+- Observability 当前是本地 snapshot，尚未推送 Langfuse/OTel/Grafana。
+- Sandbox 当前是 policy object，尚未执行 Docker/local command。

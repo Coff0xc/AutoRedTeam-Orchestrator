@@ -377,3 +377,22 @@
 
 - pytest wrapper 覆盖 `tests/test_ai_redteam_components.py tests/test_ai_redteam_runtime.py tests/test_cli.py -q`，结果 24 passed。
 - CLI smoke 覆盖 `ai-redteam catalog` 和 example scenario Markdown report。
+
+## 阶段 18：Agent runtime 平台骨架
+
+| 主题 | 证据等级 | 发现 |
+| --- | --- | --- |
+| Memory | 已验证 | `core/agent_runtime/memory.py` 提供 `MemoryRecord`、`RunMemory`，用于 run 内局部记忆。 |
+| Observability | 已验证 | `core/agent_runtime/observability.py` 统计 action、risk、network policy，不导出外部 telemetry。 |
+| Benchmark | 已验证 | `core/agent_runtime/benchmark.py` 可基于 run summary 计算 success_rate、blocked_actions、policy_violations。 |
+| Sandbox policy | 已验证 | `core/agent_runtime/sandbox.py` 只描述执行隔离策略，不启动 Docker 或 shell。 |
+| Runner 集成 | 已验证 | `AIRedTeamRunner` 写入 dry-run memory，并把 observability/benchmark 放进 run_state metadata。 |
+
+### 阶段 18 边界
+
+- 这是平台对象和指标层，不是多 Agent 执行器。
+- 没有真实 sandbox execution、Web/API、Langfuse/OTel 推送。
+
+### 验证
+
+- pytest wrapper 覆盖 `tests/test_agent_runtime_platform.py tests/test_ai_redteam_runtime.py -q`，结果 13 passed。

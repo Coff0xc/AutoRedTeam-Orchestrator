@@ -293,6 +293,7 @@ class AgentRunState:
     human_gates: List[HumanGate] = field(default_factory=list)
     trace: List[TraceEvent] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    memory: List[Dict[str, Any]] = field(default_factory=list)
     created_at: str = field(default_factory=_now)
 
     def __post_init__(self) -> None:
@@ -320,6 +321,27 @@ class AgentRunState:
         self.human_gates.append(gate)
         return gate
 
+    def add_memory(
+        self,
+        key: str,
+        value: str,
+        record_type: str = "note",
+        source: str = "runtime",
+        confidence: float = 0.5,
+        **metadata: Any,
+    ) -> Dict[str, Any]:
+        record = {
+            "key": key,
+            "value": value,
+            "record_type": record_type,
+            "source": source,
+            "confidence": confidence,
+            "metadata": metadata,
+            "created_at": _now(),
+        }
+        self.memory.append(record)
+        return record
+
     def summary(self) -> Dict[str, Any]:
         actions = [action for task in self.flow.tasks for action in task.actions]
         counts: Dict[str, int] = {}
@@ -334,6 +356,7 @@ class AgentRunState:
             "artifacts": len(self.artifacts),
             "human_gates": len(self.human_gates),
             "trace_events": len(self.trace),
+            "memory_records": len(self.memory),
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -344,6 +367,7 @@ class AgentRunState:
             "artifacts": [artifact.to_dict() for artifact in self.artifacts],
             "human_gates": [gate.to_dict() for gate in self.human_gates],
             "trace": [event.to_dict() for event in self.trace],
+            "memory": self.memory,
             "metadata": self.metadata,
             "summary": self.summary(),
             "created_at": self.created_at,

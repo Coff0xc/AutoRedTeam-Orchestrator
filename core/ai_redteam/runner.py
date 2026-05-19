@@ -13,6 +13,8 @@ from core.agent_runtime import (
     RiskLevel,
     RunMode,
     Task,
+    build_observability_snapshot,
+    score_run_summary,
 )
 from core.ai_redteam.catalog import unknown_items
 from core.ai_redteam.models import AIRedTeamRunResult, Attempt, Scenario, ScenarioMode, Score
@@ -134,6 +136,20 @@ class AIRedTeamRunner:
 
         if self.scenario.mode == ScenarioMode.DRY_RUN:
             warnings.append("Dry-run only: no target calls, model calls, shell commands, or tools ran.")
+            run_state.add_memory(
+                "ai_redteam.mode",
+                "dry-run",
+                record_type="run_policy",
+                source="ai_redteam_runner",
+                confidence=1.0,
+            )
+
+        run_state.metadata["observability"] = build_observability_snapshot(
+            run_state
+        ).to_dict()
+        run_state.metadata["benchmark"] = score_run_summary(
+            self.scenario.name, run_state.summary()
+        ).to_dict()
 
         return AIRedTeamRunResult(
             scenario=self.scenario,
