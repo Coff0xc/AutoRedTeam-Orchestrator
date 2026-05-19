@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import asyncio
 import json
+import platform
 
 import pytest
 
@@ -251,11 +252,18 @@ def _patch_http_retry_sleep(monkeypatch):
     仅 patch HTTP client 的 retry hook，不影响其他依赖真实时间的模块。
     """
     try:
+        # Importing aiohttp on Windows can call platform.system(), which may block
+        # on a WMI query in some local environments. Keep the patch scoped to this
+        # import path so unrelated tests do not hang before they start.
+        original_system = platform.system
+        platform.system = lambda: "Windows"
         import core.http.client as _http_client
 
         monkeypatch.setattr(_http_client, "_retry_sleep", lambda _s: None)
     except (ImportError, AttributeError):
         pass
+    finally:
+        platform.system = original_system
 
 
 # ==================== 标记注册 ====================

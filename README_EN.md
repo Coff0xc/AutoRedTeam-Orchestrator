@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/Version-3.1.0-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=flat-square" alt="MCP">
-  <img src="https://img.shields.io/badge/Tools-132-FF6B6B?style=flat-square" alt="Tools">
+  <img src="https://img.shields.io/badge/Tools-133-FF6B6B?style=flat-square" alt="Tools">
   <img src="https://img.shields.io/badge/Tests-1980-4CAF50?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License">
 </p>
@@ -38,7 +38,7 @@
 +-----------------------------------------------------------------------------+
 |                    AutoRedTeam-Orchestrator v3.1.0                           |
 +-----------------------------------------------------------------------------+
-|  * 132 MCP Tools         * 14 YAML Payload Files  * 1980 Tests             |
+|  * 133 MCP Tools         * 14 YAML Payload Files  * 1980 Tests             |
 |  * 10-Phase Recon        * 26 Vuln Detectors      * 5-Protocol Lateral     |
 |  * MCTS Attack Planner   * SQLite Knowledge Graph  * Production C2 Server  |
 |  * Nuclei Template Engine * Docker Sandbox         * SARIF CI/CD Output    |
@@ -56,7 +56,7 @@
 
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
-- [Tool Matrix](#tool-matrix-132-mcp-tools)
+- [Tool Matrix](#tool-matrix-133-mcp-tools)
 - [Key Features](#key-features)
   - [Pure Python Security Engines](#pure-python-security-engines)
   - [Full Red Team Kill Chain](#full-red-team-kill-chain)
@@ -158,7 +158,7 @@ autort report <session_id> -f html
 AI Editor (Cursor / Windsurf / Kiro / Claude Desktop / Claude Code)
         |  MCP Protocol (JSON-RPC over stdio)
         v
-mcp_stdio_server.py ---- FastMCP("AutoRedTeam")  [132 tools registered]
+mcp_stdio_server.py ---- FastMCP("AutoRedTeam")  [133 tools registered]
         |
    handlers/  (21 handler modules)
         |
@@ -209,7 +209,7 @@ mcp_stdio_server.py ---- FastMCP("AutoRedTeam")  [132 tools registered]
 
 ---
 
-## Tool Matrix (132 MCP Tools)
+## Tool Matrix (133 MCP Tools)
 
 | Category | Count | Handler File | Key Tools |
 |----------|------:|--------------|-----------|
@@ -225,7 +225,7 @@ mcp_stdio_server.py ---- FastMCP("AutoRedTeam")  [132 tools registered]
 | CVE Intelligence | 8 | `cve_handlers.py` | `cve_search`, `cve_auto_exploit`, `cve_generate_poc` |
 | Orchestration | 11 | `orchestration_handlers.py` | `auto_pentest`, `attack_chain_plan`, `smart_analyze` |
 | External Tools | 8 | `external_tools_handlers.py` | `ext_nmap_scan`, `ext_nuclei_scan`, `ext_sqlmap_scan` |
-| AI | 3 | `ai_handlers.py` | `smart_payload`, `ai_attack_chain` |
+| AI | 4 | `ai_handlers.py` | `smart_payload`, `ai_attack_chain`, `ai_redteam_run_scenario` |
 | Session | 4 | `session_handlers.py` | `session_create`, `session_status` |
 | Report | 2 | `report_handlers.py` | `generate_report`, `export_findings` |
 | Parallel Scan | 1 | `parallel_handlers.py` | `parallel_scan` |
@@ -379,7 +379,7 @@ Add to `claude_desktop_config.json`:
 claude mcp add redteam python /absolute/path/to/mcp_stdio_server.py
 ```
 
-Once connected, all 132 tools are available to the AI editor. Simply describe your security testing task in natural language.
+Once connected, all 133 tools are available to the AI editor. Simply describe your security testing task in natural language.
 
 ---
 

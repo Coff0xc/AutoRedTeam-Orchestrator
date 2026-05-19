@@ -27,6 +27,14 @@ app = typer.Typer(
     add_completion=False,
 )
 
+ai_redteam_app = typer.Typer(
+    name="ai-redteam",
+    help="声明式 AI 红队场景（默认 dry-run，不触发目标调用）",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(ai_redteam_app, name="ai-redteam")
+
 
 def _show_disclaimer() -> None:
     """启动时显示法律声明"""
@@ -292,6 +300,27 @@ def version():
     from autort import __version__
 
     typer.echo(f"AutoRedTeam v{__version__}")
+
+
+# ──────────────────────────── ai-redteam ────────────────────────────
+
+
+@ai_redteam_app.command("run")
+def ai_redteam_run(
+    scenario: str = typer.Argument(..., help="AI 红队场景 YAML/JSON 路径"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """规划 AI 红队场景 — dry-run，只生成 attempts/scores/trace，不请求目标"""
+    from core.ai_redteam import AIRedTeamRunner, load_scenario
+
+    try:
+        scenario_model = load_scenario(scenario)
+        result = AIRedTeamRunner(scenario_model).run()
+    except (OSError, ValueError, PermissionError) as exc:
+        typer.echo(f"AI red-team scenario failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    _output(result.to_dict(), output)
 
 
 # ──────────────────────────── helpers ────────────────────────────

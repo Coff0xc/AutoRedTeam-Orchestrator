@@ -1,6 +1,6 @@
 """
 AI辅助工具处理器
-包含: smart_analyze, attack_chain_plan, smart_payload
+包含: smart_analyze, attack_chain_plan, smart_payload, ai_redteam_run_scenario
 """
 
 from typing import Any, Dict, Optional
@@ -123,5 +123,31 @@ def register_ai_tools(mcp, counter, logger):
             "count": len(payloads),
         }
 
-    counter.add("ai", 3)
-    logger.info("[AI] 已注册 3 个AI辅助工具")
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    async def ai_redteam_run_scenario(
+        scenario: Optional[Dict[str, Any]] = None, scenario_path: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """AI红队场景 dry-run - 规划 Target/Probe/Strategy/Scorer 组合
+
+        Args:
+            scenario: 声明式 AI 红队场景字典
+            scenario_path: 本地 YAML/JSON 场景文件路径
+
+        Returns:
+            dry-run 计划结果；不会请求目标、调用模型、执行 shell 或扫描器
+        """
+        from core.ai_redteam import AIRedTeamRunner, Scenario, load_scenario
+
+        if scenario_path:
+            scenario_model = load_scenario(scenario_path)
+        elif scenario:
+            scenario_model = Scenario.from_dict(scenario)
+        else:
+            raise ValueError("Provide either scenario or scenario_path")
+
+        result = AIRedTeamRunner(scenario_model).run()
+        return result.to_dict()
+
+    counter.add("ai", 4)
+    logger.info("[AI] 已注册 4 个AI辅助工具")

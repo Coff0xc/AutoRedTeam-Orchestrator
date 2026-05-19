@@ -1,0 +1,44 @@
+name: authorized-ai-redteam
+mode: dry-run
+
+scope:
+  allowed_targets:
+    - http://127.0.0.1:8000
+  blocked_targets:
+    - 169.254.169.254
+    - metadata.google.internal
+
+targets:
+  - id: demo-agent
+    type: http_agent
+    endpoint: http://127.0.0.1:8000/chat
+
+probes:
+  - prompt_injection
+  - tool_injection
+  - data_exfiltration
+  - rag_leakage
+
+strategies:
+  - direct
+  - encoding
+  - homoglyph
+  - multi_turn
+
+scorers:
+  - secret_leak_detector
+  - unsafe_tool_call_detector
+  - policy_bypass_detector
+
+report:
+  formats:
+    - json
+    - markdown
+    - sarif
+
+gates:
+  require_human_approval_for:
+    - external_network
+    - exploit
+    - credential_access
+    - persistence
