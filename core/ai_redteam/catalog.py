@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from core.ai_redteam.converters import CONVERTERS
+
 
 PROBES: Dict[str, Dict[str, Any]] = {
     "prompt_injection": {
@@ -82,13 +84,20 @@ SCORERS: Dict[str, Dict[str, Any]] = {
 
 def catalog_summary() -> Dict[str, Any]:
     """Return built-in catalog metadata."""
+    from core.ai_redteam.plugins import plugin_summary
+
+    plugins = plugin_summary()
     return {
         "probes": len(PROBES),
+        "converters": len(CONVERTERS),
         "strategies": len(STRATEGIES),
         "scorers": len(SCORERS),
+        "plugins": plugins["plugins"],
         "probe_names": sorted(PROBES),
+        "converter_names": sorted(CONVERTERS),
         "strategy_names": sorted(STRATEGIES),
         "scorer_names": sorted(SCORERS),
+        "plugin_kinds": plugins["by_kind"],
     }
 
 

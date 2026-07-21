@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 from core.agent_runtime import AgentRunState
 
@@ -55,12 +56,33 @@ class Scope:
     def is_blocked(self, endpoint: str) -> bool:
         return any(blocked and blocked in endpoint for blocked in self.blocked_targets)
 
+    @staticmethod
+    def _origin(parts: Any) -> Optional[tuple]:
+        try:
+            port = parts.port
+        except ValueError:
+            return None
+        return (parts.scheme, parts.hostname, port)
+
+    @classmethod
+    def _target_matches(cls, endpoint: str, allowed: str) -> bool:
+        endpoint_parts = urlparse(endpoint)
+        allowed_parts = urlparse(allowed)
+        if endpoint_parts.scheme and allowed_parts.scheme:
+            endpoint_origin = cls._origin(endpoint_parts)
+            allowed_origin = cls._origin(allowed_parts)
+            if not endpoint_origin or not allowed_origin or endpoint_origin != allowed_origin:
+                return False
+            allowed_path = allowed_parts.path.rstrip("/")
+            return not allowed_path or endpoint_parts.path.startswith(allowed_path)
+        return endpoint == allowed or endpoint.startswith(f"{allowed.rstrip('/')}/")
+
     def is_allowed(self, endpoint: str) -> bool:
         if self.is_blocked(endpoint):
             return False
         if not self.allowed_targets:
             return True
-        return any(endpoint.startswith(allowed) for allowed in self.allowed_targets)
+        return any(self._target_matches(endpoint, allowed) for allowed in self.allowed_targets)
 
     def to_dict(self) -> Dict[str, Any]:
         return {

@@ -1,7 +1,8 @@
 """
 AI辅助工具处理器
 包含: smart_analyze, attack_chain_plan, smart_payload, ai_redteam_run_scenario,
-     ai_surface_scan_handlers
+     ai_surface_scan_handlers, code_agent_expand_context, ai_redteam_eval_run_state,
+     ai_prompt_convert, ai_capability_matrix
 """
 
 from typing import Any, Dict, Optional
@@ -185,5 +186,61 @@ def register_ai_tools(mcp, counter, logger):
 
         return scan_mcp_config(path).to_dict()
 
-    counter.add("ai", 7)
-    logger.info("[AI] 已注册 7 个AI辅助工具")
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    async def code_agent_expand_context(
+        path: str = "core",
+        seed: Optional[str] = None,
+        file_path: Optional[str] = None,
+        line: Optional[int] = None,
+        max_depth: int = 2,
+    ) -> Dict[str, Any]:
+        """代码 Agent 调用链上下文扩展 - 静态 AST 分析和 confidence score
+
+        Args:
+            path: Python 文件或目录
+            seed: 函数名、qualified name 或 function_id
+            file_path: 可选 seed 文件
+            line: 可选 seed 行号
+            max_depth: caller/callee 扩展深度
+
+        Returns:
+            静态调用链上下文、风险证据和 confidence score；不会导入或执行代码
+        """
+        from core.code_agent import expand_code_context
+
+        return expand_code_context(
+            path=path,
+            seed=seed,
+            file_path=file_path,
+            line=line,
+            max_depth=max_depth,
+        ).to_dict()
+
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    async def ai_redteam_eval_run_state(run_state: Dict[str, Any]) -> Dict[str, Any]:
+        """AgentRunState 本地评测 - deterministic agent/tool eval cases"""
+        from core.agent_runtime import agent_run_state_from_dict
+        from core.ai_redteam import evaluate_run_cases
+
+        return evaluate_run_cases(agent_run_state_from_dict(run_state))
+
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    async def ai_prompt_convert(prompt: str, converter: str = "identity") -> Dict[str, Any]:
+        """本地 Prompt converter - PyRIT 风格 converter 抽象，不调用模型或目标"""
+        from core.ai_redteam import convert_prompt
+
+        return convert_prompt(prompt, converter).to_dict()
+
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    async def ai_capability_matrix() -> Dict[str, Any]:
+        """AI red-team 目标能力覆盖矩阵 - 本地只读 capability registry"""
+        from core.ai_capabilities import capability_matrix
+
+        return capability_matrix()
+
+    counter.add("ai", 11)
+    logger.info("[AI] 已注册 11 个AI辅助工具")

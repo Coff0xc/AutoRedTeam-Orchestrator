@@ -26,8 +26,8 @@ def _register_ai_tools():
 def test_register_ai_tools_count():
     _, mock_counter, mock_logger = _register_ai_tools()
 
-    mock_counter.add.assert_called_once_with("ai", 7)
-    assert any("7 个AI辅助工具" in str(call) for call in mock_logger.info.call_args_list)
+    mock_counter.add.assert_called_once_with("ai", 11)
+    assert any("11 个AI辅助工具" in str(call) for call in mock_logger.info.call_args_list)
 
 
 @pytest.mark.asyncio
@@ -130,3 +130,88 @@ async def test_ai_surface_scan_mcp_config_static_scan(tmp_path):
     assert result["success"] is True
     assert result["data"]["summary"]["issue_count"] == 2
     assert result["data"]["findings"][0]["finding_type"] == "mcp_config"
+
+
+@pytest.mark.asyncio
+async def test_code_agent_expand_context_static_scan(tmp_path):
+    registered_tools, _, _ = _register_ai_tools()
+    source = tmp_path / "sample.py"
+    source.write_text(
+        "def entry(target):\n"
+        "    return sink(target)\n"
+        "\n"
+        "def sink(payload):\n"
+        "    return eval(payload)\n",
+        encoding="utf-8",
+    )
+
+    result = await registered_tools["code_agent_expand_context"](
+        path=str(tmp_path),
+        seed="sink",
+        max_depth=1,
+    )
+
+    assert result["success"] is True
+    assert result["data"]["summary"]["functions_scanned"] == 2
+    assert result["data"]["confidence"]["level"] in {"medium", "high"}
+    assert result["data"]["seed_function"]["qualified_name"].endswith("sink")
+
+
+@pytest.mark.asyncio
+async def test_ai_redteam_eval_run_state_static_eval():
+    registered_tools, _, _ = _register_ai_tools()
+
+    result = await registered_tools["ai_redteam_eval_run_state"](
+        run_state={
+            "mode": "dry-run",
+            "flow": {
+                "name": "safe",
+                "tasks": [
+                    {
+                        "name": "plan",
+                        "actions": [
+                            {
+                                "name": "dry-run",
+                                "kind": "tool_call",
+                                "policy": {"risk_level": "moderate", "network_policy": "deny"},
+                                "status": "skipped",
+                                "output": {"message": "safe"},
+                            }
+                        ],
+                    }
+                ],
+            },
+        }
+    )
+
+    assert result["success"] is True
+    assert result["data"]["passed"] is True
+    assert result["data"]["summary"]["total"] == 6
+
+
+@pytest.mark.asyncio
+async def test_ai_prompt_convert_static_converter():
+    registered_tools, _, _ = _register_ai_tools()
+
+    result = await registered_tools["ai_prompt_convert"](
+        prompt="[AI-REDTEAM-PROBE:prompt_injection]",
+        converter="base64",
+    )
+
+    assert result["success"] is True
+    assert result["data"]["converter"] == "base64"
+    assert result["metadata"]["modifies_payload"] is True
+
+
+@pytest.mark.asyncio
+async def test_ai_capability_matrix_lists_target_sources():
+    registered_tools, _, _ = _register_ai_tools()
+
+    result = await registered_tools["ai_capability_matrix"]()
+
+    assert result["success"] is True
+    assert result["data"]["summary"]["blocked"] == 0
+    assert result["data"]["summary"]["partial"] == 0
+    assert result["data"]["summary"]["implemented"] == result["data"]["summary"]["total"]
+    assert "PentAGI" in result["data"]["sources"]
+    assert "Vulnhuntr" in result["data"]["sources"]

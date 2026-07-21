@@ -21,6 +21,21 @@ from typing import Optional
 
 import typer
 
+
+def _configure_stdio_encoding() -> None:
+    """Keep Typer/Rich help usable on Windows narrow-codepage consoles."""
+    for stream in (sys.stdout, sys.stderr):
+        encoding = (getattr(stream, "encoding", None) or "").lower()
+        if "utf" in encoding or not hasattr(stream, "reconfigure"):
+            continue
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):  # pragma: no cover - stream implementation dependent
+            pass
+
+
+_configure_stdio_encoding()
+
 app = typer.Typer(
     name="autort",
     help="AutoRedTeam — AI驱动的渗透测试工具",
@@ -43,6 +58,38 @@ ai_surface_app = typer.Typer(
     add_completion=False,
 )
 app.add_typer(ai_surface_app, name="ai-surface")
+
+code_agent_app = typer.Typer(
+    name="code-agent",
+    help="代码 Agent 静态分析（call-chain context expansion，不执行代码）",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(code_agent_app, name="code-agent")
+
+runtime_api_app = typer.Typer(
+    name="runtime-api",
+    help="Agent runtime 只读本地 Web/API",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(runtime_api_app, name="runtime-api")
+
+sandbox_app = typer.Typer(
+    name="sandbox",
+    help="本地沙箱验证和诊断",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(sandbox_app, name="sandbox")
+
+capabilities_app = typer.Typer(
+    name="capabilities",
+    help="AI red-team 重构能力矩阵",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(capabilities_app, name="capabilities")
 
 
 def _show_disclaimer() -> None:
@@ -106,16 +153,12 @@ def detect(
         None, "--category", "-c", help="检测类别（逗号分隔），如 sqli,xss,ssrf"
     ),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
-    format: str = typer.Option(
-        "json", "--format", "-f", help="输出格式: json/sarif"
-    ),
+    format: str = typer.Option("json", "--format", "-f", help="输出格式: json/sarif"),
     ci: bool = typer.Option(False, "--ci", help="CI 模式: 精简输出 + 非零退出码"),
     severity_threshold: str = typer.Option(
         "high", "--severity-threshold", help="CI 失败阈值: info/low/medium/high/critical"
     ),
-    exit_code: bool = typer.Option(
-        False, "--exit-code", help="发现漏洞时返回非零退出码"
-    ),
+    exit_code: bool = typer.Option(False, "--exit-code", help="发现漏洞时返回非零退出码"),
 ):
     """漏洞检测 — 扫描目标漏洞"""
     from autort import Scanner
@@ -257,13 +300,13 @@ def report(
 @app.command()
 def nuclei(
     target: str = typer.Argument(..., help="目标 URL"),
-    tags: Optional[str] = typer.Option(None, "--tags", "-t", help="模板标签（逗号分隔），如 cve,rce"),
+    tags: Optional[str] = typer.Option(
+        None, "--tags", "-t", help="模板标签（逗号分隔），如 cve,rce"
+    ),
     severity: Optional[str] = typer.Option(
         None, "--severity", "-s", help="严重性过滤（逗号分隔），如 high,critical"
     ),
-    template_dir: Optional[str] = typer.Option(
-        None, "--template-dir", "-d", help="模板目录路径"
-    ),
+    template_dir: Optional[str] = typer.Option(None, "--template-dir", "-d", help="模板目录路径"),
     concurrency: int = typer.Option(10, "--concurrency", "-c", help="最大并发数"),
     limit: Optional[int] = typer.Option(None, "--limit", "-n", help="最大模板数"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
@@ -349,19 +392,58 @@ def ai_redteam_run(
 def ai_redteam_catalog(
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
-    """列出内置 probes/strategies/scorers 元数据"""
-    from core.ai_redteam import PROBES, SCORERS, STRATEGIES, catalog_summary
+    """列出内置 probes/converters/strategies/scorers 元数据"""
+    from core.ai_redteam import (
+        CONVERTERS,
+        PROBES,
+        SCORERS,
+        STRATEGIES,
+        catalog_summary,
+        plugin_summary,
+    )
 
     _output(
         {
             "success": True,
             "summary": catalog_summary(),
             "probes": PROBES,
+            "converters": CONVERTERS,
             "strategies": STRATEGIES,
             "scorers": SCORERS,
+            "plugins": plugin_summary(),
         },
         output,
     )
+
+
+@ai_redteam_app.command("convert")
+def ai_redteam_convert(
+    prompt: str = typer.Argument(..., help="要转换的本地提示文本"),
+    converter: str = typer.Option("identity", "--converter", "-c", help="转换器名称"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """本地 Prompt converter；不调用模型、目标或工具"""
+    from core.ai_redteam import convert_prompt
+
+    _output({"success": True, "result": convert_prompt(prompt, converter).to_dict()}, output)
+
+
+@ai_redteam_app.command("eval-run")
+def ai_redteam_eval_run(
+    run_state: str = typer.Argument(..., help="AgentRunState JSON 文件路径"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """本地评测 AgentRunState — Giskard/Inspect 风格 deterministic eval"""
+    from core.ai_redteam import evaluate_run_cases
+
+    try:
+        data = json.loads(Path(run_state).read_text(encoding="utf-8"))
+        result = evaluate_run_cases(_run_state_from_dict(data))
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        typer.echo(f"AI red-team eval failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    _output(result, output)
 
 
 # ──────────────────────────── ai-surface ────────────────────────────
@@ -382,6 +464,110 @@ def ai_surface_scan(
         raise typer.Exit(2) from exc
 
     _output(result.to_dict(), output)
+
+
+# ──────────────────────────── code-agent ────────────────────────────
+
+
+@code_agent_app.command("expand")
+def code_agent_expand(
+    path: str = typer.Option("core", "--path", "-p", help="Python 文件或目录"),
+    seed: Optional[str] = typer.Option(None, "--seed", "-s", help="函数名或 qualified name"),
+    file_path: Optional[str] = typer.Option(None, "--file", help="包含 seed 的文件路径"),
+    line: Optional[int] = typer.Option(None, "--line", help="seed 所在行号"),
+    max_depth: int = typer.Option(2, "--max-depth", "-d", help="调用链扩展深度"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """静态扩展代码调用链上下文 — 不导入模块、不执行代码"""
+    from core.code_agent import expand_code_context
+
+    try:
+        result = expand_code_context(
+            path=path,
+            seed=seed,
+            file_path=file_path,
+            line=line,
+            max_depth=max_depth,
+        )
+    except (OSError, SyntaxError, UnicodeDecodeError, ValueError) as exc:
+        typer.echo(f"Code agent expansion failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    _output(result.to_dict(), output)
+
+
+# ──────────────────────────── runtime-api ────────────────────────────
+
+
+@runtime_api_app.command("serve")
+def runtime_api_serve(
+    run_state: Optional[str] = typer.Option(
+        None, "--run-state", help="AgentRunState JSON 文件路径"
+    ),
+    host: str = typer.Option("127.0.0.1", "--host", help="监听地址，默认仅 localhost"),
+    port: int = typer.Option(8765, "--port", help="监听端口"),
+):
+    """启动只读 runtime API: GET /api/runs 和 /api/runs/{run_id}"""
+    if host not in {"127.0.0.1", "localhost", "::1"}:
+        typer.echo("runtime-api serve is read-only but must bind localhost by default", err=True)
+        raise typer.Exit(2)
+
+    try:
+        from core.agent_runtime import register_runtime_run, serve_runtime_http
+
+        if run_state:
+            data = json.loads(Path(run_state).read_text(encoding="utf-8"))
+            state = _run_state_from_dict(data)
+            register_runtime_run(state)
+            typer.echo(f"loaded runtime run: {state.run_id}")
+    except (OSError, ValueError, KeyError, TypeError, ImportError) as exc:
+        typer.echo(f"runtime API failed to start: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    typer.echo(f"runtime API listening on http://{host}:{port}/api/runs")
+    serve_runtime_http(host=host, port=port)
+
+
+# ──────────────────────────── sandbox ────────────────────────────
+
+
+@sandbox_app.command("docker-smoke")
+def sandbox_docker_smoke(
+    image: str = typer.Option("python:3.12-slim", "--image", help="Docker 镜像"),
+    timeout: int = typer.Option(30, "--timeout", help="超时秒数"),
+    require: bool = typer.Option(False, "--require", help="Docker 不可用或 smoke 失败时返回非零"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """运行本地 Docker sandbox smoke；默认网络隔离为 none"""
+    from core.agent_runtime import smoke_docker_sandbox
+
+    result = smoke_docker_sandbox(image=image, timeout_seconds=timeout)
+    _output(result, output)
+    if require and not result.get("success"):
+        raise typer.Exit(2)
+
+
+# ──────────────────────────── capabilities ────────────────────────────
+
+
+@capabilities_app.command("matrix")
+def capabilities_matrix(
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """输出 PentAGI/promptfoo/garak/PyRIT 等目标能力覆盖矩阵"""
+    from core.ai_capabilities import capability_matrix
+
+    _output(capability_matrix(), output)
+
+
+@capabilities_app.command("readiness")
+def capabilities_readiness(
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """输出全量重构 readiness 和剩余约束"""
+    from core.ai_capabilities import refactor_readiness
+
+    _output(refactor_readiness(), output)
 
 
 # ──────────────────────────── helpers ────────────────────────────
@@ -415,6 +601,13 @@ def _ci_summary(findings, threshold: str):
         )
     else:
         typer.echo(f"[CI] No findings meet threshold ({threshold})", err=True)
+
+
+def _run_state_from_dict(data: dict):
+    """Rebuild AgentRunState from runtime or AI red-team result JSON."""
+    from core.agent_runtime import agent_run_state_from_dict
+
+    return agent_run_state_from_dict(data)
 
 
 def _output(data, filepath: Optional[str]):

@@ -11,9 +11,13 @@ from core.agent_runtime import (
     AgentRunState,
     Flow,
     RiskLevel,
+    RuntimePipeline,
+    SandboxMiddleware,
+    SandboxPolicy,
     RunMode,
     Task,
     build_observability_snapshot,
+    register_runtime_run,
     score_run_summary,
 )
 from core.ai_redteam.catalog import unknown_items
@@ -24,9 +28,17 @@ from core.ai_redteam.strategies import apply_strategy, build_probe_prompt
 class AIRedTeamRunner:
     """Plan AI red-team attempts without executing external calls by default."""
 
-    def __init__(self, scenario: Scenario, allow_active: bool = False):
+    def __init__(
+        self,
+        scenario: Scenario,
+        allow_active: bool = False,
+        runtime_pipeline: RuntimePipeline | None = None,
+    ):
         self.scenario = scenario
         self.allow_active = allow_active
+        self.runtime_pipeline = runtime_pipeline or RuntimePipeline(
+            [SandboxMiddleware(SandboxPolicy(enabled=scenario.mode == ScenarioMode.ACTIVE))]
+        )
 
     def run(self) -> AIRedTeamRunResult:
         errors = self.scenario.validate()
@@ -101,18 +113,8 @@ class AIRedTeamRunner:
                         ),
                     )
                     attempt.action_id = action.action_id
-                    reason = action.policy.block_reason(mode=mode)
-                    if reason:
-                        action.mark_blocked(reason)
-                        run_state.require_gate(action, reason)
-                    else:
-                        action.mark_skipped(
-                            {
-                                "planned_only": True,
-                                "reason": "dry-run mode does not call targets or tools",
-                            }
-                        )
                     task.add_action(action)
+                    self.runtime_pipeline.apply_action(run_state, action)
                     run_state.add_trace(
                         "attempt_planned",
                         "AI red-team attempt planned without external execution",
@@ -135,7 +137,9 @@ class AIRedTeamRunner:
                         )
 
         if self.scenario.mode == ScenarioMode.DRY_RUN:
-            warnings.append("Dry-run only: no target calls, model calls, shell commands, or tools ran.")
+            warnings.append(
+                "Dry-run only: no target calls, model calls, shell commands, or tools ran."
+            )
             run_state.add_memory(
                 "ai_redteam.mode",
                 "dry-run",
@@ -144,12 +148,11 @@ class AIRedTeamRunner:
                 confidence=1.0,
             )
 
-        run_state.metadata["observability"] = build_observability_snapshot(
-            run_state
-        ).to_dict()
+        run_state.metadata["observability"] = build_observability_snapshot(run_state).to_dict()
         run_state.metadata["benchmark"] = score_run_summary(
             self.scenario.name, run_state.summary()
         ).to_dict()
+        register_runtime_run(run_state)
 
         return AIRedTeamRunResult(
             scenario=self.scenario,
