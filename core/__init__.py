@@ -54,7 +54,7 @@ __all__ = [
     "SessionStorage",
 ]
 
-__version__ = "3.0.2"
+__version__ = "3.1.0"
 
 # 懒加载: session 相关组件（拉入 core.http.client ~400ms）
 _SESSION_ATTRS = {

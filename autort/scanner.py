@@ -193,6 +193,7 @@ class Scanner:
                 detectors = DetectorFactory.create_all(detector_config)
 
             results = []
+            stop_on_first = detector_config.get("stop_on_first", True)
 
             async def _run_detector(detector):
                 """执行单个检测器"""
@@ -214,11 +215,22 @@ class Scanner:
             # 并发执行所有检测器 (限流避免目标过载)
             from utils.async_utils import gather_with_limit
 
-            coros = [_run_detector(d) for d in detectors]
-            all_results = await gather_with_limit(coros, limit=10, return_exceptions=False)
-            for batch in all_results:
-                if isinstance(batch, list):
+            if stop_on_first:
+                for detector in detectors:
+                    batch = await _run_detector(detector)
                     results.extend(batch)
+                    if any(
+                        item.get("vulnerable") and item.get("confidence", 0) >= 0.9
+                        for item in batch
+                        if isinstance(item, dict)
+                    ):
+                        break
+            else:
+                coros = [_run_detector(d) for d in detectors]
+                all_results = await gather_with_limit(coros, limit=10, return_exceptions=False)
+                for batch in all_results:
+                    if isinstance(batch, list):
+                        results.extend(batch)
 
             return results
         except Exception as e:

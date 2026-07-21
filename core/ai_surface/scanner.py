@@ -19,7 +19,6 @@ from core.ai_surface.models import (
     max_risk,
 )
 
-
 AUTH_DECORATORS: Dict[str, Tuple[str, SurfaceRiskLevel]] = {
     "require_moderate_auth": ("moderate", SurfaceRiskLevel.MODERATE),
     "require_dangerous_auth": ("dangerous", SurfaceRiskLevel.HIGH),
@@ -97,6 +96,14 @@ SKILL_RISK_TERMS: Dict[str, SurfaceRiskLevel] = {
     "secret": SurfaceRiskLevel.MODERATE,
 }
 
+SAFE_RUNTIME_HELPER_CALLS = {
+    "blocked_handler_runtime_response",
+    "complete_handler_runtime_action",
+    "complete_handler_runtime_payload",
+    "gate_handler_runtime_action",
+    "sanitize_runtime_inputs",
+}
+
 
 def scan_handler_surface(path: str | Path = "handlers") -> SurfaceScanResult:
     """Scan MCP handler files for tool exposure and local risk gates."""
@@ -119,9 +126,7 @@ def scan_handler_surface(path: str | Path = "handlers") -> SurfaceScanResult:
         visitor.visit(tree)
         result.findings.extend(visitor.findings)
 
-    result.findings.sort(
-        key=lambda item: (-RISK_ORDER[item.risk_level], item.file_path, item.line)
-    )
+    result.findings.sort(key=lambda item: (-RISK_ORDER[item.risk_level], item.file_path, item.line))
     return result
 
 
@@ -145,9 +150,11 @@ def scan_skill_surface(path: str | Path) -> SurfaceScanResult:
             issues.append("critical_skill_instruction_requires_review")
         elif risk_level == SurfaceRiskLevel.HIGH:
             issues.append("high_risk_skill_instruction_requires_review")
-        recommendations = [
-            "Require human review before installing or enabling this skill."
-        ] if issues else ["No high-risk instruction marker found."]
+        recommendations = (
+            ["Require human review before installing or enabling this skill."]
+            if issues
+            else ["No high-risk instruction marker found."]
+        )
         result.findings.append(
             SurfaceFinding(
                 tool_name=file_path.stem,
@@ -161,9 +168,7 @@ def scan_skill_surface(path: str | Path) -> SurfaceScanResult:
                 finding_type="skill_instruction",
             )
         )
-    result.findings.sort(
-        key=lambda item: (-RISK_ORDER[item.risk_level], item.file_path, item.line)
-    )
+    result.findings.sort(key=lambda item: (-RISK_ORDER[item.risk_level], item.file_path, item.line))
     return result
 
 
@@ -209,7 +214,9 @@ def scan_mcp_config(path: str | Path) -> SurfaceScanResult:
                 tool_name=str(name),
                 file_path=str(root),
                 line=1,
-                risk_level=risk_level if risk_level != SurfaceRiskLevel.INFO else SurfaceRiskLevel.LOW,
+                risk_level=(
+                    risk_level if risk_level != SurfaceRiskLevel.INFO else SurfaceRiskLevel.LOW
+                ),
                 risk_terms=risk_terms,
                 issues=issues,
                 recommendations=_mcp_config_recommendations(issues),
@@ -240,9 +247,7 @@ def _iter_text_files(root: Path) -> List[Path]:
     return sorted(
         path
         for path in root.rglob("*")
-        if path.is_file()
-        and path.suffix.lower() in suffixes
-        and "__pycache__" not in path.parts
+        if path.is_file() and path.suffix.lower() in suffixes and "__pycache__" not in path.parts
     )
 
 
@@ -261,12 +266,10 @@ class _HandlerToolVisitor(ast.NodeVisitor):
             self.findings.append(self._build_finding(node, decorators))
         self.generic_visit(node)
 
-    def _build_finding(
-        self, node: ast.AsyncFunctionDef, decorators: List[str]
-    ) -> SurfaceFinding:
+    def _build_finding(self, node: ast.AsyncFunctionDef, decorators: List[str]) -> SurfaceFinding:
         parameters = _parameter_names(node)
         annotations = _parameter_annotations(node)
-        called_names = sorted(_called_names(node))
+        called_names = sorted(_risk_relevant_called_names(_called_names(node)))
         doc = ast.get_docstring(node) or ""
         description = doc.strip().splitlines()[0] if doc.strip() else ""
         auth_level, auth_risk = _auth_level(decorators)
@@ -347,6 +350,15 @@ def _called_names(node: ast.AsyncFunctionDef) -> Iterable[str]:
             name = _dotted_name(child.func)
             if name:
                 yield name
+
+
+def _risk_relevant_called_names(called_names: Iterable[str]) -> Iterable[str]:
+    """Filter observability helper calls before risk term matching."""
+    for name in called_names:
+        short_name = name.rsplit(".", 1)[-1]
+        if short_name in SAFE_RUNTIME_HELPER_CALLS:
+            continue
+        yield name
 
 
 def _auth_level(decorators: List[str]) -> Tuple[str, SurfaceRiskLevel]:
@@ -431,9 +443,10 @@ def _issues(
         "dangerous": SurfaceRiskLevel.HIGH,
         "critical": SurfaceRiskLevel.CRITICAL,
     }[auth_level]
-    if RISK_ORDER[risk_level] >= RISK_ORDER[SurfaceRiskLevel.HIGH] and RISK_ORDER[
-        auth_rank
-    ] < RISK_ORDER[SurfaceRiskLevel.HIGH]:
+    if (
+        RISK_ORDER[risk_level] >= RISK_ORDER[SurfaceRiskLevel.HIGH]
+        and RISK_ORDER[auth_rank] < RISK_ORDER[SurfaceRiskLevel.HIGH]
+    ):
         issues.append("high_risk_tool_without_dangerous_auth")
     if risk_level == SurfaceRiskLevel.CRITICAL and auth_level != "critical":
         issues.append("critical_tool_without_critical_auth")

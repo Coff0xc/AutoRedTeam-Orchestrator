@@ -78,12 +78,37 @@ def register_demo(mcp):
     result = scan_handler_surface(tmp_path)
     by_name = {finding.tool_name: finding for finding in result.findings}
 
-    assert by_name["exploit_vulnerability"].issues == [
-        "high_risk_tool_without_dangerous_auth"
-    ]
+    assert by_name["exploit_vulnerability"].issues == ["high_risk_tool_without_dangerous_auth"]
     assert "target_input_without_handler_validator" not in by_name["exploit_vulnerability"].issues
     assert by_name["poc_list"].risk_level == SurfaceRiskLevel.LOW
     assert by_name["poc_list"].issues == []
+
+
+def test_scan_handler_surface_ignores_runtime_payload_helper_false_positive(tmp_path: Path):
+    handler = tmp_path / "runtime_handler.py"
+    handler.write_text(
+        '''
+from handlers.runtime_helpers import complete_handler_runtime_payload
+from handlers.tooling import tool
+
+
+def register_demo(mcp):
+    @tool(mcp)
+    async def local_report_status(session_id: str):
+        """Return local report metadata."""
+        gate = {"allowed": True}
+        payload = {"success": True, "session_id": session_id}
+        return complete_handler_runtime_payload(gate, payload, summary_keys=["session_id"])
+''',
+        encoding="utf-8",
+    )
+
+    result = scan_handler_surface(tmp_path)
+    finding = result.findings[0]
+
+    assert finding.tool_name == "local_report_status"
+    assert finding.risk_level == SurfaceRiskLevel.LOW
+    assert finding.issues == []
 
 
 def test_scan_repo_handlers_has_no_surface_issues():
