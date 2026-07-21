@@ -34,3 +34,5 @@ wheel>=0.42.0
 # 实用工具
 ipython>=8.18.0          # 交互式 Shell
 ipdb>=0.13.13            # 调试器
+decorator>=5.1.0,<6.0.0  # ipython runtime dependency
+mando>=0.6,<0.8          # radon 6.x runtime dependency

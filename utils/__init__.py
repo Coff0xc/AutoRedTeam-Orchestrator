@@ -12,7 +12,7 @@ AutoRedTeam-Orchestrator 工具函数层
 
 from __future__ import annotations
 
-__version__ = "3.0.2"
+__version__ = "3.1.0"
 __author__ = "AutoRedTeam"
 
 # ── 惰性导入映射: attr_name → (module_path, original_name | None) ──

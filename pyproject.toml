@@ -122,6 +122,17 @@ max-attributes = 10
 max-locals = 15
 max-branches = 15
 
+[tool.vulture]
+paths = ["core", "handlers", "cli", "autort"]
+min_confidence = 60
+ignore_decorators = [
+    "@*.command",
+    "@tool",
+    "@handle_errors",
+    "@*.resource",
+    "@*.prompt",
+]
+
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"

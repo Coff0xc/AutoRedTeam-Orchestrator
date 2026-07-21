@@ -53,7 +53,7 @@ runs:
         if [ -n "$INPUT_CATEGORIES" ]; then
           ARGS="$ARGS -c $INPUT_CATEGORIES"
         fi
-        python -m cli.main detect "$INPUT_TARGET" $ARGS -o results.sarif || true
+        python -m cli.main detect "$INPUT_TARGET" $ARGS -o results.sarif
 
     - name: Upload SARIF
       if: always() && inputs.output-format == 'sarif'

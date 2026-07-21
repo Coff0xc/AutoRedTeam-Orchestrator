@@ -25,9 +25,13 @@ from core.security.mcp_auth_middleware import AuthMode, _auth_config
 # ==================== 全局 Auth 禁用 ====================
 
 
-@pytest.fixture(autouse=True, scope="session")
-def disable_auth_for_tests():
-    """测试期间禁用 auth 检查，避免 STRICT 模式阻断测试"""
+@pytest.fixture(autouse=True)
+def disable_auth_for_tests(request):
+    """默认禁用 auth，auth 专项测试保留真实默认模式。"""
+    if request.node.path.name == "test_mcp_auth_middleware.py":
+        yield
+        return
+
     original_mode = _auth_config["mode"]
     _auth_config["mode"] = AuthMode.DISABLED
     yield
