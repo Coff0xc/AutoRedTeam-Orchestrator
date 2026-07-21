@@ -3,6 +3,7 @@ CLI 基础测试
 验证 cli.main 模块导入、帮助输出、无效目标处理
 """
 
+import json
 import pytest
 from typer.testing import CliRunner
 
@@ -69,6 +70,54 @@ class TestCLIHelp:
         assert result.exit_code == 0
         assert "path" in result.output.lower()
 
+    def test_ai_redteam_eval_run_help(self):
+        """ai-redteam eval-run --help 应返回成功"""
+        from cli.main import app
+
+        result = runner.invoke(app, ["ai-redteam", "eval-run", "--help"])
+        assert result.exit_code == 0
+        assert "run" in result.output.lower()
+
+    def test_ai_redteam_convert_help(self):
+        """ai-redteam convert --help 应返回成功"""
+        from cli.main import app
+
+        result = runner.invoke(app, ["ai-redteam", "convert", "--help"])
+        assert result.exit_code == 0
+        assert "converter" in result.output.lower()
+
+    def test_code_agent_help(self):
+        """code-agent expand --help 应返回成功"""
+        from cli.main import app
+
+        result = runner.invoke(app, ["code-agent", "expand", "--help"])
+        assert result.exit_code == 0
+        assert "seed" in result.output.lower()
+
+    def test_runtime_api_serve_help(self):
+        """runtime-api serve --help 应返回成功"""
+        from cli.main import app
+
+        result = runner.invoke(app, ["runtime-api", "serve", "--help"])
+        assert result.exit_code == 0
+        assert "run-state" in result.output.lower()
+
+    def test_sandbox_docker_smoke_help(self):
+        """sandbox docker-smoke --help 应返回成功"""
+        from cli.main import app
+
+        result = runner.invoke(app, ["sandbox", "docker-smoke", "--help"])
+        assert result.exit_code == 0
+        assert "image" in result.output.lower()
+
+    def test_capabilities_matrix_help(self):
+        """capabilities matrix --help 应返回成功"""
+        from cli.main import app
+
+        result = runner.invoke(app, ["capabilities", "matrix", "--help"])
+        assert result.exit_code == 0
+        assert "output" in result.output.lower()
+
     def test_no_args_shows_help(self):
         """无参数调用应显示帮助/用法信息"""
         from cli.main import app
@@ -109,3 +158,110 @@ class TestCLIInvalidTarget:
 
         result = runner.invoke(app, ["nonexistent_command"])
         assert result.exit_code != 0
+
+
+class TestCLIAIRedTeamEval:
+    """测试 AI red-team 本地评测命令"""
+
+    def test_eval_run_accepts_full_ai_redteam_result_json(self, tmp_path):
+        """eval-run 应能读取 ai-redteam run 的完整 JSON 输出"""
+        from cli.main import app
+
+        action_id = "action_demo"
+        run_file = tmp_path / "run.json"
+        run_file.write_text(
+            json.dumps(
+                {
+                    "success": True,
+                    "run_state": {
+                        "run_id": "run_demo",
+                        "mode": "dry-run",
+                        "flow": {
+                            "flow_id": "flow_demo",
+                            "name": "cli-eval",
+                            "tasks": [
+                                {
+                                    "task_id": "task_demo",
+                                    "name": "handoff",
+                                    "actions": [
+                                        {
+                                            "action_id": action_id,
+                                            "name": "handoff",
+                                            "kind": "tool_call",
+                                            "inputs": {
+                                                "from_role": "planner",
+                                                "to_role": "executor",
+                                            },
+                                            "policy": {
+                                                "risk_level": "moderate",
+                                                "network_policy": "deny",
+                                            },
+                                            "status": "skipped",
+                                            "output": {},
+                                        }
+                                    ],
+                                }
+                            ],
+                        },
+                        "trace": [
+                            {
+                                "event_id": "trace_demo",
+                                "event_type": "agent_handoff",
+                                "message": "handoff recorded",
+                                "action_id": action_id,
+                                "metadata": {},
+                            }
+                        ],
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        result = runner.invoke(app, ["ai-redteam", "eval-run", str(run_file)])
+
+        assert result.exit_code == 0
+        assert '"passed": true' in result.output
+        assert "agent.multi_agent_handoff_trace" in result.output
+
+
+class TestCLICapabilities:
+    """测试 AI 能力矩阵命令"""
+
+    def test_capabilities_matrix_outputs_sources(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["capabilities", "matrix"])
+        payload = json.loads(result.output[result.output.index("{") :])
+
+        assert result.exit_code == 0
+        assert "PentAGI" in payload["sources"]
+        assert "Vulnhuntr" in payload["sources"]
+        assert payload["summary"]["blocked"] == 0
+
+    def test_capabilities_readiness_is_ready(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["capabilities", "readiness"])
+        payload = json.loads(result.output[result.output.index("{") :])
+
+        assert result.exit_code == 0
+        assert payload["ready_for_full_refactor"] is True
+        assert any("Docker execution optional" in item for item in payload["constraints"])
+
+
+class TestCLIAIRedTeamConvert:
+    """测试 AI red-team prompt converter 命令"""
+
+    def test_convert_base64_outputs_converter_result(self):
+        from cli.main import app
+
+        result = runner.invoke(
+            app,
+            ["ai-redteam", "convert", "demo prompt", "--converter", "base64"],
+        )
+        payload = json.loads(result.output[result.output.index("{") :])
+
+        assert result.exit_code == 0
+        assert payload["result"]["converter"] == "base64"
+        assert payload["result"]["metadata"]["modifies_payload"] is True

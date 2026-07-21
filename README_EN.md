@@ -21,8 +21,8 @@
   <img src="https://img.shields.io/badge/Version-3.1.0-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=flat-square" alt="MCP">
-  <img src="https://img.shields.io/badge/Tools-136-FF6B6B?style=flat-square" alt="Tools">
-  <img src="https://img.shields.io/badge/Tests-1980-4CAF50?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Tools-140-FF6B6B?style=flat-square" alt="Tools">
+  <img src="https://img.shields.io/badge/Tests-passing-4CAF50?style=flat-square" alt="Tests">
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License">
 </p>
 
@@ -38,7 +38,7 @@
 +-----------------------------------------------------------------------------+
 |                    AutoRedTeam-Orchestrator v3.1.0                           |
 +-----------------------------------------------------------------------------+
-|  * 136 MCP Tools         * 14 YAML Payload Files  * 1980 Tests             |
+|  * 140 MCP Tools         * 14 YAML Payload Files  * Test Coverage         |
 |  * 10-Phase Recon        * 26 Vuln Detectors      * 5-Protocol Lateral     |
 |  * MCTS Attack Planner   * SQLite Knowledge Graph  * Production C2 Server  |
 |  * Nuclei Template Engine * Docker Sandbox         * SARIF CI/CD Output    |
@@ -56,7 +56,7 @@
 
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
-- [Tool Matrix](#tool-matrix-136-mcp-tools)
+- [Tool Matrix](#tool-matrix-140-mcp-tools)
 - [Key Features](#key-features)
   - [Pure Python Security Engines](#pure-python-security-engines)
   - [Full Red Team Kill Chain](#full-red-team-kill-chain)
@@ -158,7 +158,7 @@ autort report <session_id> -f html
 AI Editor (Cursor / Windsurf / Kiro / Claude Desktop / Claude Code)
         |  MCP Protocol (JSON-RPC over stdio)
         v
-mcp_stdio_server.py ---- FastMCP("AutoRedTeam")  [136 tools registered]
+mcp_stdio_server.py ---- FastMCP("AutoRedTeam")  [140 tools registered]
         |
    handlers/  (21 handler modules)
         |
@@ -209,7 +209,7 @@ mcp_stdio_server.py ---- FastMCP("AutoRedTeam")  [136 tools registered]
 
 ---
 
-## Tool Matrix (136 MCP Tools)
+## Tool Matrix (140 MCP Tools)
 
 | Category | Count | Handler File | Key Tools |
 |----------|------:|--------------|-----------|
@@ -225,7 +225,7 @@ mcp_stdio_server.py ---- FastMCP("AutoRedTeam")  [136 tools registered]
 | CVE Intelligence | 8 | `cve_handlers.py` | `cve_search`, `cve_auto_exploit`, `cve_generate_poc` |
 | Orchestration | 11 | `orchestration_handlers.py` | `auto_pentest`, `attack_chain_plan`, `smart_analyze` |
 | External Tools | 8 | `external_tools_handlers.py` | `ext_nmap_scan`, `ext_nuclei_scan`, `ext_sqlmap_scan` |
-| AI | 7 | `ai_handlers.py` | `smart_payload`, `ai_attack_chain`, `ai_redteam_run_scenario`, `ai_surface_scan_handlers`, `ai_surface_scan_skills`, `ai_surface_scan_mcp_config` |
+| AI | 11 | `ai_handlers.py` | `smart_payload`, `ai_attack_chain`, `ai_redteam_run_scenario`, `ai_surface_scan_handlers`, `ai_surface_scan_skills`, `ai_surface_scan_mcp_config`, `code_agent_expand_context`, `ai_redteam_eval_run_state`, `ai_prompt_convert`, `ai_capability_matrix` |
 | Session | 4 | `session_handlers.py` | `session_create`, `session_status` |
 | Report | 2 | `report_handlers.py` | `generate_report`, `export_findings` |
 | Parallel Scan | 1 | `parallel_handlers.py` | `parallel_scan` |
@@ -379,7 +379,7 @@ Add to `claude_desktop_config.json`:
 claude mcp add redteam python /absolute/path/to/mcp_stdio_server.py
 ```
 
-Once connected, all 136 tools are available to the AI editor. Simply describe your security testing task in natural language.
+Once connected, all 140 tools are available to the AI editor. Simply describe your security testing task in natural language.
 
 ---
 
@@ -479,6 +479,35 @@ autort pentest <target> [--phases recon,vuln_scan,exploit] [--resume <session_id
 
 # Report
 autort report <session_id> [-f html|json|markdown|sarif] [-o report.html]
+
+# AI red-team deterministic eval
+autort ai-redteam run scenario.yaml -o run.json
+autort ai-redteam eval-run run.json
+
+Legacy `pentest` orchestrator phases are now gated through RuntimePipeline
+policy/sandbox decisions before execution. High-risk active phases require a
+human gate by default. Concrete PoC, exploit, privilege escalation, lateral
+movement, and exfiltration actions also record runtime decision metadata, and
+the runtime view exposes read-only trace/decision state.
+AI red-team runner, pentest orchestrator, and recon/report/knowledge/resource
+MCP handler runs are registered in the local in-process `RuntimeRunRegistry` so
+the Web/API view can show them in one place.
+
+# Local prompt converter
+autort ai-redteam convert "demo prompt" --converter base64
+
+# Read-only localhost runtime Web/API view (--run-state is optional)
+autort runtime-api serve --run-state run.json --host 127.0.0.1 --port 8765
+
+# Static call-chain context expansion
+autort code-agent expand --path core --seed run
+
+# Local Docker sandbox smoke (network_mode=none)
+autort sandbox docker-smoke
+
+# AI red-team target capability matrix
+autort capabilities matrix
+autort capabilities readiness
 
 # List all tools
 autort tools
@@ -583,7 +612,10 @@ Tool chains allow sequencing (e.g., masscan -> nmap for fast discovery + deep sc
 ### Running Tests
 
 ```bash
-# All tests (1963 total)
+# Install development dependencies first
+pip install -r requirements-dev.txt
+
+# All tests
 pytest
 
 # By marker

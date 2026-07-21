@@ -3,7 +3,7 @@
 AutoRedTeam-Orchestrator MCP Server
 AI驱动的自动化渗透测试框架 - MCP协议服务端
 
-版本: 3.0.2
+版本: 3.1.0
 作者: AutoRedTeam Team
 许可: 仅限授权安全测试使用
 
