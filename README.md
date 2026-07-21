@@ -1,128 +1,121 @@
-<h1 align="center">AutoRedTeam-Orchestrator</h1>
+# AutoRedTeam-Orchestrator
 
-<p align="center">
-  <b>企业级 AI 红队编排平台</b><br>
-  <sub>纯 Python 引擎 | MCP + SDK + CLI 三层接口 | 全链路攻击自动化</sub>
-</p>
+AutoRedTeam-Orchestrator 是一个面向**授权安全测试、AI 红队评估和教育研究**的 Python 编排框架。
 
-<p align="center">
-  <a href="README.md"><b>简体中文</b></a> ·
-  <a href="README_EN.md">English</a>
-</p>
+项目提供三种入口：
 
-<p align="center">
-  <a href="https://github.com/Coff0xc/AutoRedTeam-Orchestrator/stargazers"><img src="https://img.shields.io/github/stars/Coff0xc/AutoRedTeam-Orchestrator?style=flat-square&logo=github&color=gold" alt="Stars"></a>
-  <a href="https://github.com/Coff0xc/AutoRedTeam-Orchestrator/network/members"><img src="https://img.shields.io/github/forks/Coff0xc/AutoRedTeam-Orchestrator?style=flat-square&logo=github&color=silver" alt="Forks"></a>
-  <a href="https://github.com/Coff0xc/AutoRedTeam-Orchestrator/issues"><img src="https://img.shields.io/github/issues/Coff0xc/AutoRedTeam-Orchestrator?style=flat-square&logo=github&color=red" alt="Issues"></a>
-  <a href="https://github.com/Coff0xc/AutoRedTeam-Orchestrator/commits/main"><img src="https://img.shields.io/github/last-commit/Coff0xc/AutoRedTeam-Orchestrator?style=flat-square&logo=github" alt="Last Commit"></a>
-</p>
+- **MCP Server**：供 Cursor、Windsurf、Kiro 等支持 MCP 的 AI 工具调用。
+- **Python SDK**：通过 `autort` 包在 Python 代码中集成扫描、检测、编排和报告能力。
+- **Typer CLI**：通过 `autort` 命令执行扫描、漏洞检测、编排、报告和 AI red-team 工作流。
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Version-3.1.0-blue?style=flat-square" alt="Version">
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
-  <img src="https://img.shields.io/badge/MCP-Native-00ADD8?style=flat-square" alt="MCP">
-  <img src="https://img.shields.io/badge/Tools-136-FF6B6B?style=flat-square" alt="Tools">
-  <img src="https://img.shields.io/badge/Tests-1980-4CAF50?style=flat-square" alt="Tests">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License">
-</p>
-
-<p align="center">
-  <a href="https://discord.gg/PtVyrMvB"><img src="https://img.shields.io/badge/Discord-社区-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://github.com/Coff0xc/AutoRedTeam-Orchestrator/actions"><img src="https://img.shields.io/github/actions/workflow/status/Coff0xc/AutoRedTeam-Orchestrator/ci.yml?style=flat-square&logo=github-actions&logoColor=white&label=CI" alt="CI"></a>
-</p>
+> 本项目包含漏洞检测、利用验证、C2、横向移动、持久化等双用途能力。只能在明确授权、本地实验、CTF、教育研究或 dry-run 场景中使用。
 
 ---
 
-## 为什么选择 AutoRedTeam？
+## 功能概览
 
-**唯一不依赖外部工具的 AI 渗透测试框架。** 26 个漏洞检测器全部纯 Python 实现，外部工具（sqlmap/nuclei/ffuf）自动下载内置，无需手动安装。
+- 侦察：DNS、端口、指纹、技术栈、WAF、子域名、目录和被动侦察。
+- 漏洞检测：SQLi、XSS、SSRF、RCE、XXE、SSTI、反序列化、JWT、GraphQL、CORS、WebSocket 等。
+- CVE 工作流：CVE 搜索、PoC 辅助、自动化验证入口。
+- 编排：RECON → VULN_SCAN → POC_EXEC → EXPLOIT → PRIV_ESC → LATERAL → EXFILTRATE → REPORT。
+- AI red-team runtime：受控 run state、policy middleware、sandbox gate、只读 runtime API。
+- 外部工具路由：nmap、sqlmap、nuclei、ffuf 可用时优先使用，不可用时回退到纯 Python 实现。
+- 输出：JSON、HTML、SARIF、报告生成和会话持久化。
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                AutoRedTeam-Orchestrator v3.1.0                   │
-├──────────────────────────────────────────────────────────────────┤
-│  ● 136 MCP 工具          ● 26 漏洞检测器     ● 1980 测试用例    │
-│  ● 纯 Python Nuclei 引擎 ● MCTS 攻击规划     ● SQLite 知识图谱  │
-│  ● LLM 增强决策          ● Docker 沙箱       ● SARIF CI/CD 集成 │
-│  ● SDK + CLI + MCP 三层  ● 横向移动/C2/提权  ● OOB 误报验证     │
-│  ● 生产级 C2 Server      ● 工具自动下载内置  ● LaZagne 凭据集成 │
-│  ● PostExploit 执行层    ● 统一引擎路由器    ● 被动侦察 6 源    │
-├──────────────────────────────────────────────────────────────────┤
-│  三种使用方式:                                                    │
-│    1. MCP — Cursor / Windsurf / Kiro / Claude Desktop / Claude Code │
-│    2. SDK — from autort import Scanner, AutoPentest              │
-│    3. CLI — autort scan / autort detect / autort pentest         │
-└──────────────────────────────────────────────────────────────────┘
+---
+
+## 架构
+
+```text
+AI Editor / User
+      |
+      +-- MCP Server: mcp_stdio_server.py
+      |
+      +-- Python SDK: autort/
+      |
+      +-- CLI: cli/main.py
+              |
+              v
+        handlers/        MCP tools/resources/prompts 注册层
+              |
+              v
+        core/            侦察、检测、利用、编排、runtime、报告等核心能力
 ```
 
+主要模块：
+
+| 路径 | 说明 |
+|------|------|
+| `mcp_stdio_server.py` | MCP server 启动入口，创建 `FastMCP("AutoRedTeam")` 并注册 handlers。 |
+| `handlers/` | MCP 工具注册层，按 recon、detector、CVE、redteam、orchestration、lateral 等能力拆分。 |
+| `cli/main.py` | Typer CLI 入口，提供 `scan`、`detect`、`exploit`、`pentest` 等命令。 |
+| `autort/` | Python SDK 门面，暴露 `Scanner`、`Exploiter`、`AutoPentest`、`RedTeam`、`Reporter`。 |
+| `core/recon/` | 标准侦察引擎和端口、DNS、指纹、目录、子域名等能力。 |
+| `core/detectors/` | 漏洞检测器体系和 `DetectorFactory`。 |
+| `core/exploit/` | 利用引擎和具体 exploiter。 |
+| `core/orchestrator/` | 自动化渗透阶段编排、checkpoint/resume、阶段状态管理。 |
+| `core/agent_runtime/` | action policy、sandbox middleware、runtime state、只读 API。 |
+| `core/engine_router.py` | 外部工具优先、纯 Python 回退的统一后端选择。 |
+| `tests/` | 单元、集成、handler、SDK、CLI、安全相关测试。 |
+
 ---
 
-## 目录
+## 安装
 
-- [快速开始](#快速开始)
-- [三种使用方式](#三种使用方式)
-- [架构总览](#架构总览)
-- [工具矩阵](#工具矩阵)
-- [核心能力](#核心能力)
-- [MCP 配置](#mcp-配置)
-- [CI/CD 集成](#cicd-集成)
-- [配置说明](#配置说明)
-- [开发指南](#开发指南)
-- [路线图](#路线图)
-- [贡献](#贡献)
-- [许可证](#许可证)
-
----
-
-## 快速开始
+建议使用 Python 3.10+。
 
 ```bash
-# 安装
-git clone https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git
-cd AutoRedTeam-Orchestrator
 pip install -r requirements.txt
+```
 
-# 验证
+最小 MCP 运行依赖：
+
+```bash
+pip install -r requirements-core.txt
+```
+
+开发依赖：
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+验证 SDK 是否可导入：
+
+```bash
 python -c "from autort import Scanner; print('OK')"
 ```
 
 ---
 
-## 三种使用方式
+## MCP 使用
 
-### 1. MCP — AI 编辑器集成
+stdio 模式：
 
 ```bash
-python mcp_stdio_server.py  # 启动 MCP 服务器
+python mcp_stdio_server.py --stdio
 ```
 
-在 AI 编辑器中自然语言驱动：*"扫描 http://target.com 的 SQL 注入漏洞"*
+普通启动：
 
-### 2. Python SDK
-
-```python
-import asyncio
-from autort import Scanner, Exploiter, AutoPentest
-
-async def main():
-    # 侦察 + 漏洞检测
-    scanner = Scanner("http://target.com")
-    recon = await scanner.full_recon()
-    vulns = await scanner.detect_vulns(categories=["sqli", "xss", "ssrf"])
-
-    # Nuclei 模板扫描 (185K+ 社区模板)
-    nuclei_results = await scanner.nuclei_scan(
-        severity=["high", "critical"], concurrency=20
-    )
-
-    # 一键自动化渗透
-    pentest = AutoPentest("http://target.com")
-    report = await pentest.run(phases=["recon", "detect", "exploit", "report"])
-
-asyncio.run(main())
+```bash
+python mcp_stdio_server.py
 ```
 
-### 3. CLI 命令行
+MCP 工具由 `handlers.register_all_handlers()` 统一注册。注册过程中单个 handler 失败会记录 warning 并继续加载其他 handler。
+
+---
+
+## CLI 使用
+
+查看帮助：
+
+```bash
+autort --help
+python -m cli.main --help
+```
+
+常用命令：
 
 ```bash
 # 侦察
@@ -134,241 +127,194 @@ autort detect http://target.com -c sqli,xss,ssrf
 # Nuclei 扫描
 autort nuclei http://target.com --severity high,critical --tags cve
 
-# 一键渗透
+# 一键编排
 autort pentest http://target.com --phases recon,detect,exploit
 
-# CI 模式 (SARIF 输出 + 非零退出码)
+# SARIF / CI 输出
 autort detect http://target.com --ci --format sarif -o results.sarif
 
 # 报告生成
 autort report SESSION-ID --format html -o report.html
+
+# AI red-team dry-run 场景
+autort ai-redteam run scenario.yaml -o run.json
+autort ai-redteam eval-run run.json
+
+# 只读 runtime API
+autort runtime-api serve --run-state run.json --host 127.0.0.1 --port 8765
+
+# 沙箱诊断
+autort sandbox docker-smoke
+
+# 能力矩阵
+autort capabilities matrix
 ```
 
 ---
 
-## 架构总览
-
-```
-                    ┌─────────────────────────────────────┐
-                    │         AI Editor / User             │
-                    │   (Cursor, Claude Code, CLI, SDK)    │
-                    └──────────────┬──────────────────────┘
-                                   │
-              ┌────────────────────┼────────────────────┐
-              │                    │                    │
-         MCP (JSON-RPC)      Python SDK           Typer CLI
-              │                    │                    │
-              ▼                    ▼                    ▼
-    ┌─────────────────────────────────────────────────────────┐
-    │                    handlers/ (136 tools)                 │
-    │   recon(8) detector(27) cve(8) exploit(12) lateral(9)   │
-    │   redteam(14) ad(3) persistence(3) cloud(3) api(7) ... │
-    └──────────────────────┬──────────────────────────────────┘
-                           │
-    ┌──────────────────────┼──────────────────────────────────┐
-    │                   core/ Engine Layer                     │
-    ├─────────────────────────────────────────────────────────┤
-    │  detectors/    26 纯 Python 检测器 (SQLi/XSS/SSRF/RCE..)│
-    │  exploit/      利用引擎 (SQLi/RCE/SSRF/XXE/SSTI/反序列化)│
-    │  recon/        10 阶段侦察 (端口/DNS/指纹/子域名/目录...)│
-    │  lateral/      横向移动 (SMB/SSH/WMI/WinRM/PsExec)      │
-    │  c2/           C2 框架 (Beacon + DNS/HTTP/WS 隧道)       │
-    │  orchestrator/ 编排器 (MCTS规划 + 8阶段流水线)            │
-    │  nuclei_engine 纯 Python Nuclei 模板引擎                 │
-    │  llm/          统一 LLM Provider (可选)                   │
-    │  sandbox/      Docker 沙箱执行器 (可选)                   │
-    │  knowledge/    SQLite 知识图谱 (17 实体类型)              │
-    │  config/       Pydantic 统一配置                          │
-    │  ...20+ 子包                                             │
-    └─────────────────────────────────────────────────────────┘
-```
-
----
-
-## 工具矩阵
-
-| 类别 | 数量 | 关键工具 |
-|------|------|----------|
-| **侦察** | 8 | `port_scan`, `subdomain_enum`, `fingerprint`, `waf_detect`, `dir_scan` |
-| **漏洞检测** | 27 | `sqli_scan`, `xss_scan`, `ssrf_scan`, `rce_scan`, `nuclei_scan` + 22 种 |
-| **CVE** | 8 | `cve_search`, `cve_auto_exploit`, `cve_generate_poc` |
-| **利用** | 12 | `auto_pentest`, `exploit_vulnerability`, `exploit_by_cve` |
-| **红队** | 14 | `c2_beacon_start`, `payload_obfuscate`, `waf_bypass`, `credential_find` |
-| **横向移动** | 9 | `lateral_ssh`, `lateral_smb`, `lateral_wmi`, `lateral_winrm`, `lateral_psexec` |
-| **AD 攻击** | 3 | `ad_enumerate`, `ad_kerberos_attack`, `ad_spn_scan` |
-| **持久化** | 3 | `persistence_windows`, `persistence_linux`, `persistence_webshell` |
-| **API 安全** | 7 | `jwt_scan`, `graphql_scan`, `websocket_scan`, `oauth_scan`, `cors_deep_scan` |
-| **云安全** | 3 | `k8s_scan`, `grpc_scan`, `aws_scan` |
-| **供应链** | 3 | `sbom_generate`, `dependency_audit`, `cicd_scan` |
-| **外部工具** | 8 | `ext_nmap_scan`, `ext_nuclei_scan`, `ext_sqlmap_scan`, `ext_ffuf_fuzz` |
-| **会话/报告/AI** | 13 | `session_create`, `generate_report`, `smart_analyze`, `ai_redteam_run_scenario`, `ai_surface_scan_handlers`, `ai_surface_scan_skills`, `ai_surface_scan_mcp_config` |
-| **知识图谱/MCTS** | 4 | `kg_store`, `kg_query`, `kg_attack_paths`, `plan_attack_path` |
-| **并发/资源/提示** | 11 | `parallel_scan` + 4 MCP Resources + 6 MCP Prompts |
-| **总计** | **136** | |
-
----
-
-## 核心能力
-
-### 纯 Python 检测引擎 (无外部依赖)
-
-26 个检测器覆盖 OWASP Top 10+：
-
-| 检测器 | 技术 | 精度 |
-|--------|------|------|
-| SQLi (错误/时间/布尔/UNION) | 60+ DB 错误模式, **双重时间验证**, 百分比阈值 | ~90% |
-| XSS (反射/DOM/存储) | 精确反射匹配 + **基线对比排除自身标签** | ~85% |
-| SSRF (云元数据/内部/协议) | AWS/GCP/Azure 元数据检测 + **基线响应对比** | ~85% |
-| RCE (回显/时间) | OS 输出模式 + **双重验证** | ~95% |
-| + SSTI, XXE, LFI, IDOR, CSRF, 反序列化, CRLF, 原型污染, 缓存投毒... | | |
-
-### 误报过滤 (默认开启)
-
-7 层过滤 + 3 种验证：
-
-```
-检测结果 → WAF检测 → 速率限制 → CAPTCHA → SPA识别 → 动态内容 → 错误页面
-         → 统计验证 (Welch t-test) → 布尔盲注验证 → OOB 回调验证
-```
-
-### Nuclei 模板引擎
-
-纯 Python 解析 Nuclei YAML 模板，无需 nuclei 二进制：
-
-```bash
-autort nuclei http://target.com --tags cve,rce --severity critical -n 1000
-```
-
-### LLM 增强 (可选)
-
-```bash
-# 启用 LLM 增强决策
-export AUTORT_LLM_PROVIDER=ollama  # openai/anthropic/ollama/deepseek
-export AUTORT_LLM_MODEL=llama3.1   # 本地模型, 数据不出本地
-
-# LLM 不可用时自动退回纯规则引擎 — 零影响
-```
-
-### Docker 沙箱 (可选)
+## Python SDK 使用
 
 ```python
-# config/config.yaml
-sandbox:
-  enabled: true
-  image: "python:3.12-slim"
-  memory_limit: "512m"
+import asyncio
+from autort import AutoPentest, Scanner
+
+async def main():
+    scanner = Scanner("http://target.com")
+
+    recon = await scanner.full_recon()
+    vulns = await scanner.detect_vulns(categories=["sqli", "xss", "ssrf"])
+
+    pentest = AutoPentest("http://target.com")
+    report = await pentest.run(phases=["recon", "vuln_scan", "report"])
+
+    print(recon)
+    print(vulns)
+    print(report)
+
+asyncio.run(main())
 ```
 
 ---
 
-## MCP 配置
+## 配置
 
-### Claude Desktop / Claude Code
-
-```json
-{
-  "mcpServers": {
-    "redteam": {
-      "command": "python",
-      "args": ["E:/path/to/mcp_stdio_server.py"],
-      "env": {"PYTHONIOENCODING": "utf-8"}
-    }
-  }
-}
-```
-
-### Cursor
-
-```json
-{
-  "mcpServers": {
-    "redteam": {
-      "command": "python",
-      "args": ["/absolute/path/to/mcp_stdio_server.py"]
-    }
-  }
-}
-```
-
----
-
-## CI/CD 集成
-
-### GitHub Actions
-
-```yaml
-# .github/workflows/security.yml
-name: Security Scan
-on: [pull_request]
-jobs:
-  autort:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1
-        with:
-          target: ${{ secrets.SCAN_TARGET }}
-          severity-threshold: high
-```
-
-SARIF 结果自动上传到 GitHub Security tab。
-
----
-
-## 配置说明
+常用环境变量：
 
 | 环境变量 | 默认值 | 说明 |
 |----------|--------|------|
-| `AUTORT_SCAN_TIMEOUT` | 30 | 扫描超时 (秒) |
-| `AUTORT_HTTP_MAX_RETRIES` | 3 | HTTP 重试次数 |
-| `AUTORT_LLM_PROVIDER` | none | LLM 提供者 (openai/anthropic/ollama/none) |
-| `AUTORT_LLM_MODEL` | auto | LLM 模型名 |
-| `AUTORT_AUTH_MODE` | strict | 认证模式 (strict/permissive/disabled) |
+| `AUTORT_SCAN_TIMEOUT` | `30` | 扫描超时时间。 |
+| `AUTORT_HTTP_MAX_RETRIES` | `3` | HTTP 重试次数。 |
+| `AUTORT_LLM_PROVIDER` | `none` | LLM provider，例如 `openai`、`anthropic`、`ollama`、`none`。 |
+| `AUTORT_LLM_MODEL` | `auto` | LLM 模型名。 |
+| `AUTORT_AUTH_MODE` | `strict` | MCP auth 模式：`strict`、`permissive`、`disabled`。 |
 
-完整配置见 `.env.example` 和 `config/config.yaml`。
+配置样例：
+
+- `.env.example`
+- `config/config.yaml.example`
+- `config/external_tools.yaml.example`
 
 ---
 
-## 开发指南
+## 测试
+
+快速健康检查：
 
 ```bash
-# 安装开发依赖
-pip install -r requirements-dev.txt
+python -c "from autort import Scanner; print('OK')"
+pytest tests/test_sdk.py tests/test_cli.py -q
+pytest tests/test_handlers_*.py -q
+```
 
-# 测试
-pytest                          # 全量测试 (1963 cases)
-pytest -m "not slow"            # 跳过慢速测试
-pytest --cov=core --cov=handlers --cov-report=html  # 覆盖率报告
+常规测试：
 
-# 代码质量
+```bash
+pytest
+pytest -m "not slow"
+pytest tests/test_sdk.py
+pytest tests/test_sdk.py::test_name
+pytest --cov=core --cov=handlers --cov-report=html
+```
+
+针对 OOB DNS 集成测试 debug：
+
+```bash
+pytest tests/test_oob_server.py -q --tb=short
+pytest tests/test_oob_server.py::TestOOBCallbackServerDNS -q --tb=long
+```
+
+最近一次本地 Windows / Python 3.11 验证结果：
+
+- `python -c "from autort import Scanner; print('OK')"`：通过。
+- `pytest tests/test_sdk.py tests/test_cli.py -q`：66 passed。
+- `pytest tests/test_handlers_*.py -q`：186 passed。
+- `pytest -m "not slow" -q`：2093 passed，3 个 `TestOOBCallbackServerDNS` 错误。
+- 单独重跑 `tests/test_oob_server.py` 和 `TestOOBCallbackServerDNS`：通过。
+
+初步判断：OOB DNS 错误更像全量测试时 UDP 端口、后台线程或服务就绪时序导致的 flaky，而不是稳定功能缺陷。
+
+---
+
+## 代码质量
+
+```bash
 black core/ handlers/ utils/ autort/ cli/
 isort core/ handlers/ utils/ autort/ cli/
 flake8 core/ handlers/ utils/
 mypy core/ handlers/ utils/
+pylint core handlers utils
+bandit -r core handlers utils -c .bandit
+pre-commit run --all-files
 ```
+
+项目约定：
+
+- Black / isort 行宽为 100。
+- 路径处理优先使用 `pathlib`，避免硬编码 Unix 路径。
+- 不要随意扩大 `.bandit` skip 范围。
+- active scan、exploit、lateral、persistence、C2、exfiltrate 测试默认使用 mock、local fixture、dry-run 或明确授权目标。
 
 ---
 
-## 路线图
+## Debug 与优化建议
 
-- [x] v3.1.0 — SDK + CLI + LLM + Nuclei + 沙箱 + CI/CD + 精度优化
-- [ ] v3.2.0 — Web Dashboard (React)
-- [ ] v3.2.0 — 多 Agent 协作 (ReconAgent/ExploitAgent/ReportAgent)
-- [ ] v3.3.0 — Playbook 系统 (预置攻击剧本)
-- [ ] v3.3.0 — DVWA/Juice Shop 自动化基准测试
+优先级建议：
+
+1. **收敛 OOB DNS flaky**  
+   DNS 集成测试使用随机端口、后台线程和 UDP 查询。建议 fixture 用主动探测替代固定 `sleep`，并在 `OOBCallbackServer.stop()` 后确认线程退出。
+
+2. **修复跨平台硬编码路径**  
+   外部工具 wrapper 应使用 `tempfile` / `pathlib` 生成平台无关路径，避免 Windows 环境下出现 `/tmp/...` 之类路径。
+
+3. **分层 CI**  
+   入口层优先跑 `test_sdk.py`、`test_cli.py`、`test_handlers_*.py`；全量 `pytest -m "not slow"` 作为较宽回归；网络、OOB、外部工具相关测试单独标记并隔离运行。
+
+4. **降低 handler 静默降级风险**  
+   `handlers.register_all_handlers()` 会捕获注册异常继续启动。建议继续覆盖每类 handler 的注册数量和关键工具名，避免功能缺失只停留在 warning。
+
+5. **保持安全默认值**  
+   高风险能力默认 dry-run / sandbox / policy gate。任何真实目标操作都需要明确授权。
+
+---
+
+## 安全边界
+
+允许场景：
+
+- 已授权渗透测试。
+- 企业内部安全验证。
+- 本地实验环境。
+- CTF / 靶场。
+- 教育研究。
+- dry-run / mock / fixture 验证。
+
+禁止场景：
+
+- 未授权扫描或攻击。
+- 对第三方目标进行真实 exploit、横向移动、持久化或数据外带。
+- 绕过检测、隐藏痕迹或规避执法/安全系统。
+- 破坏性操作、DoS、批量攻击或供应链投毒。
 
 ---
 
 ## 贡献
 
-欢迎 PR！请遵循 [贡献指南](CONTRIBUTING.md)。
+欢迎提交 issue 和 PR。建议提交前运行：
 
 ```bash
-# 提交规范
+pytest tests/test_sdk.py tests/test_cli.py -q
+pytest tests/test_handlers_*.py -q
+pre-commit run --all-files
+```
+
+提交类型建议：
+
+```text
 feat: 新功能
 fix: 修复
 docs: 文档
-refactor: 重构
 test: 测试
+refactor: 重构
 security: 安全修复
 ```
 
@@ -376,10 +322,10 @@ security: 安全修复
 
 ## 许可证
 
-[MIT License](LICENSE) - Coff0xc
+MIT License。详见 `LICENSE`。
 
 ---
 
 ## 免责声明
 
-本工具仅供**授权安全测试**和**教育研究**使用。使用者必须在获得目标系统所有者明确书面授权后方可进行测试。任何未经授权的使用均属违法行为，作者不承担任何因非法使用而产生的法律责任。
+本工具仅供**授权安全测试**和**教育研究**使用。使用者必须在获得目标系统所有者明确书面授权后方可进行测试。任何未经授权的使用均属违法行为，作者不承担任何因非法使用产生的法律责任。
