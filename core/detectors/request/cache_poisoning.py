@@ -20,6 +20,7 @@ Web Cache Poisoning 检测器
 import hashlib
 import logging
 import time
+import uuid
 from typing import List, Optional
 from urllib.parse import urlparse
 
@@ -121,7 +122,7 @@ class CachePoisoningDetector(BaseDetector):
 
     def _generate_cache_buster(self) -> str:
         """生成唯一的 cache buster 参数值"""
-        return hashlib.md5(str(time.time()).encode(), usedforsecurity=False).hexdigest()[:8]
+        return uuid.uuid4().hex[:8]
 
     def _add_cache_buster(self, url: str) -> str:
         """给 URL 添加 cache buster 参数以避免命中已有缓存"""

@@ -238,7 +238,7 @@ class SQLiDetector(BaseDetector):
                         break
 
             # 布尔盲注检测（需要更复杂的逻辑）
-            if self.check_boolean_based and not results:
+            if self.check_boolean_based and not any(r.param == param_name for r in results):
                 boolean_result = self._check_boolean_based(
                     url, params, param_name, baseline, method, headers
                 )

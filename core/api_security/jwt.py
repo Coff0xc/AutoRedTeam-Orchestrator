@@ -676,7 +676,7 @@ class JWTTester(BaseAPITester):
                 return True
             except pyjwt.InvalidSignatureError:
                 return False
-            except (pyjwt.DecodeError, pyjwt.InvalidTokenError, ValueError):
+            except Exception:
                 return False
         else:
             # 手动验证

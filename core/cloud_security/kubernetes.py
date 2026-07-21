@@ -88,21 +88,25 @@ class KubernetesTester(BaseCloudTester):
     )
 
     # 敏感挂载路径 (保留原有格式以兼容现有代码)
-    SENSITIVE_PATHS = {
-        "/": CloudSeverity.CRITICAL,
-        "/etc": CloudSeverity.CRITICAL,
-        "/etc/shadow": CloudSeverity.CRITICAL,
-        "/etc/passwd": CloudSeverity.HIGH,
-        "/var/run/docker.sock": CloudSeverity.CRITICAL,
-        "/var/run/crio/crio.sock": CloudSeverity.CRITICAL,
-        "/var/run/containerd/containerd.sock": CloudSeverity.CRITICAL,
-        "/proc": CloudSeverity.HIGH,
-        "/sys": CloudSeverity.HIGH,
-        "/dev": CloudSeverity.HIGH,
-        "/root": CloudSeverity.HIGH,
-        "/home": CloudSeverity.MEDIUM,
-        "/var/log": CloudSeverity.MEDIUM,
-    }
+    SENSITIVE_PATHS = (
+        {path: CloudSeverity(severity) for path, severity in _SENSITIVE_PATHS.items()}
+        if _HAS_CONSTANTS
+        else {
+            "/": CloudSeverity.CRITICAL,
+            "/etc": CloudSeverity.CRITICAL,
+            "/etc/shadow": CloudSeverity.CRITICAL,
+            "/etc/passwd": CloudSeverity.HIGH,
+            "/var/run/docker.sock": CloudSeverity.CRITICAL,
+            "/var/run/crio/crio.sock": CloudSeverity.CRITICAL,
+            "/var/run/containerd/containerd.sock": CloudSeverity.CRITICAL,
+            "/proc": CloudSeverity.HIGH,
+            "/sys": CloudSeverity.HIGH,
+            "/dev": CloudSeverity.HIGH,
+            "/root": CloudSeverity.HIGH,
+            "/home": CloudSeverity.MEDIUM,
+            "/var/log": CloudSeverity.MEDIUM,
+        }
+    )
 
     # 危险RBAC权限 (使用共享常量)
     DANGEROUS_VERBS = (

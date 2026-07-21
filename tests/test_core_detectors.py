@@ -184,6 +184,36 @@ class TestSSRFDetector:
         assert detector.name == "ssrf"
 
 
+class TestExposureDetector:
+    """测试暴露面检测器"""
+
+    def test_exposure_detector_creation(self):
+        from core.detectors import DetectorFactory, ExposureDetector
+
+        detector = ExposureDetector()
+
+        assert detector.name == "exposure"
+        assert DetectorFactory.create("exposure").name == "exposure"
+
+    def test_sliver_db_exposure_detected(self):
+        from core.detectors import ExposureDetector, Severity
+
+        detector = ExposureDetector(config={"custom_paths": {"/.sliver/sliver.db": (Severity.CRITICAL, "sliver_database")}})
+        response = Mock()
+        response.status_code = 200
+        response.text = "SQLite format 3 beacons operators"
+        response.content = b"SQLite format 3 beacons operators"
+        response.headers = {}
+        response.elapsed.total_seconds.return_value = 0.1
+        detector._safe_request = Mock(return_value=response)
+
+        results = detector.detect("http://example.com")
+
+        assert results
+        assert results[0].vuln_type == "exposure"
+        assert results[0].severity == Severity.CRITICAL
+
+
 class TestDetectorFactory:
     """测试检测器工厂"""
 

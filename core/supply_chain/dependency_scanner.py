@@ -80,11 +80,7 @@ class DependencyScanner:
             timeout: API请求超时时间
         """
         self.timeout = timeout
-        # 优先使用统一 HTTP 客户端工厂
-        if HAS_HTTP_FACTORY:
-            self._session = get_sync_client(force_new=True)
-        else:
-            self._session = requests.Session()
+        self._session = requests.Session()
         self._session.headers.update(
             {"User-Agent": "AutoRedTeam-DependencyScanner/1.0", "Content-Type": "application/json"}
         )

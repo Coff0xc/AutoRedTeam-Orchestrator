@@ -122,6 +122,12 @@ DETECTOR_CONFIGS: List[DetectorConfig] = [
         description="Host头注入检测 - 检测Host Header Injection漏洞",
         vuln_type="支持: Host覆盖、X-Forwarded-Host、端口注入、URL覆盖",
     ),
+    DetectorConfig(
+        name="exposure_scan",
+        detector_class="ExposureDetector",
+        description="暴露面检测 - 检测 .msf4/.sliver/.git/.env/历史记录/私钥/凭证等高价值暴露",
+        vuln_type="检测: Sliver DB、Metasploit history、目录列表、私钥、凭证和配置泄露",
+    ),
     # ── 以下为 Phase 3 新增 (原 detector_handlers.py 中的 10 个检测器) ──
     DetectorConfig(
         name="ldap_scan",

@@ -99,6 +99,7 @@ from .injection import (
 from .misc import (
     CORSDetector,
     CSRFDetector,
+    ExposureDetector,
     InfoDisclosureDetector,
     SecurityHeadersDetector,
 )
@@ -243,6 +244,7 @@ __all__ = [
     "CSRFDetector",
     "SecurityHeadersDetector",
     "InfoDisclosureDetector",
+    "ExposureDetector",
     # 请求层检测器
     "HTTPSmugglingDetector",
     "CachePoisoningDetector",
