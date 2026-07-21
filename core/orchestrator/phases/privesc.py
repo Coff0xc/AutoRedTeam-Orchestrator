@@ -76,6 +76,30 @@ class PrivilegeEscPhaseExecutor(BasePhaseExecutor):
             if methods:
                 escalation_config.methods = methods
 
+            gate = self._runtime_gate_action(
+                "privilege_escalation.run",
+                inputs={
+                    "methods": [method.value for method in methods],
+                    "auto_select": escalation_config.auto_select,
+                    "safe_mode": escalation_config.safe_mode,
+                },
+                risk_level="critical",
+                network_policy="deny",
+                artifact_policy="metadata-only",
+            )
+            if not gate.get("allowed", True):
+                return PhaseResult(
+                    success=False,
+                    phase=PentestPhase.PRIVILEGE_ESC,
+                    data={
+                        "runtime_actions": (
+                            [gate["action"].to_dict()] if gate.get("enabled") else []
+                        ),
+                    },
+                    findings=findings,
+                    errors=[f"权限提升被 runtime gate 阻止: {gate.get('reason')}"],
+                )
+
             module = get_escalation_module(escalation_config)
             with module:
                 if escalation_config.auto_select:
@@ -83,8 +107,19 @@ class PrivilegeEscPhaseExecutor(BasePhaseExecutor):
                 else:
                     method = methods[0] if methods else None
                     result = await asyncio.to_thread(module.escalate, method)
+            self._runtime_complete_action(
+                gate,
+                success=bool(result.success),
+                output={
+                    "success": bool(result.success),
+                    "method": result.method.value,
+                    "to_level": result.to_level.value,
+                },
+            )
 
             data = result.to_dict()
+            if gate.get("enabled"):
+                data["runtime_actions"] = [gate["action"].to_dict()]
             if result.success:
                 access_host = (
                     self.state.access_list[-1].host if self.state.access_list else self.state.target

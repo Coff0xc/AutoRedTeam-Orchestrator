@@ -11,7 +11,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 
 class RunMode(Enum):
@@ -62,10 +62,6 @@ def _now() -> str:
 
 def _id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
-
-
-def _enum_value(value: Any) -> Any:
-    return value.value if isinstance(value, Enum) else value
 
 
 @dataclass
@@ -372,3 +368,133 @@ class AgentRunState:
             "summary": self.summary(),
             "created_at": self.created_at,
         }
+
+
+def _as_mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def action_policy_from_dict(data: Mapping[str, Any]) -> ActionPolicy:
+    """Rebuild an ActionPolicy from a serialized dict."""
+    raw = _as_mapping(data)
+    return ActionPolicy(
+        risk_level=raw.get("risk_level", RiskLevel.LOW.value),
+        requires_auth=bool(raw.get("requires_auth", False)),
+        requires_human_gate=bool(raw.get("requires_human_gate", False)),
+        allowed_in_dry_run=bool(raw.get("allowed_in_dry_run", True)),
+        network_policy=str(raw.get("network_policy") or "deny"),
+        artifact_policy=str(raw.get("artifact_policy") or "metadata-only"),
+        cleanup_policy=str(raw.get("cleanup_policy") or "none"),
+    )
+
+
+def action_from_dict(data: Mapping[str, Any]) -> Action:
+    """Rebuild an Action from a serialized dict."""
+    raw = _as_mapping(data)
+    return Action(
+        name=str(raw.get("name") or "action"),
+        kind=raw.get("kind") or ActionKind.TOOL_CALL.value,
+        inputs=dict(_as_mapping(raw.get("inputs"))),
+        policy=action_policy_from_dict(_as_mapping(raw.get("policy"))),
+        action_id=str(raw.get("action_id") or _id("action")),
+        status=raw.get("status") or ActionStatus.PENDING.value,
+        output=raw.get("output"),
+        error=raw.get("error"),
+        artifact_ids=list(raw.get("artifact_ids") or []),
+        created_at=str(raw.get("created_at") or _now()),
+        updated_at=raw.get("updated_at"),
+    )
+
+
+def task_from_dict(data: Mapping[str, Any]) -> Task:
+    """Rebuild a Task from a serialized dict."""
+    raw = _as_mapping(data)
+    task = Task(
+        name=str(raw.get("name") or "task"),
+        description=str(raw.get("description") or ""),
+        task_id=str(raw.get("task_id") or _id("task")),
+        metadata=dict(_as_mapping(raw.get("metadata"))),
+    )
+    for action_data in raw.get("actions") or []:
+        task.add_action(action_from_dict(_as_mapping(action_data)))
+    return task
+
+
+def flow_from_dict(data: Mapping[str, Any], fallback_name: str = "run") -> Flow:
+    """Rebuild a Flow from a serialized dict."""
+    raw = _as_mapping(data)
+    flow = Flow(
+        name=str(raw.get("name") or fallback_name),
+        flow_id=str(raw.get("flow_id") or raw.get("id") or _id("flow")),
+        metadata=dict(_as_mapping(raw.get("metadata"))),
+        created_at=str(raw.get("created_at") or _now()),
+    )
+    for task_data in raw.get("tasks") or []:
+        flow.add_task(task_from_dict(_as_mapping(task_data)))
+    return flow
+
+
+def artifact_from_dict(data: Mapping[str, Any]) -> Artifact:
+    """Rebuild an Artifact from a serialized dict."""
+    raw = _as_mapping(data)
+    return Artifact(
+        name=str(raw.get("name") or "artifact"),
+        artifact_type=str(raw.get("artifact_type") or "unknown"),
+        artifact_id=str(raw.get("artifact_id") or _id("artifact")),
+        uri=raw.get("uri"),
+        metadata=dict(_as_mapping(raw.get("metadata"))),
+        created_at=str(raw.get("created_at") or _now()),
+    )
+
+
+def human_gate_from_dict(data: Mapping[str, Any]) -> HumanGate:
+    """Rebuild a HumanGate from a serialized dict."""
+    raw = _as_mapping(data)
+    return HumanGate(
+        reason=str(raw.get("reason") or "approval required"),
+        gate_id=str(raw.get("gate_id") or _id("gate")),
+        action_id=raw.get("action_id"),
+        approved=bool(raw.get("approved", False)),
+        requested_at=str(raw.get("requested_at") or _now()),
+        approved_at=raw.get("approved_at"),
+        approver=raw.get("approver"),
+    )
+
+
+def trace_event_from_dict(data: Mapping[str, Any]) -> TraceEvent:
+    """Rebuild a TraceEvent from a serialized dict."""
+    raw = _as_mapping(data)
+    return TraceEvent(
+        event_type=str(raw.get("event_type") or "event"),
+        message=str(raw.get("message") or ""),
+        event_id=str(raw.get("event_id") or _id("trace")),
+        action_id=raw.get("action_id"),
+        metadata=dict(_as_mapping(raw.get("metadata"))),
+        timestamp=str(raw.get("timestamp") or _now()),
+    )
+
+
+def agent_run_state_from_dict(data: Mapping[str, Any]) -> AgentRunState:
+    """Rebuild an AgentRunState from runtime or AI red-team result JSON."""
+    raw = _as_mapping(data)
+    if isinstance(raw.get("run_state"), Mapping):
+        raw = _as_mapping(raw["run_state"])
+    fallback_name = str(raw.get("run_id") or "run")
+    flow = flow_from_dict(_as_mapping(raw.get("flow")), fallback_name=fallback_name)
+    return AgentRunState(
+        flow=flow,
+        mode=RunMode(raw.get("mode") or RunMode.DRY_RUN.value),
+        run_id=str(raw.get("run_id") or _id("run")),
+        artifacts=[artifact_from_dict(_as_mapping(item)) for item in raw.get("artifacts") or []],
+        human_gates=[
+            human_gate_from_dict(_as_mapping(item)) for item in raw.get("human_gates") or []
+        ],
+        trace=[trace_event_from_dict(_as_mapping(item)) for item in raw.get("trace") or []],
+        metadata=dict(_as_mapping(raw.get("metadata"))),
+        memory=[
+            dict(_as_mapping(item))
+            for item in raw.get("memory") or []
+            if isinstance(item, Mapping)
+        ],
+        created_at=str(raw.get("created_at") or _now()),
+    )

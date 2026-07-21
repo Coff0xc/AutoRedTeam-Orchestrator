@@ -38,14 +38,14 @@ class PoCExecPhaseExecutor(BasePhaseExecutor):
         errors: List[str] = []
         findings: List[Dict[str, Any]] = []
         verified_count = 0
+        runtime_actions: List[Any] = []
 
         try:
-            from core.cve.poc_engine import get_poc_engine
-
-            poc_engine = get_poc_engine()
+            poc_engine = None
             high_value_findings = self.state.get_high_value_findings()
 
             for finding in high_value_findings:
+                gate: Dict[str, Any] = {}
                 try:
                     cve_id = (
                         finding.get("cve_id")
@@ -67,8 +67,37 @@ class PoCExecPhaseExecutor(BasePhaseExecutor):
                         cve_id = cve_id.upper()
                     if cve_id:
                         finding["cve_id"] = cve_id
+                        gate = self._runtime_gate_action(
+                            "poc.execute",
+                            inputs={
+                                "url": finding.get("url", self.state.target),
+                                "cve_id": cve_id,
+                                "finding_type": finding.get("type"),
+                            },
+                            risk_level="high",
+                            network_policy="controlled",
+                        )
+                        if gate.get("enabled"):
+                            runtime_actions.append(gate["action"])
+                        if not gate.get("allowed", True):
+                            errors.append(
+                                f"验证 {finding.get('type')} 被 runtime gate 阻止: "
+                                f"{gate.get('reason')}"
+                            )
+                            continue
+                        if gate.get("dry_run"):
+                            continue
+                        if poc_engine is None:
+                            from core.cve.poc_engine import get_poc_engine
+
+                            poc_engine = get_poc_engine()
                         result = await asyncio.to_thread(
                             poc_engine.execute, finding.get("url", self.state.target), cve_id
+                        )
+                        self._runtime_complete_action(
+                            gate,
+                            success=bool(result.get("verified")),
+                            output={"verified": bool(result.get("verified")), "cve_id": cve_id},
                         )
                         if result.get("verified"):
                             finding["verified"] = True
@@ -76,12 +105,17 @@ class PoCExecPhaseExecutor(BasePhaseExecutor):
                             verified_count += 1
                             findings.append(finding)
                 except (OSError, asyncio.TimeoutError) as e:
+                    self._runtime_complete_action(gate, success=False, error=str(e))
                     errors.append(f"验证 {finding.get('type')} 失败: {e}")
 
             return PhaseResult(
                 success=True,
                 phase=PentestPhase.POC_EXEC,
-                data={"verified": verified_count, "total": len(high_value_findings)},
+                data={
+                    "verified": verified_count,
+                    "total": len(high_value_findings),
+                    "runtime_actions": [action.to_dict() for action in runtime_actions],
+                },
                 findings=findings,
                 errors=errors,
             )

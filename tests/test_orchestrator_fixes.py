@@ -169,7 +169,9 @@ class TestConfigPriority:
         from core.orchestrator.state import PentestPhase
 
         # 全局配置
-        global_config = OrchestratorConfig(quick_mode=False, timeout=3600)
+        global_config = OrchestratorConfig(
+            quick_mode=False, timeout=3600, runtime_policy_enabled=False
+        )
 
         orchestrator = AutoPentestOrchestrator(target="https://example.com", config=global_config)
 
@@ -196,6 +198,127 @@ class TestConfigPriority:
             assert actual_config["quick_mode"] is True  # 阶段配置
             assert actual_config["custom_option"] == "value"  # 阶段配置
             assert actual_config["timeout"] == 3600  # 全局配置
+
+
+class TestOrchestratorRuntimePipeline:
+    """测试旧编排入口接入 runtime middleware/sandbox gate"""
+
+    @pytest.mark.asyncio
+    async def test_recon_phase_passes_runtime_pipeline_before_execution(self):
+        from core.orchestrator.orchestrator import AutoPentestOrchestrator, OrchestratorConfig
+        from core.orchestrator.phases import PhaseResult
+        from core.orchestrator.state import PentestPhase
+
+        orchestrator = AutoPentestOrchestrator(
+            target="https://example.com",
+            config=OrchestratorConfig(runtime_human_approved=False),
+        )
+
+        with patch("core.orchestrator.orchestrator.PHASE_EXECUTORS") as mock_executors:
+            mock_executor_class = MagicMock()
+            mock_executor_instance = MagicMock()
+            mock_executor_instance.can_execute.return_value = True
+            mock_executor_instance.execute = AsyncMock(
+                return_value=PhaseResult(
+                    success=True,
+                    phase=PentestPhase.RECON,
+                    data={},
+                    findings=[],
+                    errors=[],
+                )
+            )
+            mock_executor_class.return_value = mock_executor_instance
+            mock_executors.get.return_value = mock_executor_class
+
+            result = await orchestrator.execute_phase(PentestPhase.RECON)
+
+        assert result.success is True
+        assert result.data["runtime"]["action"]["status"] == "skipped"
+        assert result.data["runtime"]["action"]["output"]["reason"] == "orchestrator runtime dry-run"
+        assert any(
+            event.event_type == "middleware_decision"
+            for event in orchestrator.runtime_run_state.trace
+        )
+        mock_executor_instance.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_high_risk_phase_blocks_without_human_gate(self):
+        from core.orchestrator.orchestrator import AutoPentestOrchestrator, OrchestratorConfig
+        from core.orchestrator.state import PentestPhase
+
+        orchestrator = AutoPentestOrchestrator(
+            target="https://example.com",
+            config=OrchestratorConfig(runtime_mode="active", runtime_human_approved=False),
+        )
+
+        with patch("core.orchestrator.orchestrator.PHASE_EXECUTORS") as mock_executors:
+            mock_executor_class = MagicMock()
+            mock_executor_instance = MagicMock()
+            mock_executor_instance.can_execute.return_value = True
+            mock_executor_instance.execute = AsyncMock()
+            mock_executor_class.return_value = mock_executor_instance
+            mock_executors.get.return_value = mock_executor_class
+
+            result = await orchestrator.execute_phase(PentestPhase.EXPLOIT)
+
+        assert result.success is False
+        assert result.data["runtime"]["action"]["status"] == "blocked"
+        assert "human approval" in result.errors[0]
+        assert orchestrator.runtime_run_state.human_gates
+        mock_executor_instance.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_concrete_poc_action_blocks_without_human_gate(self):
+        from core.agent_runtime import (
+            AgentRunState,
+            Flow,
+            PolicyMiddleware,
+            RunMode,
+            RuntimePipeline,
+            SandboxMiddleware,
+            SandboxPolicy,
+        )
+        from core.orchestrator.phases import PoCExecPhaseExecutor
+        from core.orchestrator.state import PentestState
+
+        state = MagicMock(spec=PentestState)
+        state.target = "https://example.com"
+        state.get_high_value_findings.return_value = [
+            {
+                "type": "rce",
+                "severity": "critical",
+                "url": "https://example.com",
+                "cve_id": "CVE-2024-0001",
+            }
+        ]
+        run_state = AgentRunState(flow=Flow(name="test-poc"), mode=RunMode.ACTIVE)
+        pipeline = RuntimePipeline(
+            [
+                PolicyMiddleware(human_approved=False),
+                SandboxMiddleware(
+                    SandboxPolicy(
+                        enabled=True,
+                        provider="policy",
+                        network_policy="controlled",
+                    )
+                ),
+            ]
+        )
+        executor = PoCExecPhaseExecutor(
+            state,
+            {
+                "_runtime_run_state": run_state,
+                "_runtime_pipeline": pipeline,
+            },
+        )
+
+        with patch("core.cve.poc_engine.get_poc_engine") as mock_engine:
+            result = await executor.execute()
+
+        assert result.success is True
+        assert result.data["runtime_actions"][0]["status"] == "blocked"
+        assert "runtime gate" in result.errors[0]
+        mock_engine.assert_not_called()
 
 
 class TestExfiltrateConfig:
@@ -259,6 +382,7 @@ class TestExfiltrateConfig:
         assert result.success is True
         assert result.data.get("skipped") is True
         assert "无敏感数据" in result.data.get("reason", "")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -62,6 +62,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
 
         errors: List[str] = []
         findings: List[Dict[str, Any]] = []
+        runtime_actions: List[Any] = []
 
         try:
             from core.detectors import DetectorFactory
@@ -127,6 +128,24 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
                 target_findings: List[Dict[str, Any]] = []
                 target_errors: List[str] = []
                 self.state.add_checkpoint(step=idx, data={"current_target": target_url})
+
+                gate = self._runtime_gate_action(
+                    "vuln_scan.target",
+                    inputs={
+                        "target_url": target_url,
+                        "detectors": detector_types,
+                    },
+                    risk_level="moderate",
+                    requires_human_gate=False,
+                    network_policy="controlled",
+                )
+                if gate.get("enabled"):
+                    runtime_actions.append(gate["action"])
+                if not gate.get("allowed", True):
+                    return (
+                        target_findings,
+                        [f"扫描 {target_url} 被 runtime gate 阻止: {gate.get('reason')}"],
+                    )
 
                 try:
                     baseline = None
@@ -202,12 +221,20 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
                     self.logger.exception("扫描 %s 失败: %s", target_url, e)
                     target_errors.append(f"扫描 {target_url} 失败: {e}")
 
+                self._runtime_complete_action(
+                    gate,
+                    success=len(target_errors) == 0,
+                    output={
+                        "target_url": target_url,
+                        "findings": len(target_findings),
+                        "errors": len(target_errors),
+                    },
+                    error="; ".join(target_errors) if target_errors else None,
+                )
                 return target_findings, target_errors
 
             # 并行扫描所有目标，限制并发数
-            scan_coros = [
-                _scan_single_target(idx, url) for idx, url in enumerate(targets)
-            ]
+            scan_coros = [_scan_single_target(idx, url) for idx, url in enumerate(targets)]
             all_results = await gather_with_limit(scan_coros, limit=scan_concurrency)
 
             for result_item in all_results:
@@ -230,6 +257,7 @@ class VulnScanPhaseExecutor(BasePhaseExecutor):
                     "waf_type": waf_type.value if waf_type else None,
                     "false_positive_filter": enable_fp_filter,
                     "verifier_enabled": enable_verifier,
+                    "runtime_actions": [action.to_dict() for action in runtime_actions],
                 },
                 findings=findings,
                 errors=errors,

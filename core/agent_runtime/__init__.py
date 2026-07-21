@@ -1,6 +1,21 @@
 """Agent runtime primitives for controlled AI red-team orchestration."""
 
-from core.agent_runtime.benchmark import BenchmarkResult, score_run_summary
+from core.agent_runtime.benchmark import (
+    BenchmarkCase,
+    BenchmarkHarness,
+    BenchmarkHarnessResult,
+    BenchmarkResult,
+    score_run_summary,
+)
+from core.agent_runtime.api import (
+    get_run_view_response,
+    get_runs_index,
+    get_runs_index_response,
+    get_runs_index_response_from_states,
+    make_runtime_http_handler,
+    register_aiohttp_routes,
+    serve_runtime_http,
+)
 from core.agent_runtime.memory import MemoryRecord, RunMemory
 from core.agent_runtime.models import (
     Action,
@@ -15,12 +30,42 @@ from core.agent_runtime.models import (
     RunMode,
     Task,
     TraceEvent,
+    action_from_dict,
+    action_policy_from_dict,
+    agent_run_state_from_dict,
+    artifact_from_dict,
+    flow_from_dict,
+    human_gate_from_dict,
+    task_from_dict,
+    trace_event_from_dict,
+)
+from core.agent_runtime.middleware import (
+    MiddlewareDecision,
+    PolicyMiddleware,
+    RuntimeMiddleware,
+    RuntimePipeline,
+    SandboxMiddleware,
 )
 from core.agent_runtime.observability import (
     ObservabilitySnapshot,
     build_observability_snapshot,
 )
-from core.agent_runtime.sandbox import SandboxPolicy
+from core.agent_runtime.registry import (
+    GLOBAL_RUNTIME_RUN_REGISTRY,
+    RuntimeRunRegistry,
+    clear_runtime_runs,
+    get_runtime_run,
+    list_runtime_runs,
+    register_runtime_run,
+)
+from core.agent_runtime.sandbox import (
+    SandboxDecision,
+    SandboxPolicy,
+    enforce_sandbox_policy,
+    execute_action_in_docker_sandbox,
+    smoke_docker_sandbox,
+)
+from core.agent_runtime.views import build_run_view, build_runs_index
 
 __all__ = [
     "Action",
@@ -32,14 +77,49 @@ __all__ = [
     "Flow",
     "HumanGate",
     "MemoryRecord",
+    "MiddlewareDecision",
     "ObservabilitySnapshot",
+    "PolicyMiddleware",
     "RiskLevel",
     "RunMode",
     "RunMemory",
+    "RuntimeMiddleware",
+    "RuntimePipeline",
+    "RuntimeRunRegistry",
+    "SandboxDecision",
+    "SandboxMiddleware",
     "SandboxPolicy",
     "Task",
     "TraceEvent",
+    "GLOBAL_RUNTIME_RUN_REGISTRY",
+    "action_from_dict",
+    "action_policy_from_dict",
+    "agent_run_state_from_dict",
+    "artifact_from_dict",
+    "flow_from_dict",
+    "human_gate_from_dict",
+    "task_from_dict",
+    "trace_event_from_dict",
     "BenchmarkResult",
+    "BenchmarkCase",
+    "BenchmarkHarness",
+    "BenchmarkHarnessResult",
     "build_observability_snapshot",
+    "build_run_view",
+    "build_runs_index",
+    "clear_runtime_runs",
+    "enforce_sandbox_policy",
+    "execute_action_in_docker_sandbox",
+    "get_runtime_run",
+    "smoke_docker_sandbox",
+    "get_run_view_response",
+    "get_runs_index",
+    "get_runs_index_response",
+    "get_runs_index_response_from_states",
+    "list_runtime_runs",
+    "make_runtime_http_handler",
+    "register_runtime_run",
+    "register_aiohttp_routes",
+    "serve_runtime_http",
     "score_run_summary",
 ]

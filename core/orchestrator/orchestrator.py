@@ -14,6 +14,23 @@ import re
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
+from core.agent_runtime import (
+    Action,
+    ActionKind,
+    ActionPolicy,
+    ActionStatus,
+    AgentRunState,
+    Flow,
+    PolicyMiddleware,
+    RiskLevel,
+    RunMode,
+    RuntimePipeline,
+    SandboxMiddleware,
+    SandboxPolicy,
+    Task,
+    register_runtime_run,
+)
+
 from .decision import DecisionEngine
 from .phases import PHASE_EXECUTORS, PhaseResult
 from .state import PentestPhase, PentestState, PhaseStatus
@@ -22,6 +39,27 @@ logger = logging.getLogger(__name__)
 
 # session_id 格式校验正则 (32字符hex或带破折号的UUID)
 SESSION_ID_PATTERN = re.compile(r"^[a-f0-9]{32}$|^[a-f0-9-]{36}$")
+
+PHASE_RISK: Dict[PentestPhase, RiskLevel] = {
+    PentestPhase.RECON: RiskLevel.LOW,
+    PentestPhase.VULN_SCAN: RiskLevel.MODERATE,
+    PentestPhase.POC_EXEC: RiskLevel.HIGH,
+    PentestPhase.EXPLOIT: RiskLevel.CRITICAL,
+    PentestPhase.PRIVILEGE_ESC: RiskLevel.CRITICAL,
+    PentestPhase.LATERAL_MOVE: RiskLevel.CRITICAL,
+    PentestPhase.EXFILTRATE: RiskLevel.CRITICAL,
+    PentestPhase.REPORT: RiskLevel.LOW,
+}
+
+PHASE_REQUIRES_NETWORK = {
+    PentestPhase.RECON,
+    PentestPhase.VULN_SCAN,
+    PentestPhase.POC_EXEC,
+    PentestPhase.EXPLOIT,
+    PentestPhase.PRIVILEGE_ESC,
+    PentestPhase.LATERAL_MOVE,
+    PentestPhase.EXFILTRATE,
+}
 
 
 class OrchestratorConfig:
@@ -37,6 +75,11 @@ class OrchestratorConfig:
         quick_mode: bool = False,
         skip_exfiltrate: bool = True,
         report_formats: Optional[List[str]] = None,
+        runtime_policy_enabled: bool = True,
+        runtime_mode: str = "dry-run",
+        runtime_network_policy: str = "controlled",
+        runtime_sandbox_provider: str = "policy",
+        runtime_human_approved: bool = False,
     ):
         self.auto_mode = auto_mode
         self.skip_phases = skip_phases or []
@@ -46,6 +89,11 @@ class OrchestratorConfig:
         self.quick_mode = quick_mode
         self.skip_exfiltrate = skip_exfiltrate
         self.report_formats = report_formats or ["html", "json"]
+        self.runtime_policy_enabled = runtime_policy_enabled
+        self.runtime_mode = runtime_mode
+        self.runtime_network_policy = runtime_network_policy
+        self.runtime_sandbox_provider = runtime_sandbox_provider
+        self.runtime_human_approved = runtime_human_approved
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -57,6 +105,11 @@ class OrchestratorConfig:
             "quick_mode": self.quick_mode,
             "skip_exfiltrate": self.skip_exfiltrate,
             "report_formats": self.report_formats,
+            "runtime_policy_enabled": self.runtime_policy_enabled,
+            "runtime_mode": self.runtime_mode,
+            "runtime_network_policy": self.runtime_network_policy,
+            "runtime_sandbox_provider": self.runtime_sandbox_provider,
+            "runtime_human_approved": self.runtime_human_approved,
         }
 
 
@@ -100,12 +153,51 @@ class AutoPentestOrchestrator:
         self.state.config = self.config.to_dict()
 
         self.decision_engine = DecisionEngine(self.state)
+        self.runtime_run_state = AgentRunState(
+            flow=Flow(
+                name=f"pentest:{target}",
+                metadata={"source": "AutoPentestOrchestrator"},
+            ),
+            mode=RunMode(self.config.runtime_mode),
+            metadata={
+                "session_id": self.state.session_id,
+                "target": target,
+                "runtime_policy_enabled": self.config.runtime_policy_enabled,
+                "capability_readiness": self._capability_readiness_summary(),
+            },
+        )
+        self.runtime_pipeline = RuntimePipeline(
+            [
+                PolicyMiddleware(human_approved=self.config.runtime_human_approved),
+                SandboxMiddleware(
+                    SandboxPolicy(
+                        enabled=self.config.runtime_policy_enabled,
+                        provider=self.config.runtime_sandbox_provider,
+                        network_policy=self.config.runtime_network_policy,
+                    )
+                ),
+            ]
+        )
+        register_runtime_run(self.runtime_run_state)
         self._storage: Any = None
         self._progress_callback: Optional[Callable] = None
         self._state_lock = asyncio.Lock()  # 并发保护锁
         self._has_critical_failure = False  # 跟踪关键阶段失败
 
         self.logger = logging.getLogger(__name__)
+
+    def _capability_readiness_summary(self) -> Dict[str, Any]:
+        """Attach current AI capability coverage metadata to runtime traces."""
+        try:
+            from core.ai_capabilities import refactor_readiness
+
+            readiness = refactor_readiness()
+            return {
+                "ready_for_full_refactor": readiness.get("ready_for_full_refactor"),
+                "summary": readiness.get("summary", {}),
+            }
+        except Exception as exc:  # pragma: no cover - defensive metadata only
+            return {"error": str(exc)}
 
     @classmethod
     def resume(cls, session_id: str) -> "AutoPentestOrchestrator":
@@ -189,6 +281,7 @@ class AutoPentestOrchestrator:
             "status": self.state.current_phase.value,
             "duration": duration,
             "phases": results,
+            "runtime": self.runtime_run_state.to_dict(),
             "findings_summary": self._summarize_findings(),
             "attack_paths": [
                 {
@@ -222,6 +315,9 @@ class AutoPentestOrchestrator:
         phase_config = self.config.to_dict()
         if config:
             phase_config.update(config)
+        if self.config.runtime_policy_enabled:
+            phase_config["_runtime_run_state"] = self.runtime_run_state
+            phase_config["_runtime_pipeline"] = self.runtime_pipeline
 
         executor = executor_class(self.state, phase_config)  # type: ignore[abstract]
 
@@ -235,6 +331,59 @@ class AutoPentestOrchestrator:
                 errors=[f"缺少前置阶段: {[p.value for p in missing]}"],
             )
 
+        if self.config.runtime_policy_enabled:
+            runtime_action = self._create_phase_action(phase, phase_config)
+            runtime_decisions = self.runtime_pipeline.evaluate_action(
+                self.runtime_run_state,
+                runtime_action,
+            )
+            blocked = next(
+                (decision for decision in runtime_decisions if not decision.allowed), None
+            )
+            if blocked:
+                runtime_action.mark_blocked(blocked.reason)
+                self.runtime_run_state.require_gate(runtime_action, blocked.reason)
+                self.state.fail_phase(phase, blocked.reason)
+                return PhaseResult(
+                    success=False,
+                    phase=phase,
+                    data={
+                        "runtime": {
+                            "action": runtime_action.to_dict(),
+                            "decisions": [decision.to_dict() for decision in runtime_decisions],
+                        }
+                    },
+                    findings=[],
+                    errors=[blocked.reason],
+                )
+            if self.runtime_run_state.mode == RunMode.DRY_RUN:
+                runtime_action.mark_skipped(
+                    {
+                        "planned_only": True,
+                        "reason": "orchestrator runtime dry-run",
+                    }
+                )
+                self.state.phase_status[phase.value] = PhaseStatus.SKIPPED
+                return PhaseResult(
+                    success=True,
+                    phase=phase,
+                    data={
+                        "skipped": True,
+                        "reason": "runtime_dry_run",
+                        "runtime": {
+                            "action": runtime_action.to_dict(),
+                            "decisions": [decision.to_dict() for decision in runtime_decisions],
+                        },
+                    },
+                    findings=[],
+                    errors=[],
+                )
+            runtime_action.status = ActionStatus.RUNNING
+            runtime_action.updated_at = datetime.now().isoformat()
+        else:
+            runtime_action = None
+            runtime_decisions = []
+
         self.state.set_phase(phase, PhaseStatus.RUNNING)
 
         try:
@@ -243,6 +392,12 @@ class AutoPentestOrchestrator:
             else:
                 result = await executor.execute()
 
+            if result.findings:
+                known = {id(finding) for finding in self.state.findings}
+                for finding in result.findings:
+                    if id(finding) not in known:
+                        self.state.add_finding(finding)
+
             if result.success:
                 self.state.complete_phase(phase, result.to_dict())
             else:
@@ -250,13 +405,69 @@ class AutoPentestOrchestrator:
 
             analysis = self.decision_engine.analyze_result(phase, result.to_dict())
             result.data["analysis"] = analysis
+            if runtime_action:
+                runtime_action.mark_completed(
+                    {
+                        "phase_success": result.success,
+                        "findings_count": len(result.findings),
+                        "errors_count": len(result.errors),
+                    }
+                )
+                result.data["runtime"] = {
+                    "action": runtime_action.to_dict(),
+                    "decisions": [decision.to_dict() for decision in runtime_decisions],
+                }
 
             return result
 
         except Exception as e:
             self.logger.exception("阶段 %s 执行异常: %s", phase.value, e)
             self.state.fail_phase(phase, str(e))
+            if runtime_action:
+                runtime_action.status = ActionStatus.FAILED
+                runtime_action.error = str(e)
+                runtime_action.updated_at = datetime.now().isoformat()
             return PhaseResult(success=False, phase=phase, data={}, findings=[], errors=[str(e)])
+
+    def _create_phase_action(
+        self,
+        phase: PentestPhase,
+        phase_config: Dict[str, Any],
+    ) -> Action:
+        """Represent a legacy orchestrator phase as a runtime-gated action."""
+        task = self.runtime_run_state.flow.add_task(
+            Task(
+                name=f"phase:{phase.value}",
+                description="Legacy orchestrator phase gated by runtime middleware.",
+                metadata={"phase": phase.value},
+            )
+        )
+        risk_level = PHASE_RISK.get(phase, RiskLevel.MODERATE)
+        action = Action(
+            name=f"orchestrator.{phase.value}",
+            kind=ActionKind.TOOL_CALL,
+            inputs={
+                "phase": phase.value,
+                "target": self.target,
+                "quick_mode": bool(phase_config.get("quick_mode")),
+                "auto_mode": bool(phase_config.get("auto_mode")),
+            },
+            policy=ActionPolicy(
+                risk_level=risk_level,
+                requires_auth=True,
+                requires_human_gate=risk_level.is_high_risk(),
+                allowed_in_dry_run=risk_level
+                in {RiskLevel.INFO, RiskLevel.LOW, RiskLevel.MODERATE},
+                network_policy=(
+                    self.config.runtime_network_policy
+                    if phase in PHASE_REQUIRES_NETWORK
+                    else "deny"
+                ),
+                artifact_policy="metadata-only",
+                cleanup_policy="phase-owned",
+            ),
+        )
+        return task.add_action(action)
 
     def pause(self) -> bool:
         """暂停执行"""

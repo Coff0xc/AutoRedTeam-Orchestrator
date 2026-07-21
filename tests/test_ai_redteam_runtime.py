@@ -2,7 +2,15 @@ import json
 
 from typer.testing import CliRunner
 
-from core.agent_runtime import Action, ActionKind, ActionPolicy, RiskLevel, RunMode
+from core.agent_runtime import (
+    Action,
+    ActionKind,
+    ActionPolicy,
+    RiskLevel,
+    RunMode,
+    clear_runtime_runs,
+    get_runtime_run,
+)
 from core.ai_redteam import AIRedTeamRunner, Scenario, load_scenario
 
 
@@ -30,6 +38,7 @@ def test_action_serializes_policy_and_status():
 
 
 def test_load_yaml_scenario_and_plan_dry_run(tmp_path):
+    clear_runtime_runs()
     scenario_file = tmp_path / "scenario.yaml"
     scenario_file.write_text(
         """
@@ -73,6 +82,15 @@ report:
     assert result["run_state"]["summary"]["memory_records"] == 1
     assert "observability" in result["run_state"]["metadata"]
     assert "benchmark" in result["run_state"]["metadata"]
+    assert all(
+        action["output"]["middleware"] == "passed"
+        for action in result["run_state"]["flow"]["tasks"][0]["actions"]
+    )
+    assert any(
+        event["event_type"] == "middleware_decision" for event in result["run_state"]["trace"]
+    )
+    assert get_runtime_run(result["run_state"]["run_id"]) is not None
+    clear_runtime_runs()
 
 
 def test_scenario_rejects_blocked_target():

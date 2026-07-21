@@ -80,6 +80,7 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
             success_count = 0
             attempted = 0
             results: Dict[str, List[Dict[str, Any]]] = {}
+            runtime_actions: List[Any] = []
 
             lateral_concurrency = self._clamp_config_int("lateral_concurrency", 5, 1, 20)
             # 记录已成功的目标，避免冗余尝试
@@ -94,17 +95,54 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
                 except (ValueError, TypeError) as e:
                     return {"target": target, "error": f"无效凭证: {e}"}
 
+                gate = self._runtime_gate_action(
+                    "lateral.execute",
+                    inputs={
+                        "target": target,
+                        "command": command,
+                        "preferred_methods": preferred_methods or [],
+                        "credential_source": (
+                            cred.get("source", "unknown") if isinstance(cred, dict) else "unknown"
+                        ),
+                    },
+                    risk_level="critical",
+                    network_policy="controlled",
+                    artifact_policy="metadata-only",
+                )
+                if gate.get("enabled"):
+                    runtime_actions.append(gate["action"])
+                if not gate.get("allowed", True):
+                    return {
+                        "target": target,
+                        "runtime_blocked": True,
+                        "error": f"runtime gate blocked lateral action: {gate.get('reason')}",
+                    }
+
                 try:
                     module = await asyncio.to_thread(
                         auto_lateral, target, creds, lateral_config, preferred_methods
                     )
                     if not module:
+                        self._runtime_complete_action(
+                            gate,
+                            success=False,
+                            output={"success": False, "reason": "no compatible module"},
+                        )
                         return {"target": target, "success": False, "no_module": True}
 
                     try:
                         result = await asyncio.to_thread(module.execute, command)
                     finally:
                         await asyncio.to_thread(module.disconnect)
+                    self._runtime_complete_action(
+                        gate,
+                        success=bool(result.success),
+                        output={
+                            "success": bool(result.success),
+                            "method": str(result.method),
+                        },
+                        error=getattr(result, "error", None),
+                    )
 
                     return {
                         "target": target,
@@ -113,6 +151,7 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
                         "success": result.success,
                     }
                 except (OSError, ConnectionError, asyncio.TimeoutError) as e:
+                    self._runtime_complete_action(gate, success=False, error=str(e))
                     self.logger.exception("横向移动失败: %s - %s", target, e)
                     return {"target": target, "error": f"横向移动失败 {target}: {e}"}
 
@@ -124,9 +163,7 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
             ]
             attempted = len(lateral_coros)
 
-            lateral_results = await gather_with_limit(
-                lateral_coros, limit=lateral_concurrency
-            )
+            lateral_results = await gather_with_limit(lateral_coros, limit=lateral_concurrency)
 
             # 汇总结果，保持原语义：每个目标只记录第一次成功
             for item in lateral_results:
@@ -169,9 +206,7 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
                                 "type": "lateral_movement",
                                 "severity": "high",
                                 "title": f"横向移动成功: {target}",
-                                "description": self._sanitize_output(
-                                    result.output, max_length=500
-                                ),
+                                "description": self._sanitize_output(result.output, max_length=500),
                                 "phase": "lateral_movement",
                             }
                         )
@@ -191,6 +226,7 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
                     "attempted": attempted,
                     "success_count": success_count,
                     "results": results,
+                    "runtime_actions": [action.to_dict() for action in runtime_actions],
                 },
                 findings=findings,
                 errors=errors,

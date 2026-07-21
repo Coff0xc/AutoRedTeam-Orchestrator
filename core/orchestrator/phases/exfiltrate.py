@@ -151,8 +151,45 @@ class ExfiltratePhaseExecutor(BasePhaseExecutor):
                 nameserver=self.config.get("exfil_nameserver") or self.config.get("nameserver"),
             )
 
+            gate = self._runtime_gate_action(
+                "exfiltrate.send",
+                inputs={
+                    "channel": channel,
+                    "destination": destination,
+                    "payload_size": len(data_bytes),
+                    "include_credentials": include_credentials,
+                },
+                risk_level="critical",
+                network_policy="controlled",
+                artifact_policy="metadata-only",
+            )
+            if not gate.get("allowed", True):
+                return PhaseResult(
+                    success=False,
+                    phase=PentestPhase.EXFILTRATE,
+                    data={
+                        "payload_size": len(data_bytes),
+                        "channel": channel,
+                        "destination": destination,
+                        "runtime_actions": (
+                            [gate["action"].to_dict()] if gate.get("enabled") else []
+                        ),
+                    },
+                    findings=findings,
+                    errors=[f"数据外泄被 runtime gate 阻止: {gate.get('reason')}"],
+                )
+
             module = ExfilFactory.create(config)
             result = module.exfiltrate(data_bytes)
+            self._runtime_complete_action(
+                gate,
+                success=bool(result.success),
+                output={
+                    "success": bool(result.success),
+                    "channel": channel,
+                    "payload_size": len(data_bytes),
+                },
+            )
 
             data = result.to_dict()
             data.update(
@@ -160,6 +197,7 @@ class ExfiltratePhaseExecutor(BasePhaseExecutor):
                     "payload_size": len(data_bytes),
                     "channel": channel,
                     "destination": destination,
+                    "runtime_actions": [gate["action"].to_dict()] if gate.get("enabled") else [],
                 }
             )
 

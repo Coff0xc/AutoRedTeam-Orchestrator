@@ -74,6 +74,7 @@ class BasePhaseExecutor(ABC):
 
     async def resume(self, checkpoint_data: Dict[str, Any]) -> PhaseResult:
         """从检查点恢复执行"""
+        self.config.setdefault("_last_checkpoint_keys", sorted(checkpoint_data.keys()))
         return await self.execute()
 
     def can_execute(self) -> bool:
@@ -236,6 +237,113 @@ class BasePhaseExecutor(ABC):
         except (ValueError, TypeError):
             value = default
         return max(min_val, min(value, max_val))
+
+    def _runtime_gate_action(
+        self,
+        action_name: str,
+        inputs: Optional[Dict[str, Any]] = None,
+        risk_level: str = "moderate",
+        requires_human_gate: Optional[bool] = None,
+        network_policy: str = "controlled",
+        artifact_policy: str = "metadata-only",
+        cleanup_policy: str = "phase-owned",
+    ) -> Dict[str, Any]:
+        """Gate a concrete phase action through the shared runtime pipeline."""
+        run_state = self.config.get("_runtime_run_state")
+        pipeline = self.config.get("_runtime_pipeline")
+
+        from core.agent_runtime import (
+            Action,
+            ActionKind,
+            ActionPolicy,
+            ActionStatus,
+            RiskLevel,
+            Task,
+        )
+
+        risk = RiskLevel(risk_level)
+        if not run_state or not pipeline:
+            if risk.is_high_risk():
+                return {
+                    "enabled": False,
+                    "allowed": False,
+                    "action": None,
+                    "decisions": [],
+                    "reason": "High-risk phase action requires runtime policy gate",
+                }
+            return {"enabled": False, "allowed": True, "action": None, "decisions": []}
+        action = Action(
+            name=f"{self.name}.{action_name}",
+            kind=ActionKind.TOOL_CALL,
+            inputs={
+                "phase": self.name,
+                **(inputs or {}),
+            },
+            policy=ActionPolicy(
+                risk_level=risk,
+                requires_auth=True,
+                requires_human_gate=(
+                    risk.is_high_risk() if requires_human_gate is None else requires_human_gate
+                ),
+                allowed_in_dry_run=not risk.is_high_risk(),
+                network_policy=network_policy,
+                artifact_policy=artifact_policy,
+                cleanup_policy=cleanup_policy,
+            ),
+        )
+        task = Task(
+            name=f"{self.name}:{action_name}",
+            description="Concrete phase action gated by runtime middleware.",
+            metadata={"phase": self.name, "action": action_name},
+        )
+        task.add_action(action)
+        run_state.flow.add_task(task)
+
+        decisions = pipeline.evaluate_action(run_state, action)
+        blocked = next((decision for decision in decisions if not decision.allowed), None)
+        if blocked:
+            action.mark_blocked(blocked.reason)
+            run_state.require_gate(action, blocked.reason)
+            return {
+                "enabled": True,
+                "allowed": False,
+                "action": action,
+                "decisions": decisions,
+                "reason": blocked.reason,
+            }
+        if getattr(getattr(run_state, "mode", None), "value", None) == "dry-run":
+            action.mark_skipped({"planned_only": True, "reason": "runtime dry-run"})
+            return {
+                "enabled": True,
+                "allowed": True,
+                "dry_run": True,
+                "action": action,
+                "decisions": decisions,
+                "reason": "runtime dry-run",
+            }
+        action.status = ActionStatus.RUNNING
+        return {"enabled": True, "allowed": True, "action": action, "decisions": decisions}
+
+    @staticmethod
+    def _runtime_complete_action(
+        gate: Dict[str, Any],
+        success: bool,
+        output: Optional[Dict[str, Any]] = None,
+        error: Optional[str] = None,
+    ) -> None:
+        """Mark a gated concrete action completed or failed."""
+        action = gate.get("action") if gate else None
+        if not action:
+            return
+        if success:
+            action.mark_completed(output or {"success": True})
+        else:
+            from datetime import datetime
+
+            action.status = type(action.status).FAILED
+            action.error = error or "runtime action failed"
+            action.output = output or {"success": False}
+            action.updated_at = datetime.now().isoformat()
 
 
 __all__ = ["PhaseResult", "BasePhaseExecutor", "CVE_ID_PATTERN"]
