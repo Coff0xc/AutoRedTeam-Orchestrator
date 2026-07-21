@@ -183,6 +183,15 @@ class HTTPClient:
         """
         self.config = config or HTTPConfig()
         self.middleware_chain = MiddlewareChain()
+        if not allow_private:
+            import os
+
+            allow_private = os.getenv("AUTORT_ALLOW_PRIVATE", "").lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
 
         # SSRF 防护作为第一个中间件
         if ssrf_protection:

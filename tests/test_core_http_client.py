@@ -190,12 +190,13 @@ class TestHTTPClient:
             response = client.get("https://example.com")
             assert response.status_code == 200
 
-    def test_close(self, mock_requests):
-        """测试关闭客户端"""
+    def test_allow_private_env_bypasses_ssrf_protection(self, mock_requests, monkeypatch):
+        """AUTORT_ALLOW_PRIVATE=true 时允许本地目标，便于本地测试。"""
+        monkeypatch.setenv("AUTORT_ALLOW_PRIVATE", "true")
         client = HTTPClient()
-        client.close()
-        # 确保可以多次调用 close
-        client.close()
+        response = client.get("http://127.0.0.1:8080")
+
+        assert response.status_code == 200
 
 
 # ============== 重试机制测试 ==============

@@ -35,6 +35,9 @@
     client.middleware_chain.add(RateLimitMiddleware(requests_per_second=5))
 """
 
+from enum import Enum
+from typing import Optional
+
 # 核心客户端
 from .client import (
     HTTPClient,
@@ -43,14 +46,6 @@ from .client import (
     client_context,
     get_client,
     reset_client,
-)
-
-# 向后兼容 - 保留旧的工厂接口
-from .client_factory import (
-    ClientType,
-    HTTPClientFactory,
-    get_async_client,
-    get_sync_client,
 )
 
 # 配置
@@ -104,6 +99,44 @@ from .session import (
     CookieJar,
     HTTPSession,
 )
+
+
+class ClientType(Enum):
+    """向后兼容的 HTTP 客户端类型。"""
+
+    SYNC = "sync"
+    ASYNC = "async"
+
+
+class HTTPClientFactory:
+    """Compatibility wrapper for the removed client_factory module."""
+
+    @staticmethod
+    def create_client(
+        client_type: ClientType = ClientType.SYNC,
+        config: Optional[HTTPConfig] = None,
+        **kwargs,
+    ) -> HTTPClient:
+        _ = client_type
+        kwargs.pop("force_new", None)
+        return HTTPClient(config=config, **kwargs)
+
+    @staticmethod
+    def get_sync_client(config: Optional[HTTPConfig] = None, **kwargs) -> HTTPClient:
+        return HTTPClientFactory.create_client(ClientType.SYNC, config=config, **kwargs)
+
+    @staticmethod
+    def get_async_client(config: Optional[HTTPConfig] = None, **kwargs) -> HTTPClient:
+        return HTTPClientFactory.create_client(ClientType.ASYNC, config=config, **kwargs)
+
+
+def get_sync_client(config: Optional[HTTPConfig] = None, **kwargs) -> HTTPClient:
+    return HTTPClientFactory.get_sync_client(config=config, **kwargs)
+
+
+def get_async_client(config: Optional[HTTPConfig] = None, **kwargs) -> HTTPClient:
+    return HTTPClientFactory.get_async_client(config=config, **kwargs)
+
 
 __all__ = [
     # 客户端
