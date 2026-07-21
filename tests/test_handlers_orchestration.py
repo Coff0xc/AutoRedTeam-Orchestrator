@@ -349,6 +349,9 @@ class TestExploitVulnerabilityTool:
     @pytest.mark.asyncio
     async def test_exploit_direct_success(self):
         """测试直接利用成功"""
+        from core.agent_runtime import clear_runtime_runs, get_runtime_run
+
+        clear_runtime_runs()
         registered_tools, _, _ = _make_mcp_and_register()
 
         mock_result = MagicMock()
@@ -385,6 +388,8 @@ class TestExploitVulnerabilityTool:
             assert result["status"] == "success"
             assert result["vuln_type"] == "sqli"
             assert result["shell"] is None
+            assert result["runtime"]["summary"]["action_status"]["completed"] == 1
+            assert get_runtime_run(result["runtime"]["run_id"]) is not None
 
     @pytest.mark.asyncio
     async def test_exploit_with_feedback(self):

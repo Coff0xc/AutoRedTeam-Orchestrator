@@ -1044,7 +1044,7 @@ class BeaconServer:
 
         # 会话存储（替代原始的 beacons/tasks/results 分离存储）
         self._sessions: Dict[str, BeaconSession] = {}
-        self._sessions_lock = asyncio.Lock() if False else threading.Lock()
+        self._sessions_lock = threading.Lock()
 
         # 向后兼容的视图
         self.beacons: Dict[str, BeaconInfo] = {}
@@ -1233,9 +1233,6 @@ class BeaconServer:
         self.add_task(beacon_id, task_type, payload, timeout)
         logger.info("任务已下发到 %s: %s (type=%s)", beacon_id, task.id, task_type)
         return task.id
-        self._async_runner: Optional[threading.Thread] = None
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
-        self._site: Optional[Any] = None
 
     def _cleanup_stale_beacons(self) -> int:
         """

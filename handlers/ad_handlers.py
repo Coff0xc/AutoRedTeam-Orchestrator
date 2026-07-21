@@ -18,7 +18,25 @@ from typing import Any, Dict, List, Optional
 from core.security import require_critical_auth
 
 from .error_handling import ErrorCategory, handle_errors, validate_inputs
+from .runtime_helpers import blocked_handler_runtime_response, gate_handler_runtime_action
 from .tooling import tool
+
+
+def _gate_ad_runtime(tool_name: str, inputs: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    gate = gate_handler_runtime_action(
+        tool_name,
+        inputs=inputs,
+        risk_level="critical",
+        source="ad_handler",
+        requires_auth=True,
+        human_approved=True,
+        network_policy="controlled",
+        artifact_policy="metadata-only",
+        cleanup_policy="handler-owned",
+    )
+    if not gate["allowed"]:
+        return blocked_handler_runtime_response(gate)
+    return None
 
 
 def register_ad_tools(mcp, counter, logger):
@@ -65,6 +83,13 @@ def register_ad_tools(mcp, counter, logger):
         Returns:
             枚举结果
         """
+        blocked = _gate_ad_runtime(
+            "ad_enumerate",
+            {"domain": domain, "dc_ip": dc_ip, "enum_type": enum_type, "username": username},
+        )
+        if blocked:
+            return blocked
+
         from core.ad import ad_enumerate as _ad_enumerate
 
         # 调用便捷函数
@@ -146,6 +171,18 @@ def register_ad_tools(mcp, counter, logger):
         Returns:
             攻击结果
         """
+        blocked = _gate_ad_runtime(
+            "ad_kerberos_attack",
+            {
+                "domain": domain,
+                "dc_ip": dc_ip,
+                "attack_type": attack_type,
+                "targets": len(targets or []),
+            },
+        )
+        if blocked:
+            return blocked
+
         from core.ad import kerberos_attack as _kerberos_attack
 
         # 攻击类型映射
@@ -220,6 +257,13 @@ def register_ad_tools(mcp, counter, logger):
         Returns:
             SPN列表
         """
+        blocked = _gate_ad_runtime(
+            "ad_spn_scan",
+            {"domain": domain, "dc_ip": dc_ip, "username": username, "service_class": service_class},
+        )
+        if blocked:
+            return blocked
+
         from core.ad import ADEnumerator
 
         enumerator = ADEnumerator(

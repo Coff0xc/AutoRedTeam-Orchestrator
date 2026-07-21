@@ -14,7 +14,32 @@ from .error_handling import (
     handle_errors,
     validate_inputs,
 )
+from .runtime_helpers import (
+    blocked_handler_runtime_response,
+    complete_handler_runtime_action,
+    complete_handler_runtime_payload,
+    gate_handler_runtime_action,
+)
 from .tooling import tool
+
+
+def _gate_recon_runtime(tool_name: str, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    return gate_handler_runtime_action(
+        tool_name,
+        inputs=inputs,
+        risk_level="moderate",
+        source="recon_handler",
+        network_policy="controlled",
+    )
+
+
+def _fail_recon_runtime(gate: Dict[str, Any], exc: Exception) -> None:
+    complete_handler_runtime_action(
+        gate,
+        False,
+        output={"success": False},
+        error=str(exc),
+    )
 
 
 def register_recon_tools(mcp, counter, logger):
@@ -43,11 +68,23 @@ def register_recon_tools(mcp, counter, logger):
         """
         from core.recon import ReconConfig, StandardReconEngine
 
-        config = ReconConfig(quick_mode=quick_mode)
-        engine = StandardReconEngine(target, config)
-        result = await engine.async_run()
+        runtime_gate = _gate_recon_runtime(
+            "full_recon",
+            {"target": target, "quick_mode": quick_mode},
+        )
+        if not runtime_gate["allowed"]:
+            return blocked_handler_runtime_response(runtime_gate)
 
-        return {"success": True, "target": target, "data": result.to_dict()}
+        try:
+            config = ReconConfig(quick_mode=quick_mode)
+            engine = StandardReconEngine(target, config)
+            result = await engine.async_run()
+        except Exception as exc:
+            _fail_recon_runtime(runtime_gate, exc)
+            raise
+
+        payload = {"success": True, "target": target, "data": result.to_dict()}
+        return complete_handler_runtime_payload(runtime_gate, payload, summary_keys=["target"])
 
     @tool(mcp)
     @validate_inputs(target="target", ports="port_range")
@@ -65,7 +102,18 @@ def register_recon_tools(mcp, counter, logger):
         """
         from core.recon import async_scan_ports
 
-        results = await async_scan_ports(target, ports, timeout=timeout)
+        runtime_gate = _gate_recon_runtime(
+            "port_scan",
+            {"target": target, "ports": ports, "timeout": timeout},
+        )
+        if not runtime_gate["allowed"]:
+            return blocked_handler_runtime_response(runtime_gate)
+
+        try:
+            results = await async_scan_ports(target, ports, timeout=timeout)
+        except Exception as exc:
+            _fail_recon_runtime(runtime_gate, exc)
+            raise
 
         open_ports = [
             {"port": r.port, "state": r.state, "service": r.service, "version": r.version}
@@ -73,13 +121,18 @@ def register_recon_tools(mcp, counter, logger):
             if r.state == "open"
         ]
 
-        return {
+        payload = {
             "success": True,
             "target": target,
             "open_ports": open_ports,
             "total_scanned": len(results),
             "total_open": len(open_ports),
         }
+        return complete_handler_runtime_payload(
+            runtime_gate,
+            payload,
+            summary_keys=["target", "total_scanned", "total_open"],
+        )
 
     @tool(mcp)
     @validate_inputs(url="url")
@@ -99,9 +152,17 @@ def register_recon_tools(mcp, counter, logger):
 
         from core.recon import identify_fingerprints
 
-        results = await asyncio.to_thread(identify_fingerprints, url)
+        runtime_gate = _gate_recon_runtime("fingerprint", {"url": url})
+        if not runtime_gate["allowed"]:
+            return blocked_handler_runtime_response(runtime_gate)
 
-        return {
+        try:
+            results = await asyncio.to_thread(identify_fingerprints, url)
+        except Exception as exc:
+            _fail_recon_runtime(runtime_gate, exc)
+            raise
+
+        payload = {
             "success": True,
             "url": url,
             "fingerprints": [
@@ -117,6 +178,11 @@ def register_recon_tools(mcp, counter, logger):
             ],
             "count": len(results),
         }
+        return complete_handler_runtime_payload(
+            runtime_gate,
+            payload,
+            summary_keys=["url", "count"],
+        )
 
     @tool(mcp)
     @validate_inputs(domain="domain")
@@ -138,18 +204,34 @@ def register_recon_tools(mcp, counter, logger):
         """
         from core.recon import async_enumerate_subdomains
 
-        results = await async_enumerate_subdomains(domain, methods=methods)
+        runtime_gate = _gate_recon_runtime(
+            "subdomain_enum",
+            {"domain": domain, "methods": methods or [], "limit": limit},
+        )
+        if not runtime_gate["allowed"]:
+            return blocked_handler_runtime_response(runtime_gate)
+
+        try:
+            results = await async_enumerate_subdomains(domain, methods=methods)
+        except Exception as exc:
+            _fail_recon_runtime(runtime_gate, exc)
+            raise
 
         subdomains = [
             {"subdomain": r.subdomain, "ip": r.ip, "source": r.source} for r in results[:limit]
         ]
 
-        return {
+        payload = {
             "success": True,
             "domain": domain,
             "subdomains": subdomains,
             "count": len(subdomains),
         }
+        return complete_handler_runtime_payload(
+            runtime_gate,
+            payload,
+            summary_keys=["domain", "count"],
+        )
 
     @tool(mcp)
     @validate_inputs(url="url")
@@ -169,7 +251,22 @@ def register_recon_tools(mcp, counter, logger):
         """
         from core.recon import async_scan_directories
 
-        results = await async_scan_directories(url, wordlist=wordlist, extensions=extensions)
+        runtime_gate = _gate_recon_runtime(
+            "dir_scan",
+            {"url": url, "wordlist": wordlist, "extensions": extensions or []},
+        )
+        if not runtime_gate["allowed"]:
+            return blocked_handler_runtime_response(runtime_gate)
+
+        try:
+            results = await async_scan_directories(
+                url,
+                wordlist=wordlist,
+                extensions=extensions,
+            )
+        except Exception as exc:
+            _fail_recon_runtime(runtime_gate, exc)
+            raise
 
         directories = [
             {
@@ -182,7 +279,17 @@ def register_recon_tools(mcp, counter, logger):
             if r.status_code in [200, 301, 302, 403]
         ]
 
-        return {"success": True, "url": url, "directories": directories, "count": len(directories)}
+        payload = {
+            "success": True,
+            "url": url,
+            "directories": directories,
+            "count": len(directories),
+        }
+        return complete_handler_runtime_payload(
+            runtime_gate,
+            payload,
+            summary_keys=["url", "count"],
+        )
 
     @tool(mcp)
     @validate_inputs(domain="domain")
@@ -201,13 +308,29 @@ def register_recon_tools(mcp, counter, logger):
 
         from core.recon import get_dns_records
 
-        results = await asyncio.to_thread(get_dns_records, domain, record_types=record_types)
+        runtime_gate = _gate_recon_runtime(
+            "dns_lookup",
+            {"domain": domain, "record_types": record_types or []},
+        )
+        if not runtime_gate["allowed"]:
+            return blocked_handler_runtime_response(runtime_gate)
 
-        return {
+        try:
+            results = await asyncio.to_thread(get_dns_records, domain, record_types=record_types)
+        except Exception as exc:
+            _fail_recon_runtime(runtime_gate, exc)
+            raise
+
+        payload = {
             "success": True,
             "domain": domain,
             "records": results.to_dict() if hasattr(results, "to_dict") else results,
         }
+        return complete_handler_runtime_payload(
+            runtime_gate,
+            payload,
+            summary_keys=["domain"],
+        )
 
     @tool(mcp)
     @validate_inputs(url="url")
@@ -225,9 +348,17 @@ def register_recon_tools(mcp, counter, logger):
 
         from core.recon import detect_technologies
 
-        results = await asyncio.to_thread(detect_technologies, url)
+        runtime_gate = _gate_recon_runtime("tech_detect", {"url": url})
+        if not runtime_gate["allowed"]:
+            return blocked_handler_runtime_response(runtime_gate)
 
-        return {
+        try:
+            results = await asyncio.to_thread(detect_technologies, url)
+        except Exception as exc:
+            _fail_recon_runtime(runtime_gate, exc)
+            raise
+
+        payload = {
             "success": True,
             "url": url,
             "technologies": [
@@ -240,6 +371,11 @@ def register_recon_tools(mcp, counter, logger):
                 for t in results
             ],
         }
+        return complete_handler_runtime_payload(
+            runtime_gate,
+            payload,
+            summary_keys=["url", "technologies"],
+        )
 
     @tool(mcp)
     @validate_inputs(url="url")
@@ -257,22 +393,33 @@ def register_recon_tools(mcp, counter, logger):
 
         from core.recon import detect_waf
 
-        result = await asyncio.to_thread(detect_waf, url)
+        runtime_gate = _gate_recon_runtime("waf_detect", {"url": url})
+        if not runtime_gate["allowed"]:
+            return blocked_handler_runtime_response(runtime_gate)
 
-        return {
+        try:
+            result = await asyncio.to_thread(detect_waf, url)
+        except Exception as exc:
+            _fail_recon_runtime(runtime_gate, exc)
+            raise
+
+        payload = {
             "success": True,
             "url": url,
             "waf_detected": result.detected if hasattr(result, "detected") else bool(result),
             "waf_name": result.name if hasattr(result, "name") else None,
             "confidence": result.confidence if hasattr(result, "confidence") else None,
         }
+        return complete_handler_runtime_payload(
+            runtime_gate,
+            payload,
+            summary_keys=["url", "waf_detected", "waf_name", "confidence"],
+        )
 
     @tool(mcp)
     @validate_inputs(domain="domain")
     @handle_errors(logger, ErrorCategory.RECON, extract_domain)
-    async def passive_subdomain_enum(
-        domain: str, timeout: int = 10
-    ) -> Dict[str, Any]:
+    async def passive_subdomain_enum(domain: str, timeout: int = 10) -> Dict[str, Any]:
         """被动子域名枚举 - 通过公开API零流量发现子域名
 
         查询6个公开数据源: crt.sh、HackerTarget、ThreatCrowd、
@@ -287,23 +434,36 @@ def register_recon_tools(mcp, counter, logger):
         """
         from core.recon.passive_recon import PassiveRecon
 
-        recon = PassiveRecon(timeout=timeout)
-        by_source = await recon.discover_subdomains_with_sources(domain)
+        runtime_gate = _gate_recon_runtime(
+            "passive_subdomain_enum",
+            {"domain": domain, "timeout": timeout},
+        )
+        if not runtime_gate["allowed"]:
+            return blocked_handler_runtime_response(runtime_gate)
+
+        try:
+            recon = PassiveRecon(timeout=timeout)
+            by_source = await recon.discover_subdomains_with_sources(domain)
+        except Exception as exc:
+            _fail_recon_runtime(runtime_gate, exc)
+            raise
 
         all_subs = set()
         for subs in by_source.values():
             all_subs.update(subs)
 
-        return {
+        payload = {
             "success": True,
             "domain": domain,
             "subdomains": sorted(all_subs),
             "count": len(all_subs),
-            "by_source": {
-                k: {"subdomains": v, "count": len(v)}
-                for k, v in by_source.items()
-            },
+            "by_source": {k: {"subdomains": v, "count": len(v)} for k, v in by_source.items()},
         }
+        return complete_handler_runtime_payload(
+            runtime_gate,
+            payload,
+            summary_keys=["domain", "count"],
+        )
 
     counter.add("recon", 9)
     logger.info("[Recon] 已注册 9 个侦察工具 (含被动侦察)")

@@ -225,6 +225,11 @@ class KerberosAttacks:
         tickets = []
 
         spn_list = spns or []
+        if target_users and not spn_list:
+            logger.info(
+                "Kerberoasting target_users provided without SPNs; "
+                "LDAP SPN discovery is not available in offline mode"
+            )
 
         for spn in spn_list:
             try:

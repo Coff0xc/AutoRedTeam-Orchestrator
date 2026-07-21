@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 # 尝试导入 pywinrm
 try:
     from winrm import Session
-    from winrm.protocol import Protocol
 
     HAS_WINRM = True
 except ImportError:

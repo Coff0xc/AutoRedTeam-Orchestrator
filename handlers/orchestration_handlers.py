@@ -24,6 +24,10 @@ from core.security import (
 )
 
 from .error_handling import ErrorCategory, handle_errors, validate_inputs
+from .runtime_helpers import (
+    complete_handler_runtime_action as _shared_complete_handler_runtime_action,
+    gate_handler_runtime_action as _shared_gate_handler_runtime_action,
+)
 from .tooling import tool
 
 # ==================== 共享数据类 ====================
@@ -83,6 +87,40 @@ def extract_cve_context(args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Dict[s
         ctx["target"] = kwargs.get("target", "")
         ctx["cve_id"] = kwargs.get("cve_id", "")
     return ctx
+
+
+def _gate_handler_runtime_action(
+    tool_name: str,
+    inputs: Optional[Dict[str, Any]] = None,
+    risk_level: str = "critical",
+) -> Dict[str, Any]:
+    """Gate direct orchestration handler actions through runtime middleware."""
+    return _shared_gate_handler_runtime_action(
+        tool_name,
+        inputs=inputs,
+        risk_level=risk_level,
+        source="orchestration_handler",
+        requires_auth=True,
+        human_approved=True,
+        network_policy="controlled",
+        artifact_policy="metadata-only",
+        cleanup_policy="handler-owned",
+    )
+
+
+def _complete_handler_runtime_action(
+    gate: Dict[str, Any],
+    success: bool,
+    output: Optional[Dict[str, Any]] = None,
+    error: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Complete a handler runtime action and return serializable metadata."""
+    return _shared_complete_handler_runtime_action(
+        gate,
+        success=success,
+        output=output,
+        error=error,
+    )
 
 
 def register_orchestration_tools(mcp, counter, logger):
@@ -280,6 +318,21 @@ def register_orchestration_tools(mcp, counter, logger):
             extra=detection_result.get("extra", {}),
         )
 
+        runtime_gate = _gate_handler_runtime_action(
+            "exploit_vulnerability",
+            inputs={
+                "url": wrapped.url,
+                "vuln_type": wrapped.vuln_type,
+                "use_feedback": use_feedback,
+            },
+        )
+        if not runtime_gate["allowed"]:
+            return {
+                "success": False,
+                "error": runtime_gate["reason"],
+                "runtime": _complete_handler_runtime_action(runtime_gate, False),
+            }
+
         engine = ExploitEngine()
 
         if use_feedback:
@@ -296,6 +349,12 @@ def register_orchestration_tools(mcp, counter, logger):
 
             if feedback_result.success:
                 result = feedback_result.result
+                runtime = _complete_handler_runtime_action(
+                    runtime_gate,
+                    bool(result.success),
+                    output={"success": bool(result.success), "vuln_type": result.vuln_type},
+                    error=result.error,
+                )
                 return {
                     "success": result.success,
                     "status": result.status.value,
@@ -314,8 +373,15 @@ def register_orchestration_tools(mcp, counter, logger):
                         "adjustments_made": feedback_result.adjustments_made,
                         "final_strategy": feedback_result.final_strategy,
                     },
+                    "runtime": runtime,
                 }
             else:
+                runtime = _complete_handler_runtime_action(
+                    runtime_gate,
+                    False,
+                    output={"success": False, "attempts": feedback_result.attempts},
+                    error=feedback_result.error,
+                )
                 return {
                     "success": False,
                     "error": feedback_result.error,
@@ -324,10 +390,17 @@ def register_orchestration_tools(mcp, counter, logger):
                         "failure_reasons": feedback_result.failure_reasons,
                         "adjustments_tried": feedback_result.adjustments_tried,
                     },
+                    "runtime": runtime,
                 }
         else:
             # 直接执行
             result = await engine.async_exploit(wrapped, targets=targets)
+            runtime = _complete_handler_runtime_action(
+                runtime_gate,
+                bool(result.success),
+                output={"success": bool(result.success), "vuln_type": result.vuln_type},
+                error=result.error,
+            )
 
             return {
                 "success": result.success,
@@ -342,6 +415,7 @@ def register_orchestration_tools(mcp, counter, logger):
                 "files": [f.to_dict() for f in result.files] if result.files else None,
                 "execution_time_ms": result.execution_time_ms,
                 "error": result.error,
+                "runtime": runtime,
             }
 
     @tool(mcp)
@@ -365,8 +439,25 @@ def register_orchestration_tools(mcp, counter, logger):
         """
         from core.exploit import ExploitEngine
 
+        runtime_gate = _gate_handler_runtime_action(
+            "exploit_by_cve",
+            inputs={"target": target, "cve_id": cve_id},
+        )
+        if not runtime_gate["allowed"]:
+            return {
+                "success": False,
+                "error": runtime_gate["reason"],
+                "runtime": _complete_handler_runtime_action(runtime_gate, False),
+            }
+
         engine = ExploitEngine()
         result = engine.exploit_cve(target, cve_id, variables=variables)
+        runtime = _complete_handler_runtime_action(
+            runtime_gate,
+            bool(result.success),
+            output={"success": bool(result.success), "vuln_type": result.vuln_type},
+            error=result.error,
+        )
 
         return {
             "success": result.success,
@@ -379,6 +470,7 @@ def register_orchestration_tools(mcp, counter, logger):
             "execution_time_ms": result.execution_time_ms,
             "metadata": result.metadata,
             "error": result.error,
+            "runtime": runtime,
         }
 
     @tool(mcp)
@@ -450,9 +542,33 @@ def register_orchestration_tools(mcp, counter, logger):
 
         strategy = OrchestrationStrategy.PARALLEL if parallel else OrchestrationStrategy.SEQUENTIAL
 
+        runtime_gate = _gate_handler_runtime_action(
+            "exploit_orchestrate",
+            inputs={
+                "detections": len(detections),
+                "top_n": top_n,
+                "verify_first": verify_first,
+                "parallel": parallel,
+            },
+        )
+        if not runtime_gate["allowed"]:
+            return {
+                "success": False,
+                "error": runtime_gate["reason"],
+                "runtime": _complete_handler_runtime_action(runtime_gate, False),
+            }
+
         orchestrator = ExploitOrchestrator()
         result = await orchestrator.orchestrate(
             detections=detections, top_n=top_n, verify_first=verify_first, strategy=strategy
+        )
+        runtime = _complete_handler_runtime_action(
+            runtime_gate,
+            bool(result.success),
+            output={
+                "success": bool(result.success),
+                "successful_count": result.successful_count,
+            },
         )
 
         return {
@@ -473,6 +589,7 @@ def register_orchestration_tools(mcp, counter, logger):
             ],
             "execution_time_ms": result.execution_time_ms,
             "strategy_used": strategy.value,
+            "runtime": runtime,
         }
 
     @tool(mcp)
@@ -502,8 +619,29 @@ def register_orchestration_tools(mcp, counter, logger):
         """
         from core.exploit import exploit_with_retry as _exploit_with_retry
 
+        runtime_gate = _gate_handler_runtime_action(
+            "exploit_with_retry",
+            inputs={
+                "url": detection_result.get("url"),
+                "vuln_type": detection_result.get("vuln_type", detection_result.get("type")),
+                "max_retries": max_retries,
+            },
+        )
+        if not runtime_gate["allowed"]:
+            return {
+                "success": False,
+                "error": runtime_gate["reason"],
+                "runtime": _complete_handler_runtime_action(runtime_gate, False),
+            }
+
         result = await _exploit_with_retry(
             detection=detection_result, max_retries=max_retries, targets=targets
+        )
+        runtime = _complete_handler_runtime_action(
+            runtime_gate,
+            bool(result.success),
+            output={"success": bool(result.success), "attempts": result.attempts},
+            error=result.error,
         )
 
         return {
@@ -515,6 +653,7 @@ def register_orchestration_tools(mcp, counter, logger):
             "final_strategy": result.final_strategy,
             "total_time_ms": result.total_time_ms,
             "error": result.error,
+            "runtime": runtime,
         }
 
     @tool(mcp)
@@ -557,6 +696,23 @@ def register_orchestration_tools(mcp, counter, logger):
             extra=detection_result.get("extra", {}),
         )
 
+        runtime_gate = _gate_handler_runtime_action(
+            "verify_and_exploit",
+            inputs={
+                "url": wrapped.url,
+                "vuln_type": wrapped.vuln_type,
+                "verification_method": verification_method,
+            },
+        )
+        if not runtime_gate["allowed"]:
+            return {
+                "success": False,
+                "verified": False,
+                "verification_method": verification_method,
+                "error": runtime_gate["reason"],
+                "runtime": _complete_handler_runtime_action(runtime_gate, False),
+            }
+
         # 第一步：验证漏洞
         verifier = VulnerabilityVerifier()
         verification_results = verifier.batch_verify(
@@ -581,11 +737,26 @@ def register_orchestration_tools(mcp, counter, logger):
                 "verification_method": verification_method,
                 "verification_details": verification_result,
                 "error": "漏洞验证失败，可能是误报",
+                "runtime": _complete_handler_runtime_action(
+                    runtime_gate,
+                    False,
+                    output={"verified": False},
+                    error="漏洞验证失败，可能是误报",
+                ),
             }
 
         # 第二步：执行利用
         engine = ExploitEngine()
         exploit_result = await engine.async_exploit(wrapped, targets=targets)
+        runtime = _complete_handler_runtime_action(
+            runtime_gate,
+            bool(exploit_result.success),
+            output={
+                "success": bool(exploit_result.success),
+                "vuln_type": exploit_result.vuln_type,
+            },
+            error=exploit_result.error,
+        )
 
         return {
             "success": exploit_result.success,
@@ -606,6 +777,7 @@ def register_orchestration_tools(mcp, counter, logger):
                 "execution_time_ms": exploit_result.execution_time_ms,
                 "error": exploit_result.error,
             },
+            "runtime": runtime,
         }
 
     @tool(mcp)

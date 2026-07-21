@@ -17,6 +17,11 @@ from typing import Any, Dict, List, Optional
 from core.security import require_critical_auth
 
 from .error_handling import ErrorCategory, handle_errors
+from .runtime_helpers import (
+    blocked_handler_runtime_response,
+    complete_handler_runtime_payload,
+    gate_handler_runtime_action,
+)
 from .tooling import tool
 
 
@@ -37,6 +42,7 @@ def register_persistence_tools(mcp, counter, logger):
         payload: Optional[str] = None,
         name: str = "WindowsUpdate",
         trigger: str = "logon",
+        execute: bool = False,
     ) -> Dict[str, Any]:
         """Windows持久化 - 在Windows系统上建立持久化
 
@@ -78,8 +84,20 @@ def register_persistence_tools(mcp, counter, logger):
 
         core_method = method_map.get(method, method)
 
-        # 调用便捷函数
-        kwargs = {}
+        gate = gate_handler_runtime_action(
+            "persistence.windows",
+            inputs={"method": method, "name": name, "trigger": trigger, "execute": execute},
+            risk_level="critical" if execute else "high",
+            requires_auth=True,
+            human_approved=execute,
+            network_policy="deny",
+            artifact_policy="metadata-only",
+            cleanup_policy="required",
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
+        kwargs = {"execute": execute}
         if core_method == "task" and trigger:
             kwargs["trigger"] = trigger
 
@@ -87,26 +105,36 @@ def register_persistence_tools(mcp, counter, logger):
 
         # windows_persist 返回 dict，直接使用
         if isinstance(result, dict):
-            return {
-                "success": result.get("success", False),
-                "method": method,
-                "name": name,
-                "location": result.get("location"),
-                "trigger": trigger if core_method == "task" else None,
-                "cleanup_command": result.get("cleanup_command"),
-                "error": result.get("error"),
-            }
+            return complete_handler_runtime_payload(
+                gate,
+                {
+                    "success": result.get("success", False),
+                    "method": method,
+                    "name": name,
+                    "location": result.get("location"),
+                    "trigger": trigger if core_method == "task" else None,
+                    "cleanup_command": result.get("cleanup_command"),
+                    "executed": result.get("executed", False),
+                    "error": result.get("error"),
+                },
+                summary_keys=("method", "location", "executed"),
+            )
 
         # 兼容返回对象的情况
-        return {
-            "success": getattr(result, "success", False),
-            "method": method,
-            "name": name,
-            "location": getattr(result, "location", None),
-            "trigger": trigger if core_method == "task" else None,
-            "cleanup_command": getattr(result, "cleanup_command", None),
-            "error": getattr(result, "error", None),
-        }
+        return complete_handler_runtime_payload(
+            gate,
+            {
+                "success": getattr(result, "success", False),
+                "method": method,
+                "name": name,
+                "location": getattr(result, "location", None),
+                "trigger": trigger if core_method == "task" else None,
+                "cleanup_command": getattr(result, "cleanup_command", None),
+                "executed": getattr(result, "executed", False),
+                "error": getattr(result, "error", None),
+            },
+            summary_keys=("method", "location", "executed"),
+        )
 
     @tool(mcp)
     @require_critical_auth
@@ -116,6 +144,7 @@ def register_persistence_tools(mcp, counter, logger):
         payload: Optional[str] = None,
         name: str = "system-update",
         schedule: str = "*/5 * * * *",
+        execute: bool = False,
     ) -> Dict[str, Any]:
         """Linux持久化 - 在Linux系统上建立持久化
 
@@ -162,8 +191,20 @@ def register_persistence_tools(mcp, counter, logger):
 
         core_method = method_map.get(method, method)
 
-        # 调用便捷函数
-        kwargs = {}
+        gate = gate_handler_runtime_action(
+            "persistence.linux",
+            inputs={"method": method, "name": name, "schedule": schedule, "execute": execute},
+            risk_level="critical" if execute else "high",
+            requires_auth=True,
+            human_approved=execute,
+            network_policy="deny",
+            artifact_policy="metadata-only",
+            cleanup_policy="required",
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
+        kwargs = {"execute": execute}
         if core_method == "crontab" and schedule:
             kwargs["schedule"] = schedule
 
@@ -171,26 +212,36 @@ def register_persistence_tools(mcp, counter, logger):
 
         # linux_persist 返回 dict
         if isinstance(result, dict):
-            return {
-                "success": result.get("success", False),
+            return complete_handler_runtime_payload(
+                gate,
+                {
+                    "success": result.get("success", False),
+                    "method": method,
+                    "name": name,
+                    "location": result.get("location"),
+                    "schedule": schedule if core_method == "crontab" else None,
+                    "install_command": result.get("install_command"),
+                    "cleanup_command": result.get("cleanup_command"),
+                    "executed": result.get("executed", False),
+                    "error": result.get("error"),
+                },
+                summary_keys=("method", "location", "executed"),
+            )
+
+        return complete_handler_runtime_payload(
+            gate,
+            {
+                "success": getattr(result, "success", False),
                 "method": method,
                 "name": name,
-                "location": result.get("location"),
+                "location": getattr(result, "location", None),
                 "schedule": schedule if core_method == "crontab" else None,
-                "install_command": result.get("install_command"),
-                "cleanup_command": result.get("cleanup_command"),
-                "error": result.get("error"),
-            }
-
-        return {
-            "success": getattr(result, "success", False),
-            "method": method,
-            "name": name,
-            "location": getattr(result, "location", None),
-            "schedule": schedule if core_method == "crontab" else None,
-            "cleanup_command": getattr(result, "cleanup_command", None),
-            "error": getattr(result, "error", None),
-        }
+                "cleanup_command": getattr(result, "cleanup_command", None),
+                "executed": getattr(result, "executed", False),
+                "error": getattr(result, "error", None),
+            },
+            summary_keys=("method", "location", "executed"),
+        )
 
     @tool(mcp)
     @require_critical_auth

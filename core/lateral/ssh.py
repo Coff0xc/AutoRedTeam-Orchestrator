@@ -35,15 +35,12 @@ try:
     import paramiko
     from paramiko import (
         AuthenticationException,
-        Channel,
         DSSKey,
         ECDSAKey,
         Ed25519Key,
         RSAKey,
-        SFTPClient,
         SSHClient,
         SSHException,
-        Transport,
     )
 
     HAS_PARAMIKO = True

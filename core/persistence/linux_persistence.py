@@ -68,7 +68,7 @@ class LinuxPersistence:
         print(result.install_command)  # 手动执行
     """
 
-    def __init__(self, execute: bool = True):
+    def __init__(self, execute: bool = False):
         """
         Args:
             execute: True=直接执行安装命令, False=仅生成命令
@@ -642,7 +642,7 @@ def linux_persist(command: str, method: str = "crontab", **kwargs) -> Dict[str, 
         method: 持久化方法
         **kwargs: 其他参数
     """
-    persistence = LinuxPersistence()
+    persistence = LinuxPersistence(execute=bool(kwargs.pop("execute", False)))
 
     method_map: Dict[str, Callable[..., PersistenceResult]] = {
         "crontab": persistence.crontab,
@@ -671,6 +671,7 @@ def linux_persist(command: str, method: str = "crontab", **kwargs) -> Dict[str, 
             "install_command": persist_result.install_command,
             "cleanup_command": persist_result.cleanup_command,
             "content": persist_result.content,
+            "executed": persist_result.executed,
             "error": persist_result.error,
         }
 

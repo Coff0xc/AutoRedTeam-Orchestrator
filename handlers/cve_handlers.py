@@ -8,7 +8,26 @@ from typing import Any, Dict, List, Optional
 from core.security import require_critical_auth, require_dangerous_auth
 
 from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
+from .runtime_helpers import (
+    blocked_handler_runtime_response,
+    complete_handler_runtime_payload,
+    gate_handler_runtime_action,
+)
 from .tooling import tool
+
+
+def _gate_cve_runtime(tool_name: str, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    return gate_handler_runtime_action(
+        tool_name,
+        inputs=inputs,
+        risk_level="critical",
+        source="cve_handler",
+        requires_auth=True,
+        human_approved=True,
+        network_policy="controlled",
+        artifact_policy="metadata-only",
+        cleanup_policy="handler-owned",
+    )
 
 
 def register_cve_tools(mcp, counter, logger):
@@ -120,27 +139,42 @@ def register_cve_tools(mcp, counter, logger):
         """
         from core.cve.poc_engine import get_poc_engine
 
+        gate = _gate_cve_runtime(
+            "poc_execute",
+            {"target": target, "template_id": template_id},
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
         engine = get_poc_engine()
         template = engine.get_template(template_id)
 
         if not template:
-            return {
-                "success": False,
-                "error": f"模板不存在: {template_id}",
-                "available_templates": engine.list_templates()[:10],
-            }
+            return complete_handler_runtime_payload(
+                gate,
+                {
+                    "success": False,
+                    "error": f"模板不存在: {template_id}",
+                    "available_templates": engine.list_templates()[:10],
+                },
+                summary_keys=("template_id",),
+            )
 
         result = engine.execute(target, template, variables)
 
-        return {
-            "success": result.success,
-            "vulnerable": result.vulnerable,
-            "template_id": template_id,
-            "target": target,
-            "evidence": result.evidence,
-            "extracted": result.extracted,
-            "execution_time_ms": result.execution_time_ms,
-        }
+        return complete_handler_runtime_payload(
+            gate,
+            {
+                "success": result.success,
+                "vulnerable": result.vulnerable,
+                "template_id": template_id,
+                "target": target,
+                "evidence": result.evidence,
+                "extracted": result.extracted,
+                "execution_time_ms": result.execution_time_ms,
+            },
+            summary_keys=("template_id", "target", "vulnerable"),
+        )
 
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.CVE)
@@ -189,23 +223,34 @@ def register_cve_tools(mcp, counter, logger):
         """
         from core.cve.auto_exploit import auto_exploit_cve
 
+        gate = _gate_cve_runtime(
+            "cve_auto_exploit",
+            {"target": target, "cve_id": cve_id},
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
         result = await auto_exploit_cve(target, cve_id, custom_vars)
 
-        return {
-            "success": result.success,
-            "status": result.status.value,
-            "cve_id": cve_id,
-            "target": target,
-            "vulnerable": result.vulnerable,
-            "vuln_type": result.vuln_type,
-            "evidence": result.evidence,
-            "poc_yaml": result.poc_yaml[:2000] if result.poc_yaml else None,
-            "poc_template_path": result.poc_template_path,
-            "exploit_data": result.exploit_data,
-            "execution_time_ms": result.execution_time_ms,
-            "steps": result.steps,
-            "error": result.error,
-        }
+        return complete_handler_runtime_payload(
+            gate,
+            {
+                "success": result.success,
+                "status": result.status.value,
+                "cve_id": cve_id,
+                "target": target,
+                "vulnerable": result.vulnerable,
+                "vuln_type": result.vuln_type,
+                "evidence": result.evidence,
+                "poc_yaml": result.poc_yaml[:2000] if result.poc_yaml else None,
+                "poc_template_path": result.poc_template_path,
+                "exploit_data": result.exploit_data,
+                "execution_time_ms": result.execution_time_ms,
+                "steps": result.steps,
+                "error": result.error,
+            },
+            summary_keys=("cve_id", "target", "vulnerable"),
+        )
 
     @tool(mcp)
     @require_critical_auth
@@ -236,24 +281,35 @@ def register_cve_tools(mcp, counter, logger):
         """
         from core.cve.auto_exploit import exploit_cve_with_description
 
+        gate = _gate_cve_runtime(
+            "cve_exploit_with_desc",
+            {"target": target, "cve_id": cve_id, "severity": severity},
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
         result = await exploit_cve_with_description(
             target, cve_id, description, severity, custom_vars
         )
 
-        return {
-            "success": result.success,
-            "status": result.status.value,
-            "cve_id": cve_id,
-            "target": target,
-            "vulnerable": result.vulnerable,
-            "vuln_type": result.vuln_type,
-            "evidence": result.evidence,
-            "poc_yaml": result.poc_yaml[:2000] if result.poc_yaml else None,
-            "exploit_data": result.exploit_data,
-            "execution_time_ms": result.execution_time_ms,
-            "steps": result.steps,
-            "error": result.error,
-        }
+        return complete_handler_runtime_payload(
+            gate,
+            {
+                "success": result.success,
+                "status": result.status.value,
+                "cve_id": cve_id,
+                "target": target,
+                "vulnerable": result.vulnerable,
+                "vuln_type": result.vuln_type,
+                "evidence": result.evidence,
+                "poc_yaml": result.poc_yaml[:2000] if result.poc_yaml else None,
+                "exploit_data": result.exploit_data,
+                "execution_time_ms": result.execution_time_ms,
+                "steps": result.steps,
+                "error": result.error,
+            },
+            summary_keys=("cve_id", "target", "vulnerable"),
+        )
 
     @tool(mcp)
     @require_dangerous_auth

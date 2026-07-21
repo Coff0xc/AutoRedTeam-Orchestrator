@@ -41,7 +41,10 @@ class TestFullReconTool:
     @pytest.mark.asyncio
     async def test_full_recon_success(self):
         """测试完整侦察成功场景"""
+        from core.agent_runtime import clear_runtime_runs, get_runtime_run
         from handlers.recon_handlers import register_recon_tools
+
+        clear_runtime_runs()
 
         # 模拟 MCP 和依赖
         mock_mcp = MagicMock()
@@ -86,10 +89,14 @@ class TestFullReconTool:
             assert "data" in result
             assert result["data"]["target"] == "https://example.com"
             assert result["data"]["dns"]["ip"] == "1.2.3.4"
+            assert result["data"]["runtime"]["summary"]["action_status"]["completed"] == 1
+            assert get_runtime_run(result["data"]["runtime"]["run_id"]) is not None
 
             # 验证引擎被正确初始化
             mock_engine_class.assert_called_once()
             mock_engine.async_run.assert_called_once()
+
+        clear_runtime_runs()
 
     @pytest.mark.asyncio
     async def test_full_recon_exception(self):

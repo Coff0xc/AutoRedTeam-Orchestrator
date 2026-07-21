@@ -26,7 +26,30 @@ from .error_handling import (
     handle_external_tool_errors,
     validate_inputs,
 )
+from .runtime_helpers import (
+    blocked_handler_runtime_response,
+    complete_handler_runtime_payload,
+    gate_handler_runtime_action,
+)
 from .tooling import tool
+
+
+def _gate_external_runtime(
+    tool_name: str,
+    inputs: Dict[str, Any],
+    risk_level: str = "high",
+) -> Dict[str, Any]:
+    return gate_handler_runtime_action(
+        tool_name,
+        inputs=inputs,
+        risk_level=risk_level,
+        source="external_tools_handler",
+        requires_auth=True,
+        human_approved=True,
+        network_policy="controlled",
+        artifact_policy="metadata-only",
+        cleanup_policy="handler-owned",
+    )
 
 
 def register_external_tools(mcp, counter, logger):
@@ -87,9 +110,20 @@ def register_external_tools(mcp, counter, logger):
         if ports == "top100":
             ports = "21,22,23,25,53,80,110,111,135,139,143,443,445,993,995,1723,3306,3389,5900,8080"
 
+        gate = _gate_external_runtime(
+            "ext_nmap_scan",
+            {"target": target, "ports": ports, "preset": preset},
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
         result = await run_nmap(target=target, ports=ports, preset=preset, extra_args=extra_args)
 
-        return result
+        return complete_handler_runtime_payload(
+            gate,
+            result,
+            summary_keys=("success", "hosts", "ports"),
+        )
 
     counter.add("external_tools", 1)
 
@@ -143,9 +177,20 @@ def register_external_tools(mcp, counter, logger):
         if severity:
             args.extend(["-severity", severity])
 
+        gate = _gate_external_runtime(
+            "ext_nuclei_scan",
+            {"target": target, "preset": preset, "severity": severity, "tags": tags},
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
         result = await run_nuclei(target=target, preset=preset, extra_args=args if args else None)
 
-        return result
+        return complete_handler_runtime_payload(
+            gate,
+            result,
+            summary_keys=("success", "findings", "stats"),
+        )
 
     counter.add("external_tools", 1)
 
@@ -204,9 +249,21 @@ def register_external_tools(mcp, counter, logger):
         if tamper:
             args.extend(["--tamper", ",".join(tamper)])
 
+        gate = _gate_external_runtime(
+            "ext_sqlmap_scan",
+            {"url": url, "preset": preset, "has_data": bool(data)},
+            risk_level="critical" if preset == "exploit" else "high",
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
         result = await run_sqlmap(url=url, preset=preset, extra_args=args if args else None)
 
-        return result
+        return complete_handler_runtime_payload(
+            gate,
+            result,
+            summary_keys=("success", "vulnerable", "dbms"),
+        )
 
     counter.add("external_tools", 1)
 
@@ -275,11 +332,22 @@ def register_external_tools(mcp, counter, logger):
         if extensions:
             args.extend(["-e", ",".join(extensions)])
 
+        gate = _gate_external_runtime(
+            "ext_ffuf_fuzz",
+            {"url": url, "wordlist": wordlist, "mode": mode},
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
         result = await run_ffuf(
             url=url, wordlist=wordlist, preset=mode, extra_args=args if args else None
         )
 
-        return result
+        return complete_handler_runtime_payload(
+            gate,
+            result,
+            summary_keys=("success", "results", "stats"),
+        )
 
     counter.add("external_tools", 1)
 
@@ -331,9 +399,21 @@ def register_external_tools(mcp, counter, logger):
         args = extra_args or []
         args.extend(["--rate", str(rate)])
 
+        gate = _gate_external_runtime(
+            "ext_masscan_scan",
+            {"target": target, "ports": ports, "rate": rate},
+            risk_level="critical",
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
         result = await run_masscan(target=target, ports=ports, extra_args=args)
 
-        return result
+        return complete_handler_runtime_payload(
+            gate,
+            result,
+            summary_keys=("success", "hosts", "ports"),
+        )
 
     counter.add("external_tools", 1)
 
@@ -372,12 +452,24 @@ def register_external_tools(mcp, counter, logger):
                 "hint": f"可用的工具链: {', '.join(valid_chains)}",
             }
 
+        gate = _gate_external_runtime(
+            "ext_tool_chain",
+            {"target": target, "chain_name": chain_name},
+            risk_level="critical" if chain_name in {"full_recon", "vuln_scan"} else "high",
+        )
+        if not gate["allowed"]:
+            return blocked_handler_runtime_response(gate)
+
         manager = get_tool_manager()
         result = await manager.run_chain(
             chain_name=chain_name, target=target, config_override=config_override
         )
 
-        return result
+        return complete_handler_runtime_payload(
+            gate,
+            result,
+            summary_keys=("success", "chain_name", "steps"),
+        )
 
     counter.add("external_tools", 1)
 

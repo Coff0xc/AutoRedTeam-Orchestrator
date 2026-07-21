@@ -12,6 +12,43 @@ Resources (4个):
 
 from __future__ import annotations
 
+from typing import Any, Dict
+
+from .runtime_helpers import (
+    complete_handler_runtime_action,
+    complete_handler_runtime_payload,
+    gate_handler_runtime_action,
+)
+
+
+def _gate_resource_runtime(name: str, inputs: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    return gate_handler_runtime_action(
+        name,
+        inputs=inputs or {},
+        risk_level="low",
+        source="resource_handler",
+        network_policy="deny",
+    )
+
+
+def _complete_resource_runtime(
+    gate: Dict[str, Any],
+    payload: Dict[str, Any],
+    *,
+    success: bool = True,
+    error: str | None = None,
+    summary_keys=(),
+) -> Dict[str, Any]:
+    if success:
+        return complete_handler_runtime_payload(gate, payload, summary_keys=summary_keys)
+    payload["runtime"] = complete_handler_runtime_action(
+        gate,
+        False,
+        output={"success": False},
+        error=error,
+    )
+    return payload
+
 
 def register_resource_handlers(mcp, counter, logger):
     """注册 MCP Resource 处理器
@@ -31,12 +68,13 @@ def register_resource_handlers(mcp, counter, logger):
     )
     def list_sessions() -> dict:
         """获取活跃会话列表"""
+        runtime_gate = _gate_resource_runtime("resource.list_sessions")
         try:
             from core.session import get_session_manager
 
             manager = get_session_manager()
             sessions = manager.list_sessions() if hasattr(manager, "list_sessions") else []
-            return {
+            payload = {
                 "sessions": [
                     {
                         "session_id": s.session_id if hasattr(s, "session_id") else str(s),
@@ -47,9 +85,19 @@ def register_resource_handlers(mcp, counter, logger):
                 ],
                 "count": len(sessions),
             }
+            return _complete_resource_runtime(
+                runtime_gate,
+                payload,
+                summary_keys=["count"],
+            )
         except Exception as e:
             logger.debug("获取会话列表失败: %s", e)
-            return {"sessions": [], "count": 0, "note": "会话管理器未初始化"}
+            return _complete_resource_runtime(
+                runtime_gate,
+                {"sessions": [], "count": 0, "note": "会话管理器未初始化"},
+                success=False,
+                error=str(e),
+            )
 
     counter.add("misc", 1)
 
@@ -62,17 +110,32 @@ def register_resource_handlers(mcp, counter, logger):
     )
     def list_registered_tools() -> dict:
         """获取已注册工具列表"""
+        runtime_gate = _gate_resource_runtime("resource.list_registered_tools")
         try:
             # list_tools 可能返回 awaitable，如果是同步调用则直接用计数
             if hasattr(counter, "counts"):
-                return {
+                payload = {
                     "categories": {k: v for k, v in counter.counts.items() if v > 0},
                     "total": counter.total,
                 }
-            return {"total": "unknown"}
+                return _complete_resource_runtime(
+                    runtime_gate,
+                    payload,
+                    summary_keys=["total"],
+                )
+            return _complete_resource_runtime(
+                runtime_gate,
+                {"total": "unknown"},
+                summary_keys=["total"],
+            )
         except Exception as e:
             logger.debug("获取工具列表失败: %s", e)
-            return {"total": "unknown", "error": str(e)}
+            return _complete_resource_runtime(
+                runtime_gate,
+                {"total": "unknown", "error": str(e)},
+                success=False,
+                error=str(e),
+            )
 
     counter.add("misc", 1)
 
@@ -85,8 +148,9 @@ def register_resource_handlers(mcp, counter, logger):
     )
     def get_security_config() -> dict:
         """获取当前安全配置"""
+        runtime_gate = _gate_resource_runtime("resource.get_security_config")
         config = {
-            "version": "3.0.2",
+            "version": "3.1.0",
             "auth_mode": "unknown",
             "tools_registered": counter.total,
         }
@@ -110,7 +174,11 @@ def register_resource_handlers(mcp, counter, logger):
         except Exception:
             pass
 
-        return config
+        return _complete_resource_runtime(
+            runtime_gate,
+            config,
+            summary_keys=["auth_mode", "tools_registered"],
+        )
 
     counter.add("misc", 1)
 
@@ -123,16 +191,25 @@ def register_resource_handlers(mcp, counter, logger):
     )
     def get_payloads(category: str) -> dict:
         """按分类获取 payload 列表"""
+        runtime_gate = _gate_resource_runtime(
+            "resource.get_payloads",
+            {"category": category},
+        )
         try:
             from core.detectors.payloads import PayloadManager
 
             manager = PayloadManager()
             payloads = manager.get_payloads(category) if hasattr(manager, "get_payloads") else []
-            return {
+            payload = {
                 "category": category,
                 "payloads": payloads[:50],  # 限制返回数量
                 "count": len(payloads),
             }
+            return _complete_resource_runtime(
+                runtime_gate,
+                payload,
+                summary_keys=["category", "count"],
+            )
         except Exception as e:
             logger.debug("获取 payload 列表失败: %s", e)
             # 回退: 返回分类描述
@@ -143,12 +220,18 @@ def register_resource_handlers(mcp, counter, logger):
                 "cmd_injection": "Command Injection payloads",
                 "path_traversal": "Path Traversal payloads",
             }
-            return {
-                "category": category,
-                "description": categories.get(category, f"Unknown category: {category}"),
-                "payloads": [],
-                "count": 0,
-            }
+            return _complete_resource_runtime(
+                runtime_gate,
+                {
+                    "category": category,
+                    "description": categories.get(category, f"Unknown category: {category}"),
+                    "payloads": [],
+                    "count": 0,
+                },
+                success=False,
+                error=str(e),
+                summary_keys=["category", "count"],
+            )
 
     counter.add("misc", 1)
 

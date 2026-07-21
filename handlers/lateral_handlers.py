@@ -23,7 +23,25 @@ from .error_handling import (
     handle_errors,
     validate_inputs,
 )
+from .runtime_helpers import blocked_handler_runtime_response, gate_handler_runtime_action
 from .tooling import tool
+
+
+def _gate_lateral_runtime(tool_name: str, inputs: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    gate = gate_handler_runtime_action(
+        tool_name,
+        inputs=inputs,
+        risk_level="critical",
+        source="lateral_handler",
+        requires_auth=True,
+        human_approved=True,
+        network_policy="controlled",
+        artifact_policy="metadata-only",
+        cleanup_policy="handler-owned",
+    )
+    if not gate["allowed"]:
+        return blocked_handler_runtime_response(gate)
+    return None
 
 
 def register_lateral_tools(mcp, counter, logger):
@@ -65,6 +83,13 @@ def register_lateral_tools(mcp, counter, logger):
         Returns:
             执行结果
         """
+        blocked = _gate_lateral_runtime(
+            "lateral_ssh",
+            {"target": target, "username": username, "command": command, "port": port},
+        )
+        if blocked:
+            return blocked
+
         from core.lateral import ssh_exec
 
         # 直接调用便捷函数，返回值已是正确格式
@@ -120,6 +145,19 @@ def register_lateral_tools(mcp, counter, logger):
         Returns:
             隧道信息
         """
+        blocked = _gate_lateral_runtime(
+            "lateral_ssh_tunnel",
+            {
+                "target": target,
+                "username": username,
+                "local_port": local_port,
+                "remote_host": remote_host,
+                "remote_port": remote_port,
+            },
+        )
+        if blocked:
+            return blocked
+
         from core.lateral import ssh_tunnel
 
         result = ssh_tunnel(
@@ -183,6 +221,13 @@ def register_lateral_tools(mcp, counter, logger):
         Returns:
             执行结果
         """
+        blocked = _gate_lateral_runtime(
+            "lateral_wmi",
+            {"target": target, "username": username, "command": command, "domain": domain},
+        )
+        if blocked:
+            return blocked
+
         from core.lateral import wmi_exec
 
         result = wmi_exec(
@@ -229,6 +274,13 @@ def register_lateral_tools(mcp, counter, logger):
         Returns:
             查询结果
         """
+        blocked = _gate_lateral_runtime(
+            "lateral_wmi_query",
+            {"target": target, "username": username, "query": query, "domain": domain},
+        )
+        if blocked:
+            return blocked
+
         from core.lateral import wmi_query
 
         result = wmi_query(
@@ -281,6 +333,13 @@ def register_lateral_tools(mcp, counter, logger):
         Returns:
             执行结果
         """
+        blocked = _gate_lateral_runtime(
+            "lateral_winrm",
+            {"target": target, "username": username, "command": command, "domain": domain},
+        )
+        if blocked:
+            return blocked
+
         from core.lateral import winrm_exec
 
         result = winrm_exec(
@@ -331,6 +390,13 @@ def register_lateral_tools(mcp, counter, logger):
         Returns:
             执行结果
         """
+        blocked = _gate_lateral_runtime(
+            "lateral_winrm_ps",
+            {"target": target, "username": username, "script_length": len(script), "domain": domain},
+        )
+        if blocked:
+            return blocked
+
         from core.lateral import winrm_ps
 
         result = winrm_ps(
@@ -382,6 +448,13 @@ def register_lateral_tools(mcp, counter, logger):
         Returns:
             执行结果
         """
+        blocked = _gate_lateral_runtime(
+            "lateral_psexec",
+            {"target": target, "username": username, "command": command, "domain": domain},
+        )
+        if blocked:
+            return blocked
+
         from core.lateral import psexec
 
         result = psexec(
@@ -434,6 +507,13 @@ def register_lateral_tools(mcp, counter, logger):
         Returns:
             执行结果
         """
+        blocked = _gate_lateral_runtime(
+            "lateral_auto",
+            {"target": target, "username": username, "command": command, "domain": domain},
+        )
+        if blocked:
+            return blocked
+
         from core.lateral import Credentials, auto_lateral
 
         creds = Credentials(
@@ -485,6 +565,19 @@ def register_lateral_tools(mcp, counter, logger):
         Returns:
             有效凭证列表
         """
+        blocked = _gate_lateral_runtime(
+            "credential_spray",
+            {
+                "targets": len(targets),
+                "usernames": len(usernames),
+                "passwords": len(passwords),
+                "protocol": protocol,
+                "domain": domain,
+            },
+        )
+        if blocked:
+            return blocked
+
         from core.lateral import Credentials, spray_credentials
 
         # 构建凭证列表 - 用户名和密码的笛卡尔积

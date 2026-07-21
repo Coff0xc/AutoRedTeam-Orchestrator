@@ -62,7 +62,7 @@ class WindowsPersistence:
         persistence = WindowsPersistence(execute=False)
     """
 
-    def __init__(self, execute: bool = True):
+    def __init__(self, execute: bool = False):
         self._execute = execute
         self._random_prefix = "".join(secrets.choice(string.ascii_letters) for _ in range(4))
 
@@ -188,13 +188,21 @@ class WindowsPersistence:
             run_level: 运行级别 (limited/highest)
         """
         name = name or self._generate_name("Task")
+        task_options = {
+            "trigger": trigger,
+            "interval_minutes": interval_minutes,
+            "run_level": run_level,
+        }
 
         cleanup = f'schtasks /delete /tn "{name}" /f'
 
         return self._execute_install(PersistenceResult(
             success=True,
             method=PersistenceMethod.SCHEDULED_TASK.value,
-            location=f"Task Scheduler\\{name}",
+            location=(
+                f"Task Scheduler\\{name} "
+                f"({task_options['trigger']}, {task_options['run_level']})"
+            ),
             cleanup_command=cleanup,
         ))
 
@@ -274,7 +282,7 @@ class WindowsPersistence:
         return self._execute_install(PersistenceResult(
             success=True,
             method=PersistenceMethod.SERVICE.value,
-            location=f"Services\\{name}",
+            location=f"Services\\{name} ({display_name}, {start_type})",
             cleanup_command=cleanup,
         ))
 
@@ -407,7 +415,7 @@ Get-WmiObject -Namespace "root\\subscription" -Class "__FilterToConsumerBinding"
         return self._execute_install(PersistenceResult(
             success=True,
             method=PersistenceMethod.BITS_JOB.value,
-            location=f"BITS Job: {name}",
+            location=f"BITS Job: {name} -> {local_path} from {payload_url}",
             cleanup_command=f'bitsadmin /cancel "{name}"',
         ))
 
@@ -498,7 +506,7 @@ def windows_persist(
         name: 名称
         **kwargs: 其他参数
     """
-    persistence = WindowsPersistence()
+    persistence = WindowsPersistence(execute=bool(kwargs.pop("execute", False)))
 
     method_map: Dict[str, Callable[..., PersistenceResult]] = {
         "registry": persistence.registry_run,
@@ -536,6 +544,7 @@ def windows_persist(
         "method": persist_result.method,
         "location": persist_result.location,
         "cleanup_command": persist_result.cleanup_command,
+        "executed": persist_result.executed,
         "error": persist_result.error,
     }
 
