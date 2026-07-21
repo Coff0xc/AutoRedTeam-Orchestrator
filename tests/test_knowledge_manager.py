@@ -522,7 +522,7 @@ class TestKnowledgeManager:
 
     @pytest.fixture
     def km(self):
-        return KnowledgeManager()
+        return KnowledgeManager(backend="memory")
 
     # --- 目标存储 ---
 

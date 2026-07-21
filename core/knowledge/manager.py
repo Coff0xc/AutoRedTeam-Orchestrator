@@ -383,7 +383,7 @@ class KnowledgeManager:
     def __init__(
         self,
         config: Optional[Dict[str, Any]] = None,
-        backend: str = "memory",
+        backend: str = "sqlite",
         db_path: str = "data/knowledge.db",
     ):
         self.config = config or {}
@@ -391,8 +391,8 @@ class KnowledgeManager:
 
         if backend == "sqlite":
             self._sqlite_store = SQLiteKnowledgeStore(db_path)
-            # 内存存储仍然保留，用于 BFS 等操作的兼容层
             self._store = InMemoryGraphStore()
+            self._load_sqlite_into_memory()
             logger.info("知识图谱管理器初始化完成 (SQLite: %s)", db_path)
         else:
             self._sqlite_store = None
@@ -404,6 +404,35 @@ class KnowledgeManager:
     def _generate_id(self, prefix: str = "e") -> str:
         """生成唯一 ID"""
         return f"{prefix}_{uuid.uuid4().hex[:12]}"
+
+    def _load_sqlite_into_memory(self) -> None:
+        if not self._sqlite_store:
+            return
+        for row in self._sqlite_store.find_entities(limit=100000):
+            self._store.add_entity(KnowledgeEntity.from_dict(row))
+        for row in self._sqlite_store.find_relationships():
+            rel_data = {**row, "relation_type": row["rel_type"]}
+            self._store.add_relation(KnowledgeRelation.from_dict(rel_data))
+
+    def _persist_entity(self, entity: KnowledgeEntity) -> None:
+        if self._sqlite_store:
+            self._sqlite_store.add_entity(
+                entity_type=entity.type.value,
+                name=entity.name,
+                properties=entity.properties,
+                entity_id=entity.id,
+            )
+
+    def _persist_relation(self, relation: KnowledgeRelation) -> None:
+        if self._sqlite_store:
+            self._sqlite_store.add_relationship(
+                source_id=relation.source_id,
+                target_id=relation.target_id,
+                rel_type=relation.relation_type.value,
+                properties=relation.properties,
+                confidence=relation.confidence,
+                rel_id=relation.id,
+            )
 
     # ==================== 实体操作 ====================
 
@@ -428,14 +457,7 @@ class KnowledgeManager:
         )
 
         self._store.add_entity(entity)
-
-        # 同步到 SQLite
-        if self._sqlite_store:
-            self._sqlite_store.add_entity(
-                entity_type=EntityType.TARGET.value,
-                name=target,
-                properties=entity.properties,
-            )
+        self._persist_entity(entity)
 
         logger.debug("存储目标: %s (%s)", target, entity_id)
         return entity_id
@@ -462,6 +484,7 @@ class KnowledgeManager:
         )
 
         self._store.add_entity(entity)
+        self._persist_entity(entity)
 
         # 建立 Target -> Service 关系
         rel_id = self._generate_id("rel")
@@ -472,6 +495,7 @@ class KnowledgeManager:
             relation_type=RelationType.HOSTS,
         )
         self._store.add_relation(relation)
+        self._persist_relation(relation)
 
         logger.debug("存储服务: %s:%d (%s)", service_name, port, entity_id)
         return entity_id
@@ -497,6 +521,7 @@ class KnowledgeManager:
         )
 
         self._store.add_entity(entity)
+        self._persist_entity(entity)
 
         # 建立 Service -> Vulnerability 关系
         rel_id = self._generate_id("rel")
@@ -507,6 +532,7 @@ class KnowledgeManager:
             relation_type=RelationType.HAS_VULNERABILITY,
         )
         self._store.add_relation(relation)
+        self._persist_relation(relation)
 
         logger.debug("存储漏洞: %s (%s)", vuln_name, entity_id)
         return entity_id
@@ -531,6 +557,7 @@ class KnowledgeManager:
         )
 
         self._store.add_entity(entity)
+        self._persist_entity(entity)
 
         # 建立来源关系
         rel_id = self._generate_id("rel")
@@ -541,6 +568,7 @@ class KnowledgeManager:
             relation_type=RelationType.OBTAINED_FROM,
         )
         self._store.add_relation(relation)
+        self._persist_relation(relation)
 
         logger.debug("存储凭证: %s (%s)", credential_type, entity_id)
         return entity_id
@@ -588,6 +616,7 @@ class KnowledgeManager:
         )
 
         self._store.add_entity(entity)
+        self._persist_entity(entity)
         return entity_id
 
     def _store_port_finding(self, finding: Dict) -> str:
@@ -607,6 +636,7 @@ class KnowledgeManager:
         )
 
         self._store.add_entity(entity)
+        self._persist_entity(entity)
         return entity_id
 
     def _store_cred_finding(self, finding: Dict) -> str:
@@ -624,6 +654,7 @@ class KnowledgeManager:
         )
 
         self._store.add_entity(entity)
+        self._persist_entity(entity)
         return entity_id
 
     def _store_generic_finding(self, finding: Dict) -> str:
@@ -638,6 +669,7 @@ class KnowledgeManager:
         )
 
         self._store.add_entity(entity)
+        self._persist_entity(entity)
         return entity_id
 
     # ==================== 查询操作 ====================

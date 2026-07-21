@@ -288,8 +288,16 @@ class TestKnowledgeManagerSQLite:
         assert len(data["entities"]) >= 1
         km.close()
 
-    def test_default_backend_unchanged(self):
+    def test_default_backend_persists_to_sqlite(self, tmp_path):
         from core.knowledge import KnowledgeManager
 
-        km = KnowledgeManager()
-        assert km.sqlite_store is None
+        db_path = tmp_path / "default.db"
+        km = KnowledgeManager(db_path=str(db_path))
+        km.store_target("example.org", "domain")
+        km.close()
+
+        reopened = KnowledgeManager(db_path=str(db_path))
+        assert reopened.sqlite_store is not None
+        assert reopened.get_stats()["total_entities"] == 1
+        assert reopened.find_targets()[0].name == "example.org"
+        reopened.close()

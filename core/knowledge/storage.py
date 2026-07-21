@@ -100,12 +100,21 @@ class SQLiteKnowledgeStore:
         entity_type: str,
         name: str,
         properties: dict | None = None,
+        entity_id: str | None = None,
     ) -> str:
         """添加实体，返回 entity_id"""
-        entity_id = f"e_{uuid.uuid4().hex[:12]}"
+        entity_id = entity_id or f"e_{uuid.uuid4().hex[:12]}"
         props_json = json.dumps(properties or {}, ensure_ascii=False)
         self._conn.execute(
-            "INSERT INTO entities(id, type, name, properties) VALUES (?, ?, ?, ?)",
+            """
+            INSERT INTO entities(id, type, name, properties)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                type = excluded.type,
+                name = excluded.name,
+                properties = excluded.properties,
+                updated_at = datetime('now')
+            """,
             (entity_id, entity_type, name, props_json),
         )
         self._conn.commit()
@@ -175,13 +184,22 @@ class SQLiteKnowledgeStore:
         rel_type: str,
         properties: dict | None = None,
         confidence: float = 1.0,
+        rel_id: str | None = None,
     ) -> str:
         """添加关系，返回 relationship_id"""
-        rel_id = f"r_{uuid.uuid4().hex[:12]}"
+        rel_id = rel_id or f"r_{uuid.uuid4().hex[:12]}"
         props_json = json.dumps(properties or {}, ensure_ascii=False)
         self._conn.execute(
-            "INSERT INTO relationships(id, source_id, target_id, rel_type, properties, confidence) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            """
+            INSERT INTO relationships(id, source_id, target_id, rel_type, properties, confidence)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                source_id = excluded.source_id,
+                target_id = excluded.target_id,
+                rel_type = excluded.rel_type,
+                properties = excluded.properties,
+                confidence = excluded.confidence
+            """,
             (rel_id, source_id, target_id, rel_type, props_json, confidence),
         )
         self._conn.commit()
