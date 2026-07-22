@@ -120,7 +120,7 @@ class TestTokenBucket:
 
     def test_thread_safety(self):
         """测试线程安全"""
-        bucket = TokenBucket(rate=100.0, capacity=100.0)
+        bucket = TokenBucket(rate=0.01, capacity=100.0)
         success_count = [0]
         lock = threading.Lock()
 
@@ -137,8 +137,7 @@ class TestTokenBucket:
         for t in threads:
             t.join()
 
-        # 应该只有100个成功（初始容量），允许少量误差
-        assert success_count[0] <= 105  # 允许5个误差
+        assert success_count[0] == 100
 
 
 # ============== SlidingWindowRateLimiter 滑动窗口测试 ==============

@@ -362,10 +362,9 @@ class TestJWTExpiration:
 
         # 应该返回警告结果
         assert result is None
-        # 但应该在结果列表中有一个 INFO 级别的结果
-        tester.test()
-        info_results = [r for r in tester.results if r.severity == Severity.MEDIUM]
-        assert any("过期时间" in r.title for r in info_results)
+        # 但应该在结果列表中有一个 MEDIUM 级别的结果
+        medium_results = [r for r in tester.results if r.severity == Severity.MEDIUM]
+        assert any("过期时间" in r.title for r in medium_results)
 
     @staticmethod
     def _create_token_with_payload(payload):

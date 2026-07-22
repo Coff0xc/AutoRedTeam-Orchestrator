@@ -12,6 +12,7 @@ core.sandbox 单元测试
 from __future__ import annotations
 
 import subprocess
+import sys
 from dataclasses import asdict
 from unittest.mock import MagicMock, patch
 
@@ -19,7 +20,6 @@ import pytest
 
 from core.sandbox.config import CommandResult, SandboxConfig
 from core.sandbox.fallback import LocalExecutor, get_executor
-
 
 # ==================== SandboxConfig 测试 ====================
 
@@ -171,7 +171,7 @@ class TestLocalExecutor:
         """测试执行工具"""
         cfg = SandboxConfig()
         executor = LocalExecutor(cfg)
-        result = executor.run_tool("echo", args=["tool_test"])
+        result = executor.run_tool(sys.executable, args=["-c", "print('tool_test')"])
         assert result.exit_code == 0
         assert "tool_test" in result.stdout
 
