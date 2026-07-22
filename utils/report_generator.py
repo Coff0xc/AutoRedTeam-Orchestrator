@@ -481,7 +481,7 @@ class ReportGenerator:
 
     def _render_executive_summary(self, data: Dict) -> str:
         """渲染执行摘要HTML内容"""
-        template = Template(self._get_executive_template())
+        template = Template(self._get_executive_template(), autoescape=True)
         return template.render(**data)
 
     def _get_executive_template(self) -> str:
@@ -581,7 +581,7 @@ class ReportGenerator:
 
     def _render_html(self, data: Dict) -> str:
         """渲染HTML报告内容"""
-        template = Template(self._get_html_template())
+        template = Template(self._get_html_template(), autoescape=True)
         return template.render(**data)
 
     def _generate_json(self, data: Dict, session_id: str) -> str:

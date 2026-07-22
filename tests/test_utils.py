@@ -6,6 +6,7 @@ utils 模块单元测试
 
 import os
 import tempfile
+from types import SimpleNamespace
 
 import pytest
 
@@ -140,20 +141,34 @@ class TestReportGenerator:
                 generator.generate_json(data, filepath)
                 assert os.path.exists(filepath)
 
-    def test_generate_html_report(self):
-        """测试生成 HTML 报告"""
+    def test_html_reports_escape_untrusted_findings(self):
+        """测试 HTML 报告转义不可信发现内容"""
         from utils.report_generator import ReportGenerator
 
+        payload = "<script>alert('xss')</script>"
+        source = SimpleNamespace(
+            session_id="session-1",
+            target="https://example.com",
+            metadata={
+                "findings": [
+                    {
+                        "title": payload,
+                        "description": payload,
+                        "severity": "high",
+                        "target": payload,
+                    }
+                ]
+            },
+            vulnerabilities=[],
+            status="completed",
+            started_at=None,
+            total_requests=1,
+        )
         generator = ReportGenerator()
 
-        data = {"target": "https://example.com", "vulnerabilities": []}
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            filepath = os.path.join(tmpdir, "report.html")
-
-            if hasattr(generator, "generate_html"):
-                generator.generate_html(data, filepath)
-                assert os.path.exists(filepath)
+        for report in (generator.to_html(source), generator.to_executive(source)):
+            assert payload not in report
+            assert "&lt;script&gt;" in report
 
     def test_generate_markdown_report(self):
         """测试生成 Markdown 报告"""
