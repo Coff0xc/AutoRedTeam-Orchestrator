@@ -26,6 +26,17 @@ AutoRedTeam MCP Handlers
 - resource_handlers: MCP资源端点 (4个)
 """
 
+from __future__ import annotations
+
+from typing import Any, Callable, cast
+
+from core.capability_manifest import (
+    CapabilityManifestError,
+    get_capability,
+    handler_enabled,
+    normalize_profile,
+)
+
 from .ad_handlers import register_ad_tools
 from .ai_handlers import register_ai_tools
 from .api_security_handlers import register_api_security_tools
@@ -73,41 +84,145 @@ __all__ = [
 ]
 
 
-def register_all_handlers(mcp, counter, logger):
+class _CounterView:
+    """Expose live totals while ignoring legacy batch increments."""
+
+    def __init__(self, counter):
+        self._counter = counter
+
+    @property
+    def counts(self):
+        return self._counter.counts
+
+    @property
+    def total(self):
+        return self._counter.total
+
+    def add(self, category: str, count: int = 1):
+        return None
+
+    def summary(self):
+        return self._counter.summary()
+
+    def __getattr__(self, name: str):
+        return getattr(self._counter, name)
+
+
+class _ProfileLoggerView:
+    """Suppress legacy full-count registration messages for filtered profiles."""
+
+    def __init__(self, logger):
+        self._logger = logger
+
+    def info(self, message, *args, **kwargs):
+        text = str(message)
+        if "已注册" in text or "注册完成" in text:
+            return None
+        return self._logger.info(message, *args, **kwargs)
+
+    def __getattr__(self, name: str):
+        return getattr(self._logger, name)
+
+
+class _ProfiledMCP:
+    """Filter MCP decorators through the capability manifest."""
+
+    def __init__(self, mcp, counter, profile: str, handler: str):
+        self._mcp = mcp
+        self._counter = counter
+        self._profile = profile
+        self._handler = handler
+
+    def _decorator(
+        self,
+        kind: str,
+        factory: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+        def apply(func: Callable[..., Any]) -> Callable[..., Any]:
+            public_name = kwargs.get("name") or func.__name__
+            capability = get_capability(kind, public_name)
+            if capability.handler != self._handler:
+                raise CapabilityManifestError(
+                    f"MCP surface {kind}:{public_name} is assigned to handler "
+                    f"{capability.handler!r}, not {self._handler!r}"
+                )
+            if not capability.allowed_in(self._profile):
+                return func
+
+            registered = factory(*args, **kwargs)(func)
+            self._counter.add(capability.category, 1)
+            return cast(Callable[..., Any], registered)
+
+        return apply
+
+    def tool(self, *args: Any, **kwargs: Any):
+        return self._decorator("tool", self._mcp.tool, *args, **kwargs)
+
+    def prompt(self, *args: Any, **kwargs: Any):
+        return self._decorator("prompt", self._mcp.prompt, *args, **kwargs)
+
+    def resource(self, *args: Any, **kwargs: Any):
+        return self._decorator("resource", self._mcp.resource, *args, **kwargs)
+
+
+def _handler_specs():
+    return [
+        ("侦察工具", "recon", register_recon_tools),
+        ("漏洞检测工具", "detector", register_detector_tools),
+        ("CVE工具", "cve", register_cve_tools),
+        ("API安全工具", "api_security", register_api_security_tools),
+        ("云安全工具", "cloud_security", register_cloud_security_tools),
+        ("供应链安全工具", "supply_chain", register_supply_chain_tools),
+        ("红队工具", "redteam", register_redteam_tools),
+        ("自动化渗透编排工具", "orchestration", register_orchestration_tools),
+        ("横向移动工具", "lateral", register_lateral_tools),
+        ("持久化工具", "persistence", register_persistence_tools),
+        ("AD攻击工具", "ad", register_ad_tools),
+        ("会话管理工具", "session", register_session_tools),
+        ("报告工具", "report", register_report_tools),
+        ("AI辅助工具", "ai", register_ai_tools),
+        ("杂项工具", "misc", register_misc_tools),
+        ("外部工具集成", "external_tools", register_external_tools),
+        ("并发扫描", "parallel", register_parallel_tools),
+        ("知识图谱", "knowledge", register_knowledge_tools),
+        ("MCTS攻击规划", "mcts", register_mcts_tools),
+        ("MCP提示模板", "prompts", register_prompt_handlers),
+        ("MCP资源端点", "resources", register_resource_handlers),
+    ]
+
+
+def register_all_handlers(mcp, counter, logger, *, profile: str = "full"):
     """注册所有处理器到MCP服务器
 
     Args:
         mcp: FastMCP实例
         counter: ToolCounter实例
         logger: Logger实例
+        profile: capability profile；省略时保持旧版 full 注册行为
     """
-    handlers = [
-        ("侦察工具", register_recon_tools),
-        ("漏洞检测工具", register_detector_tools),
-        ("CVE工具", register_cve_tools),
-        ("API安全工具", register_api_security_tools),
-        ("云安全工具", register_cloud_security_tools),
-        ("供应链安全工具", register_supply_chain_tools),
-        ("红队工具", register_redteam_tools),
-        ("自动化渗透编排工具", register_orchestration_tools),
-        ("横向移动工具", register_lateral_tools),
-        ("持久化工具", register_persistence_tools),
-        ("AD攻击工具", register_ad_tools),
-        ("会话管理工具", register_session_tools),
-        ("报告工具", register_report_tools),
-        ("AI辅助工具", register_ai_tools),
-        ("杂项工具", register_misc_tools),
-        ("外部工具集成", register_external_tools),
-        ("并发扫描", register_parallel_tools),
-        ("知识图谱", register_knowledge_tools),
-        ("MCTS攻击规划", register_mcts_tools),
-        ("MCP提示模板", register_prompt_handlers),
-        ("MCP资源端点", register_resource_handlers),
-    ]
+    selected_profile = normalize_profile(profile)
+    registration_attr = "_autort_capability_profile"
+    registered_profile = vars(mcp).get(registration_attr)
+    if registered_profile is not None:
+        raise CapabilityManifestError(
+            f"MCP instance already registered with profile {registered_profile!r}; "
+            "create a new instance to change or repeat registration"
+        )
+    setattr(mcp, registration_attr, selected_profile)
 
-    for name, register_func in handlers:
+    counter_view = _CounterView(counter)
+    handler_logger = logger if selected_profile == "full" else _ProfileLoggerView(logger)
+
+    for name, handler, register_func in _handler_specs():
+        if not handler_enabled(selected_profile, handler):
+            continue
+        profiled_mcp = _ProfiledMCP(mcp, counter, selected_profile, handler)
         try:
-            register_func(mcp, counter, logger)
+            register_func(profiled_mcp, counter_view, handler_logger)
+        except CapabilityManifestError:
+            raise
         except ImportError as e:
             # 模块依赖缺失，某些功能可能不可用
             logger.warning("%s注册失败 - 模块导入错误: %s", name, e)

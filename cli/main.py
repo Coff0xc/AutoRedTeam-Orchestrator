@@ -38,7 +38,7 @@ _configure_stdio_encoding()
 
 app = typer.Typer(
     name="autort",
-    help="AutoRedTeam — AI驱动的渗透测试工具",
+    help="AutoRedTeam — MCP-native 授权安全自动化工作台",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -568,6 +568,37 @@ def capabilities_readiness(
     from core.ai_capabilities import refactor_readiness
 
     _output(refactor_readiness(), output)
+
+
+@capabilities_app.command("manifest")
+def capabilities_manifest(
+    profile: Optional[str] = typer.Option(
+        None,
+        "--profile",
+        "-p",
+        help="筛选 profile: safe, scan, active-lab, full",
+    ),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """输出 MCP capability manifest；默认显示全部 surface。"""
+    from core.capability_manifest import CapabilityManifestError
+    from core.capability_manifest import capability_manifest as build_manifest
+
+    try:
+        payload = build_manifest(profile)
+    except CapabilityManifestError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--profile") from exc
+    _output(payload, output)
+
+
+@capabilities_app.command("profiles")
+def capabilities_profiles(
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """输出 MCP capability profiles、继承关系和运行边界。"""
+    from core.capability_manifest import capability_profiles as build_profiles
+
+    _output(build_profiles(), output)
 
 
 # ──────────────────────────── helpers ────────────────────────────

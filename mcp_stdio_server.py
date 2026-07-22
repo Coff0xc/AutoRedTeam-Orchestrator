@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 AutoRedTeam-Orchestrator MCP Server
-AI驱动的自动化渗透测试框架 - MCP协议服务端
+MCP-native 授权安全自动化工作台 - MCP 协议服务端
 
 版本: 3.1.0
 作者: AutoRedTeam Team
@@ -14,6 +14,7 @@ AI驱动的自动化渗透测试框架 - MCP协议服务端
 
 架构:
     - 工具按功能模块化拆分到 handlers/ 目录
+    - capability manifest 在注册阶段应用 fail-closed profile
     - 主文件仅负责 MCP 服务器初始化和工具注册调度
     - 工具数量以 ToolCounter 运行时统计为准
 """
@@ -63,6 +64,8 @@ class ToolCounter:
             "session": 0,
             "report": 0,
             "ai": 0,
+            "knowledge": 0,
+            "mcts": 0,
             "misc": 0,
         }
         self.total = 0
@@ -76,7 +79,7 @@ class ToolCounter:
 
     def summary(self) -> str:
         parts = [f"{k}={v}" for k, v in self.counts.items() if v > 0]
-        return f"总计 {self.total} 个工具 ({', '.join(parts)})"
+        return f"总计 {self.total} 个 MCP surface ({', '.join(parts)})"
 
 
 _counter = ToolCounter()
@@ -85,16 +88,22 @@ _counter = ToolCounter()
 # ==================== 工具注册入口 ====================
 
 
-def register_all_tools():
-    """注册所有工具到MCP"""
+def register_all_tools(profile: str | None = None):
+    """按 capability profile 注册 MCP surfaces。"""
+    from core.capability_manifest import DEFAULT_MCP_PROFILE, resolve_profile
     from handlers import register_all_handlers
 
+    selected_profile = resolve_profile(profile, default=DEFAULT_MCP_PROFILE)
+
     logger.info("=" * 60)
-    logger.info("AutoRedTeam MCP Server v3.1.0 - 工具注册")
+    logger.info(
+        "AutoRedTeam MCP Server v3.1.0 - capability profile: %s",
+        selected_profile,
+    )
     logger.info("=" * 60)
 
     # 使用模块化的 handlers 注册所有工具
-    register_all_handlers(mcp, _counter, logger)
+    register_all_handlers(mcp, _counter, logger, profile=selected_profile)
 
     logger.info("=" * 60)
     logger.info("工具注册完成: %s", _counter.summary())

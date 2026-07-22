@@ -4,7 +4,7 @@ CLI 基础测试
 """
 
 import json
-import pytest
+
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -22,9 +22,9 @@ class TestCLIImport:
 
     def test_cli_app_is_typer_instance(self):
         """app 应为 Typer 实例"""
-        from cli.main import app
-
         import typer
+
+        from cli.main import app
 
         assert isinstance(app, typer.Typer)
 
@@ -117,6 +117,14 @@ class TestCLIHelp:
         result = runner.invoke(app, ["capabilities", "matrix", "--help"])
         assert result.exit_code == 0
         assert "output" in result.output.lower()
+
+    def test_capabilities_manifest_help(self):
+        """capabilities manifest --help 应返回成功"""
+        from cli.main import app
+
+        result = runner.invoke(app, ["capabilities", "manifest", "--help"])
+        assert result.exit_code == 0
+        assert "profile" in result.output.lower()
 
     def test_no_args_shows_help(self):
         """无参数调用应显示帮助/用法信息"""
@@ -248,6 +256,36 @@ class TestCLICapabilities:
         assert result.exit_code == 0
         assert payload["ready_for_full_refactor"] is True
         assert any("Docker execution optional" in item for item in payload["constraints"])
+
+    def test_capabilities_manifest_safe_profile(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["capabilities", "manifest", "--profile", "safe"])
+        payload = json.loads(result.output[result.output.index("{") :])
+
+        assert result.exit_code == 0
+        assert payload["profile"] == "safe"
+        assert payload["summary"]["total"] == 23
+        assert all("safe" in item["profiles"] for item in payload["capabilities"])
+
+    def test_capabilities_profiles_outputs_boundaries(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["capabilities", "profiles"])
+        payload = json.loads(result.output[result.output.index("{") :])
+
+        assert result.exit_code == 0
+        assert payload["default_mcp_profile"] == "safe"
+        assert [item["surface_count"] for item in payload["profiles"]] == [23, 85, 105, 141]
+        assert "do not replace authentication" in payload["security_note"]
+
+    def test_capabilities_manifest_rejects_unknown_profile(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["capabilities", "manifest", "--profile", "unknown"])
+
+        assert result.exit_code != 0
+        assert "Unknown capability profile" in result.output
 
 
 class TestCLIAIRedTeamConvert:
