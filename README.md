@@ -2,6 +2,11 @@
 
 **面向授权安全测试与 AI/MCP 工程团队的 local-first、MCP-native 安全自动化工作台。**
 
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-3.1.0-orange)
+![Status](https://img.shields.io/badge/status-Beta%20%2F%20Research%20Preview-yellow)
+
 [English](README_EN.md) · [能力成熟度](docs/capability-maturity.md) ·
 [安全模型](docs/security-model.md) · [安全审计](docs/security-audits/)
 
@@ -55,11 +60,13 @@ python -m cli.main --help
 
 ### 1. 静态盘点 MCP / AI 工具边界
 
-该命令只解析本地 Python 源码，不导入或执行 handler：
+只解析本地 Python 源码，不导入或执行 handler；可直接输出 SARIF：
 
 ```bash
-python -m cli.main ai-surface scan --path handlers -o surface.json
+python -m cli.main ai-surface scan --path handlers --format sarif -o surface.sarif
 ```
+
+想在 PR 上自动审计并接入 GitHub Code Scanning，见下方 **AI/MCP 安全自审** 一节。
 
 ### 2. 验证 SDK 和 capability catalog
 
@@ -75,6 +82,55 @@ python -m cli.main ai-redteam catalog
 ```bash
 python -m cli.main ai-redteam run config/ai_redteam.example.yaml -o run.json
 ```
+
+## AI/MCP 安全自审：一键接入 CI
+
+对**你自己的仓库**做纯静态安全自审：审计 MCP server / AI agent 工具的攻击面，结果以
+`file:line` 精度进入 GitHub Code Scanning。**无需 target、网络、secret 或授权**，天然站在
+防御方与开源维护者一侧。
+
+### GitHub Action
+
+复制到 `.github/workflows/`，每个 PR 自动审计并上传 SARIF（完整示例见
+[`self-audit.example.yml`](.github/workflows/self-audit.example.yml)）：
+
+```yaml
+name: AI Surface Self-Audit
+on: [pull_request]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write   # SARIF 上传所需
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1
+        with:
+          mode: self-audit
+          path: '.'
+          severity-threshold: high
+```
+
+### 本地 CLI
+
+```bash
+# 审计 MCP handler 工具表面 → SARIF
+python -m cli.main ai-surface scan --path . --format sarif -o surface.sarif
+
+# 审计 MCP 配置（.mcp.json）：危险命令暴露 + 明文 secret
+python -m cli.main ai-surface scan-mcp-config --path .mcp.json --format sarif
+
+# 审计 skill/prompt 指令：高危指令标记
+python -m cli.main ai-surface scan-skills --path ./skills
+```
+
+**检测项**：高危 MCP 工具缺授权 gate、target 参数缺校验、MCP 配置暴露通用命令运行时或明文
+secret 等。审计外部仓库时，加 `--auth-mode lenient` 消除本项目特化的授权判定噪音。
+
+| 退出码 | 含义 |
+|---|---|
+| `0` | 无达阈值发现 |
+| `2` | 存在达到 `--severity-threshold` 的发现（适合 CI gate） |
 
 ## 三种入口
 
@@ -102,7 +158,7 @@ python -m cli.main capabilities manifest --profile safe
 | 侦察、检测、JSON/SARIF 输出 | Beta | 仅限明确授权目标；尚无公开准确率 benchmark |
 | HTML 报告 | Preview | 不可信 finding 内容的 escaping 尚未完成安全加固 |
 | Session storage | Preview | 基础持久化可用；orchestrator resume 仍是 Experimental |
-| AI/MCP 静态表面扫描 | Preview | 只读 AST 分析 |
+| AI/MCP 静态表面扫描 + SARIF 自审 | Preview | 只读 AST 分析；可出 SARIF 接入 GitHub Code Scanning / Action |
 | MCP stdio | Preview | trusted-local only；认证尚不是全局统一边界 |
 | AI 系统红队评估 scenario runner | Preview | plan-only dry-run，不调用目标或模型 |
 | Agent runtime、policy、trace、本地 API | Preview | 主要是 plan-time governance metadata |
