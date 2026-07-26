@@ -16,7 +16,6 @@ from core.reporting.sarif import (
     write_sarif,
 )
 
-
 # ==================== Fixtures ====================
 
 
@@ -224,3 +223,73 @@ class TestWriteSarif:
         with open(output_path, encoding="utf-8") as f:
             loaded = json.load(f)
         assert loaded["version"] == SARIF_VERSION
+
+
+# ==================== 静态表面 finding (ai-surface) ====================
+
+
+@pytest.fixture
+def surface_findings():
+    """模拟 ai-surface scan 的 SurfaceFinding.to_dict() 结果 (带 file:line)"""
+    return [
+        {
+            "tool_name": "lateral_smb",
+            "file_path": "handlers/lateral_handlers.py",
+            "line": 128,
+            "risk_level": "critical",
+            "auth_level": "none",
+            "issues": ["critical_tool_without_critical_auth"],
+            "recommendations": ["Wrap with require_critical_auth or keep it plan-only."],
+            "description": "SMB lateral movement tool",
+            "finding_type": "mcp_tool",
+        },
+        {
+            "tool_name": "cve_search",
+            "file_path": "handlers/cve_handlers.py",
+            "line": 40,
+            "risk_level": "moderate",
+            "auth_level": "none",
+            "issues": [],
+            "recommendations": [],
+            "description": "Search CVE database",
+            "finding_type": "mcp_tool",
+        },
+    ]
+
+
+class TestSurfaceFindingsToSarif:
+    """静态表面 finding (带代码位置) 转 SARIF"""
+
+    def test_code_location_uses_file_and_line(self, surface_findings):
+        """有 file_path+line 时生成 region.startLine 供 code scanning 定位"""
+        sarif = findings_to_sarif(surface_findings)
+        loc = sarif["runs"][0]["results"][0]["locations"][0]["physicalLocation"]
+        assert loc["artifactLocation"]["uri"] == "handlers/lateral_handlers.py"
+        assert loc["region"]["startLine"] == 128
+
+    def test_risk_level_critical_maps_to_error(self, surface_findings):
+        """risk_level=critical → SARIF error"""
+        sarif = findings_to_sarif(surface_findings)
+        assert sarif["runs"][0]["results"][0]["level"] == "error"
+
+    def test_moderate_maps_to_medium_warning(self, surface_findings):
+        """risk_level=moderate → medium → warning (moderate 不在 SARIF level 表)"""
+        sarif = findings_to_sarif(surface_findings)
+        assert sarif["runs"][0]["results"][1]["level"] == "warning"
+
+    def test_rule_id_falls_back_to_finding_type(self, surface_findings):
+        """无 type 字段时用 finding_type 作 ruleId"""
+        sarif = findings_to_sarif(surface_findings)
+        assert sarif["runs"][0]["results"][0]["ruleId"] == "mcp_tool"
+
+    def test_message_uses_description(self, surface_findings):
+        """无 evidence 时 message 回退到 description"""
+        sarif = findings_to_sarif(surface_findings)
+        text = sarif["runs"][0]["results"][0]["message"]["text"]
+        assert "SMB lateral movement" in text
+
+    def test_rules_deduplicated_by_finding_type(self, surface_findings):
+        """两个 mcp_tool finding 去重为一条规则"""
+        sarif = findings_to_sarif(surface_findings)
+        rules = sarif["runs"][0]["tool"]["driver"]["rules"]
+        assert [r["id"] for r in rules] == ["mcp_tool"]

@@ -29,6 +29,7 @@ SEVERITY_ORDER: Dict[str, int] = {
     "info": 0,
     "low": 1,
     "medium": 2,
+    "moderate": 2,  # SurfaceRiskLevel 使用 moderate，与 medium 同级
     "high": 3,
     "critical": 4,
 }
@@ -62,39 +63,56 @@ def findings_to_sarif(
                         "rules": _extract_rules(findings),
                     }
                 },
-                "results": [
-                    _convert_finding(f, idx) for idx, f in enumerate(findings)
-                ],
+                "results": [_convert_finding(f, idx) for idx, f in enumerate(findings)],
             }
         ],
     }
     return sarif
 
 
-def _convert_finding(finding: Dict[str, Any], index: int) -> Dict[str, Any]:
-    """转换单个发现为 SARIF result"""
-    raw_severity = str(finding.get("severity", "medium")).lower()
-    level = _SEVERITY_TO_LEVEL.get(raw_severity, "warning")
-    rule_id = finding.get("type", f"vuln-{index}")
+def _normalize_severity(finding: Dict[str, Any]) -> str:
+    """兼容动态漏洞的 severity 与静态表面 finding 的 risk_level。
 
-    # 优先使用 evidence，回退到 description
-    message_text = finding.get(
-        "evidence", finding.get("description", "Vulnerability detected")
+    SurfaceRiskLevel 使用 "moderate"，SARIF level 映射按 "medium" 处理。
+    """
+    raw = str(finding.get("severity") or finding.get("risk_level") or "medium").lower()
+    return "medium" if raw == "moderate" else raw
+
+
+def _rule_id(finding: Dict[str, Any], index: int) -> str:
+    """统一 result.ruleId 与 rule.id 的取值，兼容两类 finding。"""
+    return (
+        finding.get("type")
+        or finding.get("finding_type")
+        or finding.get("tool_name")
+        or f"vuln-{index}"
     )
 
+
+def _physical_location(finding: Dict[str, Any]) -> Dict[str, Any]:
+    """静态分析优先用代码位置 (file_path + line)，动态扫描回退到 URL。"""
+    file_path = finding.get("file_path")
+    if file_path:
+        location: Dict[str, Any] = {"artifactLocation": {"uri": str(file_path)}}
+        line = finding.get("line")
+        if isinstance(line, int) and line > 0:
+            location["region"] = {"startLine": line}
+        return location
+    return {"artifactLocation": {"uri": finding.get("url", "unknown")}}
+
+
+def _convert_finding(finding: Dict[str, Any], index: int) -> Dict[str, Any]:
+    """转换单个发现为 SARIF result"""
+    level = _SEVERITY_TO_LEVEL.get(_normalize_severity(finding), "warning")
+
+    # 优先使用 evidence，回退到 description
+    message_text = finding.get("evidence", finding.get("description", "Vulnerability detected"))
+
     result: Dict[str, Any] = {
-        "ruleId": rule_id,
+        "ruleId": _rule_id(finding, index),
         "level": level,
         "message": {"text": str(message_text)},
-        "locations": [
-            {
-                "physicalLocation": {
-                    "artifactLocation": {
-                        "uri": finding.get("url", "unknown"),
-                    },
-                }
-            }
-        ],
+        "locations": [{"physicalLocation": _physical_location(finding)}],
         "properties": {
             "confidence": finding.get("confidence", 0),
             "verified": finding.get("verified", False),
@@ -109,12 +127,11 @@ def _extract_rules(findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """从 findings 中提取唯一的规则定义"""
     seen: set = set()
     rules: List[Dict[str, Any]] = []
-    for f in findings:
-        rule_id = f.get("type", "unknown")
+    for index, f in enumerate(findings):
+        rule_id = _rule_id(f, index)
         if rule_id not in seen:
             seen.add(rule_id)
-            raw_severity = str(f.get("severity", "medium")).lower()
-            level = _SEVERITY_TO_LEVEL.get(raw_severity, "warning")
+            level = _SEVERITY_TO_LEVEL.get(_normalize_severity(f), "warning")
             rules.append(
                 {
                     "id": rule_id,
