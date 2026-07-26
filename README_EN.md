@@ -3,6 +3,11 @@
 **A local-first, MCP-native security automation workbench for authorized testing and AI/MCP
 engineering teams.**
 
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-3.1.0-orange)
+![Status](https://img.shields.io/badge/status-Beta%20%2F%20Research%20Preview-yellow)
+
 [中文](README.md) · [Capability Maturity](docs/capability-maturity.md) ·
 [Security Model](docs/security-model.md) · [Security Audits](docs/security-audits/)
 
@@ -59,11 +64,13 @@ python -m cli.main --help
 
 ### 1. Inspect the local MCP / AI tool surface
 
-This command parses local Python source without importing or executing handlers:
+This parses local Python source without importing or executing handlers, and can emit SARIF directly:
 
 ```bash
-python -m cli.main ai-surface scan --path handlers -o surface.json
+python -m cli.main ai-surface scan --path handlers --format sarif -o surface.sarif
 ```
+
+To audit on every PR and feed GitHub Code Scanning, see the **AI/MCP Self-Audit in CI** section below.
 
 ### 2. Verify the SDK and capability catalog
 
@@ -80,6 +87,58 @@ without requesting the target:
 ```bash
 python -m cli.main ai-redteam run config/ai_redteam.example.yaml -o run.json
 ```
+
+## AI/MCP Self-Audit in CI
+
+Run a purely static self-audit of **your own repository**: inspect the attack surface of your MCP
+server / AI agent tools, with results delivered at `file:line` precision to GitHub Code Scanning.
+**No target, network, secret, or authorization required** — it sits squarely on the defensive side
+for blue teams and open-source maintainers.
+
+### GitHub Action
+
+Copy into `.github/workflows/` to audit every PR and upload SARIF (full example in
+[`self-audit.example.yml`](.github/workflows/self-audit.example.yml)):
+
+```yaml
+name: AI Surface Self-Audit
+on: [pull_request]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write   # required to upload SARIF
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1
+        with:
+          mode: self-audit
+          path: '.'
+          severity-threshold: high
+```
+
+### Local CLI
+
+```bash
+# Audit the MCP handler tool surface -> SARIF
+python -m cli.main ai-surface scan --path . --format sarif -o surface.sarif
+
+# Audit MCP config (.mcp.json): broad command exposure + plaintext secrets
+python -m cli.main ai-surface scan-mcp-config --path .mcp.json --format sarif
+
+# Audit skill/prompt instructions: high-risk instruction markers
+python -m cli.main ai-surface scan-skills --path ./skills
+```
+
+**Detections**: high-risk MCP tools without an authorization gate, target parameters without
+validation, MCP configs exposing a general command runtime or plaintext secrets, and more. When
+auditing external repositories, add `--auth-mode lenient` to drop project-specific authorization
+noise.
+
+| Exit code | Meaning |
+|---|---|
+| `0` | No findings at or above the threshold |
+| `2` | A finding met `--severity-threshold` (suitable as a CI gate) |
 
 ## Three entry points
 
@@ -107,7 +166,7 @@ python -m cli.main capabilities manifest --profile safe
 | Recon, detection, and JSON/SARIF output | Beta | Authorized targets only; no public accuracy benchmark yet |
 | HTML reporting | Preview | Escaping for untrusted finding content still needs security hardening |
 | Session storage | Preview | Basic persistence exists; orchestrator resume remains Experimental |
-| AI/MCP static surface scan | Preview | Read-only AST analysis |
+| AI/MCP static surface scan + SARIF self-audit | Preview | Read-only AST analysis; emits SARIF for GitHub Code Scanning / Action |
 | MCP stdio | Preview | Trusted-local only; authentication is not yet a uniform global boundary |
 | AI-system red-team scenario runner | Preview | Plan-only dry-run; no target or model requests |
 | Agent runtime, policy, trace, and local API | Preview | Primarily plan-time governance metadata |
