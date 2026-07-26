@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **AI/MCP self-audit** (`ai-surface`): SARIF output with `file:line` code locations for GitHub Code Scanning; `scan-mcp-config` and `scan-skills` subcommands; `--severity-threshold` / `--exit-code` CI gating; `--auth-mode lenient` and pluggable auth decorators for external repos; detection of both FastMCP (`@mcp.tool()`) and low-level SDK (`@app.list_tools` / `Tool(...)`) tool definitions
+- **GitHub Action self-audit mode** (`action.yml`, `.github/workflows/self-audit.example.yml`): `mode: self-audit` audits a repository's MCP/AI attack surface on every PR with no target, network, or secret
 - **Python SDK** (`autort/`): Enterprise API with `Scanner`, `Exploiter`, `AutoPentest`, `RedTeam`, `Reporter` classes
 - **CLI** (`cli/`): Typer-based CLI — `autort scan`, `autort detect`, `autort exploit`, `autort pentest`, `autort report`
 - **Unified Config** (`core/config/`): Pydantic-based configuration system with YAML + env var cascade
