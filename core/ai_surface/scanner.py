@@ -139,7 +139,13 @@ def scan_handler_surface(
             result.warnings.append(f"{file_path}: {type(exc).__name__}: {exc}")
             continue
 
-        visitor = _HandlerToolVisitor(file_path=file_path, source=source, auth_catalog=catalog)
+        bindings = _collect_string_bindings(tree)
+        visitor = _HandlerToolVisitor(
+            file_path=file_path,
+            source=source,
+            auth_catalog=catalog,
+            string_bindings=bindings,
+        )
         visitor.visit(tree)
         result.findings.extend(visitor.findings)
 
@@ -272,10 +278,11 @@ def _iter_text_files(root: Path) -> List[Path]:
 
 
 class _HandlerToolVisitor(ast.NodeVisitor):
-    def __init__(self, file_path: Path, source: str, auth_catalog=None):
+    def __init__(self, file_path: Path, source: str, auth_catalog=None, string_bindings=None):
         self.file_path = file_path
         self.source = source
         self.auth_catalog = auth_catalog or AUTH_DECORATORS
+        self.string_bindings = string_bindings or {}
         self.findings: List[SurfaceFinding] = []
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
@@ -285,6 +292,14 @@ class _HandlerToolVisitor(ast.NodeVisitor):
         decorators = [_decorator_name(item) for item in node.decorator_list]
         if any(_is_tool_decorator(name) for name in decorators):
             self.findings.append(self._build_finding(node, decorators))
+        self.generic_visit(node)
+
+    def visit_Call(self, node: ast.Call) -> None:
+        # low-level MCP SDK: 工具通过 Tool(name=..., description=..., inputSchema=...) 声明
+        if _is_tool_constructor(node.func):
+            finding = self._build_lowlevel_finding(node)
+            if finding is not None:
+                self.findings.append(finding)
         self.generic_visit(node)
 
     def _build_finding(self, node: ast.AsyncFunctionDef, decorators: List[str]) -> SurfaceFinding:
@@ -320,6 +335,40 @@ class _HandlerToolVisitor(ast.NodeVisitor):
             description=description,
         )
 
+    def _build_lowlevel_finding(self, node: ast.Call) -> Optional[SurfaceFinding]:
+        keywords = {kw.arg: kw.value for kw in node.keywords if kw.arg}
+        if "name" not in keywords:
+            return None
+        tool_name = _resolve_str(keywords["name"], self.string_bindings) or f"tool@{node.lineno}"
+        description = _resolve_str(keywords.get("description"), self.string_bindings)
+        parameters = _input_schema_params(keywords.get("inputSchema"))
+        risk_terms, term_risk = _risk_terms([tool_name, description, " ".join(parameters)])
+        target_params = [p for p in parameters if p.lower() in TARGET_PARAMS]
+
+        risk_level = term_risk
+        if target_params:
+            risk_level = max_risk(risk_level, SurfaceRiskLevel.MODERATE)
+        risk_level = _downgrade_read_only_risk(tool_name, risk_level, risk_terms, target_params)
+        if risk_level == SurfaceRiskLevel.INFO and description:
+            risk_level = SurfaceRiskLevel.LOW
+
+        issues = _issues(risk_level, "none", [], target_params, risk_terms)
+        recommendations = _recommendations(risk_level, "none", target_params, issues)
+        return SurfaceFinding(
+            tool_name=tool_name,
+            file_path=str(self.file_path),
+            line=node.lineno,
+            risk_level=risk_level,
+            auth_level="none",
+            decorators=[],
+            parameters=parameters,
+            risk_terms=risk_terms,
+            issues=issues,
+            recommendations=recommendations,
+            description=description.strip().splitlines()[0] if description.strip() else "",
+            finding_type="mcp_tool_lowlevel",
+        )
+
 
 def _decorator_name(node: ast.AST) -> str:
     if isinstance(node, ast.Call):
@@ -338,6 +387,75 @@ def _dotted_name(node: ast.AST) -> Optional[str]:
 
 def _is_tool_decorator(name: str) -> bool:
     return name == "tool" or name.endswith(".tool")
+
+
+def _is_tool_constructor(func: ast.AST) -> bool:
+    """识别 low-level MCP SDK 的 Tool(...) 构造 (mcp.types.Tool)。"""
+    name = _dotted_name(func) or ""
+    return name == "Tool" or name.endswith(".Tool")
+
+
+def _collect_string_bindings(tree: ast.AST) -> Dict[str, str]:
+    """收集 module 内 `X = "..."` 与 `self.X = "..."` 字符串绑定。
+
+    用于解析 `Tool(name=self.name, ...)` 这类工具名来自类属性/常量的写法。
+    """
+    bindings: Dict[str, str] = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not (isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)):
+            continue
+        for target in node.targets:
+            key = None
+            if isinstance(target, ast.Name):
+                key = target.id
+            elif isinstance(target, ast.Attribute):
+                key = target.attr
+            if key and key not in bindings:
+                bindings[key] = node.value.value
+    return bindings
+
+
+def _resolve_str(node: Optional[ast.AST], bindings: Dict[str, str]) -> str:
+    """尽力把 AST 节点解析为字符串：常量、名字/属性引用、或 f-string 常量片段。"""
+    if node is None:
+        return ""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.Name):
+        return bindings.get(node.id, "")
+    if isinstance(node, ast.Attribute):
+        return bindings.get(node.attr, "")
+    if isinstance(node, ast.JoinedStr):
+        parts: List[str] = []
+        for value in node.values:
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                parts.append(value.value)
+            elif isinstance(value, ast.FormattedValue):
+                inner = _resolve_str(value.value, bindings)
+                if inner:
+                    parts.append(inner)
+        return " ".join(parts)
+    return ""
+
+
+def _input_schema_params(node: Optional[ast.AST]) -> List[str]:
+    """从 inputSchema dict 字面量的 properties 提取参数名。"""
+    if not isinstance(node, ast.Dict):
+        return []
+    for key, value in zip(node.keys, node.values):
+        if (
+            isinstance(key, ast.Constant)
+            and key.value == "properties"
+            and isinstance(value, ast.Dict)
+        ):
+            return [
+                prop.value
+                for prop in value.keys
+                if isinstance(prop, ast.Constant) and isinstance(prop.value, str)
+            ]
+    return []
 
 
 def _parameter_names(node: ast.AsyncFunctionDef) -> List[str]:

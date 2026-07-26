@@ -198,3 +198,44 @@ def register(mcp):
     # 外部项目自己的授权装饰器被识别，不再误报缺授权
     assert finding.auth_level == "dangerous"
     assert "high_risk_tool_without_dangerous_auth" not in finding.issues
+
+
+def test_scan_detects_lowlevel_sdk_tool(tmp_path: Path):
+    """low-level MCP SDK: Tool(name=self.name, inputSchema=...) 声明的工具应被检测。"""
+    handler = tmp_path / "lowlevel_server.py"
+    handler.write_text(
+        """
+from mcp.server import Server
+from mcp.types import Tool
+
+app = Server("demo")
+
+
+class Handler:
+    name = "shell_execute"
+    description = "Execute a shell command"
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description=self.description,
+            inputSchema={"type": "object", "properties": {"command": {"type": "array"}}},
+        )
+
+
+@app.list_tools()
+async def list_tools():
+    return [Handler().get_tool_description()]
+""",
+        encoding="utf-8",
+    )
+
+    result = scan_handler_surface(tmp_path)
+    by_name = {f.tool_name: f for f in result.findings}
+
+    # 工具名从 self.name (类属性字符串绑定) 解析出来
+    assert "shell_execute" in by_name
+    finding = by_name["shell_execute"]
+    assert finding.risk_level == SurfaceRiskLevel.HIGH
+    assert finding.finding_type == "mcp_tool_lowlevel"
+    assert "command" in finding.parameters
