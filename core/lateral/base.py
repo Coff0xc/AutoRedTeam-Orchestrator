@@ -250,6 +250,35 @@ class LateralConfig:
         }
 
 
+_GATED_METHODS = ("connect", "execute", "upload", "download")
+
+
+def _execution_gate_wrap(method_name: str, func):
+    """Wrap a real side-effect method so it only runs in an authorized ACTIVE context.
+
+    By default (PLAN mode) the wrapped method returns a blocked result without
+    contacting the target, making the safety boundary intrinsic to the engine
+    rather than something a direct core call can bypass.
+    """
+    import functools
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        from core.security.execution_mode import evaluate
+
+        decision = evaluate(f"lateral.{getattr(self, 'name', 'module')}.{method_name}")
+        if decision.allowed:
+            return func(self, *args, **kwargs)
+        self.logger.warning("execution gate blocked %s: %s", method_name, decision.reason)
+        if method_name == "connect":
+            return False
+        if method_name == "execute":
+            return ExecutionResult(success=False, error=decision.reason, method="blocked")
+        return FileTransferResult(success=False, error=decision.reason)
+
+    return wrapper
+
+
 class BaseLateralModule(ABC):
     """
     横向移动基类
@@ -282,6 +311,20 @@ class BaseLateralModule(ABC):
     default_port: int = 0
     supported_auth: List[AuthMethod] = [AuthMethod.PASSWORD]
     supports_file_transfer: bool = False  # 子类覆盖为 True 以启用文件传输
+
+    def __init_subclass__(cls, **kwargs) -> None:
+        """Wrap each subclass's real side-effect entry points with the execution gate.
+
+        connect/execute/upload/download only run in an authorized ACTIVE context;
+        by default (PLAN) they return a blocked result without touching the target.
+        """
+        super().__init_subclass__(**kwargs)
+        for method_name in _GATED_METHODS:
+            func = cls.__dict__.get(method_name)
+            if callable(func) and not getattr(func, "_execution_gated", False):
+                wrapped = _execution_gate_wrap(method_name, func)
+                wrapped._execution_gated = True  # type: ignore[attr-defined]
+                setattr(cls, method_name, wrapped)
 
     def __init__(
         self, target: str, credentials: Credentials, config: Optional[LateralConfig] = None
