@@ -485,12 +485,17 @@ def ai_surface_scan(
         "high", "--severity-threshold", help="CI 失败阈值: info/low/moderate/high/critical"
     ),
     exit_code: bool = typer.Option(False, "--exit-code", help="发现达阈值项时返回非零退出码"),
+    auth_mode: str = typer.Option(
+        "strict",
+        "--auth-mode",
+        help="auth-gate 检测: strict(报高危缺授权) | lenient(外部仓库不报缺授权)",
+    ),
 ):
     """静态盘点 MCP/AI 工具边界 — 解析源码，不导入或执行 handler"""
     from core.ai_surface import scan_handler_surface
 
     try:
-        result = scan_handler_surface(path)
+        result = scan_handler_surface(path, flag_missing_auth=(auth_mode.lower() != "lenient"))
     except (OSError, SyntaxError, UnicodeDecodeError, ValueError) as exc:
         typer.echo(f"AI surface scan failed: {exc}", err=True)
         raise typer.Exit(2) from exc

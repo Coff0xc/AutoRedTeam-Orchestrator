@@ -145,3 +145,56 @@ def test_scan_mcp_config_flags_general_runtime_and_secret_env(tmp_path: Path):
     assert finding.risk_level == SurfaceRiskLevel.HIGH
     assert "mcp_server_uses_general_command_runtime" in finding.issues
     assert "mcp_server_env_contains_secret_like_keys" in finding.issues
+
+
+def test_lenient_mode_drops_missing_auth_issues(tmp_path: Path):
+    handler = tmp_path / "ext_handlers.py"
+    handler.write_text(
+        '''
+from mcp import tool
+
+
+def register(mcp):
+    @tool(mcp)
+    async def exploit_target(target: str):
+        """Exploit a target."""
+        return {"ok": True}
+''',
+        encoding="utf-8",
+    )
+
+    strict = scan_handler_surface(tmp_path).findings[0]
+    lenient = scan_handler_surface(tmp_path, flag_missing_auth=False).findings[0]
+
+    # strict 默认报"高危工具缺授权 gate"
+    assert "high_risk_tool_without_dangerous_auth" in strict.issues
+    # lenient 移除该本项目特化判定，但风险等级不变
+    assert "high_risk_tool_without_dangerous_auth" not in lenient.issues
+    assert lenient.risk_level == strict.risk_level == SurfaceRiskLevel.HIGH
+
+
+def test_custom_auth_decorator_recognized(tmp_path: Path):
+    handler = tmp_path / "ext_auth_handlers.py"
+    handler.write_text(
+        '''
+from framework import require_org_auth, tool
+
+
+def register(mcp):
+    @tool(mcp)
+    @require_org_auth
+    async def exploit_target(target: str):
+        """Exploit a target."""
+        return {"ok": True}
+''',
+        encoding="utf-8",
+    )
+
+    result = scan_handler_surface(
+        tmp_path, auth_decorators={"require_org_auth": ("dangerous", SurfaceRiskLevel.HIGH)}
+    )
+    finding = result.findings[0]
+
+    # 外部项目自己的授权装饰器被识别，不再误报缺授权
+    assert finding.auth_level == "dangerous"
+    assert "high_risk_tool_without_dangerous_auth" not in finding.issues

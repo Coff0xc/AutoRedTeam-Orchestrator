@@ -105,11 +105,28 @@ SAFE_RUNTIME_HELPER_CALLS = {
 }
 
 
-def scan_handler_surface(path: str | Path = "handlers") -> SurfaceScanResult:
-    """Scan MCP handler files for tool exposure and local risk gates."""
+def scan_handler_surface(
+    path: str | Path = "handlers",
+    *,
+    auth_decorators: Optional[Dict[str, Tuple[str, SurfaceRiskLevel]]] = None,
+    flag_missing_auth: bool = True,
+) -> SurfaceScanResult:
+    """Scan MCP handler files for tool exposure and local risk gates.
+
+    Args:
+        path: handler 文件或目录。
+        auth_decorators: 额外的 授权装饰器名 -> (level, risk) 映射，供外部项目
+            注册自己的授权装饰器，避免"有授权却误报缺失"。
+        flag_missing_auth: True(默认) 时对高危、无已知授权装饰器的工具报 auth-gate
+            issue；False 时移除该类 issue，适合确认不采用此授权体系的外部仓库。
+    """
     root = Path(path)
     if not root.exists():
         raise FileNotFoundError(f"Surface scan path does not exist: {root}")
+
+    catalog = dict(AUTH_DECORATORS)
+    if auth_decorators:
+        catalog.update(auth_decorators)
 
     files = _iter_python_files(root)
     result = SurfaceScanResult(root_path=str(root))
@@ -122,9 +139,12 @@ def scan_handler_surface(path: str | Path = "handlers") -> SurfaceScanResult:
             result.warnings.append(f"{file_path}: {type(exc).__name__}: {exc}")
             continue
 
-        visitor = _HandlerToolVisitor(file_path=file_path, source=source)
+        visitor = _HandlerToolVisitor(file_path=file_path, source=source, auth_catalog=catalog)
         visitor.visit(tree)
         result.findings.extend(visitor.findings)
+
+    if not flag_missing_auth:
+        _relax_missing_auth_issues(result.findings)
 
     result.findings.sort(key=lambda item: (-RISK_ORDER[item.risk_level], item.file_path, item.line))
     return result
@@ -252,9 +272,10 @@ def _iter_text_files(root: Path) -> List[Path]:
 
 
 class _HandlerToolVisitor(ast.NodeVisitor):
-    def __init__(self, file_path: Path, source: str):
+    def __init__(self, file_path: Path, source: str, auth_catalog=None):
         self.file_path = file_path
         self.source = source
+        self.auth_catalog = auth_catalog or AUTH_DECORATORS
         self.findings: List[SurfaceFinding] = []
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
@@ -272,7 +293,7 @@ class _HandlerToolVisitor(ast.NodeVisitor):
         called_names = sorted(_risk_relevant_called_names(_called_names(node)))
         doc = ast.get_docstring(node) or ""
         description = doc.strip().splitlines()[0] if doc.strip() else ""
-        auth_level, auth_risk = _auth_level(decorators)
+        auth_level, auth_risk = _auth_level(decorators, self.auth_catalog)
         risk_terms, term_risk = _risk_terms([node.name, description, " ".join(called_names)])
         target_params = _target_params_needing_validation(parameters, annotations)
 
@@ -361,13 +382,17 @@ def _risk_relevant_called_names(called_names: Iterable[str]) -> Iterable[str]:
         yield name
 
 
-def _auth_level(decorators: List[str]) -> Tuple[str, SurfaceRiskLevel]:
+def _auth_level(
+    decorators: List[str],
+    catalog: Optional[Dict[str, Tuple[str, SurfaceRiskLevel]]] = None,
+) -> Tuple[str, SurfaceRiskLevel]:
+    catalog = catalog or AUTH_DECORATORS
     level = "none"
     risk = SurfaceRiskLevel.INFO
     for decorator in decorators:
         name = decorator.rsplit(".", 1)[-1]
-        if name in AUTH_DECORATORS:
-            auth_level, auth_risk = AUTH_DECORATORS[name]
+        if name in catalog:
+            auth_level, auth_risk = catalog[name]
             if RISK_ORDER[auth_risk] > RISK_ORDER[risk]:
                 level = auth_level
                 risk = auth_risk
@@ -465,15 +490,41 @@ def _recommendations(
 ) -> List[str]:
     recommendations: List[str] = []
     if "critical_tool_without_critical_auth" in issues:
-        recommendations.append("Wrap with require_critical_auth or keep it plan-only.")
+        recommendations.append("Enforce a critical-level authorization gate, or keep it plan-only.")
     elif "high_risk_tool_without_dangerous_auth" in issues:
-        recommendations.append("Wrap with require_dangerous_auth or document why it is safe.")
+        recommendations.append(
+            "Enforce a strong authorization gate for this high-risk tool, or document why it is safe."
+        )
     if "target_input_without_handler_validator" in issues:
-        recommendations.append("Add validate_inputs for target/url-like parameters.")
+        recommendations.append("Validate target/url-like parameters before use.")
     if RISK_ORDER[risk_level] >= RISK_ORDER[SurfaceRiskLevel.HIGH]:
-        recommendations.append("Require HumanGate before any active execution path.")
+        recommendations.append("Require human approval before any active execution path.")
     if target_params:
         recommendations.append("Apply scope policy, rate limits, and audit logging.")
     if auth_level == "none" and not recommendations:
-        recommendations.append("Keep as local/static or document execution boundary.")
+        recommendations.append("Keep as local/static, or document the execution boundary.")
     return recommendations
+
+
+_MISSING_AUTH_ISSUES = frozenset(
+    {
+        "high_risk_tool_without_dangerous_auth",
+        "critical_tool_without_critical_auth",
+        "payload_generation_without_auth_gate",
+    }
+)
+
+
+def _relax_missing_auth_issues(findings: List[SurfaceFinding]) -> None:
+    """移除 auth-gate 类 issue，用于确认不采用本授权体系的外部仓库。
+
+    仅去掉"缺少已知授权装饰器"这类本项目特化的判定；risk_level、target 参数
+    校验以及其他基于代码结构的发现保持不变。
+    """
+    for finding in findings:
+        if not _MISSING_AUTH_ISSUES.intersection(finding.issues):
+            continue
+        finding.issues = [issue for issue in finding.issues if issue not in _MISSING_AUTH_ISSUES]
+        finding.recommendations = [
+            rec for rec in finding.recommendations if "authorization gate" not in rec.lower()
+        ]
