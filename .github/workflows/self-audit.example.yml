@@ -1,0 +1,34 @@
+# AI/MCP 安全自审 — 示例 workflow
+# 将此文件复制到你的项目 .github/workflows/ 下，即可在每个 PR 上静态审计
+# 你仓库里 MCP server / AI agent 工具的安全表面，结果进 GitHub code scanning。
+#
+# 前置条件:
+#   - 仓库开启 code scanning (公开库默认可用；私有库需 GitHub Advanced Security)
+#   - 无需 target、无需网络、无需 secret —— 纯静态自审
+#
+# 检测内容: 高危 MCP 工具缺少 auth gate、target 参数缺校验、
+#           MCP 配置暴露通用命令运行时或明文 secret 等。
+
+name: AI Surface Self-Audit
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ai-surface-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write  # SARIF 上传所需
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AI/MCP Surface Self-Audit
+        uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1
+        with:
+          mode: self-audit
+          path: '.'
+          severity-threshold: high
+          output-format: sarif

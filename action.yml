@@ -1,15 +1,24 @@
 name: 'AutoRedTeam Security Scan'
-description: 'AI-driven penetration testing in your CI pipeline'
+description: 'Authorized security scanning and AI/MCP attack-surface self-audit in CI'
 branding:
   icon: 'shield'
   color: 'red'
 
 inputs:
+  mode:
+    description: 'Scan mode: target-scan (active scan of an authorized URL) | self-audit (static AI/MCP surface scan of this repo)'
+    required: false
+    default: 'target-scan'
   target:
-    description: 'Target URL to scan'
-    required: true
+    description: 'Target URL to scan (required for target-scan mode)'
+    required: false
+    default: ''
+  path:
+    description: 'Path to audit in self-audit mode (relative to repo root)'
+    required: false
+    default: '.'
   scan-type:
-    description: 'Scan type: detect | recon | full'
+    description: 'Scan type for target-scan: detect | recon | full'
     required: false
     default: 'detect'
   categories:
@@ -43,17 +52,40 @@ runs:
     - name: Run Scan
       shell: bash
       env:
+        INPUT_MODE: ${{ inputs.mode }}
         INPUT_TARGET: ${{ inputs.target }}
+        INPUT_PATH: ${{ inputs.path }}
         INPUT_FORMAT: ${{ inputs.output-format }}
         INPUT_SEVERITY: ${{ inputs.severity-threshold }}
         INPUT_CATEGORIES: ${{ inputs.categories }}
       run: |
-        cd ${{ github.action_path }}
-        ARGS="--ci --format $INPUT_FORMAT --severity-threshold $INPUT_SEVERITY --exit-code"
-        if [ -n "$INPUT_CATEGORIES" ]; then
-          ARGS="$ARGS -c $INPUT_CATEGORIES"
+        set -e
+        OUT="$GITHUB_WORKSPACE/results.sarif"
+        if [ "$INPUT_MODE" = "self-audit" ]; then
+          # 静态自审：扫描调用方仓库的 AI/MCP 攻击面，无需 target 或网络
+          case "$INPUT_PATH" in
+            /*) SCAN_PATH="$INPUT_PATH" ;;
+            *)  SCAN_PATH="$GITHUB_WORKSPACE/$INPUT_PATH" ;;
+          esac
+          PYTHONPATH="${{ github.action_path }}" python -m cli.main ai-surface scan \
+            --path "$SCAN_PATH" \
+            --format "$INPUT_FORMAT" \
+            --severity-threshold "$INPUT_SEVERITY" \
+            --exit-code \
+            -o "$OUT"
+        else
+          # 主动扫描：仅用于已授权的外部目标
+          if [ -z "$INPUT_TARGET" ]; then
+            echo "target-scan mode requires the 'target' input" >&2
+            exit 2
+          fi
+          cd "${{ github.action_path }}"
+          ARGS="--ci --format $INPUT_FORMAT --severity-threshold $INPUT_SEVERITY --exit-code"
+          if [ -n "$INPUT_CATEGORIES" ]; then
+            ARGS="$ARGS -c $INPUT_CATEGORIES"
+          fi
+          python -m cli.main detect "$INPUT_TARGET" $ARGS -o "$OUT"
         fi
-        python -m cli.main detect "$INPUT_TARGET" $ARGS -o results.sarif
 
     - name: Upload SARIF
       if: always() && inputs.output-format == 'sarif'
