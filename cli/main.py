@@ -449,10 +449,42 @@ def ai_redteam_eval_run(
 # ──────────────────────────── ai-surface ────────────────────────────
 
 
+def _emit_surface_result(
+    result,
+    output: Optional[str],
+    fmt: str,
+    severity_threshold: str,
+    exit_code: bool,
+) -> None:
+    """输出静态表面扫描结果，支持 SARIF 与 CI 阈值退出码。"""
+    data = result.to_dict()
+    findings = data.get("findings", [])
+
+    if fmt.lower() == "sarif":
+        from core.reporting.sarif import findings_to_sarif
+
+        _output(findings_to_sarif(findings), output)
+    else:
+        _output(data, output)
+
+    if exit_code:
+        from core.reporting.sarif import severity_meets_threshold
+
+        for finding in findings:
+            risk = str(finding.get("risk_level") or finding.get("severity") or "info").lower()
+            if severity_meets_threshold(risk, severity_threshold):
+                raise typer.Exit(2)
+
+
 @ai_surface_app.command("scan")
 def ai_surface_scan(
     path: str = typer.Option("handlers", "--path", "-p", help="handler 文件或目录"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+    format: str = typer.Option("json", "--format", "-f", help="输出格式: json/sarif"),
+    severity_threshold: str = typer.Option(
+        "high", "--severity-threshold", help="CI 失败阈值: info/low/moderate/high/critical"
+    ),
+    exit_code: bool = typer.Option(False, "--exit-code", help="发现达阈值项时返回非零退出码"),
 ):
     """静态盘点 MCP/AI 工具边界 — 解析源码，不导入或执行 handler"""
     from core.ai_surface import scan_handler_surface
@@ -463,7 +495,51 @@ def ai_surface_scan(
         typer.echo(f"AI surface scan failed: {exc}", err=True)
         raise typer.Exit(2) from exc
 
-    _output(result.to_dict(), output)
+    _emit_surface_result(result, output, format, severity_threshold, exit_code)
+
+
+@ai_surface_app.command("scan-mcp-config")
+def ai_surface_scan_mcp_config(
+    path: str = typer.Option(..., "--path", "-p", help="MCP JSON 配置文件路径 (mcpServers)"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+    format: str = typer.Option("json", "--format", "-f", help="输出格式: json/sarif"),
+    severity_threshold: str = typer.Option(
+        "high", "--severity-threshold", help="CI 失败阈值: info/low/moderate/high/critical"
+    ),
+    exit_code: bool = typer.Option(False, "--exit-code", help="发现达阈值项时返回非零退出码"),
+):
+    """静态审计 MCP 配置 — 危险命令暴露与明文 secret，不执行任何 server"""
+    from core.ai_surface import scan_mcp_config
+
+    try:
+        result = scan_mcp_config(path)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"MCP config scan failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    _emit_surface_result(result, output, format, severity_threshold, exit_code)
+
+
+@ai_surface_app.command("scan-skills")
+def ai_surface_scan_skills(
+    path: str = typer.Option(..., "--path", "-p", help="skill/prompt 目录或文件"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+    format: str = typer.Option("json", "--format", "-f", help="输出格式: json/sarif"),
+    severity_threshold: str = typer.Option(
+        "high", "--severity-threshold", help="CI 失败阈值: info/low/moderate/high/critical"
+    ),
+    exit_code: bool = typer.Option(False, "--exit-code", help="发现达阈值项时返回非零退出码"),
+):
+    """静态审计 skill/prompt 指令 — 高危指令标记，不安装或启用任何 skill"""
+    from core.ai_surface import scan_skill_surface
+
+    try:
+        result = scan_skill_surface(path)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Skill surface scan failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    _emit_surface_result(result, output, format, severity_threshold, exit_code)
 
 
 # ──────────────────────────── code-agent ────────────────────────────
