@@ -230,6 +230,11 @@ Issues = "https://github.com/Coff0xc/AutoRedTeam-Orchestrator/issues"
 autort = "cli.main:app"
 autoredteam-mcp = "mcp_stdio_server:main"
 
+[tool.setuptools]
+# mcp_stdio_server.py 是根目录下的单文件模块，不是包，packages.find 扫不到它。
+# 缺了这一行，`autoredteam-mcp` 入口点会以 ModuleNotFoundError 启动失败。
+py-modules = ["mcp_stdio_server"]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["core*", "handlers*", "tools*", "utils*", "autort*", "cli*"]
