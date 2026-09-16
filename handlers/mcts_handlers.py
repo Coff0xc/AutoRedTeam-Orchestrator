@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 from core.security import require_critical_auth
 
 from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
-from .tooling import tool
+from .tooling import no_target_contact, tool
 
 
 def register_mcts_tools(mcp, counter, logger):
@@ -28,6 +28,7 @@ def register_mcts_tools(mcp, counter, logger):
     @require_critical_auth
     @validate_inputs(target="target")
     @handle_errors(logger, ErrorCategory.REDTEAM, extract_target)
+    @no_target_contact("MCTS 模拟规划，奖励来自内置成功率表而非对目标的观测")
     async def plan_attack_path(
         target: str,
         target_type: str = "ip",

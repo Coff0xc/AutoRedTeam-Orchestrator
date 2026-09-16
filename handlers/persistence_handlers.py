@@ -22,7 +22,7 @@ from .runtime_helpers import (
     complete_handler_runtime_payload,
     gate_handler_runtime_action,
 )
-from .tooling import tool
+from .tooling import no_target_contact, tool
 
 
 def register_persistence_tools(mcp, counter, logger):
@@ -246,6 +246,7 @@ def register_persistence_tools(mcp, counter, logger):
     @tool(mcp)
     @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
+    @no_target_contact("生成 webshell 代码，不接触目标")
     async def persistence_webshell(
         shell_type: str = "php",
         password: str = "pass",

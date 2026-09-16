@@ -179,6 +179,74 @@ def register_demo(mcp):
     assert "target_input_without_handler_validator" in lenient_rules
 
 
+def test_lint_exempts_tool_declaring_no_target_contact(tmp_path: Path):
+    """生成器/本地只读工具显式声明不观测目标后，不再要求证据契约。"""
+    _write(
+        tmp_path,
+        '''
+from handlers.tooling import no_target_contact, tool, validate_inputs
+
+
+def register_demo(mcp):
+    @tool(mcp)
+    @validate_inputs(target="target")
+    @no_target_contact("生成 payload 变体，不接触目标")
+    async def lateral_psexec(target: str) -> dict:
+        """生成 payload 变体。
+
+        Args:
+            target: 目标地址
+        """
+        return {"success": True, "variants": []}
+''',
+    )
+
+    result = lint_tool_contracts(tmp_path)
+    rules = {issue.rule for tool in result.tools for issue in tool.issues}
+
+    assert "no_evidence_contract" not in rules
+    assert "unjustified_no_target_contact" not in rules
+
+
+def test_lint_flags_no_target_contact_without_reason(tmp_path: Path):
+    """豁免必须带理由：空理由的声明不算数，仍按缺口报出。"""
+    _write(
+        tmp_path,
+        '''
+from handlers.tooling import no_target_contact, tool, validate_inputs
+
+
+def register_demo(mcp):
+    @tool(mcp)
+    @validate_inputs(target="target")
+    @no_target_contact("")
+    async def lateral_psexec(target: str) -> dict:
+        """生成 payload 变体。
+
+        Args:
+            target: 目标地址
+        """
+        return {"success": True, "variants": []}
+''',
+    )
+
+    result = lint_tool_contracts(tmp_path)
+    rules = {issue.rule for tool in result.tools for issue in tool.issues}
+
+    assert "unjustified_no_target_contact" in rules
+    assert "no_evidence_contract" not in rules
+
+
+def test_no_target_contact_decorator_rejects_empty_reason():
+    """运行时兜底：静态检查之外，空理由在导入期就该炸。"""
+    import pytest
+
+    from handlers.tooling import no_target_contact
+
+    with pytest.raises(ValueError):
+        no_target_contact("   ")
+
+
 def test_repo_handlers_have_no_contract_errors():
     """本仓库工具面必须保持零 error 级契约问题（CI 门禁）。"""
     root = Path(__file__).resolve().parent.parent

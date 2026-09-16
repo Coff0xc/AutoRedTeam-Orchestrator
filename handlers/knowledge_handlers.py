@@ -20,7 +20,7 @@ from .runtime_helpers import (
     complete_handler_runtime_payload,
     gate_handler_runtime_action,
 )
-from .tooling import tool
+from .tooling import no_target_contact, tool
 
 # 模块级单例
 _km = None
@@ -73,6 +73,7 @@ def register_knowledge_tools(mcp, counter, logger):
     @tool(mcp)
     @require_critical_auth
     @handle_errors(logger, ErrorCategory.MISC, extract_target)
+    @no_target_contact("写入本地知识图谱，不接触目标")
     async def kg_store(
         entity_type: str,
         name: str,
@@ -262,6 +263,7 @@ def register_knowledge_tools(mcp, counter, logger):
     @tool(mcp)
     @require_dangerous_auth
     @handle_errors(logger, ErrorCategory.REDTEAM, extract_target)
+    @no_target_contact("在本地知识图谱上做 BFS 查询，不接触目标")
     async def kg_attack_paths(
         source_id: str,
         target_id: str,

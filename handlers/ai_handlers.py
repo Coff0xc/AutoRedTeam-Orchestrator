@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 from core.security import require_dangerous_auth
 
 from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
-from .tooling import tool
+from .tooling import no_target_contact, tool
 
 
 def register_ai_tools(mcp, counter, logger):
@@ -46,6 +46,7 @@ def register_ai_tools(mcp, counter, logger):
     @require_dangerous_auth
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.AI, context_extractor=extract_target)
+    @no_target_contact("根据传入的侦察数据规划攻击链，不接触目标")
     async def attack_chain_plan(
         target: str, reconnaissance_data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -101,6 +102,7 @@ def register_ai_tools(mcp, counter, logger):
     @tool(mcp)
     @require_dangerous_auth
     @handle_errors(logger, category=ErrorCategory.AI)
+    @no_target_contact("从本地 payload 库挑选，不接触目标")
     async def smart_payload(
         vuln_type: str, context: Optional[Dict[str, Any]] = None, waf_detected: bool = False
     ) -> Dict[str, Any]:
@@ -173,7 +175,11 @@ def register_ai_tools(mcp, counter, logger):
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.AI)
     async def ai_surface_scan_skills(path: str) -> Dict[str, Any]:
-        """Agent Skill/插件提示静态盘点 - 发现危险指令和敏感能力边界"""
+        """Agent Skill/插件提示静态盘点 - 发现危险指令和敏感能力边界
+
+        Args:
+            path: Skill/插件所在路径 (文件或目录)
+        """
         from core.ai_surface import scan_skill_surface
 
         return scan_skill_surface(path).to_dict()
@@ -181,7 +187,11 @@ def register_ai_tools(mcp, counter, logger):
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.AI)
     async def ai_surface_scan_mcp_config(path: str) -> Dict[str, Any]:
-        """MCP 配置静态盘点 - 发现泛化命令运行时和敏感 env key"""
+        """MCP 配置静态盘点 - 发现泛化命令运行时和敏感 env key
+
+        Args:
+            path: MCP 配置文件或所在目录
+        """
         from core.ai_surface import scan_mcp_config
 
         return scan_mcp_config(path).to_dict()
@@ -220,7 +230,11 @@ def register_ai_tools(mcp, counter, logger):
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.AI)
     async def ai_redteam_eval_run_state(run_state: Dict[str, Any]) -> Dict[str, Any]:
-        """AgentRunState 本地评测 - deterministic agent/tool eval cases"""
+        """AgentRunState 本地评测 - deterministic agent/tool eval cases
+
+        Args:
+            run_state: AgentRunState 序列化后的 dict (见 core.agent_runtime)
+        """
         from core.agent_runtime import agent_run_state_from_dict
         from core.ai_redteam import evaluate_run_cases
 
@@ -229,7 +243,12 @@ def register_ai_tools(mcp, counter, logger):
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.AI)
     async def ai_prompt_convert(prompt: str, converter: str = "identity") -> Dict[str, Any]:
-        """本地 Prompt converter - PyRIT 风格 converter 抽象，不调用模型或目标"""
+        """本地 Prompt converter - PyRIT 风格 converter 抽象，不调用模型或目标
+
+        Args:
+            prompt: 待转换的 prompt
+            converter: converter 名称 (默认 identity，原样返回)
+        """
         from core.ai_redteam import convert_prompt
 
         return convert_prompt(prompt, converter).to_dict()

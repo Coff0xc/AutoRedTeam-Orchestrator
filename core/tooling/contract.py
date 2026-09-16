@@ -31,6 +31,10 @@ INHERITED_ISSUES: Dict[str, Tuple[str, str]] = {
 # 输出中能表达“我给了证据”的键名（领域既有约定）
 _EVIDENCE_MARKERS = frozenset({"evidence", "verified", "verification_confidence"})
 
+# 显式声明“本工具不观测目标”的装饰器，据此豁免证据契约。
+# 见 handlers/tooling.py 的 no_target_contact。
+_NO_TARGET_CONTACT = "no_target_contact"
+
 
 @dataclass
 class ContractIssue:
@@ -164,6 +168,33 @@ def _declares_evidence_contract(node: ast.AST) -> bool:
     return False
 
 
+def _no_target_contact_exemption(node: ast.AST) -> Optional[str]:
+    """读取 ``@no_target_contact("理由")`` 显式豁免声明。
+
+    生成器（payload/代码/计划）和只读本地状态的工具没有可核验的证据，但源码里
+    推不出这个区别——名字、授权级别、manifest 的 effects 都是按文件粗粒度声明的，
+    实测都不可靠。所以豁免必须是每个工具自己写明的，且必须带理由。
+
+    Returns:
+        None   — 未声明豁免，按未合规处理
+        ""     — 声明了但没有可用的理由（非字面量字符串或空串），视为无效声明
+        str    — 有效的豁免理由
+    """
+    for item in getattr(node, "decorator_list", []):
+        if not isinstance(item, ast.Call):
+            continue
+        func = item.func
+        name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
+        if name != _NO_TARGET_CONTACT:
+            continue
+        if item.args:
+            first = item.args[0]
+            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                return first.value.strip()
+        return ""
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Rules
 # ---------------------------------------------------------------------------
@@ -223,13 +254,23 @@ def _contract_issues(finding: SurfaceFinding, node: Optional[ast.AST]) -> List[C
 
     high_risk = RISK_ORDER[finding.risk_level] >= RISK_ORDER[SurfaceRiskLevel.HIGH]
     if high_risk and not _declares_evidence_contract(node):
-        issues.append(
-            ContractIssue(
-                rule="no_evidence_contract",
-                severity="warning",
-                message="高风险工具未使用 ToolResult，evidence/verified 无法传递到调用方",
+        exemption = _no_target_contact_exemption(node)
+        if exemption is None:
+            issues.append(
+                ContractIssue(
+                    rule="no_evidence_contract",
+                    severity="warning",
+                    message="高风险工具未使用 ToolResult，evidence/verified 无法传递到调用方",
+                )
             )
-        )
+        elif not exemption:
+            issues.append(
+                ContractIssue(
+                    rule="unjustified_no_target_contact",
+                    severity="warning",
+                    message="声明了不观测目标但没有给出理由；豁免必须说明为什么无需证据",
+                )
+            )
 
     return issues
 

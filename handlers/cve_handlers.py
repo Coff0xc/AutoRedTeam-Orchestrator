@@ -13,7 +13,7 @@ from .runtime_helpers import (
     complete_handler_runtime_payload,
     gate_handler_runtime_action,
 )
-from .tooling import tool
+from .tooling import no_target_contact, tool
 
 
 def _gate_cve_runtime(tool_name: str, inputs: Dict[str, Any]) -> Dict[str, Any]:
@@ -314,6 +314,7 @@ def register_cve_tools(mcp, counter, logger):
     @tool(mcp)
     @require_dangerous_auth
     @handle_errors(logger, category=ErrorCategory.CVE)
+    @no_target_contact("仅生成 PoC 模板不执行利用，本身无观测可验证")
     async def cve_generate_poc(
         cve_id: str, description: str, severity: str = "medium"
     ) -> Dict[str, Any]:
