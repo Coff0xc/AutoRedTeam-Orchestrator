@@ -3,7 +3,7 @@
 # 核心依赖 (必需)
 
 # Core MCP Framework
-mcp>=1.0.0,<2.0.0
+mcp>=2.2.0,<3.0.0
 
 # HTTP Clients (核心功能)
 requests>=2.31.0,<3.0.0

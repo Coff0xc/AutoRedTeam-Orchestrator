@@ -29,11 +29,13 @@ import sys
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 # ==================== MCP服务器实例 ====================
 
-mcp = FastMCP("AutoRedTeam")
+# version 会作为 _meta.io.modelcontextprotocol/serverInfo 发给客户端；
+# 不传时客户端看到的将是 MCP SDK 自己的版本号，而不是本项目的版本。
+mcp = MCPServer("AutoRedTeam", version="3.1.0")
 
 
 # ==================== 日志配置 (延迟到 main 调用) ====================

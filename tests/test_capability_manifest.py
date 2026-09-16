@@ -6,7 +6,7 @@ import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from core.capability_manifest import (
     CAPABILITIES,
@@ -174,7 +174,7 @@ def test_registration_is_one_shot(first_profile, second_profile):
 @pytest.mark.parametrize("profile", PROFILE_ORDER)
 @pytest.mark.asyncio
 async def test_real_fastmcp_registration_matches_manifest(profile):
-    mcp = FastMCP(f"manifest-{profile}")
+    mcp = MCPServer(f"manifest-{profile}")
     counter = Counter()
     register_all_handlers(mcp, counter, logging.getLogger(__name__), profile=profile)
 
@@ -239,7 +239,7 @@ def test_manifest_distinguishes_required_from_enforced_controls():
 def test_production_counter_uses_manifest_categories():
     from mcp_stdio_server import ToolCounter
 
-    mcp = FastMCP("counter-full")
+    mcp = MCPServer("counter-full")
     counter = ToolCounter()
 
     register_all_handlers(mcp, counter, MagicMock(), profile="full")
