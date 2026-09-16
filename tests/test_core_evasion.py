@@ -43,7 +43,6 @@ from core.evasion.waf_bypass_engine import (
     normalize_waf_type,
 )
 
-
 # ==================== PayloadObfuscator 测试 ====================
 
 
@@ -305,7 +304,7 @@ class TestShellcodeObfuscator:
         key = b"\xff"
         obfuscated, used_key = ShellcodeObfuscator.xor_shellcode(original, key)
         assert used_key == key
-        assert obfuscated == bytes([0x90 ^ 0xff] * 3)
+        assert obfuscated == bytes([0x90 ^ 0xFF] * 3)
 
     def test_add_nop_sled_length(self):
         """NOP sled 长度正确"""
@@ -522,14 +521,14 @@ class TestWAFBypassEngine:
 
     def test_generate_bypass_sqli_payload(self):
         """SQL 注入 bypass payload 生成"""
-        results = self.engine.generate_bypass("1 UNION SELECT username FROM users", WAFType.MODSECURITY)
+        results = self.engine.generate_bypass(
+            "1 UNION SELECT username FROM users", WAFType.MODSECURITY
+        )
         assert len(results) > 0
 
     def test_generate_chunked_bypass(self):
         """Chunked Transfer Encoding 绕过"""
-        result = self.engine.generate_chunked_bypass(
-            "alert(1)", "data=PAYLOAD_PLACEHOLDER"
-        )
+        result = self.engine.generate_chunked_bypass("alert(1)", "data=PAYLOAD_PLACEHOLDER")
         assert "Transfer-Encoding" in result["headers"]
         assert result["body_normal"].endswith(b"0\r\n\r\n")
 

@@ -13,12 +13,7 @@ import socket
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
-from .base import (
-    BaseLateralModule,
-    Credentials,
-    ExecutionResult,
-    LateralConfig,
-)
+from .base import BaseLateralModule, Credentials, ExecutionResult, LateralConfig
 
 logger = logging.getLogger(__name__)
 

@@ -35,9 +35,7 @@ def summarize_scores(scores: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 def severity_meets_threshold(severity: str, threshold: str) -> bool:
     """Return whether severity is at or above threshold."""
-    return SEVERITY_ORDER.get(severity.lower(), -1) >= SEVERITY_ORDER.get(
-        threshold.lower(), 3
-    )
+    return SEVERITY_ORDER.get(severity.lower(), -1) >= SEVERITY_ORDER.get(threshold.lower(), 3)
 
 
 def should_fail_ci(result: Dict[str, Any], threshold: str = "high") -> bool:

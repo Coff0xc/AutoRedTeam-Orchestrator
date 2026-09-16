@@ -492,9 +492,7 @@ def agent_run_state_from_dict(data: Mapping[str, Any]) -> AgentRunState:
         trace=[trace_event_from_dict(_as_mapping(item)) for item in raw.get("trace") or []],
         metadata=dict(_as_mapping(raw.get("metadata"))),
         memory=[
-            dict(_as_mapping(item))
-            for item in raw.get("memory") or []
-            if isinstance(item, Mapping)
+            dict(_as_mapping(item)) for item in raw.get("memory") or [] if isinstance(item, Mapping)
         ],
         created_at=str(raw.get("created_at") or _now()),
     )

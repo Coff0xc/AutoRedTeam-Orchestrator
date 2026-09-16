@@ -30,7 +30,11 @@ _SERVICE_SIGNATURES: List[Dict[str, Any]] = [
     # FTP
     {"pattern": rb"^220[ -]", "service": "ftp", "extract": r"220[ -](.+)"},
     # SMTP
-    {"pattern": rb"^220 .*(SMTP|Postfix|sendmail|Exchange|Exim)", "service": "smtp", "extract": r"220 (.+)"},
+    {
+        "pattern": rb"^220 .*(SMTP|Postfix|sendmail|Exchange|Exim)",
+        "service": "smtp",
+        "extract": r"220 (.+)",
+    },
     # POP3
     {"pattern": rb"^\+OK", "service": "pop3", "extract": r"\+OK (.+)"},
     # IMAP
@@ -137,7 +141,9 @@ class ServiceProber:
 
         return info
 
-    async def probe_ports(self, host: str, ports: List[int], concurrency: int = 50) -> List[ServiceInfo]:
+    async def probe_ports(
+        self, host: str, ports: List[int], concurrency: int = 50
+    ) -> List[ServiceInfo]:
         """批量探测多个端口"""
         from utils.async_utils import gather_with_limit
 
@@ -213,12 +219,23 @@ class ServiceProber:
                 if cert:
                     subj = cert.get("subject", ())
                     if subj:
-                        cn = next((v for field_set in subj for k, v in field_set if k == "commonName"), None)
+                        cn = next(
+                            (v for field_set in subj for k, v in field_set if k == "commonName"),
+                            None,
+                        )
                         if cn:
                             result["subject"] = cn
                     issuer = cert.get("issuer", ())
                     if issuer:
-                        icn = next((v for field_set in issuer for k, v in field_set if k == "organizationName"), None)
+                        icn = next(
+                            (
+                                v
+                                for field_set in issuer
+                                for k, v in field_set
+                                if k == "organizationName"
+                            ),
+                            None,
+                        )
                         if icn:
                             result["issuer"] = icn
                     if cert.get("notAfter"):

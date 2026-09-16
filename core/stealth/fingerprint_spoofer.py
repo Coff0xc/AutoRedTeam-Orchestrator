@@ -61,56 +61,64 @@ class TLSFingerprint:
     _ja3_hash: Optional[str] = None
 
     # IANA TLS 版本号映射
-    TLS_VERSION_MAP: Dict[str, int] = field(default_factory=lambda: {
-        "SSLv3": 768,
-        "TLSv1.0": 769,
-        "TLSv1.1": 770,
-        "TLSv1.2": 771,
-        "TLSv1.3": 772,
-    })
+    TLS_VERSION_MAP: Dict[str, int] = field(
+        default_factory=lambda: {
+            "SSLv3": 768,
+            "TLSv1.0": 769,
+            "TLSv1.1": 770,
+            "TLSv1.2": 771,
+            "TLSv1.3": 772,
+        }
+    )
 
     # IANA Cipher Suite 编号映射 (常见套件)
-    CIPHER_SUITE_MAP: Dict[str, int] = field(default_factory=lambda: {
-        "TLS_AES_128_GCM_SHA256": 4865,
-        "TLS_AES_256_GCM_SHA384": 4866,
-        "TLS_CHACHA20_POLY1305_SHA256": 4867,
-        "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256": 49195,
-        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256": 49199,
-        "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384": 49196,
-        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384": 49200,
-        "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256": 52393,
-        "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256": 52392,
-        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA": 49161,
-        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA": 49171,
-        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA": 49162,
-        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA": 49172,
-        "TLS_RSA_WITH_AES_128_GCM_SHA256": 156,
-        "TLS_RSA_WITH_AES_256_GCM_SHA384": 157,
-        "TLS_RSA_WITH_AES_128_CBC_SHA": 47,
-        "TLS_RSA_WITH_AES_256_CBC_SHA": 53,
-        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384": 49188,
-        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256": 49187,
-        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384": 49192,
-        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256": 49191,
-        "TLS_RSA_WITH_AES_256_CBC_SHA256": 61,
-        "TLS_RSA_WITH_AES_128_CBC_SHA256": 60,
-        "TLS_EMPTY_RENEGOTIATION_INFO": 255,
-    })
+    CIPHER_SUITE_MAP: Dict[str, int] = field(
+        default_factory=lambda: {
+            "TLS_AES_128_GCM_SHA256": 4865,
+            "TLS_AES_256_GCM_SHA384": 4866,
+            "TLS_CHACHA20_POLY1305_SHA256": 4867,
+            "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256": 49195,
+            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256": 49199,
+            "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384": 49196,
+            "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384": 49200,
+            "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256": 52393,
+            "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256": 52392,
+            "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA": 49161,
+            "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA": 49171,
+            "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA": 49162,
+            "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA": 49172,
+            "TLS_RSA_WITH_AES_128_GCM_SHA256": 156,
+            "TLS_RSA_WITH_AES_256_GCM_SHA384": 157,
+            "TLS_RSA_WITH_AES_128_CBC_SHA": 47,
+            "TLS_RSA_WITH_AES_256_CBC_SHA": 53,
+            "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384": 49188,
+            "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256": 49187,
+            "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384": 49192,
+            "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256": 49191,
+            "TLS_RSA_WITH_AES_256_CBC_SHA256": 61,
+            "TLS_RSA_WITH_AES_128_CBC_SHA256": 60,
+            "TLS_EMPTY_RENEGOTIATION_INFO": 255,
+        }
+    )
 
     # IANA 椭圆曲线 ID 映射
-    ELLIPTIC_CURVE_MAP: Dict[str, int] = field(default_factory=lambda: {
-        "x25519": 29,
-        "secp256r1": 23,
-        "secp384r1": 24,
-        "secp521r1": 25,
-    })
+    ELLIPTIC_CURVE_MAP: Dict[str, int] = field(
+        default_factory=lambda: {
+            "x25519": 29,
+            "secp256r1": 23,
+            "secp384r1": 24,
+            "secp521r1": 25,
+        }
+    )
 
     # IANA EC Point Format 映射
-    EC_POINT_FORMAT_MAP: Dict[str, int] = field(default_factory=lambda: {
-        "uncompressed": 0,
-        "ansiX962_compressed_prime": 1,
-        "ansiX962_compressed_char2": 2,
-    })
+    EC_POINT_FORMAT_MAP: Dict[str, int] = field(
+        default_factory=lambda: {
+            "uncompressed": 0,
+            "ansiX962_compressed_prime": 1,
+            "ansiX962_compressed_char2": 2,
+        }
+    )
 
     @property
     def ja3_string(self) -> str:
@@ -581,8 +589,8 @@ class FingerprintSpoofer:
             try:
                 session.headers.update(headers)
                 # httpx 通过 _transport 设置 SSL
-                if hasattr(session, '_transport') and session._transport is not None:
-                    if hasattr(session._transport, '_ssl_context'):
+                if hasattr(session, "_transport") and session._transport is not None:
+                    if hasattr(session._transport, "_ssl_context"):
                         session._transport._ssl_context = ssl_context
                 logger.info(
                     "已应用 %s 指纹到 httpx session (JA3: %s)",
@@ -625,9 +633,7 @@ class FingerprintSpoofer:
                     self.profile.tls_fingerprint.ja3_hash[:16],
                 )
             except ImportError:
-                logger.warning(
-                    "requests/urllib3 不可用, 仅应用 Headers 指纹"
-                )
+                logger.warning("requests/urllib3 不可用, 仅应用 Headers 指纹")
         else:
             # 通用回退: 尝试设置 headers 属性
             if hasattr(session, "headers"):

@@ -309,7 +309,7 @@ def handle_errors(
 # 内部路径/类名清洗模式（防止错误消息泄露服务器内部信息给 MCP 客户端）
 _PATH_PATTERNS = re.compile(
     r"(?:"
-    r"[A-Za-z]:\\(?:[^\s\\/:*?\"<>|]+\\)+"   # Windows 绝对路径
+    r"[A-Za-z]:\\(?:[^\s\\/:*?\"<>|]+\\)+"  # Windows 绝对路径
     r"|/(?:home|usr|opt|var|tmp|etc|root)/\S+"  # Unix 绝对路径
     r")",
 )

@@ -14,10 +14,7 @@ from urllib.parse import urlencode
 
 # 导入项目统一异常类型
 from core.exceptions import ConnectionError as DetectorConnectionError
-from core.exceptions import (
-    DetectorError,
-    HTTPError,
-)
+from core.exceptions import DetectorError, HTTPError
 from core.exceptions import TimeoutError as DetectorTimeoutError
 
 from .result import DetectionResult, DetectorType, RequestInfo, ResponseInfo, Severity
@@ -411,11 +408,7 @@ class BaseDetector(ABC):
         )
 
         # 误报过滤: 当启用且检测到漏洞时，自动检查是否为误报
-        if (
-            result.vulnerable
-            and self.config.get("enable_fp_filter", True)
-            and response is not None
-        ):
+        if result.vulnerable and self.config.get("enable_fp_filter", True) and response is not None:
             fp_result = self._check_false_positive(response)
             if fp_result.is_false_positive:
                 result.vulnerable = False

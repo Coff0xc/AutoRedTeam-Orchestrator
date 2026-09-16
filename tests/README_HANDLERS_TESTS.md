@@ -89,12 +89,12 @@ pytest tests/test_handlers_*.py -v --tb=long
 async def test_tool_name_scenario(self):
     """测试描述"""
     from handlers.xxx_handlers import register_xxx_tools
-    
+
     # 1. 模拟 MCP
     mock_mcp = MagicMock()
     mock_counter = MagicMock()
     mock_logger = MagicMock()
-    
+
     # 2. 捕获工具
     registered_tools = {}
     def capture_tool():
@@ -103,14 +103,14 @@ async def test_tool_name_scenario(self):
             return func
         return decorator
     mock_mcp.tool = capture_tool
-    
+
     # 3. 注册工具
     register_xxx_tools(mock_mcp, mock_counter, mock_logger)
-    
+
     # 4. Mock 底层模块
     with patch('core.xxx.YYY') as mock_yyy:
         mock_yyy.return_value = expected_result
-        
+
         # 5. 调用并验证
         result = await registered_tools['tool_name'](params)
         assert result['success'] is True

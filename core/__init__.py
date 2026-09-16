@@ -9,20 +9,11 @@ AI Red Team MCP - Core Module
 - handlers/modules 中的导入应使用延迟导入模式
 """
 
-# 统一的工具返回值 Schema (轻量，无重依赖)
-from core.result import (
-    ResultStatus,
-    ToolResult,
-    ToolResultType,
-    ensure_tool_result,
-)
-
 # AI决策引擎 (轻量 - 仅使用标准库+可选第三方)
-from core.ai_engine import (
-    AIDecisionEngine,
-    AttackVector,
-    RiskLevel,
-)
+from core.ai_engine import AIDecisionEngine, AttackVector, RiskLevel
+
+# 统一的工具返回值 Schema (轻量，无重依赖)
+from core.result import ResultStatus, ToolResult, ToolResultType, ensure_tool_result
 
 __all__ = [
     # 统一返回值

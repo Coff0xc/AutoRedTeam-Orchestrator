@@ -50,11 +50,7 @@ class LateralMovePhaseExecutor(BasePhaseExecutor):
             )
 
         try:
-            from core.lateral import (
-                LateralConfig,
-                auto_lateral,
-                ensure_credentials,
-            )
+            from core.lateral import LateralConfig, auto_lateral, ensure_credentials
 
             from ..state import AccessInfo
 

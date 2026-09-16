@@ -10,6 +10,8 @@ core.config — 统一 Pydantic 配置系统
     cfg.detector.timeout    # 30.0
 """
 
+from core.sandbox.config import SandboxConfig
+
 from .loader import get_config, reload_config, reset_config
 from .models import (
     AIConfig,
@@ -36,7 +38,6 @@ from .models import (
     ToolsConfig,
     WordlistsConfig,
 )
-from core.sandbox.config import SandboxConfig
 
 __all__ = [
     # 加载器

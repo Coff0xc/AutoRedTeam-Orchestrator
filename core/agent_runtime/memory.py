@@ -61,7 +61,9 @@ class RunMemory:
         self.records.append(record)
         return record
 
-    def query(self, key_prefix: Optional[str] = None, record_type: Optional[str] = None) -> List[MemoryRecord]:
+    def query(
+        self, key_prefix: Optional[str] = None, record_type: Optional[str] = None
+    ) -> List[MemoryRecord]:
         results = self.records
         if key_prefix:
             results = [record for record in results if record.key.startswith(key_prefix)]

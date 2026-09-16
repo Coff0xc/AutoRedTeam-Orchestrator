@@ -449,7 +449,9 @@ class AuthManager:
             return hmac.compare_digest(derived.hex(), expected_hex)
         else:
             # 旧格式: plain SHA256（向后兼容）
-            plain_hash = hashlib.sha256(secret.encode()).hexdigest()  # nosec B324  # SHA256 for API key verification (legacy format)
+            plain_hash = hashlib.sha256(
+                secret.encode()
+            ).hexdigest()  # nosec B324  # SHA256 for API key verification (legacy format)
             return hmac.compare_digest(plain_hash, key_hash)
 
     def _check_rate_limit(self, key_id: str, limit: int) -> bool:
@@ -475,9 +477,7 @@ class AuthManager:
             )
             for k in sorted_keys[: len(sorted_keys) // 2]:
                 del self.rate_limit_tracker[k]
-            logger.warning(
-                "速率限制tracker已清理，当前key数: %d", len(self.rate_limit_tracker)
-            )
+            logger.warning("速率限制tracker已清理，当前key数: %d", len(self.rate_limit_tracker))
 
         # 检查限制
         if len(self.rate_limit_tracker[key_id]) >= limit:

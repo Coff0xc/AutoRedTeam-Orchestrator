@@ -32,9 +32,7 @@ SKIP_DIRS = {"tests", "__pycache__", ".git", "venv", "backup", "scripts"}
 
 # Pattern to match logger.xxx(f"...") on a single line
 # Uses a non-greedy match for the f-string content between quotes
-LOG_PATTERN = re.compile(
-    r'(logger\.\w+)\(f(["\'])(.*?)\2\)'
-)
+LOG_PATTERN = re.compile(r'(logger\.\w+)\(f(["\'])(.*?)\2\)')
 
 # Pattern to match {expr} or {expr:fmt} inside f-string content
 FSTRING_VAR = re.compile(r"\{([^{}]+?)(?::([^{}]*))?\}")
@@ -47,8 +45,8 @@ def convert_fstring_to_lazy(match: re.Match) -> str:
     complex to safely convert (e.g. contains brackets, function calls).
     """
     log_call = match.group(1)  # e.g., logger.info
-    quote = match.group(2)     # " or '
-    content = match.group(3)   # The f-string content between quotes
+    quote = match.group(2)  # " or '
+    content = match.group(3)  # The f-string content between quotes
 
     vars_found: list[str] = []
     has_complex = False
@@ -96,7 +94,7 @@ def convert_fstring_to_lazy(match: re.Match) -> str:
         return match.group(0)
 
     vars_str = ", ".join(vars_found)
-    return f'{log_call}({quote}{new_content}{quote}, {vars_str})'
+    return f"{log_call}({quote}{new_content}{quote}, {vars_str})"
 
 
 def process_file(filepath: str, dry_run: bool = False) -> tuple[int, int]:

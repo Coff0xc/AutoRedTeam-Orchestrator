@@ -25,20 +25,11 @@ from datetime import datetime
 from typing import Any, Callable, Dict, Optional
 from urllib.parse import urlparse
 
-from .base import (
-    BaseReconEngine,
-    Finding,
-    ReconConfig,
-    ReconResult,
-    Severity,
-)
+from .base import BaseReconEngine, Finding, ReconConfig, ReconResult, Severity
 from .directory import DirectoryScanner
 from .dns_resolver import DNSResolver
 from .fingerprint import FingerprintEngine
-from .phases import (
-    PhaseResult,
-    ReconPhase,
-)
+from .phases import PhaseResult, ReconPhase
 from .port_scanner import PortScanner
 from .subdomain import SubdomainEnumerator
 from .tech_detect import TechDetector

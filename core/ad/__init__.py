@@ -27,15 +27,9 @@ from .kerberos_attack import (
     KerberosTicket,
     kerberos_attack,
 )
-from .kerberos_attacks import (
-    ASREPInfo,
-)
+from .kerberos_attacks import ASREPInfo
 from .kerberos_attacks import AttackResult as ImpacketAttackResult
-from .kerberos_attacks import (
-    KerberosAttacks,
-    TicketInfo,
-    kerberos_attacks,
-)
+from .kerberos_attacks import KerberosAttacks, TicketInfo, kerberos_attacks
 
 __all__ = [
     # AD Enumeration

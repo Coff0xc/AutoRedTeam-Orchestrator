@@ -15,11 +15,7 @@ import logging
 import time
 from typing import Iterable
 
-from ..base import (
-    BaseExfiltration,
-    ExfilChannel,
-    ExfilConfig,
-)
+from ..base import BaseExfiltration, ExfilChannel, ExfilConfig
 
 logger = logging.getLogger(__name__)
 

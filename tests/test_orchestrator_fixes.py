@@ -234,7 +234,9 @@ class TestOrchestratorRuntimePipeline:
 
         assert result.success is True
         assert result.data["runtime"]["action"]["status"] == "skipped"
-        assert result.data["runtime"]["action"]["output"]["reason"] == "orchestrator runtime dry-run"
+        assert (
+            result.data["runtime"]["action"]["output"]["reason"] == "orchestrator runtime dry-run"
+        )
         assert any(
             event.event_type == "middleware_decision"
             for event in orchestrator.runtime_run_state.trace

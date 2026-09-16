@@ -46,40 +46,19 @@
 from typing import Optional
 
 # 访问控制检测器
-from .access import (
-    IDORDetector,
-    OpenRedirectDetector,
-    PathTraversalDetector,
-    SSRFDetector,
-)
+from .access import IDORDetector, OpenRedirectDetector, PathTraversalDetector, SSRFDetector
 
 # 认证检测器
-from .auth import (
-    AuthBypassDetector,
-    SessionDetector,
-    WeakPasswordDetector,
-)
+from .auth import AuthBypassDetector, SessionDetector, WeakPasswordDetector
 
 # 基础类
-from .base import (
-    BaseDetector,
-    CompositeDetector,
-    ContextAwareDetector,
-    StreamingDetector,
-)
+from .base import BaseDetector, CompositeDetector, ContextAwareDetector, StreamingDetector
 
 # 工厂
-from .factory import (
-    DetectorFactory,
-    DetectorPresets,
-    register_detector,
-)
+from .factory import DetectorFactory, DetectorPresets, register_detector
 
 # 文件类检测器
-from .file import (
-    FileUploadDetector,
-    LFIDetector,
-)
+from .file import FileUploadDetector, LFIDetector
 
 # 注入类检测器
 from .injection import (
@@ -117,11 +96,7 @@ from .payloads import (
 )
 
 # 请求层检测器
-from .request import (
-    CachePoisoningDetector,
-    HostHeaderInjectionDetector,
-    HTTPSmugglingDetector,
-)
+from .request import CachePoisoningDetector, HostHeaderInjectionDetector, HTTPSmugglingDetector
 
 # 检测结果
 from .result import (

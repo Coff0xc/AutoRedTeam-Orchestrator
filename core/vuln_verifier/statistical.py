@@ -271,7 +271,9 @@ class StatisticalVerifier:
         variance = sum((x - mean) ** 2 for x in data) / (len(data) - 1)
         return math.sqrt(variance)
 
-    def _welch_ttest(self, sample1: Sequence[float], sample2: Sequence[float]) -> Tuple[float, float]:
+    def _welch_ttest(
+        self, sample1: Sequence[float], sample2: Sequence[float]
+    ) -> Tuple[float, float]:
         """Welch's t-test (不假设方差相等)
 
         Returns:

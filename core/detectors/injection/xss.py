@@ -12,9 +12,7 @@ from urllib.parse import parse_qs, quote, urlparse
 
 # 导入项目统一异常类型
 from core.exceptions import ConnectionError as DetectorConnectionError
-from core.exceptions import (
-    HTTPError,
-)
+from core.exceptions import HTTPError
 from core.exceptions import TimeoutError as DetectorTimeoutError
 
 from ..base import BaseDetector
@@ -385,7 +383,11 @@ class XSSDetector(BaseDetector):
         # 检查部分反射（payload 特征字符）
         # 必须排除基线响应中已存在的标签，否则 <script> 等页面自身标签导致误报
         dangerous_chars = ["<script", "<img", "<svg", "onerror=", "onload=", "javascript:"]
-        baseline_lower = self._baseline_body.lower() if hasattr(self, "_baseline_body") and self._baseline_body else ""
+        baseline_lower = (
+            self._baseline_body.lower()
+            if hasattr(self, "_baseline_body") and self._baseline_body
+            else ""
+        )
         for char in dangerous_chars:
             if char in payload.lower() and char in response_text.lower():
                 # 关键: 如果基线中已包含此标签，不算反射

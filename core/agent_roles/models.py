@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Optional
 
 from core.agent_runtime import Action, ActionKind, RiskLevel
 
-
 RISK_ORDER = {
     RiskLevel.INFO: 0,
     RiskLevel.LOW: 1,
@@ -121,7 +120,11 @@ def build_default_team() -> AgentTeam:
                 name="Researcher",
                 kind=RoleKind.RESEARCHER,
                 goals=["Collect local context", "Summarize constraints"],
-                allowed_action_kinds=[ActionKind.MODEL_CALL, ActionKind.TOOL_CALL, ActionKind.REPORT],
+                allowed_action_kinds=[
+                    ActionKind.MODEL_CALL,
+                    ActionKind.TOOL_CALL,
+                    ActionKind.REPORT,
+                ],
                 max_risk_level=RiskLevel.MODERATE,
                 allowed_network_policies=["deny", "read-only"],
             ),
@@ -129,7 +132,11 @@ def build_default_team() -> AgentTeam:
                 name="Planner",
                 kind=RoleKind.PLANNER,
                 goals=["Break scenarios into tasks", "Attach risk policy to every action"],
-                allowed_action_kinds=[ActionKind.MODEL_CALL, ActionKind.TOOL_CALL, ActionKind.REPORT],
+                allowed_action_kinds=[
+                    ActionKind.MODEL_CALL,
+                    ActionKind.TOOL_CALL,
+                    ActionKind.REPORT,
+                ],
                 max_risk_level=RiskLevel.HIGH,
                 allowed_network_policies=["deny", "read-only"],
             ),
@@ -150,7 +157,11 @@ def build_default_team() -> AgentTeam:
                 name="Verifier",
                 kind=RoleKind.VERIFIER,
                 goals=["Check evidence", "Score results", "Reduce false positives"],
-                allowed_action_kinds=[ActionKind.TOOL_CALL, ActionKind.MODEL_CALL, ActionKind.REPORT],
+                allowed_action_kinds=[
+                    ActionKind.TOOL_CALL,
+                    ActionKind.MODEL_CALL,
+                    ActionKind.REPORT,
+                ],
                 max_risk_level=RiskLevel.MODERATE,
                 allowed_network_policies=["deny", "read-only"],
             ),

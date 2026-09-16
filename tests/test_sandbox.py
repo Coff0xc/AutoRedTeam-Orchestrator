@@ -205,8 +205,10 @@ class TestDockerExecutorMocked:
         """测试 Docker 容器中执行命令"""
         mock_client, mock_container = self._make_mock_docker()
 
-        with patch("core.sandbox.executor.DOCKER_AVAILABLE", True), \
-             patch("core.sandbox.executor.docker") as mock_docker_mod:
+        with (
+            patch("core.sandbox.executor.DOCKER_AVAILABLE", True),
+            patch("core.sandbox.executor.docker") as mock_docker_mod,
+        ):
             mock_docker_mod.from_env.return_value = mock_client
 
             from core.sandbox.executor import DockerExecutor
@@ -227,8 +229,10 @@ class TestDockerExecutorMocked:
         mock_client.images.get.return_value = MagicMock()
         mock_client.containers.run.side_effect = Exception("container failed")
 
-        with patch("core.sandbox.executor.DOCKER_AVAILABLE", True), \
-             patch("core.sandbox.executor.docker") as mock_docker_mod:
+        with (
+            patch("core.sandbox.executor.DOCKER_AVAILABLE", True),
+            patch("core.sandbox.executor.docker") as mock_docker_mod,
+        ):
             mock_docker_mod.from_env.return_value = mock_client
 
             from core.sandbox.executor import DockerExecutor
@@ -249,8 +253,10 @@ class TestDockerExecutorMocked:
             b"",
         ]
 
-        with patch("core.sandbox.executor.DOCKER_AVAILABLE", True), \
-             patch("core.sandbox.executor.docker") as mock_docker_mod:
+        with (
+            patch("core.sandbox.executor.DOCKER_AVAILABLE", True),
+            patch("core.sandbox.executor.docker") as mock_docker_mod,
+        ):
             mock_docker_mod.from_env.return_value = mock_client
 
             from core.sandbox.executor import DockerExecutor

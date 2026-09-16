@@ -195,7 +195,9 @@ def hmac_md5(data: Union[str, bytes], key: Union[str, bytes], encoding: str = "u
     """
     data_bytes = _ensure_bytes(data, encoding)
     key_bytes = _ensure_bytes(key, encoding)
-    return hmac.new(key_bytes, data_bytes, hashlib.md5).hexdigest()  # nosec B324  # HMAC-MD5 for message authentication
+    return hmac.new(
+        key_bytes, data_bytes, hashlib.md5
+    ).hexdigest()  # nosec B324  # HMAC-MD5 for message authentication
 
 
 def hmac_sha1(data: Union[str, bytes], key: Union[str, bytes], encoding: str = "utf-8") -> str:
@@ -212,7 +214,9 @@ def hmac_sha1(data: Union[str, bytes], key: Union[str, bytes], encoding: str = "
     """
     data_bytes = _ensure_bytes(data, encoding)
     key_bytes = _ensure_bytes(key, encoding)
-    return hmac.new(key_bytes, data_bytes, hashlib.sha1).hexdigest()  # nosec B324  # HMAC-SHA1 for message authentication
+    return hmac.new(
+        key_bytes, data_bytes, hashlib.sha1
+    ).hexdigest()  # nosec B324  # HMAC-SHA1 for message authentication
 
 
 def hmac_sha256(data: Union[str, bytes], key: Union[str, bytes], encoding: str = "utf-8") -> str:
@@ -229,7 +233,9 @@ def hmac_sha256(data: Union[str, bytes], key: Union[str, bytes], encoding: str =
     """
     data_bytes = _ensure_bytes(data, encoding)
     key_bytes = _ensure_bytes(key, encoding)
-    return hmac.new(key_bytes, data_bytes, hashlib.sha256).hexdigest()  # nosec B324  # HMAC-SHA256 for message authentication
+    return hmac.new(
+        key_bytes, data_bytes, hashlib.sha256
+    ).hexdigest()  # nosec B324  # HMAC-SHA256 for message authentication
 
 
 def hmac_sha512(data: Union[str, bytes], key: Union[str, bytes], encoding: str = "utf-8") -> str:

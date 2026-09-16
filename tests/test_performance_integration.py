@@ -19,13 +19,7 @@ from pathlib import Path
 
 import pytest
 
-from core.concurrency import (
-    CircuitBreaker,
-    TokenBucket,
-    get_collector,
-    get_pool,
-    track_request,
-)
+from core.concurrency import CircuitBreaker, TokenBucket, get_collector, get_pool, track_request
 from core.exploit.pure_scanner import PurePortScanner
 
 # 导入核心模块 (使用正确的导入路径)
@@ -208,14 +202,9 @@ class TestIntegration:
 def test_basic_imports():
     """测试基本导入"""
     # 验证所有必要模块可以导入
-    from core.concurrency import (
-        get_collector,
-    )
+    from core.concurrency import get_collector
     from core.exploit.pure_scanner import PurePortScanner
-    from core.recon import (
-        ReconConfig,
-        StandardReconEngine,
-    )
+    from core.recon import ReconConfig, StandardReconEngine
 
     assert StandardReconEngine is not None
     assert ReconConfig is not None

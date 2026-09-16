@@ -10,7 +10,6 @@ import base64
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
-
 HOMOGLYPHS = str.maketrans(
     {
         "a": "а",  # Cyrillic small a

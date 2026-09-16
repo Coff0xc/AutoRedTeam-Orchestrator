@@ -24,12 +24,7 @@ import time
 from typing import Any, Dict, List, Optional, cast
 from urllib.parse import urlparse
 
-from .base import (
-    APITestResult,
-    APIVulnType,
-    BaseAPITester,
-    Severity,
-)
+from .base import APITestResult, APIVulnType, BaseAPITester, Severity
 
 logger = logging.getLogger(__name__)
 
@@ -661,7 +656,9 @@ class JWTTester(BaseAPITester):
 
         # HMAC-SHA256签名
         signature = hmac.new(
-            secret.encode("utf-8"), message.encode("utf-8"), hashlib.sha256  # nosec B324  # HMAC-SHA256 for JWT signing (security purpose)
+            secret.encode("utf-8"),
+            message.encode("utf-8"),
+            hashlib.sha256,  # nosec B324  # HMAC-SHA256 for JWT signing (security purpose)
         ).digest()
 
         signature_b64 = self._base64url_encode(signature)

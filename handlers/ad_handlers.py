@@ -259,7 +259,12 @@ def register_ad_tools(mcp, counter, logger):
         """
         blocked = _gate_ad_runtime(
             "ad_spn_scan",
-            {"domain": domain, "dc_ip": dc_ip, "username": username, "service_class": service_class},
+            {
+                "domain": domain,
+                "dc_ip": dc_ip,
+                "username": username,
+                "service_class": service_class,
+            },
         )
         if blocked:
             return blocked

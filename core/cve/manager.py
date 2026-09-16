@@ -16,13 +16,7 @@ from typing import Dict, List, Optional
 
 from .models import CVEEntry, CVEStats, Severity, SyncStatus
 from .search import CVESearchEngine, SearchFilter, SearchOptions, SearchResult
-from .sources import (
-    AggregatedSource,
-    CVESource,
-    ExploitDBSource,
-    NucleiSource,
-    NVDSource,
-)
+from .sources import AggregatedSource, CVESource, ExploitDBSource, NucleiSource, NVDSource
 from .storage import get_storage
 
 logger = logging.getLogger(__name__)

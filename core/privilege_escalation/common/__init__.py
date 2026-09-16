@@ -3,11 +3,7 @@
 权限提升通用模块 - Common Module for Privilege Escalation
 """
 
-from .enumeration import (
-    EnumerationResult,
-    PrivilegeEnumerator,
-    SystemInfo,
-)
+from .enumeration import EnumerationResult, PrivilegeEnumerator, SystemInfo
 
 __all__ = [
     "PrivilegeEnumerator",

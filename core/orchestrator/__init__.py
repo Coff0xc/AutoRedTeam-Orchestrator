@@ -21,44 +21,13 @@ Usage:
 """
 
 # 数据协议 - v3.0.0新增
-from .contracts import (
-    AccessGrant,
-    AccessLevel,
-    AccumulatedState,
-    Credential,
-    PhaseDataManager,
-)
+from .contracts import AccessGrant, AccessLevel, AccumulatedState, Credential, PhaseDataManager
 from .contracts import PhaseResult as ContractPhaseResult
-from .contracts import (
-    SecretType,
-    VulnFinding,
-    VulnSeverity,
-)
-from .decision import (
-    AttackComplexity,
-    AttackPath,
-    DecisionEngine,
-    RiskLevel,
-    ThreatContext,
-)
-from .orchestrator import (
-    AutoPentestOrchestrator,
-    OrchestratorConfig,
-    resume_pentest,
-    run_pentest,
-)
-from .phases import (
-    PHASE_EXECUTORS,
-    BasePhaseExecutor,
-    PhaseResult,
-)
-from .state import (
-    AccessInfo,
-    Checkpoint,
-    PentestPhase,
-    PentestState,
-    PhaseStatus,
-)
+from .contracts import SecretType, VulnFinding, VulnSeverity
+from .decision import AttackComplexity, AttackPath, DecisionEngine, RiskLevel, ThreatContext
+from .orchestrator import AutoPentestOrchestrator, OrchestratorConfig, resume_pentest, run_pentest
+from .phases import PHASE_EXECUTORS, BasePhaseExecutor, PhaseResult
+from .state import AccessInfo, Checkpoint, PentestPhase, PentestState, PhaseStatus
 
 __all__ = [
     # State

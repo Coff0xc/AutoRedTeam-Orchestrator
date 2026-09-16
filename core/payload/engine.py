@@ -18,11 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from .mutator import PayloadMutator, mutate_payload
 from .selector import SmartPayloadSelector
 from .signatures import WAF_BYPASS_STRATEGIES, TargetProfile
-from .types import (
-    PayloadResult,
-    ScoredPayload,
-    get_payload_key,
-)
+from .types import PayloadResult, ScoredPayload, get_payload_key
 
 logger = logging.getLogger(__name__)
 

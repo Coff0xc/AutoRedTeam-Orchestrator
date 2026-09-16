@@ -209,7 +209,9 @@ async def _download_from_github(tool_name: str, config: dict) -> Optional[Path]:
         if target_path.exists():
             # 设置可执行权限
             if not _IS_WINDOWS:
-                target_path.chmod(target_path.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+                target_path.chmod(
+                    target_path.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH
+                )
             logger.info("工具 %s 已下载到 %s", tool_name, target_path)
             return target_path
 
@@ -267,7 +269,14 @@ async def ensure_sqlmap() -> Optional[Path]:
 
         result = await asyncio.to_thread(
             subprocess.run,
-            ["git", "clone", "--depth", "1", "https://github.com/sqlmapproject/sqlmap.git", str(sqlmap_dir)],
+            [
+                "git",
+                "clone",
+                "--depth",
+                "1",
+                "https://github.com/sqlmapproject/sqlmap.git",
+                str(sqlmap_dir),
+            ],
             capture_output=True,
             text=True,
             timeout=120,
@@ -294,7 +303,14 @@ async def ensure_nuclei_templates() -> Optional[Path]:
 
         result = await asyncio.to_thread(
             subprocess.run,
-            ["git", "clone", "--depth", "1", "https://github.com/projectdiscovery/nuclei-templates.git", str(templates_dir)],
+            [
+                "git",
+                "clone",
+                "--depth",
+                "1",
+                "https://github.com/projectdiscovery/nuclei-templates.git",
+                str(templates_dir),
+            ],
             capture_output=True,
             text=True,
             timeout=300,
@@ -317,7 +333,11 @@ def get_all_tool_status() -> Dict[str, Dict]:
         status[name] = {
             "available": path is not None,
             "path": str(path) if path else None,
-            "source": "builtin" if path and str(TOOLS_BIN_DIR) in str(path) else "system" if path else "missing",
+            "source": (
+                "builtin"
+                if path and str(TOOLS_BIN_DIR) in str(path)
+                else "system" if path else "missing"
+            ),
         }
     # sqlmap
     sqlmap_path = Path(__file__).resolve().parent / "sqlmap" / "sqlmap.py"

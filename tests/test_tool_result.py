@@ -6,11 +6,7 @@ ToolResult 单元测试
 
 from datetime import datetime
 
-from core.result import (
-    ResultStatus,
-    ToolResult,
-    ensure_tool_result,
-)
+from core.result import ResultStatus, ToolResult, ensure_tool_result
 
 
 class TestToolResult:

@@ -134,6 +134,7 @@ class TestCVESearch:
 
             # 在 search_engine 层 mock，绕过直接 SQLite 调用
             from core.cve.search import SearchResult
+
             manager._search_engine.advanced_search = Mock(
                 return_value=SearchResult(entries=[mock_cve], total_count=1, returned_count=1)
             )
@@ -176,8 +177,12 @@ class TestCVESearch:
     def test_search_empty_results(self, manager_with_data):
         """测试空搜索结果"""
         from core.cve.search import SearchResult
-        with patch.object(manager_with_data._search_engine, "advanced_search",
-                          return_value=SearchResult(entries=[], total_count=0, returned_count=0)):
+
+        with patch.object(
+            manager_with_data._search_engine,
+            "advanced_search",
+            return_value=SearchResult(entries=[], total_count=0, returned_count=0),
+        ):
             results = manager_with_data.search("nonexistent-keyword")
             assert results == []
 
@@ -428,6 +433,7 @@ class TestIntegration:
             manager = CVEManager()
 
             from core.cve.search import SearchResult
+
             manager._search_engine.advanced_search = Mock(
                 return_value=SearchResult(entries=[mock_cve], total_count=1, returned_count=1)
             )
@@ -467,6 +473,7 @@ class TestIntegration:
             manager = CVEManager()
 
             from core.cve.search import SearchResult
+
             manager._search_engine.advanced_search = Mock(
                 return_value=SearchResult(entries=cves, total_count=5, returned_count=5)
             )

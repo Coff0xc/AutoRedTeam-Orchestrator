@@ -22,12 +22,7 @@ import secrets
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode, urlparse
 
-from .base import (
-    APITestResult,
-    APIVulnType,
-    BaseAPITester,
-    Severity,
-)
+from .base import APITestResult, APIVulnType, BaseAPITester, Severity
 
 logger = logging.getLogger(__name__)
 
@@ -517,7 +512,9 @@ class OAuthTester(BaseAPITester):
         if include_pkce and params["response_type"] == "code":
             code_verifier = secrets.token_urlsafe(64)
             code_challenge = (
-                base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())  # nosec B324  # PKCE S256 challenge per OAuth 2.0 spec
+                base64.urlsafe_b64encode(
+                    hashlib.sha256(code_verifier.encode()).digest()
+                )  # nosec B324  # PKCE S256 challenge per OAuth 2.0 spec
                 .rstrip(b"=")
                 .decode()
             )
@@ -553,7 +550,9 @@ class OAuthTester(BaseAPITester):
             if include_pkce and params["response_type"] == "code":
                 code_verifier = secrets.token_urlsafe(64)
                 code_challenge = (
-                    base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())  # nosec B324  # PKCE S256 challenge per OAuth 2.0 spec
+                    base64.urlsafe_b64encode(
+                        hashlib.sha256(code_verifier.encode()).digest()
+                    )  # nosec B324  # PKCE S256 challenge per OAuth 2.0 spec
                     .rstrip(b"=")
                     .decode()
                 )

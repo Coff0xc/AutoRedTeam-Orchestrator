@@ -41,22 +41,10 @@ AutoRedTeam Recon 引擎模块
 """
 
 # 基类和数据类
-from .base import (
-    BaseReconEngine,
-    Finding,
-    ProgressCallback,
-    ReconConfig,
-    ReconResult,
-    Severity,
-)
+from .base import BaseReconEngine, Finding, ProgressCallback, ReconConfig, ReconResult, Severity
 
 # 目录扫描
-from .directory import (
-    DirectoryInfo,
-    DirectoryScanner,
-    async_scan_directories,
-    scan_directories,
-)
+from .directory import DirectoryInfo, DirectoryScanner, async_scan_directories, scan_directories
 
 # DNS解析
 from .dns_resolver import (
@@ -70,10 +58,7 @@ from .dns_resolver import (
 )
 
 # 标准引擎
-from .engine import (
-    StandardReconEngine,
-    create_recon_engine,
-)
+from .engine import StandardReconEngine, create_recon_engine
 
 # 指纹识别
 from .fingerprint import (
@@ -83,6 +68,9 @@ from .fingerprint import (
     FingerprintRule,
     identify_fingerprints,
 )
+
+# 被动侦察
+from .passive_recon import PassiveRecon, passive_subdomain_discovery
 
 # 阶段定义
 from .phases import (
@@ -98,12 +86,7 @@ from .phases import (
 )
 
 # 端口扫描
-from .port_scanner import (
-    PortInfo,
-    PortScanner,
-    async_scan_ports,
-    scan_ports,
-)
+from .port_scanner import PortInfo, PortScanner, async_scan_ports, scan_ports
 
 # 子域名枚举
 from .subdomain import (
@@ -113,26 +96,11 @@ from .subdomain import (
     enumerate_subdomains,
 )
 
-# 被动侦察
-from .passive_recon import (
-    PassiveRecon,
-    passive_subdomain_discovery,
-)
-
 # 技术栈识别
-from .tech_detect import (
-    TechDetector,
-    Technology,
-    detect_technologies,
-)
+from .tech_detect import TechDetector, Technology, detect_technologies
 
 # WAF检测
-from .waf_detect import (
-    WAFDetector,
-    WAFInfo,
-    detect_waf,
-    is_waf_protected,
-)
+from .waf_detect import WAFDetector, WAFInfo, detect_waf, is_waf_protected
 
 # 导出列表
 __all__ = [

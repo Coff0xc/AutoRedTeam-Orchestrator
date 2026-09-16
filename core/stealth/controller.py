@@ -521,7 +521,9 @@ class TrafficObfuscation(EvasionTechnique):
 
     async def apply(self, context: RequestContext, config: StealthConfig) -> RequestContext:
         # 添加噪声参数
-        noise_param = hashlib.md5(str(random.random()).encode(), usedforsecurity=False).hexdigest()[:8]
+        noise_param = hashlib.md5(str(random.random()).encode(), usedforsecurity=False).hexdigest()[
+            :8
+        ]
 
         parts = urlsplit(context.url)
         query_params = parse_qsl(parts.query, keep_blank_values=True)

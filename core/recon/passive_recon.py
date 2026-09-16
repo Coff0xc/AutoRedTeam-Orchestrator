@@ -192,9 +192,7 @@ class PassiveRecon:
 
     # ==================== 高级接口 ====================
 
-    async def discover_subdomains_with_sources(
-        self, domain: str
-    ) -> Dict[str, List[str]]:
+    async def discover_subdomains_with_sources(self, domain: str) -> Dict[str, List[str]]:
         """查询所有被动源，按源分类返回
 
         Args:
@@ -225,8 +223,7 @@ class PassiveRecon:
                 filtered = sorted(
                     s.lower().strip().rstrip(".")
                     for s in result
-                    if s.lower().endswith(f".{domain_lower}")
-                    or s.lower() == domain_lower
+                    if s.lower().endswith(f".{domain_lower}") or s.lower() == domain_lower
                 )
                 source_results[name] = filtered
             else:
@@ -236,9 +233,7 @@ class PassiveRecon:
 
 
 # 便捷函数
-async def passive_subdomain_discovery(
-    domain: str, timeout: int = 15
-) -> List[str]:
+async def passive_subdomain_discovery(domain: str, timeout: int = 15) -> List[str]:
     """便捷函数: 被动子域名发现
 
     Args:

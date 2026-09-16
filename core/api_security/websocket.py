@@ -25,12 +25,7 @@ import ssl
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
-from .base import (
-    APITestResult,
-    APIVulnType,
-    BaseAPITester,
-    Severity,
-)
+from .base import APITestResult, APIVulnType, BaseAPITester, Severity
 
 logger = logging.getLogger(__name__)
 
@@ -416,7 +411,9 @@ class WebSocketTester(BaseAPITester):
     def _compute_accept_key(self, key: str) -> str:
         """计算WebSocket Accept密钥"""
         concat = key + self.WS_MAGIC
-        sha1 = hashlib.sha1(concat.encode(), usedforsecurity=False).digest()  # RFC 6455 WebSocket handshake
+        sha1 = hashlib.sha1(
+            concat.encode(), usedforsecurity=False
+        ).digest()  # RFC 6455 WebSocket handshake
         return base64.b64encode(sha1).decode("utf-8")
 
     def _try_ws_connect(

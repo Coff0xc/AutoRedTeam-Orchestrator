@@ -25,7 +25,7 @@ import struct
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from socketserver import UDPServer, BaseRequestHandler
+from socketserver import BaseRequestHandler, UDPServer
 from typing import TYPE_CHECKING, Any, Dict, Optional
 from urllib.parse import parse_qs
 
@@ -324,7 +324,9 @@ class _OOBDNSHandler(BaseRequestHandler):
         return query_data[12:offset]
 
     @staticmethod
-    def _build_dns_response(query_data: bytes, query_name: str, matched: bool) -> bytes:  # noqa: ARG004
+    def _build_dns_response(
+        query_data: bytes, query_name: str, matched: bool
+    ) -> bytes:  # noqa: ARG004
         """构建 DNS 响应包
 
         Args:
@@ -456,9 +458,7 @@ class OOBCallbackServer:
                 "OOB 回调服务器已启动: HTTP=%s:%d%s",
                 self._bind_address,
                 self._http_port,
-                (", DNS=%s:%d" % (self._bind_address, self._dns_port))
-                if self._enable_dns
-                else "",
+                (", DNS=%s:%d" % (self._bind_address, self._dns_port)) if self._enable_dns else "",
             )
 
     def stop(self):

@@ -445,7 +445,9 @@ class AttackChainEngine:
                             if port:
                                 node.params["port"] = port
 
-    def _add_web_attack_nodes(self, chain: AttackChain, parent_node: AttackNode, port: Optional[int]):
+    def _add_web_attack_nodes(
+        self, chain: AttackChain, parent_node: AttackNode, port: Optional[int]
+    ):
         """添加Web攻击节点"""
         target = chain.target
         base_url = f"http://{target}:{port}" if port != 80 else f"http://{target}"

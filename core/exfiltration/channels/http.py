@@ -13,11 +13,7 @@ import base64
 import logging
 from typing import Union, cast
 
-from ..base import (
-    BaseExfiltration,
-    ExfilChannel,
-    ExfilConfig,
-)
+from ..base import BaseExfiltration, ExfilChannel, ExfilConfig
 
 logger = logging.getLogger(__name__)
 

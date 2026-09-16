@@ -78,7 +78,9 @@ class BenchmarkHarness:
         self.cases.append(case)
         return case
 
-    def evaluate_summary(self, summary: Dict[str, Any], case: BenchmarkCase) -> BenchmarkHarnessResult:
+    def evaluate_summary(
+        self, summary: Dict[str, Any], case: BenchmarkCase
+    ) -> BenchmarkHarnessResult:
         result = score_run_summary(case.name, summary)
         failures: List[str] = []
         if result.success_rate < case.min_success_rate:

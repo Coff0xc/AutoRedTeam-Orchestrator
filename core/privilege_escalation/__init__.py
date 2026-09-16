@@ -20,10 +20,7 @@ from .base import (
     EscalationResult,
     PrivilegeLevel,
 )
-from .common.enumeration import (
-    EnumerationResult,
-    PrivilegeEnumerator,
-)
+from .common.enumeration import EnumerationResult, PrivilegeEnumerator
 
 # 支持的平台列表
 SUPPORTED_PLATFORMS: List[str] = ["windows", "linux", "darwin"]

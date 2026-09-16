@@ -104,8 +104,12 @@ class TestHTTPResponse:
         from core.http import HTTPResponse
 
         response = HTTPResponse(
-            status_code=200, text="OK", headers={"Content-Type": "text/html"},
-            content=b"OK", elapsed=0.1, url="https://example.com"
+            status_code=200,
+            text="OK",
+            headers={"Content-Type": "text/html"},
+            content=b"OK",
+            elapsed=0.1,
+            url="https://example.com",
         )
 
         assert response.status_code == 200
@@ -116,8 +120,22 @@ class TestHTTPResponse:
         """测试 ok 属性"""
         from core.http import HTTPResponse
 
-        response_ok = HTTPResponse(status_code=200, text="", headers={}, content=b"", elapsed=0.1, url="https://example.com")
-        response_error = HTTPResponse(status_code=500, text="", headers={}, content=b"", elapsed=0.1, url="https://example.com")
+        response_ok = HTTPResponse(
+            status_code=200,
+            text="",
+            headers={},
+            content=b"",
+            elapsed=0.1,
+            url="https://example.com",
+        )
+        response_error = HTTPResponse(
+            status_code=500,
+            text="",
+            headers={},
+            content=b"",
+            elapsed=0.1,
+            url="https://example.com",
+        )
 
         assert response_ok.ok is True
         assert response_error.ok is False

@@ -325,7 +325,10 @@ class TokenManipulation:
             {"success": bool, "output": str, "error": str}
         """
         if not hasattr(self, "_impersonated_token") or not self._impersonated_token:
-            return {"success": False, "error": "未持有 impersonated token, 请先调用 impersonate_system()"}
+            return {
+                "success": False,
+                "error": "未持有 impersonated token, 请先调用 impersonate_system()",
+            }
 
         result = self.create_process_with_token(self._impersonated_token, command)
         return {"success": result, "command": command, "token": self._impersonated_token}

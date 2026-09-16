@@ -7,11 +7,7 @@ AI 决策引擎测试
 
 import pytest
 
-from core.ai_engine import (
-    AIDecisionEngine,
-    AttackVector,
-    RiskLevel,
-)
+from core.ai_engine import AIDecisionEngine, AttackVector, RiskLevel
 
 
 class TestRiskLevel:

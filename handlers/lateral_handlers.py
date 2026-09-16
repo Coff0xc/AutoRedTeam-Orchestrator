@@ -17,12 +17,7 @@ from typing import Any, Dict, List, Optional
 # 授权中间件
 from core.security import require_critical_auth
 
-from .error_handling import (
-    ErrorCategory,
-    extract_target,
-    handle_errors,
-    validate_inputs,
-)
+from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
 from .runtime_helpers import blocked_handler_runtime_response, gate_handler_runtime_action
 from .tooling import tool
 
@@ -392,7 +387,12 @@ def register_lateral_tools(mcp, counter, logger):
         """
         blocked = _gate_lateral_runtime(
             "lateral_winrm_ps",
-            {"target": target, "username": username, "script_length": len(script), "domain": domain},
+            {
+                "target": target,
+                "username": username,
+                "script_length": len(script),
+                "domain": domain,
+            },
         )
         if blocked:
             return blocked

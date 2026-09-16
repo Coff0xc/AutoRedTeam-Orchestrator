@@ -123,9 +123,7 @@ class SQLiteKnowledgeStore:
 
     def get_entity(self, entity_id: str) -> dict | None:
         """获取实体"""
-        row = self._conn.execute(
-            "SELECT * FROM entities WHERE id = ?", (entity_id,)
-        ).fetchone()
+        row = self._conn.execute("SELECT * FROM entities WHERE id = ?", (entity_id,)).fetchone()
         return self._row_to_entity(row) if row else None
 
     def update_entity(self, entity_id: str, properties: dict) -> bool:
@@ -225,9 +223,7 @@ class SQLiteKnowledgeStore:
             params.append(rel_type)
 
         where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
-        rows = self._conn.execute(
-            f"SELECT * FROM relationships {where}", params
-        ).fetchall()
+        rows = self._conn.execute(f"SELECT * FROM relationships {where}", params).fetchall()
         return [self._row_to_rel(r) for r in rows]
 
     # ==================== Path Discovery (BFS) ====================
@@ -316,8 +312,7 @@ class SQLiteKnowledgeStore:
 
         for r in rels:
             lines.append(
-                f'  "{r["source_id"]}" -> "{r["target_id"]}" '
-                f'[label="{r["rel_type"]}"];'
+                f'  "{r["source_id"]}" -> "{r["target_id"]}" ' f'[label="{r["rel_type"]}"];'
             )
 
         lines.append("}")
@@ -337,9 +332,7 @@ class SQLiteKnowledgeStore:
 
     def get_session(self, session_id: str) -> dict | None:
         """获取会话"""
-        row = self._conn.execute(
-            "SELECT * FROM sessions WHERE id = ?", (session_id,)
-        ).fetchone()
+        row = self._conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
         return dict(row) if row else None
 
     # ==================== Stats & Lifecycle ====================

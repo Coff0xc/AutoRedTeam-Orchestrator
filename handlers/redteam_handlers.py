@@ -12,10 +12,7 @@
 from typing import Any, Dict, List, Optional
 
 # 授权中间件
-from core.security import (
-    require_critical_auth,
-    require_dangerous_auth,
-)
+from core.security import require_critical_auth, require_dangerous_auth
 
 from .error_handling import (
     ErrorCategory,

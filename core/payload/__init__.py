@@ -66,11 +66,7 @@ from .mutator import (
 )
 
 # 选择器
-from .selector import (
-    SmartPayloadSelector,
-    get_selector,
-    smart_select,
-)
+from .selector import SmartPayloadSelector, get_selector, smart_select
 
 # 特征检测
 from .signatures import (

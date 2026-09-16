@@ -253,7 +253,9 @@ class TestExtractors:
     def test_regex_extractor(self):
         from core.detectors.nuclei_engine import NucleiExtractor
 
-        ext = NucleiExtractor(type="regex", name="version", regex=[r"Server: Apache/([\d.]+)"], group=1)
+        ext = NucleiExtractor(
+            type="regex", name="version", regex=[r"Server: Apache/([\d.]+)"], group=1
+        )
         result = run_extractors([ext], {}, "Server: Apache/2.4.49")
         assert result["version"] == "2.4.49"
 
@@ -267,7 +269,9 @@ class TestExtractors:
     def test_regex_extractor_header_part(self):
         from core.detectors.nuclei_engine import NucleiExtractor
 
-        ext = NucleiExtractor(type="regex", name="token", regex=[r"Token: (\w+)"], group=1, part="header")
+        ext = NucleiExtractor(
+            type="regex", name="token", regex=[r"Token: (\w+)"], group=1, part="header"
+        )
         result = run_extractors([ext], {"Token": "abc123"}, "")
         assert result["token"] == "abc123"
 

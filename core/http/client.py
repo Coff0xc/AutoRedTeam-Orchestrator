@@ -12,13 +12,7 @@ import time
 import warnings
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
-from typing import (
-    Any,
-    Dict,
-    List,
-    Optional,
-    Union,
-)
+from typing import Any, Dict, List, Optional, Union
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -521,9 +515,7 @@ class HTTPClient:
         if breaker and not breaker.is_call_permitted():
             from .exceptions import ConnectionError as HTTPConnectionError
 
-            raise HTTPConnectionError(
-                "熔断器已打开，目标 host 暂时不可用", url=url
-            )
+            raise HTTPConnectionError("熔断器已打开，目标 host 暂时不可用", url=url)
 
         # 速率限制
         if self._rate_limiter:
@@ -696,9 +688,7 @@ class HTTPClient:
         if breaker and not breaker.is_call_permitted():
             from .exceptions import ConnectionError as HTTPConnectionError
 
-            raise HTTPConnectionError(
-                "熔断器已打开，目标 host 暂时不可用", url=url
-            )
+            raise HTTPConnectionError("熔断器已打开，目标 host 暂时不可用", url=url)
 
         # 异步速率限制
         if self._rate_limiter:

@@ -81,7 +81,10 @@ class LocalExecutor:
         except subprocess.TimeoutExpired:
             duration = time.monotonic() - start_time
             return CommandResult(
-                stdout="", stderr="Python 脚本执行超时", exit_code=-1, duration=duration,
+                stdout="",
+                stderr="Python 脚本执行超时",
+                exit_code=-1,
+                duration=duration,
             )
         except Exception as e:
             duration = time.monotonic() - start_time
@@ -128,7 +131,10 @@ class LocalExecutor:
         except subprocess.TimeoutExpired:
             duration = time.monotonic() - start_time
             return CommandResult(
-                stdout="", stderr="工具执行超时", exit_code=-1, duration=duration,
+                stdout="",
+                stderr="工具执行超时",
+                exit_code=-1,
+                duration=duration,
             )
         except Exception as e:
             duration = time.monotonic() - start_time

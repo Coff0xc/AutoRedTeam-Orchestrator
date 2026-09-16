@@ -387,7 +387,9 @@ class TestAuthContext:
         """测试 Token 认证"""
         from core.session import AuthContext
 
-        auth = AuthContext(tokens={"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."})
+        auth = AuthContext(
+            tokens={"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
+        )
 
         assert auth is not None
         assert auth.tokens is not None

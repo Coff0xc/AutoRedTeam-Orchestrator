@@ -198,7 +198,9 @@ class TestExposureDetector:
     def test_sliver_db_exposure_detected(self):
         from core.detectors import ExposureDetector, Severity
 
-        detector = ExposureDetector(config={"custom_paths": {"/.sliver/sliver.db": (Severity.CRITICAL, "sliver_database")}})
+        detector = ExposureDetector(
+            config={"custom_paths": {"/.sliver/sliver.db": (Severity.CRITICAL, "sliver_database")}}
+        )
         response = Mock()
         response.status_code = 200
         response.text = "SQLite format 3 beacons operators"

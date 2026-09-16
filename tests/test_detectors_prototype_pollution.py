@@ -7,10 +7,7 @@ Prototype Pollution 检测器测试
 
 from unittest.mock import MagicMock, patch
 
-from core.detectors.injection.prototype_pollution import (
-    PrototypePollutionDetector,
-    _random_canary,
-)
+from core.detectors.injection.prototype_pollution import PrototypePollutionDetector, _random_canary
 from core.detectors.result import Severity
 
 

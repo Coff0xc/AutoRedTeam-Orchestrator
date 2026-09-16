@@ -10,7 +10,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ==================== SDK: Scanner 测试 ====================
 
 
@@ -434,9 +433,7 @@ class TestRedTeam:
         mock_module.connect.return_value = False
 
         with patch.object(rt, "_get_lateral_module", return_value=mock_module):
-            result = await rt.lateral_move(
-                target="192.168.1.100", method="ssh", username="root"
-            )
+            result = await rt.lateral_move(target="192.168.1.100", method="ssh", username="root")
 
             assert result["success"] is False
             assert "连接失败" in result["error"]

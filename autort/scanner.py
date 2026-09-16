@@ -55,7 +55,7 @@ class Scanner:
             raise ValueError("目标不能为空")
         target = target.strip()
         try:
-            from utils.validators import validate_url, validate_ip, validate_domain
+            from utils.validators import validate_domain, validate_ip, validate_url
 
             if target.startswith(("http://", "https://")):
                 if validate_url(target):
@@ -69,9 +69,7 @@ class Scanner:
             if validate_domain(target):
                 return
 
-            raise ValueError(
-                "无效的目标格式: %s（支持 URL / IP / 域名）" % target
-            )
+            raise ValueError("无效的目标格式: %s（支持 URL / IP / 域名）" % target)
 
         except ImportError:
             # validators 模块不可用时使用基础正则校验
@@ -81,12 +79,10 @@ class Scanner:
                 r"^https?://[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?(:\d{1,5})?(/.*)?$"
             )
             _ip_re = _re.compile(
-                r"^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}"
-                r"(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$"
+                r"^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}" r"(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$"
             )
             _domain_re = _re.compile(
-                r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+"
-                r"[a-zA-Z]{2,}$"
+                r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+" r"[a-zA-Z]{2,}$"
             )
 
             if _url_re.match(target):
@@ -96,9 +92,7 @@ class Scanner:
             if _domain_re.match(target):
                 return
 
-            raise ValueError(
-                "无效的目标格式: %s（支持 URL / IP / 域名）" % target
-            )
+            raise ValueError("无效的目标格式: %s（支持 URL / IP / 域名）" % target)
 
     async def full_recon(self) -> Dict[str, Any]:
         """执行完整10阶段侦察
@@ -205,8 +199,7 @@ class Scanner:
                     if result:
                         items = result if isinstance(result, list) else [result]
                         return [
-                            item.to_dict() if hasattr(item, "to_dict") else item
-                            for item in items
+                            item.to_dict() if hasattr(item, "to_dict") else item for item in items
                         ]
                 except Exception as e:
                     logger.warning("检测器 %s 执行失败: %s", getattr(detector, "name", "?"), e)
@@ -332,9 +325,7 @@ class Scanner:
                 parts = hostname.split(".")
                 domain = ".".join(parts[-2:]) if len(parts) >= 2 else hostname
 
-            recon = PassiveRecon(
-                timeout=self._config.get("passive_timeout", 10)
-            )
+            recon = PassiveRecon(timeout=self._config.get("passive_timeout", 10))
             by_source = await recon.discover_subdomains_with_sources(domain)
 
             # 合并所有子域名
@@ -347,10 +338,7 @@ class Scanner:
                 "domain": domain,
                 "subdomains": sorted(all_subs),
                 "count": len(all_subs),
-                "by_source": {
-                    k: {"subdomains": v, "count": len(v)}
-                    for k, v in by_source.items()
-                },
+                "by_source": {k: {"subdomains": v, "count": len(v)} for k, v in by_source.items()},
             }
         except Exception as e:
             logger.error("passive_recon 失败: %s", e)

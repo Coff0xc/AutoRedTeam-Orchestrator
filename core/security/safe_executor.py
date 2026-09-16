@@ -332,9 +332,7 @@ class SafeExecutor:
                     raise SecurityError("python -m 缺少模块名")
                 module_name = args[i + 1]
                 if module_name not in self.PYTHON_ALLOWED_MODULES:
-                    raise SecurityError(
-                        "python -m %s 不在允许的模块白名单中" % module_name
-                    )
+                    raise SecurityError("python -m %s 不在允许的模块白名单中" % module_name)
                 i += 2
                 continue
             elif arg == "-c":

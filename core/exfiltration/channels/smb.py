@@ -12,14 +12,9 @@ Warning: 仅限授权渗透测试使用！
 import logging
 import tempfile
 from pathlib import Path
-
 from typing import Any, Optional
 
-from ..base import (
-    BaseExfiltration,
-    ExfilChannel,
-    ExfilConfig,
-)
+from ..base import BaseExfiltration, ExfilChannel, ExfilConfig
 
 logger = logging.getLogger(__name__)
 

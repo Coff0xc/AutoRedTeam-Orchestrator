@@ -14,7 +14,6 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from core.code_agent.models import CallEdge, CodeContextResult, CodeFunction, ConfidenceScore
 
-
 RISKY_CALL_TERMS = {
     "eval",
     "exec",
@@ -110,11 +109,7 @@ def expand_code_context(
         key=lambda item: (item.file_path, item.line_start, item.qualified_name),
     )
     context_edges = sorted(
-        (
-            edge
-            for edge in edges
-            if edge.caller_id in context_ids and edge.callee_id in context_ids
-        ),
+        (edge for edge in edges if edge.caller_id in context_ids and edge.callee_id in context_ids),
         key=lambda item: (item.file_path, item.line, item.call_name),
     )
 
@@ -192,11 +187,7 @@ class _FunctionVisitor(ast.NodeVisitor):
             }
         )
         source_terms = sorted(
-            {
-                param
-                for param in parameters
-                if any(term in param.lower() for term in SOURCE_TERMS)
-            }
+            {param for param in parameters if any(term in param.lower() for term in SOURCE_TERMS)}
         )
         self.functions.append(
             CodeFunction(
@@ -287,7 +278,8 @@ def _select_seed(
         matches = [
             function
             for function in functions.values()
-            if seed in {
+            if seed
+            in {
                 function.function_id,
                 function.qualified_name,
                 function.qualified_name.rsplit(".", 1)[-1],
@@ -302,7 +294,10 @@ def _select_seed(
     if file_path and line is not None:
         target = str(Path(file_path))
         for function in functions.values():
-            if function.file_path.endswith(target) and function.line_start <= line <= function.line_end:
+            if (
+                function.file_path.endswith(target)
+                and function.line_start <= line <= function.line_end
+            ):
                 return function
     return None
 

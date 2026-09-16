@@ -22,10 +22,9 @@ from core.security.mcp_auth_middleware import (
     require_dangerous_auth,
     require_moderate_auth,
     require_safe_auth,
-    set_auth_mode,
     set_audit_enabled,
+    set_auth_mode,
 )
-
 
 # ==================== Fixtures ====================
 
@@ -192,9 +191,7 @@ class TestStrictMode:
         _auth_config["manager"] = None
 
         with patch.dict(os.environ, {"AUTOREDTEAM_API_KEY": "some-key"}, clear=False):
-            with patch(
-                "core.security.mcp_auth_middleware.HAS_AUTH_MANAGER", False
-            ):
+            with patch("core.security.mcp_auth_middleware.HAS_AUTH_MANAGER", False):
 
                 @require_auth()
                 async def secure_tool():
@@ -232,9 +229,7 @@ class TestPermissiveMode:
         _auth_config["manager"] = None
 
         with patch.dict(os.environ, {"AUTOREDTEAM_API_KEY": "some-key"}, clear=False):
-            with patch(
-                "core.security.mcp_auth_middleware.HAS_AUTH_MANAGER", False
-            ):
+            with patch("core.security.mcp_auth_middleware.HAS_AUTH_MANAGER", False):
 
                 @require_auth()
                 async def tool_permissive():
@@ -471,12 +466,14 @@ class TestSanitizeParams:
         assert result == {}
 
     def test_mixed_params(self):
-        result = _sanitize_params({
-            "target": "10.0.0.1",
-            "password": "pass123",
-            "command": "whoami",
-            "ssh_key": "-----BEGIN RSA",
-        })
+        result = _sanitize_params(
+            {
+                "target": "10.0.0.1",
+                "password": "pass123",
+                "command": "whoami",
+                "ssh_key": "-----BEGIN RSA",
+            }
+        )
         assert result["target"] == "10.0.0.1"
         assert result["password"] == "***REDACTED***"
         assert result["command"] == "whoami"

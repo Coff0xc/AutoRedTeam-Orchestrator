@@ -55,7 +55,11 @@ class SQLiVerifierMixin:
         )
 
     def _prepare_request(
-        self, url: str, param: str, payload: str, method: str = "GET",
+        self,
+        url: str,
+        param: str,
+        payload: str,
+        method: str = "GET",
         headers: Optional[Dict[str, str]] = None,
         params: Optional[Dict[str, Any]] = None,
         data: Optional[Any] = None,

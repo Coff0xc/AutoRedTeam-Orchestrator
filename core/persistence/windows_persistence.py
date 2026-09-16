@@ -70,7 +70,9 @@ class WindowsPersistence:
         """如果 execute=True，执行安装命令并更新结果"""
         if not self._execute:
             return result
-        install_cmd = getattr(result, "install_command", "") or getattr(result, "cleanup_command", "")
+        install_cmd = getattr(result, "install_command", "") or getattr(
+            result, "cleanup_command", ""
+        )
         # 从 result 中提取安装命令
         if hasattr(result, "install_command") and result.install_command:
             install_cmd = result.install_command
@@ -132,12 +134,14 @@ class WindowsPersistence:
 
         cleanup = f'reg delete "{reg_path}" /v "{name}" /f'
 
-        return self._execute_install(PersistenceResult(
-            success=True,
-            method=PersistenceMethod.REGISTRY_RUN.value,
-            location=f"{reg_path}\\{name}",
-            cleanup_command=cleanup,
-        ))
+        return self._execute_install(
+            PersistenceResult(
+                success=True,
+                method=PersistenceMethod.REGISTRY_RUN.value,
+                location=f"{reg_path}\\{name}",
+                cleanup_command=cleanup,
+            )
+        )
 
     def registry_run_powershell(
         self, payload_path: str, name: str = "", encoded: bool = True
@@ -160,12 +164,14 @@ class WindowsPersistence:
         reg_path = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
         cleanup = f'reg delete "{reg_path}" /v "{name}" /f'
 
-        return self._execute_install(PersistenceResult(
-            success=True,
-            method=PersistenceMethod.REGISTRY_RUN.value,
-            location=f"{reg_path}\\{name}",
-            cleanup_command=cleanup,
-        ))
+        return self._execute_install(
+            PersistenceResult(
+                success=True,
+                method=PersistenceMethod.REGISTRY_RUN.value,
+                location=f"{reg_path}\\{name}",
+                cleanup_command=cleanup,
+            )
+        )
 
     # ==================== 计划任务持久化 ====================
 
@@ -196,15 +202,17 @@ class WindowsPersistence:
 
         cleanup = f'schtasks /delete /tn "{name}" /f'
 
-        return self._execute_install(PersistenceResult(
-            success=True,
-            method=PersistenceMethod.SCHEDULED_TASK.value,
-            location=(
-                f"Task Scheduler\\{name} "
-                f"({task_options['trigger']}, {task_options['run_level']})"
-            ),
-            cleanup_command=cleanup,
-        ))
+        return self._execute_install(
+            PersistenceResult(
+                success=True,
+                method=PersistenceMethod.SCHEDULED_TASK.value,
+                location=(
+                    f"Task Scheduler\\{name} "
+                    f"({task_options['trigger']}, {task_options['run_level']})"
+                ),
+                cleanup_command=cleanup,
+            )
+        )
 
     def scheduled_task_xml(
         self, payload_path: str, name: str = "", hidden: bool = True
@@ -279,12 +287,14 @@ class WindowsPersistence:
 
         cleanup = f'sc stop "{name}" & sc delete "{name}"'
 
-        return self._execute_install(PersistenceResult(
-            success=True,
-            method=PersistenceMethod.SERVICE.value,
-            location=f"Services\\{name} ({display_name}, {start_type})",
-            cleanup_command=cleanup,
-        ))
+        return self._execute_install(
+            PersistenceResult(
+                success=True,
+                method=PersistenceMethod.SERVICE.value,
+                location=f"Services\\{name} ({display_name}, {start_type})",
+                cleanup_command=cleanup,
+            )
+        )
 
     # ==================== WMI 事件订阅 ====================
 
@@ -375,12 +385,14 @@ Get-WmiObject -Namespace "root\\subscription" -Class "__FilterToConsumerBinding"
         # 创建快捷方式的 VBScript
         lnk_name = f"{name}.lnk"
 
-        return self._execute_install(PersistenceResult(
-            success=True,
-            method=PersistenceMethod.STARTUP_FOLDER.value,
-            location=f"{startup_path}\\{lnk_name}",
-            cleanup_command=f'del "{startup_path}\\{lnk_name}"',
-        ))
+        return self._execute_install(
+            PersistenceResult(
+                success=True,
+                method=PersistenceMethod.STARTUP_FOLDER.value,
+                location=f"{startup_path}\\{lnk_name}",
+                cleanup_command=f'del "{startup_path}\\{lnk_name}"',
+            )
+        )
 
     # ==================== 屏保持久化 ====================
 
@@ -392,12 +404,14 @@ Get-WmiObject -Namespace "root\\subscription" -Class "__FilterToConsumerBinding"
             'reg delete "HKCU\\Control Panel\\Desktop" /v SCRNSAVE.EXE /f',
         ]
 
-        return self._execute_install(PersistenceResult(
-            success=True,
-            method=PersistenceMethod.SCREENSAVER.value,
-            location="HKCU\\Control Panel\\Desktop\\SCRNSAVE.EXE",
-            cleanup_command=" & ".join(cleanup_commands),
-        ))
+        return self._execute_install(
+            PersistenceResult(
+                success=True,
+                method=PersistenceMethod.SCREENSAVER.value,
+                location="HKCU\\Control Panel\\Desktop\\SCRNSAVE.EXE",
+                cleanup_command=" & ".join(cleanup_commands),
+            )
+        )
 
     # ==================== BITS Job ====================
 
@@ -412,12 +426,14 @@ Get-WmiObject -Namespace "root\\subscription" -Class "__FilterToConsumerBinding"
         """
         name = name or self._generate_name("BITS")
 
-        return self._execute_install(PersistenceResult(
-            success=True,
-            method=PersistenceMethod.BITS_JOB.value,
-            location=f"BITS Job: {name} -> {local_path} from {payload_url}",
-            cleanup_command=f'bitsadmin /cancel "{name}"',
-        ))
+        return self._execute_install(
+            PersistenceResult(
+                success=True,
+                method=PersistenceMethod.BITS_JOB.value,
+                location=f"BITS Job: {name} -> {local_path} from {payload_url}",
+                cleanup_command=f'bitsadmin /cancel "{name}"',
+            )
+        )
 
     # ==================== 综合方法 ====================
 

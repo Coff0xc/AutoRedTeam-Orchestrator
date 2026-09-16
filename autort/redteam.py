@@ -77,7 +77,9 @@ class RedTeam:
             # 执行命令
             if command:
                 exec_result = module.execute(command)
-                result_data["output"] = exec_result.output if hasattr(exec_result, "output") else str(exec_result)
+                result_data["output"] = (
+                    exec_result.output if hasattr(exec_result, "output") else str(exec_result)
+                )
                 result_data["exit_code"] = getattr(exec_result, "exit_code", None)
 
             # 断开连接
@@ -178,6 +180,7 @@ class RedTeam:
 
             if hasattr(result, "__dataclass_fields__"):
                 from dataclasses import asdict
+
                 return {"success": True, **asdict(result)}
             return {"success": True, "data": str(result)}
 
@@ -226,11 +229,15 @@ class RedTeam:
             best_vector = max(vectors, key=lambda v: v.success_probability)
             result = privesc.escalate(best_vector)
 
-            return result.to_dict() if hasattr(result, "to_dict") else {
-                "success": getattr(result, "success", False),
-                "method": str(getattr(result, "method", "")),
-                "vector": best_vector.name,
-            }
+            return (
+                result.to_dict()
+                if hasattr(result, "to_dict")
+                else {
+                    "success": getattr(result, "success", False),
+                    "method": str(getattr(result, "method", "")),
+                    "vector": best_vector.name,
+                }
+            )
         except ImportError as e:
             logger.error("privesc 模块导入失败: %s", e)
             return {"success": False, "error": f"模块不可用: {e}"}
@@ -269,7 +276,11 @@ class RedTeam:
                 "total": len(findings),
                 "findings": [
                     {
-                        "type": f.secret_type.value if hasattr(f.secret_type, "value") else str(f.secret_type),
+                        "type": (
+                            f.secret_type.value
+                            if hasattr(f.secret_type, "value")
+                            else str(f.secret_type)
+                        ),
                         "file": f.file_path,
                         "line": f.line_number,
                         "confidence": f.confidence,
@@ -297,6 +308,7 @@ class RedTeam:
 
         module_path, class_name = method_map[method]
         import importlib
+
         module = importlib.import_module(module_path)
         cls = getattr(module, class_name)
         return cls()

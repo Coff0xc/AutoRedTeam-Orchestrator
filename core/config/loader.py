@@ -201,10 +201,27 @@ def _yaml_to_flat(yaml_data: Dict[str, Any]) -> Dict[str, Any]:
 
     # 直接映射的 section
     direct_keys = {
-        "server", "logging", "security", "wordlists", "reporting",
-        "tools", "scanning", "scan", "http", "c2", "lateral",
-        "detector", "cve", "credential", "dns", "performance",
-        "ai", "tool_manager", "git", "auth", "cache",
+        "server",
+        "logging",
+        "security",
+        "wordlists",
+        "reporting",
+        "tools",
+        "scanning",
+        "scan",
+        "http",
+        "c2",
+        "lateral",
+        "detector",
+        "cve",
+        "credential",
+        "dns",
+        "performance",
+        "ai",
+        "tool_manager",
+        "git",
+        "auth",
+        "cache",
     }
 
     for key in direct_keys:

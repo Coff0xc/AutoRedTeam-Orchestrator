@@ -10,12 +10,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from core.attack_chain import (
-    AttackChain,
-    AttackChainEngine,
-    AttackNode,
-    AttackPhase,
-)
+from core.attack_chain import AttackChain, AttackChainEngine, AttackNode, AttackPhase
 
 
 class TestAttackPhase:

@@ -15,7 +15,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ==================== 基础功能 ====================
 
 
@@ -34,11 +33,7 @@ class TestLLMProviderDisabled:
 
     def test_default_provider_is_none(self):
         """默认 provider=none, available=False"""
-        env = {
-            k: v
-            for k, v in os.environ.items()
-            if not k.startswith("AUTORT_LLM_")
-        }
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AUTORT_LLM_")}
         with patch.dict(os.environ, env, clear=True):
             from core.llm.provider import LLMProvider
 

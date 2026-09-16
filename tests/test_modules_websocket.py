@@ -235,7 +235,12 @@ class TestWebSocketCompressionOracle:
         with patch.object(
             tester,
             "_try_ws_connect",
-            return_value={"connected": True, "headers": {}, "extensions": ["permessage-deflate"], "error": ""},
+            return_value={
+                "connected": True,
+                "headers": {},
+                "extensions": ["permessage-deflate"],
+                "error": "",
+            },
         ):
             result = tester.test_compression_oracle()
 
@@ -286,7 +291,12 @@ class TestWebSocketAuthBypass:
         with patch.object(
             tester,
             "_try_ws_connect",
-            return_value={"connected": False, "headers": {}, "extensions": [], "error": "Unauthorized"},
+            return_value={
+                "connected": False,
+                "headers": {},
+                "extensions": [],
+                "error": "Unauthorized",
+            },
         ):
             result = tester.test_auth_bypass()
 
@@ -319,7 +329,12 @@ class TestWebSocketFullScan:
         with patch.object(
             tester,
             "_try_ws_connect",
-            return_value={"connected": True, "headers": {}, "extensions": ["permessage-deflate"], "error": ""},
+            return_value={
+                "connected": True,
+                "headers": {},
+                "extensions": ["permessage-deflate"],
+                "error": "",
+            },
         ):
             results = tester.test()
 
@@ -489,7 +504,12 @@ class TestWebSocketSecurityBestPractices:
 
         # Mock 不安全配置 - 接受所有 Origin，支持压缩
         def mock_insecure_connect(origin="", extra_headers=None):
-            return {"connected": True, "headers": {}, "extensions": ["permessage-deflate"], "error": ""}
+            return {
+                "connected": True,
+                "headers": {},
+                "extensions": ["permessage-deflate"],
+                "error": "",
+            }
 
         with patch.object(tester, "_try_ws_connect", side_effect=mock_insecure_connect):
             results = tester.test()

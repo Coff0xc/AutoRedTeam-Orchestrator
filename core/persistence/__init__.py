@@ -9,14 +9,9 @@ ATT&CK Tactic: TA0003 - Persistence
 - Webshell管理 (PHP/JSP/ASPX/内存马)
 """
 
-from .linux_persistence import (
-    LinuxPersistence,
-    LinuxPersistMethod,
-)
+from .linux_persistence import LinuxPersistence, LinuxPersistMethod
 from .linux_persistence import PersistenceResult as LinuxPersistenceResult
-from .linux_persistence import (
-    linux_persist,
-)
+from .linux_persistence import linux_persist
 from .webshell_manager import (
     ObfuscationLevel,
     WebshellGenerator,

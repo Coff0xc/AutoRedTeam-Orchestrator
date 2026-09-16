@@ -23,13 +23,7 @@ from core.detectors.base import (
     ContextAwareDetector,
     StreamingDetector,
 )
-from core.detectors.result import (
-    DetectionResult,
-    DetectorType,
-    RequestInfo,
-    ResponseInfo,
-    Severity,
-)
+from core.detectors.result import DetectionResult, DetectorType, RequestInfo, ResponseInfo, Severity
 
 # ============== 测试用的具体检测器实现 ==============
 

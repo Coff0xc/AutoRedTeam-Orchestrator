@@ -5,12 +5,7 @@
 
 from typing import Any, Dict, Optional
 
-from .error_handling import (
-    ErrorCategory,
-    extract_target,
-    handle_errors,
-    validate_inputs,
-)
+from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
 from .tooling import tool
 
 

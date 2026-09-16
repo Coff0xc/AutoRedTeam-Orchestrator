@@ -7,12 +7,7 @@ external targets.
 """
 
 from core.code_agent.analyzer import expand_code_context
-from core.code_agent.models import (
-    CallEdge,
-    CodeContextResult,
-    CodeFunction,
-    ConfidenceScore,
-)
+from core.code_agent.models import CallEdge, CodeContextResult, CodeFunction, ConfidenceScore
 
 __all__ = [
     "CallEdge",

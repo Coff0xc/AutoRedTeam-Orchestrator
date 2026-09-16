@@ -45,16 +45,10 @@ from .base import (
 )
 
 # CORS测试
-from .cors import (
-    CORSTester,
-    quick_cors_test,
-)
+from .cors import CORSTester, quick_cors_test
 
 # GraphQL测试
-from .graphql import (
-    GraphQLTester,
-    quick_graphql_test,
-)
+from .graphql import GraphQLTester, quick_graphql_test
 
 # 安全头测试
 from .headers import (
@@ -66,23 +60,13 @@ from .headers import (
 )
 
 # JWT测试
-from .jwt import (
-    JWTTester,
-    decode_jwt,
-    quick_jwt_test,
-)
+from .jwt import JWTTester, decode_jwt, quick_jwt_test
 
 # OAuth测试
-from .oauth import (
-    OAuthTester,
-    quick_oauth_test,
-)
+from .oauth import OAuthTester, quick_oauth_test
 
 # WebSocket测试
-from .websocket import (
-    WebSocketTester,
-    quick_websocket_test,
-)
+from .websocket import WebSocketTester, quick_websocket_test
 
 
 # 便捷函数

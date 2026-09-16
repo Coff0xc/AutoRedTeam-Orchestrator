@@ -170,9 +170,7 @@ class TestLateralSMBTool:
         mock_mcp.tool = capture_tool
         register_redteam_tools(mock_mcp, mock_counter, mock_logger)
 
-        with patch(
-            "core.lateral.smb.smb_exec", side_effect=ImportError("Module not found")
-        ):
+        with patch("core.lateral.smb.smb_exec", side_effect=ImportError("Module not found")):
             result = await registered_tools["lateral_smb"](
                 target="192.168.1.100", username="Administrator", password="P@ssw0rd"
             )
@@ -328,6 +326,8 @@ class TestPayloadObfuscateTool:
 
             assert result["success"] is False
             assert "Invalid technique" in result["error"]
+
+
 class TestCredentialFindTool:
     """测试 credential_find 凭证发现工具"""
 

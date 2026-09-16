@@ -28,18 +28,10 @@ from .fingerprint_spoofer import (
 )
 
 # 代理池
-from .proxy_pool import (
-    ProxyAnonymity,
-    ProxyPool,
-    ProxyType,
-)
+from .proxy_pool import ProxyAnonymity, ProxyPool, ProxyType
 
 # 流量变异
-from .traffic_mutator import (
-    MutationConfig,
-    TrafficMutator,
-    UserAgentRotator,
-)
+from .traffic_mutator import MutationConfig, TrafficMutator, UserAgentRotator
 
 __all__ = [
     # 控制器

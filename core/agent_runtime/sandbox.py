@@ -89,7 +89,10 @@ def enforce_sandbox_policy(
             required_provider=policy.provider,
             metadata={"allowed_tools": policy.allowed_tools},
         )
-    if action.policy.artifact_policy != "metadata-only" and policy.artifact_policy == "metadata-only":
+    if (
+        action.policy.artifact_policy != "metadata-only"
+        and policy.artifact_policy == "metadata-only"
+    ):
         return SandboxDecision(
             allowed=False,
             reason="Action artifact policy exceeds sandbox artifact policy",

@@ -22,12 +22,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, cast
 
-from .base import (
-    BaseCloudTester,
-    CloudFinding,
-    CloudSeverity,
-    CloudVulnType,
-)
+from .base import BaseCloudTester, CloudFinding, CloudSeverity, CloudVulnType
 
 logger = logging.getLogger(__name__)
 

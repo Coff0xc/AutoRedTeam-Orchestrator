@@ -225,7 +225,12 @@ class ProxyChain:
         Returns:
             验证结果统计
         """
-        results: Dict[str, Any] = {"total": len(self._proxies), "valid": 0, "invalid": 0, "details": []}
+        results: Dict[str, Any] = {
+            "total": len(self._proxies),
+            "valid": 0,
+            "invalid": 0,
+            "details": [],
+        }
 
         for i, proxy in enumerate(self._proxies):
             is_valid, response_time = self.verify_proxy(proxy.url, timeout)

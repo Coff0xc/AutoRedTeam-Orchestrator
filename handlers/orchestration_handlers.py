@@ -18,16 +18,13 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 # 授权中间件
-from core.security import (
-    require_critical_auth,
-    require_dangerous_auth,
-)
+from core.security import require_critical_auth, require_dangerous_auth
 
 from .error_handling import ErrorCategory, handle_errors, validate_inputs
 from .runtime_helpers import (
     complete_handler_runtime_action as _shared_complete_handler_runtime_action,
-    gate_handler_runtime_action as _shared_gate_handler_runtime_action,
 )
+from .runtime_helpers import gate_handler_runtime_action as _shared_gate_handler_runtime_action
 from .tooling import tool
 
 # ==================== 共享数据类 ====================

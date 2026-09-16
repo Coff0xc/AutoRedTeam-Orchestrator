@@ -10,7 +10,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ==================== Fixtures ====================
 
 
@@ -38,10 +37,12 @@ class TestCrtsh:
     """crt.sh 数据源测试"""
 
     async def test_crtsh_parses_json(self, passive_recon):
-        data = json.dumps([
-            {"name_value": "sub1.example.com\nsub2.example.com"},
-            {"name_value": "*.example.com"},
-        ])
+        data = json.dumps(
+            [
+                {"name_value": "sub1.example.com\nsub2.example.com"},
+                {"name_value": "*.example.com"},
+            ]
+        )
         resp = _mock_response(data)
         with patch.object(passive_recon, "_http_get", return_value=data):
             result = await passive_recon._query_crtsh("example.com")
@@ -71,9 +72,7 @@ class TestHackerTarget:
         assert "sub2.example.com" in result
 
     async def test_hackertarget_handles_error(self, passive_recon):
-        with patch.object(
-            passive_recon, "_http_get", return_value="error: rate limit"
-        ):
+        with patch.object(passive_recon, "_http_get", return_value="error: rate limit"):
             result = await passive_recon._query_hackertarget("example.com")
         assert result == set()
 
@@ -87,12 +86,14 @@ class TestAlienVault:
     """AlienVault OTX 数据源测试"""
 
     async def test_alienvault_parses_dns(self, passive_recon):
-        data = json.dumps({
-            "passive_dns": [
-                {"hostname": "api.example.com"},
-                {"hostname": "mail.example.com"},
-            ]
-        })
+        data = json.dumps(
+            {
+                "passive_dns": [
+                    {"hostname": "api.example.com"},
+                    {"hostname": "mail.example.com"},
+                ]
+            }
+        )
         with patch.object(passive_recon, "_http_get", return_value=data):
             result = await passive_recon._query_alienvault("example.com")
         assert "api.example.com" in result
@@ -108,12 +109,14 @@ class TestURLScan:
     """URLScan.io 数据源测试"""
 
     async def test_urlscan_parses_results(self, passive_recon):
-        data = json.dumps({
-            "results": [
-                {"page": {"domain": "app.example.com"}, "task": {"domain": ""}},
-                {"page": {"domain": "www.example.com"}, "task": {"domain": ""}},
-            ]
-        })
+        data = json.dumps(
+            {
+                "results": [
+                    {"page": {"domain": "app.example.com"}, "task": {"domain": ""}},
+                    {"page": {"domain": "www.example.com"}, "task": {"domain": ""}},
+                ]
+            }
+        )
         with patch.object(passive_recon, "_http_get", return_value=data):
             result = await passive_recon._query_urlscan("example.com")
         assert "app.example.com" in result
@@ -140,11 +143,13 @@ class TestWebArchive:
     """Wayback Machine 数据源测试"""
 
     async def test_webarchive_parses_cdx(self, passive_recon):
-        data = json.dumps([
-            ["original"],
-            ["http://old.example.com/page"],
-            ["https://archive.example.com/test"],
-        ])
+        data = json.dumps(
+            [
+                ["original"],
+                ["http://old.example.com/page"],
+                ["https://archive.example.com/test"],
+            ]
+        )
         with patch.object(passive_recon, "_http_get", return_value=data):
             result = await passive_recon._query_webarchive("example.com")
         assert "old.example.com" in result
@@ -159,6 +164,7 @@ class TestDiscoverSubdomains:
 
     async def test_merges_and_deduplicates(self, passive_recon):
         """验证多源结果合并去重"""
+
         async def mock_crtsh(domain):
             return {"sub1.example.com", "sub2.example.com"}
 
@@ -171,12 +177,14 @@ class TestDiscoverSubdomains:
         async def mock_fail(domain):
             raise Exception("source down")
 
-        with patch.object(passive_recon, "_query_crtsh", mock_crtsh), \
-             patch.object(passive_recon, "_query_hackertarget", mock_hackertarget), \
-             patch.object(passive_recon, "_query_alienvault", mock_empty), \
-             patch.object(passive_recon, "_query_urlscan", mock_empty), \
-             patch.object(passive_recon, "_query_rapiddns", mock_empty), \
-             patch.object(passive_recon, "_query_webarchive", mock_fail):
+        with (
+            patch.object(passive_recon, "_query_crtsh", mock_crtsh),
+            patch.object(passive_recon, "_query_hackertarget", mock_hackertarget),
+            patch.object(passive_recon, "_query_alienvault", mock_empty),
+            patch.object(passive_recon, "_query_urlscan", mock_empty),
+            patch.object(passive_recon, "_query_rapiddns", mock_empty),
+            patch.object(passive_recon, "_query_webarchive", mock_fail),
+        ):
             result = await passive_recon.discover_subdomains("example.com")
 
         assert "sub1.example.com" in result
@@ -189,18 +197,21 @@ class TestDiscoverSubdomains:
 
     async def test_filters_unrelated_domains(self, passive_recon):
         """验证过滤非目标域名"""
+
         async def mock_crtsh(domain):
             return {"sub.example.com", "sub.other.com", "evil.com"}
 
         async def mock_empty(domain):
             return set()
 
-        with patch.object(passive_recon, "_query_crtsh", mock_crtsh), \
-             patch.object(passive_recon, "_query_hackertarget", mock_empty), \
-             patch.object(passive_recon, "_query_alienvault", mock_empty), \
-             patch.object(passive_recon, "_query_urlscan", mock_empty), \
-             patch.object(passive_recon, "_query_rapiddns", mock_empty), \
-             patch.object(passive_recon, "_query_webarchive", mock_empty):
+        with (
+            patch.object(passive_recon, "_query_crtsh", mock_crtsh),
+            patch.object(passive_recon, "_query_hackertarget", mock_empty),
+            patch.object(passive_recon, "_query_alienvault", mock_empty),
+            patch.object(passive_recon, "_query_urlscan", mock_empty),
+            patch.object(passive_recon, "_query_rapiddns", mock_empty),
+            patch.object(passive_recon, "_query_webarchive", mock_empty),
+        ):
             result = await passive_recon.discover_subdomains("example.com")
 
         assert "sub.example.com" in result
@@ -209,15 +220,18 @@ class TestDiscoverSubdomains:
 
     async def test_all_sources_fail(self, passive_recon):
         """验证所有源失败时返回空列表"""
+
         async def mock_fail(domain):
             raise Exception("down")
 
-        with patch.object(passive_recon, "_query_crtsh", mock_fail), \
-             patch.object(passive_recon, "_query_hackertarget", mock_fail), \
-             patch.object(passive_recon, "_query_alienvault", mock_fail), \
-             patch.object(passive_recon, "_query_urlscan", mock_fail), \
-             patch.object(passive_recon, "_query_rapiddns", mock_fail), \
-             patch.object(passive_recon, "_query_webarchive", mock_fail):
+        with (
+            patch.object(passive_recon, "_query_crtsh", mock_fail),
+            patch.object(passive_recon, "_query_hackertarget", mock_fail),
+            patch.object(passive_recon, "_query_alienvault", mock_fail),
+            patch.object(passive_recon, "_query_urlscan", mock_fail),
+            patch.object(passive_recon, "_query_rapiddns", mock_fail),
+            patch.object(passive_recon, "_query_webarchive", mock_fail),
+        ):
             result = await passive_recon.discover_subdomains("example.com")
 
         assert result == []
@@ -238,15 +252,15 @@ class TestDiscoverWithSources:
         async def mock_empty(domain):
             return set()
 
-        with patch.object(passive_recon, "_query_crtsh", mock_crtsh), \
-             patch.object(passive_recon, "_query_hackertarget", mock_empty), \
-             patch.object(passive_recon, "_query_alienvault", mock_empty), \
-             patch.object(passive_recon, "_query_urlscan", mock_empty), \
-             patch.object(passive_recon, "_query_rapiddns", mock_empty), \
-             patch.object(passive_recon, "_query_webarchive", mock_empty):
-            result = await passive_recon.discover_subdomains_with_sources(
-                "example.com"
-            )
+        with (
+            patch.object(passive_recon, "_query_crtsh", mock_crtsh),
+            patch.object(passive_recon, "_query_hackertarget", mock_empty),
+            patch.object(passive_recon, "_query_alienvault", mock_empty),
+            patch.object(passive_recon, "_query_urlscan", mock_empty),
+            patch.object(passive_recon, "_query_rapiddns", mock_empty),
+            patch.object(passive_recon, "_query_webarchive", mock_empty),
+        ):
+            result = await passive_recon.discover_subdomains_with_sources("example.com")
 
         assert "crt.sh" in result
         assert "api.example.com" in result["crt.sh"]

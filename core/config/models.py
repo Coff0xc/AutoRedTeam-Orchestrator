@@ -23,7 +23,6 @@ from pydantic import BaseModel, Field
 
 from core.sandbox.config import SandboxConfig  # noqa: E402 — 沙箱配置
 
-
 # ---------------------------------------------------------------------------
 # 子模型
 # ---------------------------------------------------------------------------
@@ -248,9 +247,7 @@ class SecurityConfig(BaseModel):
     """安全配置 (对应 config.yaml security 段)"""
 
     allowed_targets: List[str] = Field(default_factory=list)
-    blocked_targets: List[str] = Field(
-        default_factory=lambda: list(_DEFAULT_BLOCKED_TARGETS)
-    )
+    blocked_targets: List[str] = Field(default_factory=lambda: list(_DEFAULT_BLOCKED_TARGETS))
     dangerous_operations: List[str] = Field(
         default_factory=lambda: ["exploit", "brute_force", "dos"]
     )
@@ -278,9 +275,7 @@ class ToolsConfig(BaseModel):
 
     default_timeout: int = 300
     max_concurrent: int = 5
-    root_required: List[str] = Field(
-        default_factory=lambda: ["nmap_scan", "nmap_os", "masscan"]
-    )
+    root_required: List[str] = Field(default_factory=lambda: ["nmap_scan", "nmap_os", "masscan"])
 
 
 class ScanningConfig(BaseModel):

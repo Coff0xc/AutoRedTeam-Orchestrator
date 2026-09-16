@@ -49,14 +49,7 @@ from .client import (
 )
 
 # 配置
-from .config import (
-    ConfigPresets,
-    HTTPConfig,
-    PoolConfig,
-    ProxyConfig,
-    RetryConfig,
-    RetryStrategy,
-)
+from .config import ConfigPresets, HTTPConfig, PoolConfig, ProxyConfig, RetryConfig, RetryStrategy
 
 # 异常
 from .exceptions import (
@@ -92,13 +85,7 @@ from .middleware import (
 )
 
 # 会话管理
-from .session import (
-    AuthConfig,
-    AuthType,
-    Cookie,
-    CookieJar,
-    HTTPSession,
-)
+from .session import AuthConfig, AuthType, Cookie, CookieJar, HTTPSession
 
 
 class ClientType(Enum):

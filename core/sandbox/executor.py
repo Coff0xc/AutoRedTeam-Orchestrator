@@ -42,9 +42,7 @@ class DockerExecutor:
     def _ensure_client(self) -> None:
         """初始化 Docker 客户端连接"""
         if not DOCKER_AVAILABLE:
-            raise RuntimeError(
-                "docker SDK 未安装，请执行: pip install docker"
-            )
+            raise RuntimeError("docker SDK 未安装，请执行: pip install docker")
         try:
             self._client = docker.from_env()
             self._client.ping()
@@ -92,7 +90,10 @@ class DockerExecutor:
             for vol in self._config.volumes:
                 parts = vol.split(":")
                 if len(parts) >= 2:
-                    binds[parts[0]] = {"bind": parts[1], "mode": parts[2] if len(parts) > 2 else "rw"}
+                    binds[parts[0]] = {
+                        "bind": parts[1],
+                        "mode": parts[2] if len(parts) > 2 else "rw",
+                    }
             if binds:
                 kwargs["volumes"] = binds
 

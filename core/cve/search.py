@@ -407,10 +407,12 @@ class CVESearchEngine:
 
         # 关键词搜索
         if search_filter.keyword:
-            conditions.append("""
+            conditions.append(
+                """
                 (cve_id LIKE ? OR title LIKE ? OR description LIKE ?
                  OR affected_products LIKE ? OR tags LIKE ?)
-            """)
+            """
+            )
             keyword_pattern = f"%{search_filter.keyword}%"
             params.extend([keyword_pattern] * 5)
 
@@ -516,10 +518,12 @@ class CVESearchEngine:
 
         # 复制 _build_query 中的条件构建逻辑 (简化版)
         if search_filter.keyword:
-            conditions.append("""
+            conditions.append(
+                """
                 (cve_id LIKE ? OR title LIKE ? OR description LIKE ?
                  OR affected_products LIKE ? OR tags LIKE ?)
-            """)
+            """
+            )
 
         if search_filter.cve_id:
             conditions.append("cve_id LIKE ?")

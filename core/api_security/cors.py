@@ -18,12 +18,7 @@ import logging
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
-from .base import (
-    APITestResult,
-    APIVulnType,
-    BaseAPITester,
-    Severity,
-)
+from .base import APITestResult, APIVulnType, BaseAPITester, Severity
 
 logger = logging.getLogger(__name__)
 

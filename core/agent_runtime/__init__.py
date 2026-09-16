@@ -1,12 +1,5 @@
 """Agent runtime primitives for controlled AI red-team orchestration."""
 
-from core.agent_runtime.benchmark import (
-    BenchmarkCase,
-    BenchmarkHarness,
-    BenchmarkHarnessResult,
-    BenchmarkResult,
-    score_run_summary,
-)
 from core.agent_runtime.api import (
     get_run_view_response,
     get_runs_index,
@@ -16,7 +9,21 @@ from core.agent_runtime.api import (
     register_aiohttp_routes,
     serve_runtime_http,
 )
+from core.agent_runtime.benchmark import (
+    BenchmarkCase,
+    BenchmarkHarness,
+    BenchmarkHarnessResult,
+    BenchmarkResult,
+    score_run_summary,
+)
 from core.agent_runtime.memory import MemoryRecord, RunMemory
+from core.agent_runtime.middleware import (
+    MiddlewareDecision,
+    PolicyMiddleware,
+    RuntimeMiddleware,
+    RuntimePipeline,
+    SandboxMiddleware,
+)
 from core.agent_runtime.models import (
     Action,
     ActionKind,
@@ -39,17 +46,7 @@ from core.agent_runtime.models import (
     task_from_dict,
     trace_event_from_dict,
 )
-from core.agent_runtime.middleware import (
-    MiddlewareDecision,
-    PolicyMiddleware,
-    RuntimeMiddleware,
-    RuntimePipeline,
-    SandboxMiddleware,
-)
-from core.agent_runtime.observability import (
-    ObservabilitySnapshot,
-    build_observability_snapshot,
-)
+from core.agent_runtime.observability import ObservabilitySnapshot, build_observability_snapshot
 from core.agent_runtime.registry import (
     GLOBAL_RUNTIME_RUN_REGISTRY,
     RuntimeRunRegistry,

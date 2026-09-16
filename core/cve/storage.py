@@ -547,23 +547,28 @@ class CVEStorage:
         poc_available_count = cursor.fetchone()[0]
 
         # 按严重性统计
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT severity, COUNT(*) as count
             FROM cve_entries
             GROUP BY severity
-        """)
+        """
+        )
         by_severity = {row[0]: row[1] for row in cursor.fetchall()}
 
         # 按来源统计
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT source, COUNT(*) as count
             FROM cve_entries
             GROUP BY source
-        """)
+        """
+        )
         by_source = {row[0]: row[1] for row in cursor.fetchall()}
 
         # 按年份统计
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 CAST(substr(cve_id, 5, 4) AS INTEGER) as year,
                 COUNT(*) as count
@@ -571,7 +576,8 @@ class CVEStorage:
             WHERE cve_id LIKE 'CVE-%'
             GROUP BY year
             ORDER BY year DESC
-        """)
+        """
+        )
         by_year = {row[0]: row[1] for row in cursor.fetchall()}
 
         # 最后更新时间

@@ -12,9 +12,7 @@ from urllib.parse import parse_qs, urlparse
 
 # 导入项目统一异常类型
 from core.exceptions import ConnectionError as DetectorConnectionError
-from core.exceptions import (
-    HTTPError,
-)
+from core.exceptions import HTTPError
 from core.exceptions import TimeoutError as DetectorTimeoutError
 
 from ..base import BaseDetector
@@ -396,7 +394,11 @@ class SQLiDetector(BaseDetector):
                         response=response_info,
                         remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
                         references=["https://owasp.org/www-community/attacks/Blind_SQL_Injection"],
-                        extra={"injection_type": "time-based", "delay": elapsed, "delay2": elapsed2},
+                        extra={
+                            "injection_type": "time-based",
+                            "delay": elapsed,
+                            "delay2": elapsed2,
+                        },
                     )
                 else:
                     # 只有一次超时 — 低置信度, 可能是网络抖动
@@ -420,7 +422,11 @@ class SQLiDetector(BaseDetector):
                         response=response_info,
                         remediation="使用参数化查询（Prepared Statements）或 ORM 框架",
                         references=["https://owasp.org/www-community/attacks/Blind_SQL_Injection"],
-                        extra={"injection_type": "time-based", "delay": elapsed, "delay2": elapsed2},
+                        extra={
+                            "injection_type": "time-based",
+                            "delay": elapsed,
+                            "delay2": elapsed2,
+                        },
                     )
         except DetectorTimeoutError as e:
             # 超时可能是时间盲注成功的信号，需要进一步验证

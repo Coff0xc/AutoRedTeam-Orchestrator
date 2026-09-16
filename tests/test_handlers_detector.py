@@ -28,9 +28,7 @@ class TestDetectorHandlersRegistration:
 
         expected_total = 2 + len(DETECTOR_CONFIGS)
 
-        detector_calls = [
-            c for c in mock_counter.add.call_args_list if c[0][0] == "detector"
-        ]
+        detector_calls = [c for c in mock_counter.add.call_args_list if c[0][0] == "detector"]
         total_detectors = sum(c[0][1] for c in detector_calls)
         assert total_detectors == expected_total
 

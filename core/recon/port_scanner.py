@@ -400,7 +400,9 @@ class PortScanner:
 
                 prober = ServiceProber(timeout=min(3.0, self.timeout))
                 open_ports = [r.port for r in results]
-                probed = await prober.probe_ports(host, open_ports, concurrency=min(50, concurrency))
+                probed = await prober.probe_ports(
+                    host, open_ports, concurrency=min(50, concurrency)
+                )
                 # 合并探针结果到 PortInfo
                 probe_map = {p.port: p for p in probed}
                 for port_info in results:

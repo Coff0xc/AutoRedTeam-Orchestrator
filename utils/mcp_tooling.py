@@ -27,17 +27,30 @@ logger = logging.getLogger(__name__)
 _AUDIT_ENABLED: bool = os.environ.get("AUTORT_AUDIT_LOG", "1") != "0"
 
 # 审计日志文件路径
-_AUDIT_LOG_PATH: Path = Path(os.environ.get(
-    "AUTORT_AUDIT_LOG_PATH",
-    str(Path(__file__).resolve().parent.parent / "data" / "operation_audit.jsonl"),
-))
+_AUDIT_LOG_PATH: Path = Path(
+    os.environ.get(
+        "AUTORT_AUDIT_LOG_PATH",
+        str(Path(__file__).resolve().parent.parent / "data" / "operation_audit.jsonl"),
+    )
+)
 
 # 需要脱敏的参数名 (大小写不敏感匹配)
-_SENSITIVE_KEYS: frozenset[str] = frozenset({
-    "password", "passwd", "api_key", "apikey", "token",
-    "secret", "credential", "private_key", "access_key",
-    "secret_key", "auth", "authorization",
-})
+_SENSITIVE_KEYS: frozenset[str] = frozenset(
+    {
+        "password",
+        "passwd",
+        "api_key",
+        "apikey",
+        "token",
+        "secret",
+        "credential",
+        "private_key",
+        "access_key",
+        "secret_key",
+        "auth",
+        "authorization",
+    }
+)
 
 
 def _sanitize_params(params: dict[str, Any]) -> dict[str, Any]:
@@ -96,14 +109,16 @@ def _wrap_tool_func(func: Callable[..., Any]) -> Callable[..., Any]:
             finally:
                 if _AUDIT_ENABLED:
                     elapsed_ms = round((time.time() - start_ts) * 1000, 2)
-                    _write_audit_record({
-                        "tool_name": tool_name,
-                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                        "params": _sanitize_params(kwargs),
-                        "success": success,
-                        "error": error_msg,
-                        "execution_time_ms": elapsed_ms,
-                    })
+                    _write_audit_record(
+                        {
+                            "tool_name": tool_name,
+                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                            "params": _sanitize_params(kwargs),
+                            "success": success,
+                            "error": error_msg,
+                            "execution_time_ms": elapsed_ms,
+                        }
+                    )
 
     else:
 
@@ -125,14 +140,16 @@ def _wrap_tool_func(func: Callable[..., Any]) -> Callable[..., Any]:
             finally:
                 if _AUDIT_ENABLED:
                     elapsed_ms = round((time.time() - start_ts) * 1000, 2)
-                    _write_audit_record({
-                        "tool_name": tool_name,
-                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                        "params": _sanitize_params(kwargs),
-                        "success": success,
-                        "error": error_msg,
-                        "execution_time_ms": elapsed_ms,
-                    })
+                    _write_audit_record(
+                        {
+                            "tool_name": tool_name,
+                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                            "params": _sanitize_params(kwargs),
+                            "success": success,
+                            "error": error_msg,
+                            "execution_time_ms": elapsed_ms,
+                        }
+                    )
 
     return wrapper
 

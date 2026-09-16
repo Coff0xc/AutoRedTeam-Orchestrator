@@ -24,13 +24,7 @@ from core.credential.credential_dumper import (
     DumpResult,
     dump_credentials,
 )
-from core.credential.password_finder import (
-    PasswordFinder,
-    SecretFinding,
-    SecretType,
-    find_secrets,
-)
-
+from core.credential.password_finder import PasswordFinder, SecretFinding, SecretType, find_secrets
 
 # ==================== CredentialDumper 测试 ====================
 
@@ -317,12 +311,8 @@ class TestDumpAll:
     def test_dump_all_method_exception(self):
         """某个方法抛异常时不影响其他方法"""
         dumper = CredentialDumper()
-        with patch.object(
-            dumper, "dump_environment_secrets", side_effect=RuntimeError("boom")
-        ):
-            with patch.object(
-                dumper, "dump_ssh_keys", return_value=DumpResult(True, "ssh_keys")
-            ):
+        with patch.object(dumper, "dump_environment_secrets", side_effect=RuntimeError("boom")):
+            with patch.object(dumper, "dump_ssh_keys", return_value=DumpResult(True, "ssh_keys")):
                 results = dumper.dump_all(categories=["env", "ssh"])
         assert results["env"].success is False
         assert "boom" in results["env"].error
@@ -446,9 +436,7 @@ class TestPasswordPatternMatching:
     def test_database_url(self):
         """匹配数据库连接字符串"""
         finder = PasswordFinder()
-        findings = self._scan_line(
-            finder, "DATABASE_URL=postgres://user:pass@localhost/db"
-        )
+        findings = self._scan_line(finder, "DATABASE_URL=postgres://user:pass@localhost/db")
         assert any(f.secret_type == SecretType.DATABASE_URL for f in findings)
 
     def test_false_positive_placeholder(self):
@@ -570,12 +558,7 @@ class TestGitHistorySearch:
         # 第一次调用: git log
         log_result = MagicMock(stdout="abc123def456\n")
         # 第二次调用: git show
-        diff_result = MagicMock(
-            stdout=(
-                "+++ b/config.py\n"
-                '+db_password = "Kj8#mPq2xR!vN5wZ"\n'
-            )
-        )
+        diff_result = MagicMock(stdout=("+++ b/config.py\n" '+db_password = "Kj8#mPq2xR!vN5wZ"\n'))
         mock_run.side_effect = [log_result, diff_result]
 
         finder = PasswordFinder()

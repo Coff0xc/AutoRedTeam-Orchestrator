@@ -354,9 +354,7 @@ class TestCheckRBACPermissions:
         wildcard_roles = [
             {
                 "metadata": {"name": "admin-role"},
-                "rules": [
-                    {"apiGroups": [""], "resources": ["*"], "verbs": ["*"]}
-                ],
+                "rules": [{"apiGroups": [""], "resources": ["*"], "verbs": ["*"]}],
             }
         ]
 
@@ -562,9 +560,7 @@ class TestFullScan:
             with patch.object(tester, "check_privileged_containers", return_value=[]):
                 with patch.object(tester, "check_host_path_mounts", return_value=[]):
                     with patch.object(tester, "check_dangerous_capabilities", return_value=[]):
-                        with patch.object(
-                            tester, "check_service_account_tokens", return_value=[]
-                        ):
+                        with patch.object(tester, "check_service_account_tokens", return_value=[]):
                             with patch.object(tester, "check_rbac_permissions", return_value=[]):
                                 with patch.object(
                                     tester, "check_network_policies", return_value=[]

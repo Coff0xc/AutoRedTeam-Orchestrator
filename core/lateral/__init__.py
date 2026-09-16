@@ -64,11 +64,7 @@ from .base import (  # 基类; 枚举; 数据类; 异常; 工具函数
 )
 
 # PsExec 模块
-from .psexec import (
-    PsExecLateral,
-    psexec,
-    psexec_upload_exec,
-)
+from .psexec import PsExecLateral, psexec, psexec_upload_exec
 
 # SMB 模块
 from .smb import (
@@ -114,21 +110,10 @@ from .utils import (  # 端口检测; 操作系统检测; 横向移动; 批量�
 )
 
 # WinRM 模块
-from .winrm import (
-    WinRMLateral,
-    winrm_exec,
-    winrm_ps,
-)
+from .winrm import WinRMLateral, winrm_exec, winrm_ps
 
 # WMI 模块
-from .wmi import (
-    WMILateral,
-    WMIQueryResult,
-    WQLQueries,
-    wmi_exec,
-    wmi_query,
-    wmi_recon,
-)
+from .wmi import WMILateral, WMIQueryResult, WQLQueries, wmi_exec, wmi_query, wmi_recon
 
 logger = logging.getLogger(__name__)
 

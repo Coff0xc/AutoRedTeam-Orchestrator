@@ -26,7 +26,6 @@ from core.persistence.windows_persistence import (
     windows_persist,
 )
 
-
 # ==================== WebshellGenerator 测试 ====================
 
 
@@ -285,9 +284,7 @@ class TestGenerateWebshellConvenience:
 
     def test_obfuscation_param(self):
         """混淆参数应生效"""
-        result = generate_webshell(
-            shell_type="php", password="pw", obfuscation="high"
-        )
+        result = generate_webshell(shell_type="php", password="pw", obfuscation="high")
         assert result["success"] is True
         assert "base64_decode" in result["content"]
 
@@ -362,9 +359,7 @@ class TestRegistryPersistence:
     def test_registry_run_hklm(self):
         """HKLM 注册表 Run 键"""
         p = WindowsPersistence()
-        result = p.registry_run(
-            payload_path=r"C:\payload.exe", hive="HKLM"
-        )
+        result = p.registry_run(payload_path=r"C:\payload.exe", hive="HKLM")
         assert "HKLM" in result.location
 
     def test_registry_run_hidden(self):
@@ -548,37 +543,27 @@ class TestWindowsPersistConvenience:
     """windows_persist 便捷函数测试"""
 
     def test_registry_method(self):
-        result = windows_persist(
-            payload_path=r"C:\payload.exe", method="registry", name="TestReg"
-        )
+        result = windows_persist(payload_path=r"C:\payload.exe", method="registry", name="TestReg")
         assert result["success"] is True
         assert result["method"] == PersistenceMethod.REGISTRY_RUN.value
 
     def test_task_method(self):
-        result = windows_persist(
-            payload_path=r"C:\payload.exe", method="task", name="TestTask"
-        )
+        result = windows_persist(payload_path=r"C:\payload.exe", method="task", name="TestTask")
         assert result["success"] is True
 
     def test_wmi_method(self):
-        result = windows_persist(
-            payload_path=r"C:\payload.exe", method="wmi", name="TestWMI"
-        )
+        result = windows_persist(payload_path=r"C:\payload.exe", method="wmi", name="TestWMI")
         assert result["success"] is True
         assert "install_script" in result
 
     def test_bits_without_url_fails(self):
         """BITS 方法缺少 payload_url 应失败"""
-        result = windows_persist(
-            payload_path=r"C:\temp\file.exe", method="bits"
-        )
+        result = windows_persist(payload_path=r"C:\temp\file.exe", method="bits")
         assert result["success"] is False
         assert "payload_url" in result["error"]
 
     def test_unknown_method_fails(self):
-        result = windows_persist(
-            payload_path=r"C:\payload.exe", method="unknown_method"
-        )
+        result = windows_persist(payload_path=r"C:\payload.exe", method="unknown_method")
         assert result["success"] is False
         assert "error" in result
 

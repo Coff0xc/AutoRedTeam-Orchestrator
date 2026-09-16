@@ -17,10 +17,7 @@ from utils.validators import (
 )
 
 # 轻量导入: MCP auth 装饰器（handlers 的 @require_*_auth 直接依赖）
-from .mcp_auth_middleware import (
-    AuthMode,
-    get_api_key_from_env,
-)
+from .mcp_auth_middleware import AuthMode, get_api_key_from_env
 from .mcp_auth_middleware import require_auth as mcp_require_auth
 from .mcp_auth_middleware import (
     require_critical_auth,

@@ -4,28 +4,33 @@
 自动化部署安全模块并进行配置检查
 """
 
-import sys
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import List, Tuple
 
+
 # 颜色输出
 class Colors:
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    BLUE = '\033[94m'
-    END = '\033[0m'
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    BLUE = "\033[94m"
+    END = "\033[0m"
+
 
 def print_success(msg: str):
     print(f"{Colors.GREEN}[+]{Colors.END} {msg}")
 
+
 def print_warning(msg: str):
     print(f"{Colors.YELLOW}[!]{Colors.END} {msg}")
 
+
 def print_error(msg: str):
     print(f"{Colors.RED}[-]{Colors.END} {msg}")
+
 
 def print_info(msg: str):
     print(f"{Colors.BLUE}[*]{Colors.END} {msg}")
@@ -87,6 +92,7 @@ def generate_master_key() -> str:
 
     try:
         from cryptography.fernet import Fernet
+
         key = Fernet.generate_key().decode()
         print_success(f"  主密钥: {key[:20]}...")
         return key
@@ -129,11 +135,11 @@ JWT_SECRET=
 """
 
     try:
-        with open(env_file, 'w', encoding='utf-8') as f:
+        with open(env_file, "w", encoding="utf-8") as f:
             f.write(env_content)
 
         # 设置文件权限（Unix-like系统）
-        if os.name != 'nt':
+        if os.name != "nt":
             os.chmod(env_file, 0o600)
 
         print_success(f"  .env文件已创建: {env_file.absolute()}")
@@ -156,7 +162,7 @@ def generate_admin_key():
             name="管理员",
             permissions=[Permission.ADMIN],
             max_tool_level=ToolLevel.CRITICAL,
-            rate_limit=1000
+            rate_limit=1000,
         )
 
         print_success("  管理员密钥已生成:")
@@ -168,11 +174,11 @@ def generate_admin_key():
         keys_file = Path("data/admin_key.txt")
         keys_file.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(keys_file, 'w', encoding='utf-8') as f:
+        with open(keys_file, "w", encoding="utf-8") as f:
             f.write(f"Admin API Key: {key_info['full_key']}\n")
             f.write(f"Generated: {__import__('datetime').datetime.now().isoformat()}\n")
 
-        if os.name != 'nt':
+        if os.name != "nt":
             os.chmod(keys_file, 0o600)
 
         print_success(f"  密钥已保存到: {keys_file.absolute()}")
@@ -180,6 +186,7 @@ def generate_admin_key():
     except Exception as e:
         print_error(f"  生成失败: {e}")
         import traceback
+
         traceback.print_exc()
 
 
@@ -191,10 +198,7 @@ def run_security_tests():
     if test_file.exists():
         try:
             result = subprocess.run(
-                [sys.executable, str(test_file)],
-                capture_output=True,
-                text=True,
-                timeout=60
+                [sys.executable, str(test_file)], capture_output=True, text=True, timeout=60
             )
 
             if result.returncode == 0:
@@ -227,7 +231,7 @@ def run_security_tests():
             [sys.executable, "-m", "pytest", *[str(p) for p in existing]],
             capture_output=True,
             text=True,
-            timeout=120
+            timeout=120,
         )
 
         if result.returncode == 0:
@@ -269,7 +273,7 @@ def check_existing_vulnerabilities():
 
             file_path = Path(root) / file
             try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                     content = f.read()
 
                 for pattern, desc in dangerous_patterns:
@@ -313,14 +317,14 @@ def create_gitignore():
     try:
         existing = []
         if gitignore_file.exists():
-            with open(gitignore_file, 'r', encoding='utf-8') as f:
+            with open(gitignore_file, "r", encoding="utf-8") as f:
                 existing = f.read().splitlines()
 
         # 添加新条目
         new_entries = [e for e in gitignore_entries if e not in existing]
 
         if new_entries:
-            with open(gitignore_file, 'a', encoding='utf-8') as f:
+            with open(gitignore_file, "a", encoding="utf-8") as f:
                 f.write("\n" + "\n".join(new_entries) + "\n")
             print_success(f"  已添加 {len(new_entries)} 个条目到.gitignore")
         else:

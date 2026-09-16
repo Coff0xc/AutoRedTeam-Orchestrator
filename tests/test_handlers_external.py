@@ -295,9 +295,7 @@ class TestExtSqlmapScanTool:
             manager.is_tool_available.return_value = False
             mock_mgr_fn.return_value = manager
 
-            result = await registered_tools["ext_sqlmap_scan"](
-                url="https://example.com/page?id=1"
-            )
+            result = await registered_tools["ext_sqlmap_scan"](url="https://example.com/page?id=1")
 
             assert result["success"] is False
             assert "SQLMap未安装" in result["error"]
@@ -353,9 +351,7 @@ class TestExtFfufFuzzTool:
             mock_mgr_fn.return_value = manager
             mock_run.return_value = mock_result
 
-            result = await registered_tools["ext_ffuf_fuzz"](
-                url="https://example.com", mode="dir"
-            )
+            result = await registered_tools["ext_ffuf_fuzz"](url="https://example.com", mode="dir")
 
             assert result["success"] is True
 
@@ -374,9 +370,7 @@ class TestExtFfufFuzzTool:
             mock_run.return_value = {"success": True}
 
             # URL不含FUZZ，dir模式应自动追加
-            await registered_tools["ext_ffuf_fuzz"](
-                url="https://example.com", mode="dir"
-            )
+            await registered_tools["ext_ffuf_fuzz"](url="https://example.com", mode="dir")
 
             call_args = mock_run.call_args
             url_arg = call_args.kwargs.get("url") or call_args[1].get("url")
@@ -439,9 +433,7 @@ class TestExtMasscanScanTool:
             manager.is_tool_available.return_value = True
             mock_mgr_fn.return_value = manager
 
-            result = await registered_tools["ext_masscan_scan"](
-                target="192.168.1.0/24", rate=-1
-            )
+            result = await registered_tools["ext_masscan_scan"](target="192.168.1.0/24", rate=-1)
 
             assert result["success"] is False
             assert "rate" in result["error"]

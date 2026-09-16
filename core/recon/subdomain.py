@@ -447,9 +447,7 @@ class SubdomainEnumerator:
 
                 passive = PassiveRecon(timeout=max(int(self.timeout * 2), 10))
                 passive_subdomains = await passive.discover_subdomains(domain)
-                self._logger.info(
-                    "被动侦察发现 %d 个子域名: %s", len(passive_subdomains), domain
-                )
+                self._logger.info("被动侦察发现 %d 个子域名: %s", len(passive_subdomains), domain)
             except Exception as e:
                 self._logger.warning("被动侦察失败，继续 DNS 暴破: %s", e)
 

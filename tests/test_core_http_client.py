@@ -17,10 +17,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 # 导入被测试的模块
-from core.http.client import (
-    HTTPClient,
-    HTTPResponse,
-)
+from core.http.client import HTTPClient, HTTPResponse
 from core.http.config import HTTPConfig, RetryStrategy
 
 # ============== HTTPResponse 测试 ==============
@@ -389,7 +386,9 @@ class TestExceptionHandling:
                 with patch("core.http.client.requests") as mock:
                     import socket
 
-                    mock.Session.return_value.request.side_effect = socket.timeout("Request timeout")
+                    mock.Session.return_value.request.side_effect = socket.timeout(
+                        "Request timeout"
+                    )
 
                     client = HTTPClient()
                     with pytest.raises(Exception):

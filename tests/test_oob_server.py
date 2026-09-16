@@ -16,7 +16,6 @@ import pytest
 from core.detectors.advanced_verifier import OOBCallbackManager
 from core.detectors.oob_server import OOBCallbackServer, _OOBDNSHandler, _OOBHTTPHandler
 
-
 # ==================== _OOBHTTPHandler 单元测试 ====================
 
 
@@ -124,9 +123,7 @@ class TestOOBCallbackServerHTTP:
     @pytest.fixture
     def server(self, manager):
         port = _find_free_port()
-        srv = OOBCallbackServer(
-            manager, http_port=port, bind_address="127.0.0.1"
-        )
+        srv = OOBCallbackServer(manager, http_port=port, bind_address="127.0.0.1")
         srv.start()
         # 等待服务器就绪
         time.sleep(0.2)

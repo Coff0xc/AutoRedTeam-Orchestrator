@@ -397,8 +397,8 @@ def run_extractors(
     extracted: Dict[str, str] = {}
     for ext in extractors:
         if ext.type == "regex" and ext.regex:
-            target = body if ext.part == "body" else "\r\n".join(
-                f"{k}: {v}" for k, v in headers.items()
+            target = (
+                body if ext.part == "body" else "\r\n".join(f"{k}: {v}" for k, v in headers.items())
             )
             for pattern in ext.regex:
                 try:
@@ -548,10 +548,7 @@ class NucleiEngine:
         )
 
         # 构建协程列表
-        coros = [
-            self._execute_template_async(tmpl, target, timeout)
-            for tmpl in templates
-        ]
+        coros = [self._execute_template_async(tmpl, target, timeout) for tmpl in templates]
         raw_results = await gather_with_limit(coros, limit=concurrency, return_exceptions=True)
 
         findings: List[Dict[str, Any]] = []
@@ -612,9 +609,7 @@ class NucleiEngine:
                             data=body.encode("utf-8") if body else None,
                         )
                     except Exception as e:
-                        logger.debug(
-                            "[%s] 请求失败 %s: %s", template.id, url, e
-                        )
+                        logger.debug("[%s] 请求失败 %s: %s", template.id, url, e)
                         continue
 
                     # 检查 matchers
@@ -716,9 +711,6 @@ class NucleiEngine:
 
         if tags:
             tag_set = set(t.lower() for t in tags)
-            result = [
-                t for t in result
-                if set(tg.lower() for tg in t.tags) & tag_set
-            ]
+            result = [t for t in result if set(tg.lower() for tg in t.tags) & tag_set]
 
         return result

@@ -20,11 +20,7 @@ from core.recon.base import Finding, ReconConfig, ReconResult, Severity
 
 # 导入被测试的模块
 from core.recon.engine import StandardReconEngine, create_recon_engine
-from core.recon.phases import (
-    PhaseManager,
-    PhaseStatus,
-    ReconPhase,
-)
+from core.recon.phases import PhaseManager, PhaseStatus, ReconPhase
 
 # ============== 测试夹具 ==============
 

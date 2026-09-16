@@ -76,7 +76,9 @@ class SessionManager:
             self._cleanup_counter = 0  # 清理计数器
 
             # 存储
-            self._storage = SessionStorage(Path(storage_dir)) if storage_dir else SessionStorage(None)
+            self._storage = (
+                SessionStorage(Path(storage_dir)) if storage_dir else SessionStorage(None)
+            )
             self._auto_save = auto_save
 
             # 事件回调

@@ -24,7 +24,6 @@ from core.tools.tool_manager import (
     validate_extra_args,
 )
 
-
 # ==================== ExternalToolResult 测试 ====================
 
 
@@ -35,7 +34,9 @@ class TestExternalToolResult:
     def test_create_success_result(self):
         """创建成功结果"""
         result = ExternalToolResult(
-            tool="nmap", success=True, target="192.168.1.1",
+            tool="nmap",
+            success=True,
+            target="192.168.1.1",
             raw_output="PORT STATE SERVICE\n80/tcp open http",
         )
         assert result.tool == "nmap"
@@ -46,7 +47,9 @@ class TestExternalToolResult:
     def test_create_failure_result(self):
         """创建失败结果"""
         result = ExternalToolResult(
-            tool="nmap", success=False, target="10.0.0.1",
+            tool="nmap",
+            success=False,
+            target="10.0.0.1",
             error="Connection refused",
         )
         assert result.success is False
@@ -55,8 +58,11 @@ class TestExternalToolResult:
     def test_to_dict(self):
         """to_dict 序列化"""
         result = ExternalToolResult(
-            tool="nuclei", success=True, target="http://example.com",
-            parsed_data={"findings": []}, execution_time=5.2,
+            tool="nuclei",
+            success=True,
+            target="http://example.com",
+            parsed_data={"findings": []},
+            execution_time=5.2,
         )
         d = result.to_dict()
         assert d["tool"] == "nuclei"
@@ -245,19 +251,23 @@ class TestResultParser:
 
     def test_parse_nuclei_jsonl(self):
         """解析 nuclei JSONL 输出"""
-        line1 = json.dumps({
-            "template-id": "cve-2021-1234",
-            "info": {"name": "Test CVE", "severity": "critical"},
-            "type": "http",
-            "host": "http://example.com",
-            "matched-at": "http://example.com/path",
-        })
-        line2 = json.dumps({
-            "template-id": "exposed-panel",
-            "info": {"name": "Admin Panel", "severity": "medium"},
-            "type": "http",
-            "host": "http://example.com",
-        })
+        line1 = json.dumps(
+            {
+                "template-id": "cve-2021-1234",
+                "info": {"name": "Test CVE", "severity": "critical"},
+                "type": "http",
+                "host": "http://example.com",
+                "matched-at": "http://example.com/path",
+            }
+        )
+        line2 = json.dumps(
+            {
+                "template-id": "exposed-panel",
+                "info": {"name": "Admin Panel", "severity": "medium"},
+                "type": "http",
+                "host": "http://example.com",
+            }
+        )
         output = f"{line1}\n{line2}"
         result = ResultParser.parse_nuclei_jsonl(output)
         assert len(result) == 2
@@ -301,8 +311,18 @@ back-end DBMS: MySQL
         data = {
             "config": {"url": "http://example.com/FUZZ"},
             "results": [
-                {"input": {"FUZZ": "admin"}, "status": 200, "length": 1234, "url": "http://example.com/admin"},
-                {"input": {"FUZZ": "login"}, "status": 301, "length": 0, "url": "http://example.com/login"},
+                {
+                    "input": {"FUZZ": "admin"},
+                    "status": 200,
+                    "length": 1234,
+                    "url": "http://example.com/admin",
+                },
+                {
+                    "input": {"FUZZ": "login"},
+                    "status": 301,
+                    "length": 0,
+                    "url": "http://example.com/login",
+                },
             ],
         }
         result = ResultParser.parse_ffuf_json(json.dumps(data))
@@ -372,6 +392,7 @@ class TestConvenienceFunctions:
     def test_get_tool_manager_singleton(self, mock_exists, mock_which):
         """get_tool_manager 单例"""
         from core.tools.tool_manager import get_tool_manager
+
         m1 = get_tool_manager()
         m2 = get_tool_manager()
         assert m1 is m2
@@ -380,10 +401,10 @@ class TestConvenienceFunctions:
     @patch("core.tools.tool_manager.Path.exists", return_value=False)
     async def test_run_nmap_unavailable(self, mock_exists, mock_which):
         """run_nmap 工具不可用时返回失败"""
-        from core.tools.tool_manager import run_nmap
-
         # 重置单例
         import core.tools.tool_manager as tm
+        from core.tools.tool_manager import run_nmap
+
         tm._manager = None
 
         result = await run_nmap("192.168.1.1")
@@ -393,9 +414,9 @@ class TestConvenienceFunctions:
     @patch("core.tools.tool_manager.Path.exists", return_value=False)
     async def test_run_nuclei_unavailable(self, mock_exists, mock_which):
         """run_nuclei 工具不可用时返回失败"""
+        import core.tools.tool_manager as tm
         from core.tools.tool_manager import run_nuclei
 
-        import core.tools.tool_manager as tm
         tm._manager = None
 
         result = await run_nuclei("http://example.com")

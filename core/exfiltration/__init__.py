@@ -12,13 +12,7 @@ ATT&CK Tactic: TA0010 - Exfiltration
 仅用于授权渗透测试和安全研究
 """
 
-from .base import (
-    BaseExfiltration,
-    ExfilChannel,
-    ExfilConfig,
-    ExfilResult,
-    ExfilStatus,
-)
+from .base import BaseExfiltration, ExfilChannel, ExfilConfig, ExfilResult, ExfilStatus
 
 
 class ExfilFactory:

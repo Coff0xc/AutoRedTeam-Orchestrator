@@ -529,7 +529,9 @@ class PasswordFinder:
         self._log(f"Scan complete. Scanned {file_count} files, found {len(self.findings)} secrets.")
         return self.findings
 
-    def scan_git_history(self, repo_path: Union[str, Path], max_commits: int = 100) -> List[SecretFinding]:
+    def scan_git_history(
+        self, repo_path: Union[str, Path], max_commits: int = 100
+    ) -> List[SecretFinding]:
         """
         扫描Git历史中的敏感信息
 

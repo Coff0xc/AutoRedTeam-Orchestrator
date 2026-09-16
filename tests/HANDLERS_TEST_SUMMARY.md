@@ -134,10 +134,10 @@ register_xxx_tools(mock_mcp, mock_counter, mock_logger)
 # 3. Mock 底层模块
 with patch('core.xxx.YYY') as mock_yyy:
     mock_yyy.return_value = expected_result
-    
+
     # 4. 调用工具
     result = await registered_tools['tool_name'](params)
-    
+
     # 5. 验证结果
     assert result['success'] is True
 ```
