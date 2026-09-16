@@ -452,6 +452,73 @@ class TestPasswordPatternMatching:
         findings = self._scan_line(finder, 'secret = "${SECRET_KEY}"')
         assert len(findings) == 0
 
+    def test_reports_value_containing_placeholder_substring(self):
+        """真实密钥里含占位符词根仍要报出"""
+        finder = PasswordFinder()
+        # group(0) 是 'password = "..."'，占位符名单里就有 password，
+        # 拿整段匹配去比对会把下面这些真值全部吞掉
+        for content in (
+            'password = "hunter2SuperSecret"',
+            'password = "MyTestPassw0rd!"',
+        ):
+            findings = self._scan_line(finder, content)
+            assert any(f.secret_type == SecretType.PASSWORD for f in findings), content
+
+    def test_false_positive_masked_value(self):
+        """掩码值仍按假阳性过滤"""
+        finder = PasswordFinder()
+        for content in ('password = "xxxxxxxxxxxx"', 'password = "**********"'):
+            assert self._scan_line(finder, content) == [], content
+
+    def test_trailing_separator_stripped_before_placeholder_check(self):
+        """ini/properties 行尾的 ; , 不该让占位符逃过过滤"""
+        finder = PasswordFinder()
+        # test 只在整值名单里，不在假值标记里，所以这条只靠去掉行尾的 ; 才能过滤
+        assert self._scan_line(finder, "db_password=test;") == []
+        assert self._scan_line(finder, "db_password=changeme;") == []
+
+    def test_code_and_doc_fragments_are_not_credentials(self):
+        """类型注解、调用、表达式、文档句子里抠出来的值不是密钥"""
+        finder = PasswordFinder()
+        for content in (
+            'password = os.environ.get("DB_PASS")',
+            "password: str,",
+            "password=self.password,",
+            "password: Optional[str]",
+            "password: 请填写访问密码",
+        ):
+            assert self._scan_line(finder, content) == [], content
+
+    def test_dummy_marker_values_filtered(self):
+        """明说是示例/假值的标记仍要过滤"""
+        finder = PasswordFinder()
+        assert self._scan_line(finder, "aws_key = AKIAIOSFODNN7EXAMPLE") == []
+        assert self._scan_line(finder, 'api_key = "AIzaSyFAKE_TEST_KEY_NOT_REAL_1234567890"') == []
+
+    def test_underscore_prefixed_password_still_matches(self):
+        """pass 的边界不能用 \\b：下划线是 word 字符，db_pass 必须命中"""
+        finder = PasswordFinder()
+        findings = self._scan_line(finder, "db_pass = Xk9mQ2vLpT7w")
+        assert any(f.secret_type == SecretType.PASSWORD for f in findings)
+
+    def test_pass_keyword_not_matched_inside_word(self):
+        """bypass / compass 里的 pass 不是密码赋值"""
+        finder = PasswordFinder()
+        for content in ("bypass = true", "compass = north"):
+            assert self._scan_line(finder, content) == [], content
+
+    def test_mssql_connection_string_password(self):
+        """连接串里的 Password 字段要单独捕获出值"""
+        finder = PasswordFinder()
+        content = "Server=db01;Database=app;User Id=sa;Password=Kj8mPq2xRvN5wZ;"
+        findings = self._scan_line(finder, content)
+        assert any(f.secret_type == SecretType.DATABASE_URL for f in findings)
+        # 占位符密码仍要过滤：没捕获出值的模式只会把整段匹配交给过滤，占位符就漏了
+        placeholder = self._scan_line(
+            finder, "Server=db01;Database=app;User Id=sa;Password=changeme;"
+        )
+        assert not any(f.secret_type == SecretType.DATABASE_URL for f in placeholder)
+
 
 @pytest.mark.unit
 class TestFileSkipLogic:
@@ -558,7 +625,13 @@ class TestGitHistorySearch:
         # 第一次调用: git log
         log_result = MagicMock(stdout="abc123def456\n")
         # 第二次调用: git show
-        diff_result = MagicMock(stdout=("+++ b/config.py\n" '+db_password = "Kj8#mPq2xR!vN5wZ"\n'))
+        diff_result = MagicMock(
+            stdout=(
+                "+++ b/config.py\n"
+                '+db_password = "Kj8#mPq2xR!vN5wZ"\n'
+                '+db_password = "changeme"\n'
+            )
+        )
         mock_run.side_effect = [log_result, diff_result]
 
         finder = PasswordFinder()
@@ -566,6 +639,11 @@ class TestGitHistorySearch:
 
         # 至少调用了 git log
         assert mock_run.called
+        # git 历史这条路同样要出结果：db_password 曾因假阳性过滤被整段丢弃
+        assert any(f.secret_type == SecretType.PASSWORD for f in findings)
+        assert "config.py" in findings[0].file_path
+        # 占位符仍要过滤：过滤拿到的必须是捕获出的值，不是含关键字的整段匹配
+        assert not any("changeme" in f.matched_text for f in findings)
 
     def test_not_a_git_repo(self, tmp_path):
         """非 git 仓库应返回空列表"""

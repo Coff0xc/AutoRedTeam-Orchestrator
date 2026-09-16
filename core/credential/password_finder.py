@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Set, Union
+from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Union
 
 
 class SecretType(Enum):
@@ -209,7 +209,12 @@ class PasswordFinder:
     # 敏感信息正则表达式
     SECRET_PATTERNS: Dict[SecretType, List[tuple]] = {
         SecretType.PASSWORD: [
-            (r'(?i)(password|passwd|pwd|pass)\s*[=:]\s*["\']?([^"\'\s\n]{4,})["\']?', "high"),
+            # (?<![A-Za-z]) 而非 \b：下划线是 word 字符，db_pass 这类命名必须仍能命中
+            (
+                r"(?i)(password|passwd|pwd|(?<![A-Za-z])pass)\s*[=:]\s*"
+                r'["\']?([^"\'\s\n]{4,})["\']?',
+                "high",
+            ),
             (r'(?i)(secret|token|key)\s*[=:]\s*["\']?([^"\'\s\n]{8,})["\']?', "medium"),
         ],
         SecretType.API_KEY: [
@@ -246,12 +251,13 @@ class PasswordFinder:
             (r"-----BEGIN PGP PRIVATE KEY BLOCK-----", "high"),
         ],
         SecretType.DATABASE_URL: [
-            (r'(?i)(mysql|postgres|postgresql|mongodb|redis|mssql)://[^\s\n"\']+', "high"),
+            # 协议名不捕获：捕获组在这里表示密钥值，整个连接串才是值
+            (r'(?i)(?:mysql|postgres|postgresql|mongodb|redis|mssql)://[^\s\n"\']+', "high"),
             (
                 r'(?i)(database_url|db_url|connection_string)\s*[=:]\s*["\']?([^\s\n"\']+)["\']?',
                 "high",
             ),
-            (r"Server=.+;Database=.+;User Id=.+;Password=.+;", "high"),
+            (r"(?i)Server=.+;Database=.+;User Id=.+;Password=(.+?);", "high"),
         ],
         SecretType.JWT_TOKEN: [
             (r"eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*", "high"),
@@ -385,7 +391,7 @@ class PasswordFinder:
                         matched_text = match.group(0)
 
                         # 过滤假阳性
-                        if self._is_false_positive(matched_text, line, file_path):
+                        if self._is_false_positive(match, line, file_path):
                             continue
 
                         # 如果在敏感文件中发现,提高置信度
@@ -407,18 +413,48 @@ class PasswordFinder:
 
         return findings
 
-    def _is_false_positive(self, matched_text: str, line: str, file_path: Path) -> bool:
+    @staticmethod
+    def _captured_value(match: "re.Match[str]") -> Tuple[str, bool]:
+        """取匹配里的密钥值，以及它是不是从捕获组里取出来的
+
+        约定：最后一个非空捕获组是密钥值（``password = "x"`` 的值是 ``x``）；
+        整个匹配即密钥的模式（私钥头、``ghp_`` token、连接串）没有捕获组，退回 group(0)。
+        关键字和分隔符都在 group(0) 里，拿它当值去比对会把真实密钥整条滤掉。
+        """
+        groups = [group for group in match.groups() if group]
+        if groups:
+            return groups[-1], True
+        return match.group(0), False
+
+    @staticmethod
+    def _looks_like_secret_value(value: str) -> bool:
+        """值的形状像密钥，而不是代码或文档片段
+
+        只对捕获组取值的情况用：``password: str,`` 是类型注解、``os.environ.get(`` 是调用、
+        ``password[:2]`` 是表达式，抠出来的值形状就不对。签名类模式（私钥头、token、
+        连接串）的整段匹配本身就带这些字符，不能按同一把尺子量。
+        """
+        if any(char in value for char in "()[]{}<>=|`"):
+            return False
+        # 以逗号结尾的值是代码里的参数或字面量，配置文件不用逗号收尾
+        if value.endswith(","):
+            return False
+        return bool(re.search(r"[A-Za-z0-9]", value))
+
+    def _is_false_positive(self, match: "re.Match[str]", line: str, file_path: Path) -> bool:
         """
         检测假阳性
 
         Args:
-            matched_text: 匹配到的文本
+            match: 正则匹配对象，密钥值由 _captured_value 取出
             line: 所在行
             file_path: 文件路径
 
         Returns:
             是否为假阳性
         """
+        value, from_group = self._captured_value(match)
+
         # 常见假阳性值
         false_positive_values = {
             "password",
@@ -453,15 +489,40 @@ class PasswordFinder:
             "........",
         }
 
-        matched_lower = matched_text.lower()
+        # 占位符按整值比对：子串命中会连真实密钥一起吞掉
+        # （hunter2SuperSecret 含 secret，MyTestPassw0rd! 含 test）
+        # 逗号分号是 ini/properties 的行尾分隔符，比对前去掉
+        if value.strip().strip(",;").lower() in false_positive_values:
+            return True
 
-        # 检查是否为示例值
-        for fp in false_positive_values:
-            if fp in matched_lower:
-                return True
+        # 掩码值不按整值比，长度随意 (xxxxxx / ********)
+        if re.fullmatch(r"[x*.]+", value, re.IGNORECASE):
+            return True
+
+        # 明说是假值的标记按子串比对，形状判不出来：AKIA...EXAMPLE、AIza...FAKE_TEST_KEY
+        # 名单故意只有这几个词：test、secret、password 在真实密钥里也会出现，放进来就是误杀
+        if any(
+            marker in value.lower()
+            for marker in (
+                "example",
+                "fake",
+                "dummy",
+                "placeholder",
+                "not_real",
+                "your_",
+                "your-",
+                "changeme",
+                "xxxx",
+                "****",
+            )
+        ):
+            return True
 
         # 检查是否为变量引用
-        if "${" in matched_text or "#{" in matched_text or "{{" in matched_text:
+        if "${" in value or "#{" in value or "{{" in value:
+            return True
+
+        if from_group and not self._looks_like_secret_value(value):
             return True
 
         # 检查是否在测试/示例文件中
@@ -599,9 +660,7 @@ class PasswordFinder:
                             for match in matches:
                                 matched_text = match.group(0)
 
-                                if self._is_false_positive(
-                                    matched_text, line_content, Path(current_file)
-                                ):
+                                if self._is_false_positive(match, line_content, Path(current_file)):
                                     continue
 
                                 finding = SecretFinding(
