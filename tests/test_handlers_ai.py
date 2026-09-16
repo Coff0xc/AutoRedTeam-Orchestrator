@@ -49,9 +49,10 @@ async def test_ai_redteam_run_scenario_from_dict_dry_run():
     assert result["data"]["summary"]["attempts_planned"] == 2
     assert result["data"]["summary"]["scores"] == 2
     assert result["data"]["run_state"]["summary"]["action_status"]["skipped"] == 2
-    assert result["data"]["run_state"]["flow"]["tasks"][0]["actions"][0]["policy"][
-        "network_policy"
-    ] == "deny"
+    assert (
+        result["data"]["run_state"]["flow"]["tasks"][0]["actions"][0]["policy"]["network_policy"]
+        == "deny"
+    )
 
 
 @pytest.mark.asyncio
@@ -210,8 +211,11 @@ async def test_ai_capability_matrix_lists_target_sources():
     result = await registered_tools["ai_capability_matrix"]()
 
     assert result["success"] is True
-    assert result["data"]["summary"]["blocked"] == 0
-    assert result["data"]["summary"]["partial"] == 0
-    assert result["data"]["summary"]["implemented"] == result["data"]["summary"]["total"]
+    summary = result["data"]["summary"]
+    assert summary["total"] == summary["implemented"] + summary["partial"] + summary["blocked"]
+    assert summary["blocked"] == 0
+    assert summary["partial"] > 0, "scaffolding-only directions must not be reported as implemented"
+    assert summary["coverage"] == round(summary["implemented"] / summary["total"], 3)
+    assert "scope" in result["data"]
     assert "PentAGI" in result["data"]["sources"]
     assert "Vulnhuntr" in result["data"]["sources"]

@@ -39,28 +39,33 @@ CAPABILITIES: List[Capability] = [
     Capability(
         source="PentAGI",
         capability="sandbox policy enforcement",
-        status="implemented",
+        status="partial",
         local_modules=["core.agent_runtime.sandbox", "core.agent_runtime.middleware"],
         evidence=[
             "SandboxPolicy/enforce_sandbox_policy",
             "SandboxMiddleware in RuntimePipeline",
             "sandbox docker-smoke CLI",
         ],
-        notes=["Docker execution is available but real smoke depends on local Docker daemon."],
+        notes=[
+            "SandboxPolicy 是规划期断言：enforce_sandbox_policy 不会启动任何容器。",
+            "Docker 执行器可选（默认 allow_execute=False），且依赖本机 Docker daemon。",
+        ],
     ),
     Capability(
         source="PentAGI",
         capability="multi-agent roles",
-        status="implemented",
+        status="partial",
         local_modules=["core.agent_roles.models"],
         evidence=["AgentRole", "AgentTeam", "build_default_team"],
+        notes=["仅角色元数据：编排器按固定阶段顺序执行，没有基于角色的任务分派。"],
     ),
     Capability(
         source="PentAGI",
         capability="memory",
-        status="implemented",
+        status="partial",
         local_modules=["core.agent_runtime.memory", "core.agent_runtime.models"],
         evidence=["RunMemory", "AgentRunState.memory", "AgentRunState.add_memory"],
+        notes=["RunMemory 只在 AI red-team dry-run 路径写入，未回馈到渗透决策。"],
     ),
     Capability(
         source="PentAGI",
@@ -72,13 +77,14 @@ CAPABILITIES: List[Capability] = [
     Capability(
         source="PentAGI",
         capability="observability",
-        status="implemented",
+        status="partial",
         local_modules=["core.agent_runtime.observability", "core.agent_runtime.views"],
         evidence=[
             "build_observability_snapshot",
             "build_run_view",
             "RuntimeRunRegistry collects handler and runner runs",
         ],
+        notes=["快照覆盖运行状态；没有模型调用/工具调用的 trace，也没有 OTel/exporter 接入。"],
     ),
     Capability(
         source="PentAGI",
@@ -107,7 +113,7 @@ CAPABILITIES: List[Capability] = [
     Capability(
         source="promptfoo",
         capability="plugins/strategies/report/CI",
-        status="implemented",
+        status="partial",
         local_modules=[
             "core.ai_redteam.plugins",
             "core.ai_redteam.strategies",
@@ -121,22 +127,26 @@ CAPABILITIES: List[Capability] = [
             "render_markdown",
             "ai-redteam run --ci",
         ],
+        notes=[
+            "core.ai_redteam.plugins 是静态元数据注册表，不是动态加载器；strategies/scorers/report 已实现。"
+        ],
     ),
     Capability(
         source="garak",
         capability="probe/generator/detector/evaluator organization",
-        status="implemented",
+        status="partial",
         local_modules=[
             "core.ai_redteam.catalog",
             "core.ai_redteam.scorers",
             "core.ai_redteam.eval_cases",
         ],
         evidence=["PROBES", "STRATEGIES", "SCORERS", "EvalCase"],
+        notes=["probe/strategy 目录存在，但 probe 提示是占位串且从未发送给任何目标。"],
     ),
     Capability(
         source="PyRIT",
         capability="prompt target/converter/scorer/memory abstractions",
-        status="implemented",
+        status="partial",
         local_modules=[
             "core.ai_redteam.models",
             "core.ai_redteam.converters",
@@ -144,6 +154,9 @@ CAPABILITIES: List[Capability] = [
             "core.agent_runtime.memory",
         ],
         evidence=["Target", "convert_prompt", "Scorer", "RunMemory"],
+        notes=[
+            "converter/scorer/memory 抽象存在；缺少把 prompt 发送给真实模型目标的 target 适配器。"
+        ],
     ),
     Capability(
         source="AI-Infra-Guard",
@@ -155,18 +168,19 @@ CAPABILITIES: List[Capability] = [
     Capability(
         source="CAI",
         capability="guardrails/MCP/benchmark",
-        status="implemented",
+        status="partial",
         local_modules=[
             "core.agent_runtime.middleware",
             "core.agent_runtime.benchmark",
             "handlers.ai_handlers",
         ],
         evidence=["PolicyMiddleware", "SandboxMiddleware", "BenchmarkHarness"],
+        notes=["中间件记录策略决策；apply_action 未接执行器，BenchmarkHarness 是本地元数据。"],
     ),
     Capability(
         source="Decepticon",
         capability="sandbox/tools/middleware/agent workflow runtime",
-        status="implemented",
+        status="partial",
         local_modules=[
             "core.agent_runtime.middleware",
             "core.agent_runtime.sandbox",
@@ -183,6 +197,7 @@ CAPABILITIES: List[Capability] = [
             "orchestration handlers return runtime decision metadata",
             "recon/report/knowledge/resource handlers register runtime runs",
         ],
+        notes=["RuntimePipeline 是规划期治理层；实际执行仍走旧的 executor 路径。"],
     ),
     Capability(
         source="Vulnhuntr",
@@ -225,6 +240,10 @@ def capability_matrix() -> Dict[str, Any]:
         status_counts[item.status] += 1
     return {
         "success": True,
+        "scope": (
+            "status='implemented' 表示本地存在实现、可从公开 CLI/MCP 入口触达且有测试覆盖；"
+            "它不代表产品成熟度，产品级支持边界见 docs/capability-maturity.md。"
+        ),
         "summary": {
             "total": len(CAPABILITIES),
             "implemented": status_counts["implemented"],

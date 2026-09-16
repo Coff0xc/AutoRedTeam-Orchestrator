@@ -23,17 +23,17 @@
 
 ## 当前项目基线
 
-AutoRedTeam-Orchestrator 当前定位是企业级 AI 红队编排平台，已有三类入口：
+AutoRedTeam-Orchestrator 当前定位是**研究预览（research preview）**的 AI 红队编排工具，有三类入口：
 
 - CLI：`autort`，覆盖 scan、detect、exploit、cve-search、pentest、report、nuclei。
 - SDK：`Scanner`、`Exploiter`、`AutoPentest`、`RedTeam`、`Reporter`。
-- MCP：本地注册验证为 132 项能力，其中 122 tools、6 prompts、3 resources、1 resource template。
+- MCP：本地注册共 142 项能力，其中 132 tools、6 prompts、4 resources。
 
 当前优势：
 
 - 传统安全能力覆盖广：recon、detector、CVE、exploit、lateral、persistence、AD、C2、report、knowledge、MCTS、prompt。
 - 已有 MCP/CLI/SDK 三层入口，适合做 AI 编排外壳。
-- 本地测试面较大，非 slow/non-network 套件已验证过 1975 passed。
+- 本地测试面较大：tests/ 下 83 个测试文件、2107 个 test 函数（按 `def test_` 静态计数）；全量通过结论需重新执行验证，本文件不再引用历史数字。
 
 当前短板：
 

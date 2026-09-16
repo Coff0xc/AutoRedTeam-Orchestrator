@@ -35,10 +35,10 @@ def register_ai_tools(mcp, counter, logger):
         Returns:
             分析结果和建议
         """
-        from core.ai_engine import AIAnalyzer
+        from core.ai_engine import AIDecisionEngine
 
-        analyzer = AIAnalyzer()
-        result = analyzer.analyze(target, context)
+        analyzer = AIDecisionEngine()
+        result = analyzer.analyze_target(target, {"note": context} if context else None)
 
         return {"success": True, "target": target, "analysis": result}
 
