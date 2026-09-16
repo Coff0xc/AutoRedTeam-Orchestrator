@@ -33,7 +33,7 @@ only because an implementation exists in the repository.
 | Agent runtime models, policy, trace, and local API | Preview | Primarily plan-time governance metadata and read-only views. |
 | Automated pentest orchestrator | Experimental | Defaults to dry-run; checkpoint/resume is not release-certified. |
 | Docker sandbox executor | Experimental | An attached container executor reduces exposure; policy checks alone do not isolate execution. |
-| External engine routing | Internal | `EngineRouter` is not the universal SDK/CLI/handler path today. |
+| External engine routing | Planned | No backend-selection layer exists: `core/engine_router.py` had zero callers and unreachable external-tool branches, and has been removed. Handlers and the SDK call the pure-Python engines directly. |
 | MCTS, knowledge, feedback, and agent-role research | Experimental | Research components without outcome-backed optimization claims. |
 | All active/high-risk operations | Restricted Experimental | Includes exploit, privilege escalation, lateral, AD, post-exploit, persistence, C2, credential, external-tool execution, stealth/evasion, and exfiltration. |
 | Multi-user campaigns, collaboration, and distributed execution | Planned | No supported contract yet. |

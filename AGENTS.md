@@ -96,7 +96,7 @@ Black/isort 行宽为 100。`.pre-commit-config.yaml` 还包含 trailing whitesp
 - `core/exploit/` 提供 exploit engine、具体 exploiter、纯 Python SQLi/扫描能力和 exploit orchestrator。
 - `core/orchestrator/` 实现一键渗透阶段编排：RECON → VULN_SCAN → POC_EXEC → EXPLOIT → PRIV_ESC → LATERAL → EXFILTRATE → REPORT。`AutoPentestOrchestrator` 支持 checkpoint/resume、阶段状态和 runtime policy/sandbox gate。
 - `core/agent_runtime/` 提供受控 AI red-team runtime primitives：run state、action policy、risk level、middleware、sandbox enforcement、observability、benchmark、只读 runtime API view 和进程内 registry。
-- `core/engine_router.py` 在外部工具可用时优先选择 nmap/sqlmap/nuclei/ffuf 等后端，不可用时退回纯 Python 引擎；不要在调用侧重复实现后端选择逻辑。
+- 外部工具（nmap/sqlmap/nuclei/ffuf）目前**没有**后端选择层：handler 与 SDK 直接调用 `core.recon` / `core.detectors` / `core.exploit` 的纯 Python 引擎。曾被当作路由层的 `core/engine_router.py` 已删除（零调用者，且其外部工具分支在干净 checkout 中不可达）。引入后端选择时必须带真实消费者，见 `docs/agent-refactor-plan.md`。
 - `core/config/` 使用 Pydantic 模型加载配置，优先级为环境变量（`AUTORT_` 等）→ `config/config.yaml`/`config.yml` → 默认值。
 - `core/session/` 管理目标、HTTP session、上下文和持久化，用于扫描/编排结果和 resume。
 
@@ -111,5 +111,5 @@ Black/isort 行宽为 100。`.pre-commit-config.yaml` 还包含 trailing whitesp
 
 - 这是安全测试工具，`.bandit` 有大量针对红队场景的 skip；不要把这些 skip 当作普通应用安全基线，也不要未经需求扩大 skip 范围。
 - 涉及 active scan、exploit、lateral、persistence、C2、exfiltrate 的代码或命令，只在明确授权、local fixture、mock、dry-run 或文档化测试目标上运行。
-- 优先复用 SDK、`DetectorFactory`、`EngineRouter`、`RuntimePipeline` 和现有 handler 注册模式；避免在 CLI/MCP 层直接复制 core 逻辑。
+- 优先复用 SDK、`DetectorFactory`、`RuntimePipeline` 和现有 handler 注册模式；避免在 CLI/MCP 层直接复制 core 逻辑。
 - Windows 兼容性是项目关注点：pre-commit 会检查硬编码 Unix 路径；新增路径处理优先使用 `pathlib`。
