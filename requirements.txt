@@ -12,6 +12,8 @@ httpx>=0.26.0,<1.0.0
 # AI/LLM Integration (核心功能)
 openai>=1.12.0,<3.0.0
 anthropic>=0.18.0,<1.0.0
+# 多 provider 统一接口（ollama/deepseek 等；未安装时仅 openai/anthropic 直连可用）
+litellm>=1.101.0,<2.0.0
 
 # Security Tools Integration (核心功能)
 python-nmap>=0.7.1,<1.0.0

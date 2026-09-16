@@ -49,7 +49,10 @@ DECISION_PROMPT = """根据当前渗透测试状态，建议下一步行动:
 
 ## 当前状态
 - 阶段: {current_phase}
-- 已发现漏洞: {findings_summary}
+- 已发现漏洞:
+<scan_data>
+{findings_summary}
+</scan_data>
 - 防御态势: WAF={waf_detected}, 防御评分={defense_score}/10
 - 已获权限: {access_level}
 - 失败尝试: {failed_attempts}

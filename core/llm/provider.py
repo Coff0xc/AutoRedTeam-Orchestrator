@@ -7,8 +7,11 @@
 配置 (环境变量):
     AUTORT_LLM_PROVIDER: openai / anthropic / ollama / deepseek / none (默认 none)
     AUTORT_LLM_MODEL:    模型名 (默认按 provider 自动选择)
-    AUTORT_LLM_API_KEY:  API Key
+    AUTORT_LLM_API_KEY:  API Key；未设置时回退到该 provider 对应的环境变量
     AUTORT_LLM_BASE_URL: 自定义 base URL (Ollama: http://localhost:11434)
+
+多 provider 路径依赖 litellm；litellm 未安装时只有 openai/anthropic 直连 SDK 可用，
+ollama/deepseek 会因缺少后端而静默降级（返回 None）。
 """
 
 import logging
@@ -41,6 +44,13 @@ _LITELLM_PREFIX: Dict[str, str] = {
     "deepseek": "deepseek/",
 }
 
+# AUTORT_LLM_API_KEY 未设置时，按 provider 回退到对应的厂商环境变量
+_PROVIDER_KEY_ENV: Dict[str, str] = {
+    "openai": "OPENAI_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+}
+
 
 class LLMProvider:
     """统一 LLM 调用接口
@@ -55,7 +65,8 @@ class LLMProvider:
             "AUTORT_LLM_MODEL", _DEFAULT_MODELS.get(self.provider, "gpt-4o-mini")
         )
         self.api_key: str = os.environ.get(
-            "AUTORT_LLM_API_KEY", os.environ.get("OPENAI_API_KEY", "")
+            "AUTORT_LLM_API_KEY",
+            os.environ.get(_PROVIDER_KEY_ENV.get(self.provider, ""), ""),
         )
         self.base_url: str = os.environ.get("AUTORT_LLM_BASE_URL", "")
         self._available: bool = self.provider != "none" and (
@@ -207,9 +218,7 @@ class LLMProvider:
             return self._anthropic_call(prompt, system, temperature, max_tokens)
         return None
 
-    def _openai_call(
-        self, prompt: str, system: str, temperature: float, max_tokens: int
-    ) -> str:
+    def _openai_call(self, prompt: str, system: str, temperature: float, max_tokens: int) -> str:
         """OpenAI SDK 直接调用"""
         import openai
 
@@ -226,9 +235,7 @@ class LLMProvider:
         )
         return resp.choices[0].message.content  # type: ignore[return-value]
 
-    def _anthropic_call(
-        self, prompt: str, system: str, temperature: float, max_tokens: int
-    ) -> str:
+    def _anthropic_call(self, prompt: str, system: str, temperature: float, max_tokens: int) -> str:
         """Anthropic SDK 直接调用"""
         import anthropic
 

@@ -12,6 +12,7 @@ decision.py - 智能决策引擎
 """
 
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -749,6 +750,26 @@ class DecisionEngine:
 
         return analysis
 
+    @staticmethod
+    def _sanitize_llm_text(value: Any, max_length: int = 200) -> str:
+        """清理不可信文本（扫描结果、LLM 输出）：去控制字符、压平换行、截断。
+
+        这些值会被拼进下一轮 prompt 或编排动作列表，不能假设其类型与内容可信。
+        """
+        cleaned = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", str(value))
+        return " ".join(cleaned.split())[:max_length]
+
+    @classmethod
+    def _llm_text_list(cls, value: Any, limit: int) -> List[str]:
+        """把 LLM 返回的“字符串列表”收敛为受长度限制的 list[str]。"""
+        if not isinstance(value, list):
+            return []
+        return [
+            cls._sanitize_llm_text(item)
+            for item in value[:limit]
+            if isinstance(item, str) and item.strip()
+        ]
+
     def _llm_enhance_analysis(
         self,
         phase: "PentestPhase",
@@ -771,10 +792,15 @@ class DecisionEngine:
 
         # 构造上下文摘要
         findings = result.get("findings", [])
-        findings_summary = ", ".join(
-            f'{f.get("type", "unknown")}({f.get("severity", "?")})'
-            for f in findings[:10]
-        ) or "无"
+        findings_summary = (
+            ", ".join(
+                f"{self._sanitize_llm_text(f.get('type', 'unknown'), 64)}"
+                f"({self._sanitize_llm_text(f.get('severity', '?'), 16)})"
+                for f in findings[:10]
+                if isinstance(f, dict)
+            )
+            or "无"
+        )
 
         threat_ctx = self.threat_context
         prompt = DECISION_PROMPT.format(
@@ -789,12 +815,13 @@ class DecisionEngine:
         llm_result = llm.complete_json(prompt, system=SECURITY_SYSTEM_PROMPT)
         if llm_result:
             analysis["llm_enhanced"] = True
-            if llm_result.get("recommended_action"):
-                analysis["recommendations"].append(llm_result["recommended_action"])
-            if llm_result.get("evasion_tips"):
-                analysis["recommendations"].extend(llm_result["evasion_tips"][:3])
-            if llm_result.get("tools_to_use"):
-                analysis["next_actions"].extend(llm_result["tools_to_use"][:5])
+            recommended = llm_result.get("recommended_action")
+            if isinstance(recommended, str) and recommended.strip():
+                analysis["recommendations"].append(self._sanitize_llm_text(recommended))
+            analysis["recommendations"].extend(
+                self._llm_text_list(llm_result.get("evasion_tips"), 3)
+            )
+            analysis["next_actions"].extend(self._llm_text_list(llm_result.get("tools_to_use"), 5))
             analysis["llm_assessment"] = llm_result
             self.logger.info("LLM 增强分析完成, 推荐: %s", llm_result.get("recommended_action"))
         else:
