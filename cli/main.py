@@ -91,6 +91,14 @@ capabilities_app = typer.Typer(
 )
 app.add_typer(capabilities_app, name="capabilities")
 
+tools_app = typer.Typer(
+    name="tools",
+    help="MCP 工具面契约检查（静态分析，不执行 handler）",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(tools_app, name="tools")
+
 
 def _show_disclaimer() -> None:
     """启动时显示法律声明"""
@@ -545,6 +553,36 @@ def ai_surface_scan_skills(
         raise typer.Exit(2) from exc
 
     _emit_surface_result(result, output, format, severity_threshold, exit_code)
+
+
+# ──────────────────────────── tools ────────────────────────────
+
+
+@tools_app.command("lint")
+def tools_lint(
+    path: str = typer.Option("handlers", "--path", "-p", help="handler 文件或目录"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+    exit_code: bool = typer.Option(False, "--exit-code", help="存在 error 级问题时返回非零退出码"),
+    auth_mode: str = typer.Option(
+        "strict",
+        "--auth-mode",
+        help="auth-gate 检测: strict(报高危缺授权) | lenient(外部仓库不报缺授权)",
+    ),
+):
+    """检查工具面是否符合统一契约（授权门禁/schema 质量/证据契约）"""
+    from core.tooling import lint_tool_contracts
+
+    try:
+        result = lint_tool_contracts(path, flag_missing_auth=auth_mode.lower() != "lenient")
+    except (OSError, ValueError) as exc:
+        typer.echo(f"Tool contract lint failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    data = result.to_dict()
+    _output(data, output)
+
+    if exit_code and data["summary"]["errors"]:
+        raise typer.Exit(2)
 
 
 # ──────────────────────────── code-agent ────────────────────────────
