@@ -703,6 +703,13 @@ class MCTSPlanner:
                 for action, visits, avg_reward in best_path
             ],
             "total_iterations": iterations,
+            "probability_source": "history-calibrated" if history else "static-prior",
+            # 规划结果未经真实观测验证；字段位置与 DetectionResult.verified 一致（在结果体内）
+            "verified": False,
+            "notes": [
+                "动作奖励由内置成功率表（BASE_SUCCESS_RATES）加随机模拟生成，不是对目标的真实观测；"
+                "仅用于排序候选动作，不得当作已确认结论。结论必须经 core.vuln_verifier 验证。"
+            ],
             "tree_stats": stats,
         }
 

@@ -54,6 +54,10 @@ def register_mcts_tools(mcp, counter, logger):
             access_level: 当前访问级别 (0=none, 1=user, 2=admin)
             iterations: MCTS迭代次数 (越多越精确，默认200)
             session_id: 从知识图谱会话加载已有信息
+
+        Returns:
+            planning 结果；其中 ``verified`` 恒为 False，奖励由内置成功率表模拟得出，
+            不是对目标的观测，不得当作已确认结论。
         """
         import asyncio
 
