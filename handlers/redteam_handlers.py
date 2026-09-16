@@ -27,7 +27,7 @@ from .runtime_helpers import (
     complete_handler_runtime_payload,
     gate_handler_runtime_action,
 )
-from .tooling import tool
+from .tooling import no_target_contact, tool
 
 
 def _gate_redteam_runtime(
@@ -164,6 +164,7 @@ def register_redteam_tools(mcp, counter, logger):
     @require_dangerous_auth
     @require_non_empty("payload")
     @handle_errors(logger, ErrorCategory.REDTEAM)
+    @no_target_contact("对给定字符串做混淆变体，不接触目标")
     async def payload_obfuscate(payload: str, technique: str = "xor") -> Dict[str, Any]:
         """Payload混淆 - 对payload进行混淆处理
 
@@ -193,6 +194,7 @@ def register_redteam_tools(mcp, counter, logger):
     @require_dangerous_auth
     @require_non_empty("payload")
     @handle_errors(logger, ErrorCategory.REDTEAM)
+    @no_target_contact("生成绕过变体与方案，不去验证目标是否真的放行")
     async def waf_bypass(
         payload: str,
         waf_name: Optional[str] = None,
@@ -250,30 +252,27 @@ def register_redteam_tools(mcp, counter, logger):
         ErrorCategory.REDTEAM,
         lambda a, kw: {"path": kw.get("path") or (a[0] if a else None)},
     )
-    async def credential_find(
-        path: Optional[str] = None, patterns: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+    async def credential_find(path: str = ".") -> Dict[str, Any]:
         """凭证发现 - 在文件中搜索敏感凭证
 
         搜索: API密钥、密码、令牌、私钥等
         警告: 仅限授权渗透测试使用！
 
         Args:
-            path: 搜索路径
-            patterns: 自定义搜索模式
+            path: 搜索路径 (默认当前目录)
 
         Returns:
             发现的凭证
         """
         from core.credential.password_finder import find_secrets
 
-        results = find_secrets(path=path, patterns=patterns)
+        results = find_secrets(path=path)
 
         return {
             "success": True,
             "path": path,
-            "findings": results if isinstance(results, list) else [results],
-            "total": len(results) if isinstance(results, list) else 1,
+            "findings": results["findings"],
+            "total": results["summary"]["total_findings"],
         }
 
     # ==================== 权限提升工具 ====================
@@ -354,6 +353,7 @@ def register_redteam_tools(mcp, counter, logger):
     @tool(mcp)
     @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
+    @no_target_contact("生成 AMSI 绕过代码，不接触目标")
     async def post_exploit_amsi_bypass(technique: Optional[str] = None) -> Dict[str, Any]:
         """AMSI绕过 - 生成AMSI绕过代码
 
@@ -374,6 +374,7 @@ def register_redteam_tools(mcp, counter, logger):
     @tool(mcp)
     @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
+    @no_target_contact("返回内置 ETW Patch 代码常量，不接触目标")
     async def post_exploit_etw_bypass() -> Dict[str, Any]:
         """ETW绕过 - 获取ETW Patch代码"""
         from core.post_exploit.advanced_techniques import ETWBypass
@@ -383,12 +384,19 @@ def register_redteam_tools(mcp, counter, logger):
     @tool(mcp)
     @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
+    @no_target_contact("生成 stager 代码，不接触目标")
     async def post_exploit_stager(
         payload_type: str = "powershell",
         include_amsi_bypass: bool = True,
         include_etw_bypass: bool = True,
     ) -> Dict[str, Any]:
-        """生成后渗透stager代码"""
+        """生成后渗透stager代码
+
+        Args:
+            payload_type: stager 类型 (powershell 等)
+            include_amsi_bypass: 是否内联 AMSI 绕过
+            include_etw_bypass: 是否内联 ETW 绕过
+        """
         from core.post_exploit import PostExploitManager
 
         manager = PostExploitManager()
@@ -403,8 +411,13 @@ def register_redteam_tools(mcp, counter, logger):
     @tool(mcp)
     @require_critical_auth
     @handle_errors(logger, ErrorCategory.REDTEAM)
+    @no_target_contact("按目标 OS 返回推荐的规避链，不接触目标")
     async def post_exploit_evasion_chain(target_os: str = "windows") -> Dict[str, Any]:
-        """获取推荐的后渗透规避链"""
+        """获取推荐的后渗透规避链
+
+        Args:
+            target_os: 目标操作系统 (windows, linux)
+        """
         from core.post_exploit import PostExploitManager
 
         manager = PostExploitManager()
@@ -416,10 +429,16 @@ def register_redteam_tools(mcp, counter, logger):
     @require_dangerous_auth
     @require_non_empty("current_privileges")
     @handle_errors(logger, ErrorCategory.REDTEAM)
+    @no_target_contact("根据传入的权限列表给出提权建议，不接触目标")
     async def post_exploit_privesc_suggest(
         current_privileges: List[str], target_os: str = "windows"
     ) -> Dict[str, Any]:
-        """根据当前权限建议提权路径"""
+        """根据当前权限建议提权路径
+
+        Args:
+            current_privileges: 已获取的权限/身份列表
+            target_os: 目标操作系统 (windows, linux)
+        """
         from core.post_exploit import PostExploitManager
 
         manager = PostExploitManager()

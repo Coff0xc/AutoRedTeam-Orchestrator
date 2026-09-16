@@ -665,24 +665,47 @@ class TestExploitWithRetryTool:
 
     @pytest.mark.asyncio
     async def test_retry_success(self):
-        """测试重试后成功"""
+        """测试重试后成功
+
+        用真实 FeedbackResult/ExploitResult 而非 MagicMock: MagicMock 能凭空
+        编造任意属性, 早先 handler 读的 attempts/failure_reasons/final_strategy
+        在真实对象上根本不存在, 却因为这个 mock 一直是绿的。
+        """
+        from core.exploit.engine import ExploitResult, ExploitStatus, ExploitType
+        from core.feedback.engine import FeedbackResult, RetryContext
+        from core.feedback.failure_analyzer import FailureAnalysis
+        from core.feedback.strategies import FailureReason
+
         registered_tools, _, _ = _make_mcp_and_register()
 
-        mock_inner = MagicMock()
-        mock_inner.to_dict.return_value = {"status": "success"}
-
-        mock_result = MagicMock()
-        mock_result.success = True
-        mock_result.result = mock_inner
-        mock_result.attempts = 2
-        mock_result.failure_reasons = ["waf_block"]
-        mock_result.adjustments_made = ["encoding_change"]
-        mock_result.final_strategy = "double_url_encode"
-        mock_result.total_time_ms = 3000
-        mock_result.error = None
+        inner = ExploitResult(
+            status=ExploitStatus.SUCCESS,
+            exploit_type=ExploitType.DATA_EXTRACTION,
+            vuln_type="sqli",
+            url="https://target.example/item?id=1",
+            evidence="UNION SELECT returned 3 rows",
+        )
+        real_result = FeedbackResult(
+            success=True,
+            result=inner,
+            retry_context=RetryContext(
+                attempt=2,
+                max_retries=3,
+                failures=[
+                    FailureAnalysis(
+                        reason=FailureReason.WAF_BLOCKED,
+                        confidence=0.9,
+                        description="WAF blocked the payload",
+                    )
+                ],
+            ),
+            adjustments_applied=[{"type": "encoding_change"}],
+            total_attempts=2,
+            total_time_ms=3000.0,
+        )
 
         with patch("core.exploit.exploit_with_retry", new_callable=AsyncMock) as mock_fn:
-            mock_fn.return_value = mock_result
+            mock_fn.return_value = real_result
 
             result = await registered_tools["exploit_with_retry"](
                 detection_result={"vulnerable": True, "vuln_type": "sqli"}, max_retries=3
@@ -690,6 +713,11 @@ class TestExploitWithRetryTool:
 
             assert result["success"] is True
             assert result["attempts"] == 2
+            assert result["failure_reasons"] == ["WAF_BLOCKED"]
+            assert result["adjustments_made"] == [{"type": "encoding_change"}]
+            assert result["total_time_ms"] == 3000.0
+            assert result["error"] is None
+            assert result["result"]["evidence"] == "UNION SELECT returned 3 rows"
 
     @pytest.mark.asyncio
     async def test_retry_exception(self):

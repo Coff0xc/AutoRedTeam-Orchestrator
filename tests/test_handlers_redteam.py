@@ -352,15 +352,30 @@ class TestCredentialFindTool:
         mock_mcp.tool = capture_tool
         register_redteam_tools(mock_mcp, mock_counter, mock_logger)
 
-        mock_findings = [
-            {"file": "/etc/config.ini", "type": "password", "value": "admin123"},
-            {"file": "/home/user/.env", "type": "api_key", "value": "sk-xxx"},
-        ]
+        # 必须复刻 find_secrets 的真实返回形状 ({"summary", "findings"})。
+        # 早先这里 mock 成裸 list,而 handler 读的是 dict —— 契约不匹配被
+        # @handle_errors 吞成 success=False,测试却是绿的。
+        engine_result = {
+            "summary": {
+                "total_findings": 2,
+                "by_type": {"password": 1, "api_key": 1},
+                "by_confidence": {"high": 2, "medium": 0, "low": 0},
+                "files_affected": ["/etc/config.ini", "/home/user/.env"],
+            },
+            "findings": [
+                {"file": "/etc/config.ini", "type": "password", "value": "admin123"},
+                {"file": "/home/user/.env", "type": "api_key", "value": "sk-xxx"},
+            ],
+        }
 
         with patch("core.credential.password_finder.find_secrets") as mock_find:
-            mock_find.return_value = mock_findings
+            mock_find.return_value = engine_result
 
             result = await registered_tools["credential_find"](path="/home/user")
+
+            # 真实签名是 (path, recursive, include_git, verbose) —— 曾经
+            # 传了不存在的 patterns=,只有钉住调用参数才能防它回来。
+            mock_find.assert_called_once_with(path="/home/user")
 
             assert result["success"] is True
             assert result["data"]["total"] == 2

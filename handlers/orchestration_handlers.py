@@ -25,7 +25,7 @@ from .runtime_helpers import (
     complete_handler_runtime_action as _shared_complete_handler_runtime_action,
 )
 from .runtime_helpers import gate_handler_runtime_action as _shared_gate_handler_runtime_action
-from .tooling import tool
+from .tooling import no_target_contact, tool
 
 # ==================== 共享数据类 ====================
 
@@ -204,6 +204,7 @@ def register_orchestration_tools(mcp, counter, logger):
     @handle_errors(
         logger, category=ErrorCategory.REDTEAM, context_extractor=extract_session_context
     )
+    @no_target_contact("读取本地会话状态，不接触目标")
     async def pentest_status(session_id: str) -> Dict[str, Any]:
         """查询渗透测试状态 - 获取渗透测试会话的当前状态
 
@@ -474,6 +475,7 @@ def register_orchestration_tools(mcp, counter, logger):
     @require_dangerous_auth
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.REDTEAM, context_extractor=extract_target_context)
+    @no_target_contact("由决策引擎基于已有状态推荐路径，不接触目标")
     async def get_attack_paths(
         target: str,
         session_id: Optional[str] = None,
@@ -634,22 +636,33 @@ def register_orchestration_tools(mcp, counter, logger):
         result = await _exploit_with_retry(
             detection=detection_result, max_retries=max_retries, targets=targets
         )
+        final_error = str(result.final_error) if result.final_error else None
         runtime = _complete_handler_runtime_action(
             runtime_gate,
             bool(result.success),
-            output={"success": bool(result.success), "attempts": result.attempts},
-            error=result.error,
+            output={"success": bool(result.success), "attempts": result.total_attempts},
+            error=final_error,
         )
+
+        exploit_result = result.result
+        if isinstance(exploit_result, Exception):
+            exploit_payload: Any = str(exploit_result)
+        elif hasattr(exploit_result, "to_dict"):
+            exploit_payload = exploit_result.to_dict()
+        else:
+            exploit_payload = exploit_result
 
         return {
             "success": result.success,
-            "result": result.result.to_dict() if result.result else None,
-            "attempts": result.attempts,
-            "failure_reasons": result.failure_reasons,
-            "adjustments_made": result.adjustments_made,
-            "final_strategy": result.final_strategy,
+            "result": exploit_payload,
+            "attempts": result.total_attempts,
+            "failure_reasons": [
+                failure.reason.name
+                for failure in (result.retry_context.failures if result.retry_context else [])
+            ],
+            "adjustments_made": result.adjustments_applied,
             "total_time_ms": result.total_time_ms,
-            "error": result.error,
+            "error": final_error,
             "runtime": runtime,
         }
 
@@ -780,6 +793,7 @@ def register_orchestration_tools(mcp, counter, logger):
     @tool(mcp)
     @require_dangerous_auth
     @handle_errors(logger, category=ErrorCategory.REDTEAM)
+    @no_target_contact("分析传入的失败结果，不接触目标")
     async def analyze_exploit_failure(
         failed_result: Dict[str, Any], context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
