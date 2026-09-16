@@ -495,6 +495,19 @@ class TestPasswordPatternMatching:
         assert self._scan_line(finder, "aws_key = AKIAIOSFODNN7EXAMPLE") == []
         assert self._scan_line(finder, 'api_key = "AIzaSyFAKE_TEST_KEY_NOT_REAL_1234567890"') == []
 
+    def test_reports_value_not_whole_match(self):
+        """报出去的是密钥值，不是含关键字的整段匹配"""
+        finder = PasswordFinder()
+        findings = self._scan_line(finder, 'db_password = "Kj8#mPq2xR!vN5wZ"')
+        password = [f for f in findings if f.secret_type == SecretType.PASSWORD]
+        assert [f.matched_text for f in password] == ["Kj8#mPq2xR!vN5wZ"]
+
+    def test_reports_whole_match_when_signature_pattern(self):
+        """签名类模式没有捕获组，报的还是整段"""
+        finder = PasswordFinder()
+        findings = self._scan_line(finder, "-----BEGIN RSA PRIVATE KEY-----")
+        assert [f.matched_text for f in findings] == ["-----BEGIN RSA PRIVATE KEY-----"]
+
     def test_underscore_prefixed_password_still_matches(self):
         """pass 的边界不能用 \\b：下划线是 word 字符，db_pass 必须命中"""
         finder = PasswordFinder()

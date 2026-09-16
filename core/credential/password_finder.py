@@ -388,10 +388,11 @@ class PasswordFinder:
                 for pattern, confidence in patterns:
                     matches = re.finditer(pattern, line)
                     for match in matches:
-                        matched_text = match.group(0)
+                        # 报出去的是值本身，不是含关键字的整段匹配
+                        matched_text, from_group = self._captured_value(match)
 
                         # 过滤假阳性
-                        if self._is_false_positive(match, line, file_path):
+                        if self._is_false_positive(matched_text, from_group, line, file_path):
                             continue
 
                         # 如果在敏感文件中发现,提高置信度
@@ -441,20 +442,19 @@ class PasswordFinder:
             return False
         return bool(re.search(r"[A-Za-z0-9]", value))
 
-    def _is_false_positive(self, match: "re.Match[str]", line: str, file_path: Path) -> bool:
+    def _is_false_positive(self, value: str, from_group: bool, line: str, file_path: Path) -> bool:
         """
         检测假阳性
 
         Args:
-            match: 正则匹配对象，密钥值由 _captured_value 取出
+            value: 密钥值（_captured_value 取出，也是最终报出去的内容）
+            from_group: 值是否来自捕获组，决定要不要按密钥形状要求它
             line: 所在行
             file_path: 文件路径
 
         Returns:
             是否为假阳性
         """
-        value, from_group = self._captured_value(match)
-
         # 常见假阳性值
         false_positive_values = {
             "password",
@@ -658,9 +658,11 @@ class PasswordFinder:
                         for pattern, confidence in patterns:
                             matches = re.finditer(pattern, line_content)
                             for match in matches:
-                                matched_text = match.group(0)
+                                matched_text, from_group = self._captured_value(match)
 
-                                if self._is_false_positive(match, line_content, Path(current_file)):
+                                if self._is_false_positive(
+                                    matched_text, from_group, line_content, Path(current_file)
+                                ):
                                     continue
 
                                 finding = SecretFinding(
