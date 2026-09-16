@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # AI Red Team MCP Tool - Dependencies
 # 核心依赖 (必需)
 
