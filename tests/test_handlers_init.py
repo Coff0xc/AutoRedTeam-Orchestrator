@@ -18,6 +18,7 @@ class TestHandlersInit:
         expected_exports = [
             "register_recon_tools",
             "register_detector_tools",
+            "register_evidence_tools",
             "register_cve_tools",
             "register_api_security_tools",
             "register_cloud_security_tools",
@@ -300,6 +301,7 @@ class TestHandlersIntegration:
         all_handlers = [
             "register_recon_tools",
             "register_detector_tools",
+            "register_evidence_tools",
             "register_cve_tools",
             "register_api_security_tools",
             "register_cloud_security_tools",
@@ -327,7 +329,7 @@ class TestHandlersIntegration:
             register_all_handlers(mock_mcp, mock_counter, mock_logger)
 
         # 验证所有处理器都被注册
-        assert len(registered_handlers) == 21
+        assert len(registered_handlers) == 22
         assert "recon" in registered_handlers
         assert "detector" in registered_handlers
         assert "redteam" in registered_handlers

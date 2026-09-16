@@ -276,7 +276,7 @@ class TestCLICapabilities:
 
         assert result.exit_code == 0
         assert payload["default_mcp_profile"] == "safe"
-        assert [item["surface_count"] for item in payload["profiles"]] == [23, 85, 105, 141]
+        assert [item["surface_count"] for item in payload["profiles"]] == [23, 86, 106, 142]
         assert "do not replace authentication" in payload["security_note"]
 
     def test_capabilities_manifest_rejects_unknown_profile(self):

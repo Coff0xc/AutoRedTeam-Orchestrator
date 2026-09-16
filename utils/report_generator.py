@@ -13,13 +13,26 @@ from typing import Any, Dict, List, Optional, cast
 
 from jinja2 import Template
 
+from core.evidence import enforce_evidence_gate
+
 logger = logging.getLogger(__name__)
+
+# 证据门禁的三种判定状态，用于报告汇总计数。
+_EVIDENCE_STATUSES = ("verified", "unverified", "contradicted")
 
 
 class ReportGenerator:
-    """报告生成器"""
+    """报告生成器
 
-    def __init__(self):
+    Args:
+        require_evidence: 是否对进入报告的 finding 执行证据门禁，默认开启。开启时
+            未通过门禁（无证据 / 置信度不足 / 验证明确否定）的 finding 会被降级到
+            ``max_unverified_severity``（medium）并在标题前加 ``[UNCONFIRMED] ``；
+            置为 ``False`` 时完全跳过门禁，输出与接入门禁前一致。
+    """
+
+    def __init__(self, require_evidence: bool = True):
+        self.require_evidence = require_evidence
         self.reports_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "reports")
         os.makedirs(self.reports_dir, exist_ok=True)
 
@@ -72,10 +85,18 @@ class ReportGenerator:
         raise ValueError(f"不支持的报告格式: {format_type}")
 
     def _prepare_report_data(self, source) -> Dict[str, Any]:
-        """准备报告数据（兼容多种会话/结果对象）"""
+        """准备报告数据（兼容多种会话/结果对象）
+
+        所有报告格式（html/json/markdown/executive）与 ``to_*`` 入口都经过这里，
+        因此证据门禁的处理与汇总统一收口在本链路，不在各渲染格式里重复实现。
+        """
         if self._is_legacy_session(source):
-            return self._prepare_report_data_from_legacy_session(source)
-        return self._prepare_report_data_from_scan_source(source)
+            data = self._prepare_report_data_from_legacy_session(source)
+        else:
+            data = self._prepare_report_data_from_scan_source(source)
+        if self.require_evidence:
+            data["evidence_summary"] = self._summarize_evidence(data["findings"])
+        return data
 
     def _prepare_report_data_from_legacy_session(self, session) -> Dict[str, Any]:
         """准备旧版会话报告数据"""
@@ -202,7 +223,7 @@ class ReportGenerator:
         return normalized
 
     def _normalize_findings(self, findings: List[Any]) -> List[Dict[str, Any]]:
-        """统一发现结构，补齐模板所需字段"""
+        """统一发现结构，补齐模板所需字段，并在此收口处应用证据门禁"""
         normalized = []
         for finding in findings or []:
             if isinstance(finding, dict):
@@ -233,7 +254,58 @@ class ReportGenerator:
                 data["target"] = data.get("url")
             normalized.append(data)
 
+        if self.require_evidence:
+            return self._apply_evidence_gate(normalized)
         return normalized
+
+    def _apply_evidence_gate(self, findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """对归一化后的 finding 逐个执行证据门禁。
+
+        ``enforce_evidence_gate`` 返回副本、不改传入字典；这里再为通过门禁的 finding
+        补齐证据字段，保证报告里每个 finding 都带 ``verification_status`` 与
+        ``missing_checks``，读者能直接分辨结论是否被证实。
+        """
+        gated = []
+        for finding in findings:
+            processed, assessment = enforce_evidence_gate(finding)
+            # 直接赋值而不是 setdefault：门禁的判定是权威值，不得被上游同名字段遮蔽
+            processed["verification_status"] = assessment.status
+            processed["missing_checks"] = list(assessment.missing_checks)
+            gated.append(processed)
+        return gated
+
+    def _summarize_evidence(self, findings: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """汇总证据状态，供报告读者分辨已验证与未验证结论。
+
+        计数口径来自 ``enforce_evidence_gate`` 写入的 ``verification_status``；
+        ``missing_checks`` 聚合为 ``{"check": 原因, "count": 次数}`` 列表，
+        按次数降序、原因升序排列。
+        """
+        summary: Dict[str, Any] = {
+            "total": len(findings),
+            "verified": 0,
+            "unverified": 0,
+            "contradicted": 0,
+            "missing_checks": [],
+        }
+        missing_counter: Dict[str, int] = defaultdict(int)
+
+        for finding in findings:
+            status = str(finding.get("verification_status") or "unverified").lower()
+            if status not in _EVIDENCE_STATUSES:
+                status = "unverified"
+            summary[status] += 1
+            checks = finding.get("missing_checks") or []
+            if isinstance(checks, (list, tuple, set)):
+                for check in checks:
+                    if check:
+                        missing_counter[str(check)] += 1
+
+        summary["missing_checks"] = [
+            {"check": check, "count": count}
+            for check, count in sorted(missing_counter.items(), key=lambda kv: (-kv[1], kv[0]))
+        ]
+        return summary
 
     def _summarize_findings(self, findings: List[Dict]) -> Dict[str, int]:
         """汇总发现"""

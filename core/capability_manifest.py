@@ -215,6 +215,18 @@ def _build_capabilities() -> tuple[Capability, ...]:
     )
     add(
         _surface_group(
+            ("verify_finding",),
+            handler="evidence",
+            category="detector",
+            minimum_profile="scan",
+            risk="moderate",
+            maturity="beta",
+            auth_required=True,
+            effects=("network-probe",),
+        )
+    )
+    add(
+        _surface_group(
             ("cve_search", "cve_stats", "poc_list"),
             handler="cve",
             category="cve",

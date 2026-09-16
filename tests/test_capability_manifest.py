@@ -39,8 +39,8 @@ def test_manifest_has_unique_complete_surface_totals():
     keys = {(capability.kind, capability.name) for capability in CAPABILITIES}
     summary = capability_manifest()["summary"]
 
-    assert len(keys) == len(CAPABILITIES) == 141
-    assert summary["by_kind"] == {"prompt": 6, "resource": 4, "tool": 131}
+    assert len(keys) == len(CAPABILITIES) == 142
+    assert summary["by_kind"] == {"prompt": 6, "resource": 4, "tool": 132}
 
 
 def test_profiles_are_monotonic_and_have_stable_counts():
@@ -48,7 +48,7 @@ def test_profiles_are_monotonic_and_have_stable_counts():
     counts = {profile["name"]: profile["surface_count"] for profile in profiles}
 
     assert tuple(counts) == PROFILE_ORDER
-    assert counts == {"safe": 23, "scan": 85, "active-lab": 105, "full": 141}
+    assert counts == {"safe": 23, "scan": 86, "active-lab": 106, "full": 142}
 
     previous: set[tuple[str, str]] = set()
     for profile in PROFILE_ORDER:
@@ -203,7 +203,7 @@ def test_legacy_registration_default_remains_full():
 
     register_all_handlers(mcp, counter, MagicMock())
 
-    assert counter.total == 141
+    assert counter.total == 142
 
 
 def test_server_default_profile_is_safe(monkeypatch):
@@ -244,7 +244,7 @@ def test_production_counter_uses_manifest_categories():
 
     register_all_handlers(mcp, counter, MagicMock(), profile="full")
 
-    assert counter.total == 141
+    assert counter.total == 142
     assert counter.counts["knowledge"] == 3
     assert counter.counts["mcts"] == 1
     assert "MCP surface" in counter.summary()
