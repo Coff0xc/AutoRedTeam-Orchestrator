@@ -519,9 +519,7 @@ class TestExtToolChainTool:
 
         mock_results = [
             ExternalToolResult(tool="masscan", success=True, target="192.168.1.1"),
-            ExternalToolResult(
-                tool="nmap", success=False, target="192.168.1.1", error="超时"
-            ),
+            ExternalToolResult(tool="nmap", success=False, target="192.168.1.1", error="超时"),
         ]
 
         with patch("core.tools.get_tool_manager") as mock_mgr_fn:
