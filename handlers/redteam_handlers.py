@@ -25,6 +25,7 @@ from .error_handling import (
 from .runtime_helpers import (
     blocked_handler_runtime_response,
     complete_handler_runtime_payload,
+    evidence_items,
     gate_handler_runtime_action,
 )
 from .tooling import no_target_contact, tool
@@ -268,12 +269,18 @@ def register_redteam_tools(mcp, counter, logger):
 
         results = find_secrets(path=path)
 
-        return {
+        total = results["summary"]["total_findings"]
+        payload = {
             "success": True,
             "path": path,
             "findings": results["findings"],
-            "total": results["summary"]["total_findings"],
+            "total": total,
         }
+        payload["evidence"] = evidence_items(
+            "credential_find", "enumeration", f"发现 {total} 处敏感凭证"
+        )
+        payload["verified"] = total > 0
+        return payload
 
     # ==================== 权限提升工具 ====================
 
@@ -294,13 +301,20 @@ def register_redteam_tools(mcp, counter, logger):
         level = module.check_current_privilege()
         vectors = module.enumerate_vectors()
 
-        return {
+        payload = {
             "success": True,
             "current_level": level.value,
             "vectors": vectors,
             "platform": module.platform,
             "vectors_count": len(vectors),
         }
+        payload["evidence"] = evidence_items(
+            "privilege_check",
+            "enumeration",
+            f"枚举出 {len(vectors)} 个提权向量，当前权限 {level.value}",
+        )
+        payload["verified"] = len(vectors) > 0
+        return payload
 
     @tool(mcp)
     @require_critical_auth

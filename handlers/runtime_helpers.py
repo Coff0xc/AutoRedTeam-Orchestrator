@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from core.agent_runtime import (
     Action,
@@ -64,6 +64,16 @@ def _sanitize_value(value: Any, key: str = "", depth: int = 0) -> Any:
 def sanitize_runtime_inputs(inputs: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     """Return a JSON-safe, low-leakage copy of handler runtime inputs."""
     return {str(key): _sanitize_value(value, str(key)) for key, value in (inputs or {}).items()}
+
+
+def evidence_items(method: str, kind: str, summary: str) -> List[Dict[str, Any]]:
+    """构造 finding 级证据列表（单条观测）。
+
+    外部二进制/枚举/编排对目标的观测都是独立证据；调用方把 ``verified`` 设成
+    「本次是否产出正向/确认结果」，语义由各工具按自身定义。证据项带 ``method``，
+    门禁据此认作独立来源（见 core/evidence/gate._has_provenance）。
+    """
+    return [{"method": method, "kind": kind, "summary": summary}]
 
 
 def gate_handler_runtime_action(

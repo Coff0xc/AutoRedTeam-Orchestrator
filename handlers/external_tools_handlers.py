@@ -29,6 +29,7 @@ from .error_handling import (
 from .runtime_helpers import (
     blocked_handler_runtime_response,
     complete_handler_runtime_payload,
+    evidence_items,
     gate_handler_runtime_action,
 )
 from .tooling import tool
@@ -119,6 +120,16 @@ def register_external_tools(mcp, counter, logger):
 
         result = await run_nmap(target=target, ports=ports, preset=preset, extra_args=extra_args)
 
+        parsed = result.get("parsed_data") or {}
+        hosts = parsed.get("hosts") or []
+        open_count = sum(
+            1 for host in hosts for port in host.get("ports", []) if port.get("state") == "open"
+        )
+        result["evidence"] = evidence_items(
+            "nmap", "external_tool", f"nmap 发现 {len(hosts)} 台主机、{open_count} 个开放端口"
+        )
+        result["verified"] = open_count > 0
+
         return complete_handler_runtime_payload(
             gate,
             result,
@@ -185,6 +196,13 @@ def register_external_tools(mcp, counter, logger):
             return blocked_handler_runtime_response(gate)
 
         result = await run_nuclei(target=target, preset=preset, extra_args=args if args else None)
+
+        parsed = result.get("parsed_data") or {}
+        findings = parsed.get("findings") or []
+        result["evidence"] = evidence_items(
+            "nuclei", "external_tool", f"nuclei 命中 {len(findings)} 条模板"
+        )
+        result["verified"] = bool(findings)
 
         return complete_handler_runtime_payload(
             gate,
@@ -258,6 +276,13 @@ def register_external_tools(mcp, counter, logger):
             return blocked_handler_runtime_response(gate)
 
         result = await run_sqlmap(url=url, preset=preset, extra_args=args if args else None)
+
+        parsed = result.get("parsed_data") or {}
+        vulnerable = bool(parsed.get("vulnerable"))
+        result["evidence"] = evidence_items(
+            "sqlmap", "external_tool", f"sqlmap 注入检测 {'命中' if vulnerable else '未命中'}"
+        )
+        result["verified"] = vulnerable
 
         return complete_handler_runtime_payload(
             gate,
@@ -343,6 +368,13 @@ def register_external_tools(mcp, counter, logger):
             url=url, wordlist=wordlist, preset=mode, extra_args=args if args else None
         )
 
+        parsed = result.get("parsed_data") or {}
+        results_list = parsed.get("results") or []
+        result["evidence"] = evidence_items(
+            "ffuf", "external_tool", f"ffuf 发现 {len(results_list)} 条路径"
+        )
+        result["verified"] = bool(results_list)
+
         return complete_handler_runtime_payload(
             gate,
             result,
@@ -408,6 +440,19 @@ def register_external_tools(mcp, counter, logger):
             return blocked_handler_runtime_response(gate)
 
         result = await run_masscan(target=target, ports=ports, extra_args=args)
+
+        parsed = result.get("parsed_data") or {}
+        hosts_dict = parsed.get("hosts") or {}
+        open_count = sum(
+            1
+            for host in hosts_dict.values()
+            for port in host.get("ports", [])
+            if port.get("status") == "open"
+        )
+        result["evidence"] = evidence_items(
+            "masscan", "external_tool", f"masscan 发现 {open_count} 个开放端口"
+        )
+        result["verified"] = open_count > 0
 
         return complete_handler_runtime_payload(
             gate,
@@ -475,6 +520,15 @@ def register_external_tools(mcp, counter, logger):
             "target": target,
             "steps": steps,
         }
+        payload["evidence"] = [
+            {
+                "method": step.get("tool", "chain"),
+                "kind": "external_tool",
+                "summary": f"{step.get('tool')} 步骤 success={step.get('success')}",
+            }
+            for step in steps
+        ]
+        payload["verified"] = payload["success"]
         return complete_handler_runtime_payload(
             gate,
             payload,

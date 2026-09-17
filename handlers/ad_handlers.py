@@ -18,7 +18,11 @@ from typing import Any, Dict, List, Optional
 from core.security import require_critical_auth
 
 from .error_handling import ErrorCategory, handle_errors, validate_inputs
-from .runtime_helpers import blocked_handler_runtime_response, gate_handler_runtime_action
+from .runtime_helpers import (
+    blocked_handler_runtime_response,
+    evidence_items,
+    gate_handler_runtime_action,
+)
 from .tooling import tool
 
 
@@ -106,28 +110,37 @@ def register_ad_tools(mcp, counter, logger):
         if isinstance(result, dict):
             # 如果是 all 类型，结果结构不同
             if enum_type == "all":
-                return {
+                statistics = {
+                    "users": result.get("users", {}).get("count", 0),
+                    "groups": result.get("groups", {}).get("count", 0),
+                    "computers": result.get("computers", {}).get("count", 0),
+                }
+                payload = {
                     "success": True,
                     "domain": domain,
                     "dc_ip": dc_ip,
                     "enum_type": enum_type,
                     "results": result,
-                    "statistics": {
-                        "users": result.get("users", {}).get("count", 0),
-                        "groups": result.get("groups", {}).get("count", 0),
-                        "computers": result.get("computers", {}).get("count", 0),
-                    },
+                    "statistics": statistics,
                 }
+                total = sum(statistics.values())
             else:
-                return {
+                count = result.get("count", 0)
+                payload = {
                     "success": result.get("success", True),
                     "domain": domain,
                     "dc_ip": dc_ip,
                     "enum_type": enum_type,
-                    "count": result.get("count", 0),
+                    "count": count,
                     "objects": result.get("objects", []),
                     "error": result.get("error"),
                 }
+                total = count
+            payload["evidence"] = evidence_items(
+                "ad_enumerate", "enumeration", f"AD 枚举发现 {total} 个对象（enum_type={enum_type}）"
+            )
+            payload["verified"] = total > 0
+            return payload
 
         # 兼容返回对象的情况
         return {
@@ -312,7 +325,7 @@ def register_ad_tools(mcp, counter, logger):
                 if "/" in spn_str:
                     service_classes.add(spn_str.split("/")[0])
 
-            return {
+            payload = {
                 "success": result.success,
                 "domain": domain,
                 "total_spns": len(spns),
@@ -322,6 +335,13 @@ def register_ad_tools(mcp, counter, logger):
                 "service_classes": list(service_classes),
                 "error": result.error if hasattr(result, "error") else None,
             }
+            payload["evidence"] = evidence_items(
+                "ad_spn_scan",
+                "enumeration",
+                f"发现 {len(spns)} 个 SPN，其中 {len(kerberoastable)} 个可 Kerberoast",
+            )
+            payload["verified"] = len(spns) > 0
+            return payload
 
         finally:
             enumerator.close()

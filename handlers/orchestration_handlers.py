@@ -24,6 +24,7 @@ from .error_handling import ErrorCategory, handle_errors, validate_inputs
 from .runtime_helpers import (
     complete_handler_runtime_action as _shared_complete_handler_runtime_action,
 )
+from .runtime_helpers import evidence_items
 from .runtime_helpers import gate_handler_runtime_action as _shared_gate_handler_runtime_action
 from .tooling import no_target_contact, tool
 
@@ -170,7 +171,15 @@ def register_orchestration_tools(mcp, counter, logger):
         result = await orchestrator.run()
         success = result.get("status") == "completed"
 
-        return {"success": success, **result}
+        findings = result.get("findings_summary") or {}
+        payload = {"success": success, **result}
+        payload["evidence"] = evidence_items(
+            "auto_pentest",
+            "orchestration",
+            f"渗透流程 {result.get('status')}，发现 {findings.get('total', 0)} 个 finding",
+        )
+        payload["verified"] = findings.get("total", 0) > 0
+        return payload
 
     @tool(mcp)
     @require_critical_auth
@@ -196,7 +205,15 @@ def register_orchestration_tools(mcp, counter, logger):
         result = await resume_pentest(session_id)
         success = result.get("status") == "completed"
 
-        return {"success": success, **result}
+        findings = result.get("findings_summary") or {}
+        payload = {"success": success, **result}
+        payload["evidence"] = evidence_items(
+            "pentest_resume",
+            "orchestration",
+            f"恢复的渗透流程 {result.get('status')}，发现 {findings.get('total', 0)} 个 finding",
+        )
+        payload["verified"] = findings.get("total", 0) > 0
+        return payload
 
     @tool(mcp)
     @require_dangerous_auth
@@ -270,7 +287,7 @@ def register_orchestration_tools(mcp, counter, logger):
         phase_enum = PentestPhase(phase)
         result = await orchestrator.execute_phase(phase_enum, config)
 
-        return {
+        payload = {
             "success": result.success,
             "session_id": orchestrator.state.session_id,
             "phase": phase,
@@ -279,6 +296,13 @@ def register_orchestration_tools(mcp, counter, logger):
             "errors": result.errors,
             "duration": result.duration,
         }
+        payload["evidence"] = evidence_items(
+            "pentest_phase",
+            "orchestration",
+            f"阶段 {phase} 完成，发现 {len(result.findings)} 个 finding",
+        )
+        payload["verified"] = len(result.findings) > 0
+        return payload
 
     @tool(mcp)
     @require_critical_auth
@@ -652,7 +676,7 @@ def register_orchestration_tools(mcp, counter, logger):
         else:
             exploit_payload = exploit_result
 
-        return {
+        payload = {
             "success": result.success,
             "result": exploit_payload,
             "attempts": result.total_attempts,
@@ -665,6 +689,13 @@ def register_orchestration_tools(mcp, counter, logger):
             "error": final_error,
             "runtime": runtime,
         }
+        payload["evidence"] = evidence_items(
+            "exploit_with_retry",
+            "command",
+            f"exploit {'成功' if result.success else '失败'}（{result.total_attempts} 次尝试）",
+        )
+        payload["verified"] = result.success
+        return payload
 
     @tool(mcp)
     @require_critical_auth

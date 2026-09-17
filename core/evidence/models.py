@@ -17,6 +17,9 @@ EVIDENCE_KINDS = frozenset(
         "replay",
         "http_response",
         "command",
+        "external_tool",
+        "enumeration",
+        "orchestration",
         "unknown",
     }
 )
@@ -32,7 +35,7 @@ class EvidenceItem:
     字段保持扁平，避免上层为了取值反复解包嵌套结构。
     """
 
-    kind: str  # "statistical" | "oob_callback" | "replay" | "http_response" | "command" | "unknown"
+    kind: str  # 取值见 EVIDENCE_KINDS
     method: str = ""  # 如 "time_based_sqli"
     summary: str = ""  # 人可读摘要
     payload: str = ""

@@ -98,12 +98,25 @@ class TestExtNmapScanTool:
 
     @pytest.mark.asyncio
     async def test_nmap_scan_success(self):
-        """测试Nmap扫描成功"""
+        """测试Nmap扫描成功，并把观测抬成 evidence/verified"""
         registered_tools, _, _ = _make_mcp_and_register()
 
+        # run_nmap 返回 ExternalToolResult.to_dict()，hosts 在 parsed_data 里、
+        # 端口用 {state: "open"} 表达——顶层 hosts 是 mock 出来的假形状，会让
+        # 证据派生读到空 parsed_data。
         mock_result = {
             "success": True,
-            "hosts": [{"ip": "192.168.1.1", "ports": [80, 443]}],
+            "parsed_data": {
+                "hosts": [
+                    {
+                        "ip": "192.168.1.1",
+                        "ports": [
+                            {"port": 80, "state": "open"},
+                            {"port": 443, "state": "open"},
+                        ],
+                    }
+                ]
+            },
         }
 
         with (
@@ -120,7 +133,9 @@ class TestExtNmapScanTool:
             )
 
             assert result["success"] is True
-            assert "hosts" in result
+            assert result["verified"] is True
+            assert result["evidence"][0]["method"] == "nmap"
+            assert "2 个开放端口" in result["evidence"][0]["summary"]
             mock_run.assert_called_once()
 
     @pytest.mark.asyncio
@@ -401,12 +416,18 @@ class TestExtMasscanScanTool:
 
     @pytest.mark.asyncio
     async def test_masscan_scan_success(self):
-        """测试Masscan扫描成功"""
+        """测试Masscan扫描成功，并把观测抬成 evidence/verified"""
         registered_tools, _, _ = _make_mcp_and_register()
 
+        # masscan 的 parsed_data.hosts 是 ip→{ports} 的 dict（不同于 nmap 的 list），
+        # 端口字段是 status 而非 state——用错形状会静默数出 0 个开放端口。
         mock_result = {
             "success": True,
-            "hosts": [{"ip": "192.168.1.1", "ports": [80]}],
+            "parsed_data": {
+                "hosts": {
+                    "192.168.1.1": {"ports": [{"port": 80, "status": "open"}]},
+                }
+            },
         }
 
         with (
@@ -423,6 +444,9 @@ class TestExtMasscanScanTool:
             )
 
             assert result["success"] is True
+            assert result["verified"] is True
+            assert result["evidence"][0]["method"] == "masscan"
+            assert "1 个开放端口" in result["evidence"][0]["summary"]
 
     @pytest.mark.asyncio
     async def test_masscan_invalid_rate(self):

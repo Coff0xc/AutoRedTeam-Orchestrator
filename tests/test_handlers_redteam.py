@@ -380,6 +380,8 @@ class TestCredentialFindTool:
             assert result["success"] is True
             assert result["data"]["total"] == 2
             assert len(result["data"]["findings"]) == 2
+            assert result["data"]["verified"] is True
+            assert result["data"]["evidence"][0]["method"] == "credential_find"
 
     @pytest.mark.asyncio
     async def test_credential_find_permission_error(self):

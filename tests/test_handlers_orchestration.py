@@ -99,12 +99,21 @@ class TestAutoPentestTool:
 
     @pytest.mark.asyncio
     async def test_auto_pentest_success(self):
-        """测试正常执行"""
+        """测试正常执行，并把流程观测抬成 evidence/verified"""
         registered_tools, _, _ = _make_mcp_and_register()
 
+        # 真实 run() 返回 findings_summary（dict），不是顶层 findings 列表。
         mock_result = {
             "status": "completed",
-            "findings": [{"vuln": "sqli", "severity": "high"}],
+            "findings_summary": {
+                "total": 1,
+                "critical": 0,
+                "high": 1,
+                "medium": 0,
+                "low": 0,
+                "info": 0,
+                "verified": 0,
+            },
             "duration": 3600,
         }
 
@@ -123,7 +132,9 @@ class TestAutoPentestTool:
 
             assert result["success"] is True
             assert result["status"] == "completed"
-            assert "findings" in result
+            assert result["verified"] is True
+            assert result["evidence"][0]["method"] == "auto_pentest"
+            assert "1 个 finding" in result["evidence"][0]["summary"]
 
     @pytest.mark.asyncio
     async def test_auto_pentest_failed_status(self):
