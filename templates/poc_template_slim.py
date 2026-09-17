@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """精简版PoC模板"""
+
 import argparse
 import logging
 import sys

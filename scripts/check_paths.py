@@ -4,6 +4,7 @@
 检查硬编码路径的 pre-commit hook
 防止在代码中使用 Linux 特有的路径（如 /tmp/, /dev/tty）
 """
+
 import io
 import re
 import sys
