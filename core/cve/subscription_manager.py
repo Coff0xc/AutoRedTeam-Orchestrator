@@ -135,12 +135,10 @@ class SubscriptionManager:
             cursor = conn.cursor()
 
             # 1. 检查表是否存在
-            cursor.execute(
-                """
+            cursor.execute("""
                 SELECT name FROM sqlite_master
                 WHERE type='table' AND name='subscriptions'
-            """
-            )
+            """)
             table_exists = cursor.fetchone() is not None
 
             if table_exists:
@@ -173,8 +171,7 @@ class SubscriptionManager:
                 logger.info("创建新订阅表")
 
             # 4. 创建notification_history表 (如果不存在)
-            cursor.execute(
-                """
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS notification_history (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     subscription_id INTEGER,
@@ -183,8 +180,7 @@ class SubscriptionManager:
                     status TEXT,
                     FOREIGN KEY (subscription_id) REFERENCES subscriptions(id)
                 )
-            """
-            )
+            """)
 
             # 5. 创建索引
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_sub_enabled ON subscriptions(enabled)")
