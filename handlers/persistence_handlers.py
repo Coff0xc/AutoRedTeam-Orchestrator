@@ -20,6 +20,7 @@ from .error_handling import ErrorCategory, handle_errors
 from .runtime_helpers import (
     blocked_handler_runtime_response,
     complete_handler_runtime_payload,
+    evidence_items,
     gate_handler_runtime_action,
 )
 from .tooling import no_target_contact, tool
@@ -105,18 +106,25 @@ def register_persistence_tools(mcp, counter, logger):
 
         # windows_persist 返回 dict，直接使用
         if isinstance(result, dict):
+            payload = {
+                "success": result.get("success", False),
+                "method": method,
+                "name": name,
+                "location": result.get("location"),
+                "trigger": trigger if core_method == "task" else None,
+                "cleanup_command": result.get("cleanup_command"),
+                "executed": result.get("executed", False),
+                "error": result.get("error"),
+            }
+            payload["evidence"] = evidence_items(
+                "persistence_windows",
+                "command",
+                f"Windows 持久化 {method} @ {result.get('location')}",
+            )
+            payload["verified"] = bool(result.get("success", False))
             return complete_handler_runtime_payload(
                 gate,
-                {
-                    "success": result.get("success", False),
-                    "method": method,
-                    "name": name,
-                    "location": result.get("location"),
-                    "trigger": trigger if core_method == "task" else None,
-                    "cleanup_command": result.get("cleanup_command"),
-                    "executed": result.get("executed", False),
-                    "error": result.get("error"),
-                },
+                payload,
                 summary_keys=("method", "location", "executed"),
             )
 
@@ -212,19 +220,26 @@ def register_persistence_tools(mcp, counter, logger):
 
         # linux_persist 返回 dict
         if isinstance(result, dict):
+            payload = {
+                "success": result.get("success", False),
+                "method": method,
+                "name": name,
+                "location": result.get("location"),
+                "schedule": schedule if core_method == "crontab" else None,
+                "install_command": result.get("install_command"),
+                "cleanup_command": result.get("cleanup_command"),
+                "executed": result.get("executed", False),
+                "error": result.get("error"),
+            }
+            payload["evidence"] = evidence_items(
+                "persistence_linux",
+                "command",
+                f"Linux 持久化 {method} @ {result.get('location')}",
+            )
+            payload["verified"] = bool(result.get("success", False))
             return complete_handler_runtime_payload(
                 gate,
-                {
-                    "success": result.get("success", False),
-                    "method": method,
-                    "name": name,
-                    "location": result.get("location"),
-                    "schedule": schedule if core_method == "crontab" else None,
-                    "install_command": result.get("install_command"),
-                    "cleanup_command": result.get("cleanup_command"),
-                    "executed": result.get("executed", False),
-                    "error": result.get("error"),
-                },
+                payload,
                 summary_keys=("method", "location", "executed"),
             )
 

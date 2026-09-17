@@ -101,6 +101,12 @@ def register_redteam_tools(mcp, counter, logger):
             ntlm_hash=ntlm_hash or "",
             command=command,
         )
+        result["evidence"] = evidence_items(
+            "lateral_smb",
+            "command",
+            f"SMB 执行 {command} {'成功' if result.get('success') else '失败'}",
+        )
+        result["verified"] = bool(result.get("success"))
         return complete_handler_runtime_payload(
             gate,
             result,
@@ -151,13 +157,25 @@ def register_redteam_tools(mcp, counter, logger):
                     "beacon_id": beacon.beacon_id,
                     "status": beacon.status.value,
                     "server": server,
+                    "evidence": evidence_items(
+                        "c2_beacon_start", "command", f"C2 Beacon 连接 {server} 成功"
+                    ),
+                    "verified": True,
                 },
                 summary_keys=("server", "status"),
             )
 
         return complete_handler_runtime_payload(
             gate,
-            {"success": False, "error": "Connection failed", "server": server},
+            {
+                "success": False,
+                "error": "Connection failed",
+                "server": server,
+                "evidence": evidence_items(
+                    "c2_beacon_start", "command", f"C2 Beacon 连接 {server} 失败"
+                ),
+                "verified": False,
+            },
             summary_keys=("server",),
         )
 
@@ -522,10 +540,17 @@ def register_redteam_tools(mcp, counter, logger):
         raw_data = base64.b64decode(data)
         result = module.exfiltrate(raw_data)
 
+        exfil_result = result.to_dict()
+        exfil_result["evidence"] = evidence_items(
+            "exfiltrate_data",
+            "command",
+            f"外泄 {exfil_result.get('transferred', 0)} 字节（{channel}）",
+        )
+        exfil_result["verified"] = bool(exfil_result.get("success"))
         return complete_handler_runtime_payload(
             gate,
-            result.to_dict(),
-            summary_keys=("success", "channel", "bytes_sent"),
+            exfil_result,
+            summary_keys=("success", "channel", "transferred"),
         )
 
     @tool(mcp)
@@ -580,9 +605,16 @@ def register_redteam_tools(mcp, counter, logger):
         data = path.read_bytes()
         result = module.exfiltrate(data)
 
+        exfil_result = {**result.to_dict(), "file": str(path), "file_size": len(data)}
+        exfil_result["evidence"] = evidence_items(
+            "exfiltrate_file",
+            "command",
+            f"外泄文件 {len(data)} 字节（{channel}）",
+        )
+        exfil_result["verified"] = bool(exfil_result.get("success"))
         return complete_handler_runtime_payload(
             gate,
-            {**result.to_dict(), "file": str(path), "file_size": len(data)},
+            exfil_result,
             summary_keys=("success", "channel", "file_size"),
         )
 

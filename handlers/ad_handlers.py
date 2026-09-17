@@ -223,16 +223,25 @@ def register_ad_tools(mcp, counter, logger):
 
         # kerberos_attack 返回 dict
         if isinstance(result, dict):
-            return {
+            hash_count = result.get("hash_count", len(result.get("hashes", [])))
+            valid_users = result.get("valid_users", [])
+            payload = {
                 "success": result.get("success", False),
                 "domain": domain,
                 "dc_ip": dc_ip,
                 "attack_type": attack_type,
                 "hashes": result.get("hashes", []),
-                "hash_count": result.get("hash_count", len(result.get("hashes", []))),
-                "valid_users": result.get("valid_users", []),
+                "hash_count": hash_count,
+                "valid_users": valid_users,
                 "error": result.get("error"),
             }
+            payload["evidence"] = evidence_items(
+                "ad_kerberos_attack",
+                "command",
+                f"{attack_type} 攻击命中 {hash_count} 条 hash、{len(valid_users)} 个有效用户",
+            )
+            payload["verified"] = hash_count > 0 or len(valid_users) > 0
+            return payload
 
         return {
             "success": getattr(result, "success", False),

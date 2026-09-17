@@ -316,12 +316,11 @@ def test_repo_handlers_have_no_contract_errors():
     assert summary["errors"] == 0, summary["tools_with_errors"]
 
 
-def test_repo_evidence_gaps_are_only_deferred_action_tools():
-    """证据缺口应收敛到尚未处理的 action 工具（横向/持久化/外泄等 16 个）。
+def test_repo_has_no_evidence_gaps():
+    """高风险工具要么回传 evidence/verified，要么显式声明 no_target_contact。
 
-    扫描 / 枚举 / 编排三类已把观测抬成 evidence/verified，这里钉住剩余集合：
-    哪类工具退回到「不回传证据」，集合就会变大、测试失败。
-    16 个 action 工具是下一笔 commit 单独处理的，处理完这里会降到 0。
+    扫描 / 枚举 / 编排 / action（横向、持久化、外泄、Kerberos）四类都已把
+    观测抬成 evidence/verified，这里钉住全仓库零缺口。
     """
     root = Path(__file__).resolve().parent.parent
     result = lint_tool_contracts(root / "handlers")
@@ -332,21 +331,4 @@ def test_repo_evidence_gaps_are_only_deferred_action_tools():
         if any(issue.rule == "no_evidence_contract" for issue in tool.issues)
     }
 
-    surfaced = {
-        "ext_nmap_scan",
-        "ext_nuclei_scan",
-        "ext_sqlmap_scan",
-        "ext_ffuf_fuzz",
-        "ext_masscan_scan",
-        "ext_tool_chain",
-        "ad_enumerate",
-        "ad_spn_scan",
-        "credential_find",
-        "privilege_check",
-        "auto_pentest",
-        "pentest_resume",
-        "pentest_phase",
-        "exploit_with_retry",
-    }
-    assert surfaced & flagged == set(), sorted(surfaced & flagged)
-    assert len(flagged) == 16, sorted(flagged)
+    assert flagged == set(), sorted(flagged)

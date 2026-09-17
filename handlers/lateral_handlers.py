@@ -18,7 +18,11 @@ from typing import Any, Dict, List, Optional
 from core.security import require_critical_auth
 
 from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
-from .runtime_helpers import blocked_handler_runtime_response, gate_handler_runtime_action
+from .runtime_helpers import (
+    blocked_handler_runtime_response,
+    evidence_items,
+    gate_handler_runtime_action,
+)
 from .tooling import tool
 
 
@@ -99,6 +103,12 @@ def register_lateral_tools(mcp, counter, logger):
 
         # ssh_exec 返回 dict，直接返回
         if isinstance(result, dict):
+            result["evidence"] = evidence_items(
+                "lateral_ssh",
+                "command",
+                f"SSH 执行 {command} {'成功' if result.get('success') else '失败'}",
+            )
+            result["verified"] = bool(result.get("success"))
             return result
 
         # 兼容返回对象的情况
@@ -166,8 +176,9 @@ def register_lateral_tools(mcp, counter, logger):
         )
 
         if isinstance(result, dict):
+            success = result.get("success", False)
             return {
-                "success": result.get("success", False),
+                "success": success,
                 "target": target,
                 "tunnel": {
                     "local_port": local_port,
@@ -176,6 +187,12 @@ def register_lateral_tools(mcp, counter, logger):
                 },
                 "local_bind": result.get("local_bind"),
                 "error": result.get("error"),
+                "evidence": evidence_items(
+                    "lateral_ssh_tunnel",
+                    "command",
+                    f"SSH 隧道 {local_port}→{remote_host}:{remote_port} {'建立' if success else '失败'}",
+                ),
+                "verified": success,
             }
 
         return {
@@ -234,6 +251,12 @@ def register_lateral_tools(mcp, counter, logger):
         )
 
         if isinstance(result, dict):
+            result["evidence"] = evidence_items(
+                "lateral_wmi",
+                "command",
+                f"WMI 执行 {command} {'成功' if result.get('success') else '失败'}",
+            )
+            result["verified"] = bool(result.get("success"))
             return result
 
         return {
@@ -283,12 +306,19 @@ def register_lateral_tools(mcp, counter, logger):
         )
 
         if isinstance(result, dict):
+            results = result.get("data", [])
             return {
                 "success": result.get("success", False),
                 "target": target,
                 "query": query,
-                "results": result.get("data", []),
+                "results": results,
                 "error": result.get("error"),
+                "evidence": evidence_items(
+                    "lateral_wmi_query",
+                    "command",
+                    f"WMI 查询返回 {len(results)} 条结果",
+                ),
+                "verified": len(results) > 0,
             }
 
         return {
@@ -347,6 +377,12 @@ def register_lateral_tools(mcp, counter, logger):
         )
 
         if isinstance(result, dict):
+            result["evidence"] = evidence_items(
+                "lateral_winrm",
+                "command",
+                f"WinRM 执行 {command} {'成功' if result.get('success') else '失败'}",
+            )
+            result["verified"] = bool(result.get("success"))
             return result
 
         return {
@@ -409,6 +445,12 @@ def register_lateral_tools(mcp, counter, logger):
         )
 
         if isinstance(result, dict):
+            result["evidence"] = evidence_items(
+                "lateral_winrm_ps",
+                "command",
+                f"WinRM PS 脚本执行 {'成功' if result.get('success') else '失败'}",
+            )
+            result["verified"] = bool(result.get("success"))
             return result
 
         return {
@@ -467,6 +509,12 @@ def register_lateral_tools(mcp, counter, logger):
         )
 
         if isinstance(result, dict):
+            result["evidence"] = evidence_items(
+                "lateral_psexec",
+                "command",
+                f"PsExec 执行 {command} {'成功' if result.get('success') else '失败'}",
+            )
+            result["verified"] = bool(result.get("success"))
             return result
 
         return {
@@ -535,6 +583,12 @@ def register_lateral_tools(mcp, counter, logger):
                 "command": command,
                 "output": result.output,
                 "error": getattr(result, "error", None),
+                "evidence": evidence_items(
+                    "lateral_auto",
+                    "command",
+                    f"{method_used} 执行 {command} {'成功' if result.success else '失败'}",
+                ),
+                "verified": bool(result.success),
             }
         finally:
             # 确保资源清理
@@ -614,6 +668,12 @@ def register_lateral_tools(mcp, counter, logger):
                 "total_attempts": len(targets) * len(credentials_list),
                 "valid_credentials": valid_creds,
                 "valid_count": len(valid_creds),
+                "evidence": evidence_items(
+                    "credential_spray",
+                    "command",
+                    f"凭证喷洒命中 {len(valid_creds)} 组有效凭证",
+                ),
+                "verified": len(valid_creds) > 0,
             }
 
         # 兼容列表返回

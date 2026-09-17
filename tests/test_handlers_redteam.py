@@ -80,6 +80,8 @@ class TestLateralSMBTool:
             assert result["success"] is True
             assert result["data"]["target"] == "192.168.1.100"
             assert "Administrator" in result["data"]["output"]
+            assert result["data"]["verified"] is True
+            assert result["data"]["evidence"][0]["method"] == "lateral_smb"
             mock_smb_exec.assert_called_once()
 
     @pytest.mark.asyncio
@@ -222,6 +224,8 @@ class TestC2BeaconStartTool:
             assert result["data"]["beacon_id"] == "beacon-12345"
             assert result["data"]["status"] == "active"
             assert result["data"]["server"] == "c2.example.com"
+            assert result["data"]["verified"] is True
+            assert result["data"]["evidence"][0]["method"] == "c2_beacon_start"
 
     @pytest.mark.asyncio
     async def test_c2_beacon_start_connection_failed(self):
@@ -254,6 +258,7 @@ class TestC2BeaconStartTool:
 
             assert result["success"] is False
             assert "Connection failed" in result["error"]
+            assert result["data"]["verified"] is False
 
 
 class TestPayloadObfuscateTool:
@@ -569,8 +574,8 @@ class TestExfiltrateDataTool:
         mock_result.to_dict.return_value = {
             "success": True,
             "channel": "https",
-            "bytes_sent": 1024,
-            "encrypted": True,
+            "transferred": 1024,
+            "total_size": 1024,
         }
 
         mock_module = MagicMock()
@@ -589,6 +594,8 @@ class TestExfiltrateDataTool:
 
             assert result["success"] is True
             assert result["data"]["channel"] == "https"
+            assert result["data"]["verified"] is True
+            assert result["data"]["evidence"][0]["method"] == "exfiltrate_data"
 
     @pytest.mark.asyncio
     async def test_exfiltrate_data_invalid_base64(self):
@@ -656,7 +663,8 @@ class TestExfiltrateFileTool:
             mock_result.to_dict.return_value = {
                 "success": True,
                 "channel": "https",
-                "bytes_sent": 14,
+                "transferred": 14,
+                "total_size": 14,
             }
 
             mock_module = MagicMock()
@@ -672,6 +680,8 @@ class TestExfiltrateFileTool:
                 assert result["success"] is True
                 assert "file" in result["data"]
                 assert "file_size" in result["data"]
+                assert result["data"]["verified"] is True
+                assert result["data"]["evidence"][0]["method"] == "exfiltrate_file"
         finally:
             Path(temp_file).unlink(missing_ok=True)
 

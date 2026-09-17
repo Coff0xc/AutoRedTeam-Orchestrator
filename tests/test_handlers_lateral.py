@@ -116,6 +116,8 @@ class TestLateralSSHTool:
             )
 
             assert result["success"] is True
+            assert result["verified"] is True
+            assert result["evidence"][0]["method"] == "lateral_ssh"
             mock_ssh.assert_called_once()
 
     @pytest.mark.asyncio
@@ -311,6 +313,7 @@ class TestLateralWMIQueryTool:
 
             assert result["success"] is True
             assert result["query"] == "SELECT * FROM Win32_OperatingSystem"
+            assert result["verified"] is True
 
     @pytest.mark.asyncio
     async def test_wmi_query_exception(self):
@@ -614,6 +617,8 @@ class TestCredentialSprayTool:
             assert result["valid_count"] == 1
             assert result["valid_credentials"][0]["target"] == "192.168.1.100"
             assert result["valid_credentials"][0]["username"] == "admin"
+            assert result["verified"] is True
+            assert result["evidence"][0]["method"] == "credential_spray"
 
     @pytest.mark.asyncio
     async def test_spray_no_valid(self):
@@ -639,6 +644,7 @@ class TestCredentialSprayTool:
 
             assert result["success"] is False
             assert result["valid_count"] == 0
+            assert result["verified"] is False
 
     @pytest.mark.asyncio
     async def test_spray_exception(self):
