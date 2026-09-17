@@ -461,13 +461,23 @@ def register_external_tools(mcp, counter, logger):
             return blocked_handler_runtime_response(gate)
 
         manager = get_tool_manager()
-        result = await manager.run_chain(
+        results = await manager.run_chain(
             chain_name=chain_name, target=target, config_override=config_override
         )
 
+        # run_chain 返回 List[ExternalToolResult]，而 complete_handler_runtime_payload
+        # 第一行就是 payload.get("success")——列表没有 .get，会被 handle_external_tool_errors
+        # 吞成恒失败。这里转成 dict，把每一步的 to_dict() 塞进 steps。
+        steps = [r.to_dict() for r in results]
+        payload = {
+            "success": all(r.success for r in results),
+            "chain_name": chain_name,
+            "target": target,
+            "steps": steps,
+        }
         return complete_handler_runtime_payload(
             gate,
-            result,
+            payload,
             summary_keys=("success", "chain_name", "steps"),
         )
 

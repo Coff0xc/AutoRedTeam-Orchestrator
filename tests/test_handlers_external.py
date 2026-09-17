@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from core.security.mcp_auth_middleware import AuthMode
+from core.tools.tool_manager import ExternalToolResult
 
 # ==================== 辅助函数 ====================
 
@@ -462,20 +463,21 @@ class TestExtToolChainTool:
 
     @pytest.mark.asyncio
     async def test_tool_chain_success(self):
-        """测试工具链执行成功"""
+        """测试工具链执行成功
+
+        run_chain 真实契约返回 List[ExternalToolResult]（不是 dict），
+        handler 需转成 dict 才能交给 complete_handler_runtime_payload。
+        """
         registered_tools, _, _ = _make_mcp_and_register()
 
-        mock_result = {
-            "success": True,
-            "steps": [
-                {"tool": "masscan", "status": "completed"},
-                {"tool": "nmap", "status": "completed"},
-            ],
-        }
+        mock_results = [
+            ExternalToolResult(tool="masscan", success=True, target="192.168.1.1"),
+            ExternalToolResult(tool="nmap", success=True, target="192.168.1.1"),
+        ]
 
         with patch("core.tools.get_tool_manager") as mock_mgr_fn:
             manager = MagicMock()
-            manager.run_chain = AsyncMock(return_value=mock_result)
+            manager.run_chain = AsyncMock(return_value=mock_results)
             mock_mgr_fn.return_value = manager
 
             result = await registered_tools["ext_tool_chain"](
@@ -483,6 +485,31 @@ class TestExtToolChainTool:
             )
 
             assert result["success"] is True
+            assert len(result["steps"]) == 2
+            assert [step["tool"] for step in result["steps"]] == ["masscan", "nmap"]
+
+    @pytest.mark.asyncio
+    async def test_tool_chain_partial_failure(self):
+        """工具链任一步失败，整体 success 应为 False"""
+        registered_tools, _, _ = _make_mcp_and_register()
+
+        mock_results = [
+            ExternalToolResult(tool="masscan", success=True, target="192.168.1.1"),
+            ExternalToolResult(
+                tool="nmap", success=False, target="192.168.1.1", error="超时"
+            ),
+        ]
+
+        with patch("core.tools.get_tool_manager") as mock_mgr_fn:
+            manager = MagicMock()
+            manager.run_chain = AsyncMock(return_value=mock_results)
+            mock_mgr_fn.return_value = manager
+
+            result = await registered_tools["ext_tool_chain"](
+                target="192.168.1.1", chain_name="full_recon"
+            )
+
+            assert result["success"] is False
             assert len(result["steps"]) == 2
 
     @pytest.mark.asyncio
@@ -507,7 +534,11 @@ class TestExtToolChainTool:
         for chain_name in valid_chains:
             with patch("core.tools.get_tool_manager") as mock_mgr_fn:
                 manager = MagicMock()
-                manager.run_chain = AsyncMock(return_value={"success": True})
+                manager.run_chain = AsyncMock(
+                    return_value=[
+                        ExternalToolResult(tool="nmap", success=True, target="192.168.1.1")
+                    ]
+                )
                 mock_mgr_fn.return_value = manager
 
                 result = await registered_tools["ext_tool_chain"](
