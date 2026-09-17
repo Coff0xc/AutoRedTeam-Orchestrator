@@ -33,6 +33,23 @@ AutoRedTeam-Orchestrator 在单一代码库中提供可组合的安全能力，�
 
 ## 快速开始
 
+单行安装（安装 `autort` 与 `autoredteam-mcp` 两个命令）：
+
+```bash
+pip install autoredteam-orchestrator                # PyPI
+pipx install autoredteam-orchestrator               # 隔离环境
+uvx --from autoredteam-orchestrator autort --help    # 免安装直接运行
+```
+
+等不及 PyPI 发布，从 Git 直装：
+
+```bash
+pip install "git+https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git"
+uvx --from git+https://github.com/Coff0xc/AutoRedTeam-Orchestrator autort --help
+```
+
+从源码运行（开发）：
+
 ```bash
 git clone https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git
 cd AutoRedTeam-Orchestrator
