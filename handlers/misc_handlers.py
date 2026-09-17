@@ -6,6 +6,8 @@
 import platform
 from typing import Any, Dict
 
+from core import __version__
+
 from .error_handling import ErrorCategory, extract_url, handle_errors, validate_inputs
 from .tooling import tool
 
@@ -30,7 +32,7 @@ def register_misc_tools(mcp, counter, logger):
             "success": True,
             "total": counter.total,
             "by_category": counter.counts,
-            "version": "3.0.0",
+            "version": __version__,
         }
 
     @tool(mcp)
@@ -43,7 +45,7 @@ def register_misc_tools(mcp, counter, logger):
         return {
             "success": True,
             "status": "healthy",
-            "version": "3.0.0",
+            "version": __version__,
             "python_version": platform.python_version(),
             "platform": platform.system(),
             "tools_registered": counter.total,
