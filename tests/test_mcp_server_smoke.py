@@ -99,16 +99,13 @@ class TestMCPServerSmoke:
         # Verify at least some tools were registered
         assert counter.total > 0, f"Expected tools to be registered, got {counter.total}"
 
-    def test_version_file_exists(self):
-        """Test that VERSION file exists and contains valid version"""
-        import os
+    def test_version_single_source(self):
+        """版本号唯一来源：autort / core / utils 暴露的 __version__ 与 _version 一致。"""
+        from _version import __version__ as canonical
+        from autort import __version__ as autort_version
+        from core import __version__ as core_version
+        from utils import __version__ as utils_version
 
-        version_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "VERSION"
-        )
-        assert os.path.exists(version_path), "VERSION file should exist"
-        with open(version_path, encoding="utf-8") as f:
-            version = f.read().strip()
-        # Basic semver format check
-        parts = version.split(".")
-        assert len(parts) >= 2, f"Version should be semver format, got: {version}"
+        assert autort_version == core_version == utils_version == canonical
+        parts = canonical.split(".")
+        assert len(parts) >= 2, f"Version should be semver format, got: {canonical}"

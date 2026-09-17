@@ -14,6 +14,7 @@ Usage:
     results = await scanner.full_recon()
 """
 
+from _version import __version__
 from autort.exploiter import Exploiter
 from autort.pentest import AutoPentest
 from autort.redteam import RedTeam
@@ -21,4 +22,3 @@ from autort.report import Reporter
 from autort.scanner import Scanner
 
 __all__ = ["Scanner", "Exploiter", "AutoPentest", "RedTeam", "Reporter"]
-__version__ = "3.1.0"

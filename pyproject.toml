@@ -24,7 +24,7 @@ extend-exclude = '''
 profile = "black"
 line_length = 100
 skip_gitignore = true
-known_first_party = ["core", "modules", "handlers", "tools", "utils"]
+known_first_party = ["core", "modules", "handlers", "tools", "utils", "_version"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -139,7 +139,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autoredteam-orchestrator"
-version = "3.1.0"
+dynamic = ["version"]
 description = "Local-first MCP-native security automation workbench for authorized testing"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -231,9 +231,12 @@ autort = "cli.main:app"
 autoredteam-mcp = "mcp_stdio_server:main"
 
 [tool.setuptools]
-# mcp_stdio_server.py 是根目录下的单文件模块，不是包，packages.find 扫不到它。
-# 缺了这一行，`autoredteam-mcp` 入口点会以 ModuleNotFoundError 启动失败。
-py-modules = ["mcp_stdio_server"]
+# _version.py / mcp_stdio_server.py 是根目录下的单文件模块，不是包，packages.find 扫不到。
+# 缺了这一行，版本读取与 `autoredteam-mcp` 入口点会以 ModuleNotFoundError 启动失败。
+py-modules = ["_version", "mcp_stdio_server"]
+
+[tool.setuptools.dynamic]
+version = {attr = "_version.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -10,6 +10,7 @@ AI Red Team MCP - Core Module
 """
 
 # AI决策引擎 (轻量 - 仅使用标准库+可选第三方)
+from _version import __version__
 from core.ai_engine import AIDecisionEngine, AttackVector, RiskLevel
 
 # 统一的工具返回值 Schema (轻量，无重依赖)
@@ -44,8 +45,6 @@ __all__ = [
     "get_http_session_manager",
     "SessionStorage",
 ]
-
-__version__ = "3.1.0"
 
 # 懒加载: session 相关组件（拉入 core.http.client ~400ms）
 _SESSION_ATTRS = {
