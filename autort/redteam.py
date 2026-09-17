@@ -274,20 +274,7 @@ class RedTeam:
             return {
                 "success": True,
                 "total": len(findings),
-                "findings": [
-                    {
-                        "type": (
-                            f.secret_type.value
-                            if hasattr(f.secret_type, "value")
-                            else str(f.secret_type)
-                        ),
-                        "file": f.file_path,
-                        "line": f.line_number,
-                        "confidence": f.confidence,
-                        "context": f.context,
-                    }
-                    for f in findings
-                ],
+                "findings": [f.to_dict() for f in findings],
             }
         except Exception as e:
             logger.error("credential_find 失败: %s", e)

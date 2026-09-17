@@ -459,6 +459,35 @@ class TestRedTeam:
         assert result["success"] is False
         assert "不支持的平台" in result["error"]
 
+    @pytest.mark.asyncio
+    async def test_credential_find_reports_value(self):
+        """credential_find 的 finding 要报出密钥值本身，而不是丢值"""
+        from autort import RedTeam
+        from core.credential.password_finder import SecretFinding, SecretType
+
+        rt = RedTeam()
+        finding = SecretFinding(
+            secret_type=SecretType.PASSWORD,
+            file_path="/tmp/app.cfg",
+            line_number=3,
+            line_content='db_password = "hunter2SuperSecret"',
+            matched_text="hunter2SuperSecret",
+            confidence="high",
+            context="Line 1-5",
+        )
+
+        with patch("core.credential.password_finder.PasswordFinder") as MockFinder:
+            mock_finder = MagicMock()
+            mock_finder.scan_directory.return_value = [finding]
+            MockFinder.return_value = mock_finder
+
+            result = await rt.credential_find(target_path="/tmp")
+
+        assert result["success"] is True
+        assert result["total"] == 1
+        assert result["findings"][0]["match"] == "hunter2SuperSecret"
+        assert result["findings"][0]["type"] == "password"
+
 
 # ==================== SDK: Reporter 测试 ====================
 
