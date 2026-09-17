@@ -96,6 +96,65 @@ def register_demo(mcp):
     assert "no_evidence_contract" not in rules
 
 
+def test_lint_accepts_serialized_detector_results(tmp_path: Path):
+    """序列化 DetectionResult（.vulnerable + .to_dict()）隐含 evidence，不报证据缺口。"""
+    _write(
+        tmp_path,
+        '''
+from core.security import require_dangerous_auth
+from handlers.tooling import tool, validate_inputs
+
+
+def register_demo(mcp):
+    @tool(mcp)
+    @require_dangerous_auth
+    @validate_inputs(target="target")
+    async def parallel_scan(target: str) -> dict:
+        """并发扫描目标。
+
+        Args:
+            target: 目标 URL
+        """
+        results = await detector.async_detect(target)
+        findings = [r.to_dict() for r in results if r.vulnerable]
+        return {"success": True, "findings": findings}
+''',
+    )
+
+    result = lint_tool_contracts(tmp_path)
+    rules = {issue.rule for tool in result.tools for issue in tool.issues}
+
+    assert "no_evidence_contract" not in rules
+
+
+def test_lint_still_flags_serialized_result_without_detector_fingerprint(tmp_path: Path):
+    """.to_dict() 本身不算证据：没有 .vulnerable 指纹（非 DetectionResult）仍报缺口。"""
+    _write(
+        tmp_path,
+        '''
+from handlers.tooling import tool, validate_inputs
+
+
+def register_demo(mcp):
+    @tool(mcp)
+    @validate_inputs(target="target")
+    async def credential_dump(target: str) -> dict:
+        """导出凭据。
+
+        Args:
+            target: 目标路径
+        """
+        findings = finder.scan(target)
+        return {"success": True, "findings": [f.to_dict() for f in findings]}
+''',
+    )
+
+    result = lint_tool_contracts(tmp_path)
+    rules = {issue.rule for tool in result.tools for issue in tool.issues}
+
+    assert "no_evidence_contract" in rules
+
+
 def test_lint_flags_untyped_parameters_and_missing_args_doc(tmp_path: Path):
     _write(
         tmp_path,

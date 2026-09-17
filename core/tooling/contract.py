@@ -151,21 +151,32 @@ def _docstring(node: ast.AST) -> str:
 def _declares_evidence_contract(node: ast.AST) -> bool:
     """判断工具是否在输出中暴露证据字段（启发式）。
 
-    两条路径都算：
+    三条路径都算：
     - 使用统一 ``ToolResult`` / ``ensure_tool_result`` 返回值契约；
     - 在返回结构里直接给出 ``evidence`` / ``verified`` / ``verification_confidence``
-      （领域既有约定，见 ``core/detectors/result.py`` 的 ``DetectionResult``）。
+      （领域既有约定，见 ``core/detectors/result.py`` 的 ``DetectionResult``）；
+    - 序列化已知证据类型：对同一个名字既访问 ``.vulnerable`` 又调用 ``.to_dict()``
+      （如 ``[r.to_dict() for r in results if r.vulnerable]``）。``.vulnerable`` 是
+      ``DetectionResult`` 的指纹字段，其 ``to_dict()`` 已带 ``evidence``/``verified``，
+      证据嵌套在 ``results[].findings[]`` 里，所以浅扫描看不到字面 ``evidence``。
 
     文档字符串被排除，避免一句“evidence”就把工具当成已合规。
     """
     docstring = _docstring(node)
+    to_dict_receivers: set[str] = set()
+    vulnerable_receivers: set[str] = set()
     for child in ast.walk(node):
         if isinstance(child, ast.Name) and child.id in {"ToolResult", "ensure_tool_result"}:
             return True
         if isinstance(child, ast.Constant) and isinstance(child.value, str):
             if child.value in _EVIDENCE_MARKERS and child.value not in docstring:
                 return True
-    return False
+        if isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name):
+            if child.attr == "vulnerable":
+                vulnerable_receivers.add(child.value.id)
+            elif child.attr == "to_dict":
+                to_dict_receivers.add(child.value.id)
+    return bool(to_dict_receivers & vulnerable_receivers)
 
 
 def _no_target_contact_exemption(node: ast.AST) -> Optional[str]:
