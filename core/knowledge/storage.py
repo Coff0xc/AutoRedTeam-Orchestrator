@@ -45,8 +45,7 @@ class SQLiteKnowledgeStore:
 
     def _init_schema(self):
         """创建表结构"""
-        self._conn.executescript(
-            """
+        self._conn.executescript("""
             CREATE TABLE IF NOT EXISTS entities (
                 id          TEXT PRIMARY KEY,
                 type        TEXT NOT NULL,
@@ -84,8 +83,7 @@ class SQLiteKnowledgeStore:
                 key   TEXT PRIMARY KEY,
                 value TEXT
             );
-            """
-        )
+            """)
         # 版本标记
         self._conn.execute(
             "INSERT OR IGNORE INTO meta(key, value) VALUES (?, ?)",
