@@ -33,6 +33,23 @@ AutoRedTeam-Orchestrator предоставляет компонуемые во�
 
 ## Быстрый старт
 
+Установка одной командой (ставит команды `autort` и `autoredteam-mcp`):
+
+```bash
+pip install autoredteam-orchestrator                # PyPI
+pipx install autoredteam-orchestrator               # изолированное окружение
+uvx --from autoredteam-orchestrator autort --help    # запуск без установки
+```
+
+Не ждёте релиза в PyPI — установите напрямую из Git:
+
+```bash
+pip install "git+https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git"
+uvx --from git+https://github.com/Coff0xc/AutoRedTeam-Orchestrator autort --help
+```
+
+Запуск из исходников (разработка):
+
 ```bash
 git clone https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git
 cd AutoRedTeam-Orchestrator

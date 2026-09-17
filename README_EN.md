@@ -33,6 +33,23 @@ See [Capability Maturity](docs/capability-maturity.md) for full definitions.
 
 ## Quick start
 
+One-line install (installs the `autort` and `autoredteam-mcp` commands):
+
+```bash
+pip install autoredteam-orchestrator                # PyPI
+pipx install autoredteam-orchestrator               # isolated env
+uvx --from autoredteam-orchestrator autort --help    # run without installing
+```
+
+Can't wait for a PyPI release? Install straight from Git:
+
+```bash
+pip install "git+https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git"
+uvx --from git+https://github.com/Coff0xc/AutoRedTeam-Orchestrator autort --help
+```
+
+Run from source (development):
+
 ```bash
 git clone https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git
 cd AutoRedTeam-Orchestrator
