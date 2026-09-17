@@ -137,7 +137,9 @@ def register_ad_tools(mcp, counter, logger):
                 }
                 total = count
             payload["evidence"] = evidence_items(
-                "ad_enumerate", "enumeration", f"AD 枚举发现 {total} 个对象（enum_type={enum_type}）"
+                "ad_enumerate",
+                "enumeration",
+                f"AD 枚举发现 {total} 个对象（enum_type={enum_type}）",
             )
             payload["verified"] = total > 0
             return payload
