@@ -14,6 +14,10 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, ValidationError
 
+from core.llm.orcarouter import DEFAULT_MODEL as _ORCA_DEFAULT_MODEL
+from core.llm.orcarouter import api_base_url as _orca_api_base_url
+from core.llm.orcarouter import resolve_credential as _orca_resolve_credential
+
 logger = logging.getLogger(__name__)
 
 
@@ -116,9 +120,21 @@ class AIDecisionEngine:
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
         self.provider = self.config.get("provider", "openai")
-        self.model = self.config.get("model", "gpt-4")
-        env_key_map = {"openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
+        env_key_map = {
+            "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+            "orcarouter": "ORCAROUTER_API_KEY",
+        }
+        default_model = _ORCA_DEFAULT_MODEL if self.provider == "orcarouter" else "gpt-4"
+        self.model = self.config.get("model", default_model)
+        self.base_url = self.config.get("base_url", "")
         self.api_key = self.config.get("api_key") or os.getenv(env_key_map.get(self.provider, ""))
+        if self.provider == "orcarouter" and not self.api_key:
+            # Reuse the shared credential seam so a PKCE-issued key and a pasted
+            # key behave identically for the MCP `smart_analyze` entry point.
+            credential = _orca_resolve_credential()
+            if credential is not None:
+                self.api_key = credential.api_key
         self._client = None
         self._client_lock = threading.Lock()
 
@@ -137,6 +153,7 @@ class AIDecisionEngine:
         provider_map = {
             "openai": ("openai", "OpenAI"),
             "anthropic": ("anthropic", "Anthropic"),
+            "orcarouter": ("openai", "OpenAI"),
         }
         spec = provider_map.get(self.provider)
         if spec is None:
@@ -149,6 +166,13 @@ class AIDecisionEngine:
         try:
             mod = __import__(module_name, fromlist=[class_name])
             cls = getattr(mod, class_name)
+            if self.provider == "orcarouter":
+                # Named OrcaRouter provider: its own relay base URL, never the
+                # OpenAI default endpoint.
+                return cls(
+                    api_key=self.api_key,
+                    base_url=self.base_url or _orca_api_base_url(),
+                )
             return cls(api_key=self.api_key)
         except ImportError:
             logger.warning("%s库未安装，使用本地规则引擎", class_name)
@@ -764,7 +788,7 @@ class AIDecisionEngine:
 
         raw_text: Optional[str] = None
         try:
-            if self.provider == "openai":
+            if self.provider in ("openai", "orcarouter"):
                 response = client.chat.completions.create(
                     model=self.model,
                     messages=[

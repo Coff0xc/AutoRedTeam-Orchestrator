@@ -139,9 +139,12 @@ class PerformanceConfig(BaseModel):
 class AIConfig(BaseModel):
     """AI 引擎配置 (对应 core.defaults.AIDefaults + config.yaml ai 段)"""
 
+    # openai / anthropic / orcarouter / local
     provider: str = "openai"
     model: str = "gpt-4"
     api_key: str = ""
+    # Only used by named providers with their own relay (e.g. orcarouter).
+    base_url: str = ""
     temperature: float = 0.7
     max_tokens: int = 4000
     request_timeout: float = 30.0
@@ -155,7 +158,8 @@ class AIConfig(BaseModel):
 class LLMConfig(BaseModel):
     """统一 LLM Provider 配置 (对应 core.llm.provider 环境变量)"""
 
-    provider: str = "none"  # openai / anthropic / ollama / deepseek / none
+    # openai / anthropic / ollama / deepseek / orcarouter / none
+    provider: str = "none"
     model: str = ""  # 空字符串表示使用 provider 默认模型
     api_key: str = ""
     base_url: str = ""

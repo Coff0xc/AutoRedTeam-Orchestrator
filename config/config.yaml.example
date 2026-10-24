@@ -9,13 +9,26 @@ server:
 
 # AI配置
 ai:
-  # 提供商: openai, anthropic, local
+  # 提供商: openai, anthropic, orcarouter, local
+  # orcarouter = OrcaRouter Cyber Inference (授权红蓝队工作)
   provider: "openai"
   model: "gpt-4"
-  # API密钥 (建议使用环境变量 OPENAI_API_KEY)
+  # OrcaRouter 使用 base_url: "https://api.orcarouter.ai/v1"
+  base_url: ""
+  # API密钥 (建议使用环境变量 OPENAI_API_KEY / ORCAROUTER_API_KEY)
   api_key: ""
   temperature: 0.7
   max_tokens: 4000
+
+# 统一 LLM Provider 配置 (orchestrator LLM 增强)
+llm:
+  # 提供商: openai, anthropic, ollama, deepseek, orcarouter, none
+  provider: "none"
+  # 空字符串表示使用 provider 默认模型 (orcarouter 默认 orcarouter/auto)
+  model: ""
+  # 建议使用环境变量 ORCAROUTER_API_KEY；也可运行 `autort llm connect`
+  api_key: ""
+  base_url: ""
 
 # 日志配置
 logging:

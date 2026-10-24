@@ -1,14 +1,22 @@
 """
-统一 LLM Provider — 支持 OpenAI / Anthropic / Ollama / DeepSeek
+统一 LLM Provider — 支持 OpenAI / Anthropic / Ollama / DeepSeek / OrcaRouter
 
 通过 LiteLLM 统一接口调用 300+ 模型，或直接使用 OpenAI/Anthropic SDK。
 当无 LLM 可用时，所有方法返回 None (graceful degradation)。
 
 配置 (环境变量):
-    AUTORT_LLM_PROVIDER: openai / anthropic / ollama / deepseek / none (默认 none)
+    AUTORT_LLM_PROVIDER: openai / anthropic / ollama / deepseek / orcarouter / none
     AUTORT_LLM_MODEL:    模型名 (默认按 provider 自动选择)
     AUTORT_LLM_API_KEY:  API Key；未设置时回退到该 provider 对应的环境变量
     AUTORT_LLM_BASE_URL: 自定义 base URL (Ollama: http://localhost:11434)
+
+OrcaRouter Cyber Inference (provider id ``orcarouter``) is a named provider for
+authorized red-team/blue-team work. Its relay is OpenAI-compatible at
+``https://api.orcarouter.ai/v1``. Credentials come from the credential seam in
+``core.llm.orcarouter``: either an exported ``sk-orca-…`` key (environment or
+the user credential file) or an OAuth 2.0 + PKCE login. HTTP 401 from the relay
+marks the exact rejected credential generation for reauthentication; there is
+no refresh grant.
 
 多 provider 路径依赖 litellm；litellm 未安装时只有 openai/anthropic 直连 SDK 可用，
 ollama/deepseek 会因缺少后端而静默降级（返回 None）。
@@ -17,6 +25,14 @@ ollama/deepseek 会因缺少后端而静默降级（返回 None）。
 import logging
 import os
 from typing import Any, Dict, List, Optional
+
+from .orcarouter import DEFAULT_MODEL as ORCAROUTER_DEFAULT_MODEL
+from .orcarouter import (
+    OrcaCredential,
+    PkceCredentialSource,
+    api_base_url,
+    resolve_credential,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +50,7 @@ _DEFAULT_MODELS: Dict[str, str] = {
     "anthropic": "claude-sonnet-4-20250514",
     "ollama": "llama3.1",
     "deepseek": "deepseek-chat",
+    "orcarouter": ORCAROUTER_DEFAULT_MODEL,
 }
 
 # LiteLLM 模型名前缀映射
@@ -42,6 +59,9 @@ _LITELLM_PREFIX: Dict[str, str] = {
     "anthropic": "",
     "ollama": "ollama/",
     "deepseek": "deepseek/",
+    # OrcaRouter speaks the OpenAI wire format; litellm needs the explicit
+    # openai/ prefix so it honours api_base instead of vendor routing.
+    "orcarouter": "openai/",
 }
 
 # AUTORT_LLM_API_KEY 未设置时，按 provider 回退到对应的厂商环境变量
@@ -49,7 +69,18 @@ _PROVIDER_KEY_ENV: Dict[str, str] = {
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "deepseek": "DEEPSEEK_API_KEY",
+    "orcarouter": "ORCAROUTER_API_KEY",
 }
+
+
+def _llm_config() -> Any:
+    """Load the ``llm`` config section lazily (env > YAML > defaults)."""
+    try:
+        from core.config import get_config
+
+        return get_config().llm
+    except Exception:  # pragma: no cover - configuration is optional
+        return None
 
 
 class LLMProvider:
@@ -59,24 +90,71 @@ class LLMProvider:
     当无 LLM 可用时，所有方法返回 None (graceful degradation)。
     """
 
-    def __init__(self) -> None:
-        self.provider: str = os.environ.get("AUTORT_LLM_PROVIDER", "none").lower()
-        self.model: str = os.environ.get(
-            "AUTORT_LLM_MODEL", _DEFAULT_MODELS.get(self.provider, "gpt-4o-mini")
+    def __init__(self, provider: Optional[str] = None, model: Optional[str] = None) -> None:
+        self._credential: Optional[OrcaCredential] = None
+        cfg = _llm_config()
+        cfg_provider = getattr(cfg, "provider", "") if cfg is not None else ""
+        provider_override = (provider or "").strip().lower()
+        model_override = (model or "").strip()
+
+        self.provider: str = (
+            provider_override
+            or (os.environ.get("AUTORT_LLM_PROVIDER") or cfg_provider or "none").lower()
         )
-        self.api_key: str = os.environ.get(
-            "AUTORT_LLM_API_KEY",
-            os.environ.get(_PROVIDER_KEY_ENV.get(self.provider, ""), ""),
-        )
-        self.base_url: str = os.environ.get("AUTORT_LLM_BASE_URL", "")
-        self._available: bool = self.provider != "none" and (
-            LITELLM_AVAILABLE or self._has_direct_sdk()
-        )
+
+        cfg_model = getattr(cfg, "model", "") if cfg is not None else ""
+        cfg_api_key = getattr(cfg, "api_key", "") if cfg is not None else ""
+        cfg_base_url = getattr(cfg, "base_url", "") if cfg is not None else ""
+
+        if self.provider == "orcarouter":
+            # Credential seam: API key (env/user file) — the PKCE adapter writes
+            # to the same store, so downstream code does not care which one ran.
+            self._credential = resolve_credential()
+            self.api_key: str = (
+                os.environ.get("AUTORT_LLM_API_KEY", "")
+                or cfg_api_key
+                or (self._credential.api_key if self._credential else "")
+            )
+            stored_model = self._credential.model if self._credential else ""
+            self.model: str = (
+                model_override
+                or os.environ.get("AUTORT_LLM_MODEL", "")
+                or cfg_model
+                or stored_model
+                or ORCAROUTER_DEFAULT_MODEL
+            )
+            self.base_url: str = (
+                os.environ.get("AUTORT_LLM_BASE_URL", "") or cfg_base_url or api_base_url()
+            )
+            self._available = bool(self.api_key) and (LITELLM_AVAILABLE or self._has_direct_sdk())
+        else:
+            self.model = model_override or os.environ.get(
+                "AUTORT_LLM_MODEL",
+                cfg_model or _DEFAULT_MODELS.get(self.provider, "gpt-4o-mini"),
+            )
+            self.api_key = os.environ.get(
+                "AUTORT_LLM_API_KEY",
+                cfg_api_key or os.environ.get(_PROVIDER_KEY_ENV.get(self.provider, ""), ""),
+            )
+            self.base_url = os.environ.get("AUTORT_LLM_BASE_URL", cfg_base_url)
+            self._available = self.provider != "none" and (
+                LITELLM_AVAILABLE or self._has_direct_sdk()
+            )
 
         if self._available:
             logger.info("LLM Provider 初始化: %s/%s", self.provider, self.model)
+        elif self.provider == "orcarouter":
+            logger.info(
+                "OrcaRouter provider selected but no credential found; "
+                "run `autort llm connect` or set ORCAROUTER_API_KEY"
+            )
         else:
             logger.debug("LLM Provider 未配置, AI 增强功能禁用")
+
+    @property
+    def credential(self) -> Optional[OrcaCredential]:
+        """The resolved OrcaRouter credential, if this provider uses one."""
+        return self._credential
 
     @property
     def available(self) -> bool:
@@ -85,7 +163,7 @@ class LLMProvider:
 
     def _has_direct_sdk(self) -> bool:
         """检查是否有直接 SDK (不依赖 litellm)"""
-        if self.provider == "openai":
+        if self.provider in ("openai", "orcarouter"):
             try:
                 import openai  # noqa: F401
 
@@ -122,12 +200,15 @@ class LLMProvider:
         if not self._available:
             return None
         try:
+            # OrcaRouter goes through the OpenAI SDK directly so the relay base
+            # URL and bearer key are used exactly as configured.
+            if self.provider == "orcarouter" and self._has_direct_sdk():
+                return self._orcarouter_call(prompt, system, temperature, max_tokens)
             if LITELLM_AVAILABLE:
                 return self._litellm_call(prompt, system, temperature, max_tokens)
-            else:
-                return self._direct_call(prompt, system, temperature, max_tokens)
+            return self._direct_call(prompt, system, temperature, max_tokens)
         except Exception as e:
-            logger.warning("LLM 调用失败: %s", e)
+            logger.warning("LLM 调用失败: %s", self._redact(str(e)))
             return None
 
     def complete_json(
@@ -217,6 +298,59 @@ class LLMProvider:
         elif self.provider == "anthropic":
             return self._anthropic_call(prompt, system, temperature, max_tokens)
         return None
+
+    def _redact(self, message: str) -> str:
+        """Keep credentials out of logs and error strings."""
+        if self.api_key and self.api_key in message:
+            return message.replace(self.api_key, "<redacted>")
+        return message
+
+    def _orcarouter_call(
+        self, prompt: str, system: str, temperature: float, max_tokens: int
+    ) -> str:
+        """OpenAI-wire call to the OrcaRouter Cyber Inference relay."""
+        import openai
+
+        client = openai.OpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url or api_base_url(),
+        )
+        messages: List[Dict[str, str]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+        try:
+            resp = client.chat.completions.create(
+                model=self.model,
+                messages=messages,  # type: ignore[arg-type]
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        except Exception as exc:
+            self._handle_orcarouter_failure(exc)
+            raise
+        return resp.choices[0].message.content  # type: ignore[return-value]
+
+    def _handle_orcarouter_failure(self, exc: Exception) -> None:
+        """Terminal 401 handling: flag the rejected credential generation.
+
+        OrcaRouter keys are durable and there is no refresh grant, so the only
+        correct reaction is reauthentication — never a retry loop and never a
+        silent refresh.
+        """
+        status = getattr(exc, "status_code", None)
+        if status != 401:
+            return
+        logger.warning(
+            "OrcaRouter rejected the credential (HTTP 401). Run `autort llm connect` "
+            "or update ORCAROUTER_API_KEY; stored keys are reused until revoked."
+        )
+        if self._credential is None:
+            return
+        try:
+            PkceCredentialSource().mark_needs_reauth(self._credential)
+        except Exception:  # pragma: no cover - store failures must not mask the 401
+            logger.debug("Could not persist the needs-reauth flag")
 
     def _openai_call(self, prompt: str, system: str, temperature: float, max_tokens: int) -> str:
         """OpenAI SDK 直接调用"""

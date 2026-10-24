@@ -157,6 +157,11 @@ def _apply_env_overrides(data: Dict[str, Any]) -> Dict[str, Any]:
         ("AI_MAX_CONTEXT_LENGTH", "ai", "max_context_length", 2000),
         ("AI_MAX_SANITIZED_LENGTH", "ai", "max_sanitized_length", 50),
         ("AI_BASE_ESTIMATE_MINUTES", "ai", "base_estimate_minutes", 30),
+        # llm (unified provider, mirrors core.llm.provider env handling)
+        ("LLM_PROVIDER", "llm", "provider", "none"),
+        ("LLM_MODEL", "llm", "model", ""),
+        ("LLM_API_KEY", "llm", "api_key", ""),
+        ("LLM_BASE_URL", "llm", "base_url", ""),
         # tool_manager
         ("TOOL_SUBPROCESS_TIMEOUT", "tool_manager", "subprocess_timeout", 30.0),
         ("TOOL_CHUNK_SIZE", "tool_manager", "default_chunk_size", 1024),
@@ -218,6 +223,7 @@ def _yaml_to_flat(yaml_data: Dict[str, Any]) -> Dict[str, Any]:
         "dns",
         "performance",
         "ai",
+        "llm",
         "tool_manager",
         "git",
         "auth",

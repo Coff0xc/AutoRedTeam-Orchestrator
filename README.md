@@ -127,6 +127,28 @@ Claude Code、Cursor 等 MCP 客户端读取 `mcpServers` 键下的 JSON 配置�
 | `AUTOREDTEAM_AUTH_MODE` | `strict` \| `permissive` \| `disabled` | `strict` | 受保护工具的授权门禁 |
 | `AUTOREDTEAM_API_KEY` | 任意字符串 | *(未设置)* | `strict` 模式校验的 API Key；`MCP_API_KEY` 为等价别名 |
 
+### OrcaRouter Cyber Inference provider
+
+`orcarouter` 是面向**授权**红蓝队工作的命名 provider：通过
+`https://api.orcarouter.ai/v1` 这同一个 OpenAI 兼容端点，把 scoped 安全推理请求导向
+OrcaRouter 的 cyber 模型（默认 `orcarouter/auto`；通过业务验证的安全团队可用
+`orca/orcacyber-ultra-1.0`、`orca/orcacyber-zero-1.5`；通用兜底 `orcarouter/fusion`）。
+
+两种认证方式都只会得到同一种 `sk-orca-…` key，保存在
+`~/.config/autoredt/orcarouter.json`（0600）：
+
+```bash
+autort llm connect              # OAuth 2.0 + PKCE（S256，loopback 回调）
+autort llm connect --flow oob   # 无浏览器/SSH 场景：在授权页复制 code 粘贴回来
+autort llm key set              # 或直接粘贴已有 API Key
+autort llm models               # 实时 GET /v1/models?capability=chat，按能力过滤
+autort llm status               # 脱敏凭据、origin 与当前模型
+```
+
+provider 页：<https://www.orcarouter.ai/cyber>；cyber 模型目录：
+<https://www.orcarouter.ai/models?tier=cyber>。完整说明见
+[docs/orcarouter.md](docs/orcarouter.md)。
+
 ## Python SDK
 
 SDK 是 `core/` 引擎之上的薄异步封装，从源码 checkout 导入：
