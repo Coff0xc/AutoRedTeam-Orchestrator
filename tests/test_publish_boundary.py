@@ -95,5 +95,5 @@ def test_image_context_matches_wheel_excludes():
         assert package in dockerignore
         dotted = package.replace("/", ".")
         assert f'"{dotted}*"' in pyproject
-    assert "attack-surface audit and evidence gate" in workflow
-    assert "administration: write" in workflow
+    assert "platforms: linux/amd64,linux/arm64" in workflow
+    assert "administration:" not in workflow

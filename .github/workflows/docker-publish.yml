@@ -13,29 +13,6 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  repository-about:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      administration: write
-    steps:
-      - name: Align repository About with the product sentence
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method PATCH "repos/${{ github.repository }}" \
-            -f description='Local MCP/AI attack-surface audit and evidence gate for authorized testing' \
-            -f homepage='https://github.com/Coff0xc/AutoRedTeam-Orchestrator#readme'
-          gh api --method PUT "repos/${{ github.repository }}/topics" \
-            -f names[]=mcp \
-            -f names[]=security \
-            -f names[]=attack-surface \
-            -f names[]=sarif \
-            -f names[]=python \
-            -f names[]=static-analysis \
-            -f names[]=ai
-
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
