@@ -390,6 +390,8 @@ core.credential*  core.ad*  core.exploit*
 
 `autort/__init__.py` imports `Scanner` and `Reporter` immediately. `Exploiter`, `AutoPentest`, and `RedTeam` load through `__getattr__` on first use. `from autort import Scanner` does not import those three. A handler that imports an excluded package raises `ImportError` at registration, which is logged, and the other modules still register. That is why a wheel install can serve the `safe` audit even though the git tree contains the experimental packages.
 
+The CI build job installs that wheel into a clean virtual environment. The ten packages above are not importable there. `capabilities manifest --profile safe` still runs, an `ai-surface scan` of the installed `handlers` package still reports `issue_count == 0`, and importing `Scanner` does not load `Exploiter`, `AutoPentest`, or `RedTeam`. The source-tree unit tests do not prove this, because those tests can still import the engines from the checkout.
+
 Repo-level content classifiers still see the experimental tree. The wheel, the container, and the `safe` import boundary do not change that.
 
 Coverage in CI is scoped to the same default wheel. The ten engine globs are omitted from both `[tool.coverage.run]` and `[tool.coverage.report]`, and the workflow uses `--cov-fail-under=50`. Run-omit alone does not hide files already stored in a `.coverage` data file, which is why the report omit exists. The gate is "the published install stays measured." It is not a claim that the detectors are fully covered, and it is not a reason to edit them.

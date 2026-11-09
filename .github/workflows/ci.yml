@@ -176,6 +176,13 @@ jobs:
       - name: Build package
         run: python -m build
 
+      - name: Check the installed wheel boundary
+        run: |
+          pip install pytest
+          pytest tests/test_wheel_boundary.py -m slow -q --tb=short
+        env:
+          AUTORT_WHEEL: dist
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
