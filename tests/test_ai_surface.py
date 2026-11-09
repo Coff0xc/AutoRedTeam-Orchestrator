@@ -446,6 +446,7 @@ def test_action_v3_1_still_runs_ai_surface_scan():
     readme = Path("README.md").read_text(encoding="utf-8")
 
     assert "python -m cli.main ai-surface scan" in action
+    assert "default: 'self-audit'" in action
     assert "uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1" in example
     assert "uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1" in readme
 

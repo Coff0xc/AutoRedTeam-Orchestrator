@@ -6,9 +6,9 @@ branding:
 
 inputs:
   mode:
-    description: 'Mode: self-audit (static AI/MCP surface scan of this repo) | target-scan (active scan of an authorized URL). The default is target-scan.'
+    description: 'Mode: self-audit (static AI/MCP surface scan of this repo) | target-scan (active scan of an authorized URL). The default is self-audit.'
     required: false
-    default: 'target-scan'
+    default: 'self-audit'
   target:
     description: 'Target URL to scan (required for target-scan mode)'
     required: false
