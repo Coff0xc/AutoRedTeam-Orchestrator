@@ -147,7 +147,7 @@ license = {text = "MIT"}
 authors = [
     {name = "AutoRedTeam Team"}
 ]
-keywords = ["security", "pentest", "red-team", "mcp", "ai"]
+keywords = ["mcp", "security", "attack-surface", "sarif", "python", "static-analysis", "ai"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

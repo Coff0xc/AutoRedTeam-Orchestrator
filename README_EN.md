@@ -18,11 +18,11 @@
 - [Overview](#overview)
 - [Capabilities](#capabilities)
 - [Quick start](#quick-start)
+- [AI/MCP self-audit](#aimcp-self-audit)
 - [MCP server integration](#mcp-server-integration)
 - [Python SDK](#python-sdk)
 - [CLI reference](#cli-reference)
 - [Configuration & authorization](#configuration--authorization)
-- [AI/MCP self-audit](#aimcp-self-audit)
 - [Design approach](#design-approach)
 - [Security and scope](#security-and-scope)
 - [License and disclaimer](#license-and-disclaimer)
@@ -37,11 +37,11 @@ Recon, detection, and post-exploitation code remains in the source tree and is r
 
 | Domain | Status | Scope |
 |---|---|---|
-| Recon and vulnerability detection (JSON/SARIF) | Beta | Authorized targets only; no public accuracy benchmark yet |
-| Static AI/MCP surface self-audit | Preview | Read-only AST → SARIF; covers FastMCP and low-level SDK |
-| CVE intelligence and PoC | Preview | NVD sync, Nuclei-compatible execution |
-| Reporting (JSON/SARIF/HTML) | Beta | HTML escaping hardening in progress |
-| Orchestration / exploit / post-exploit / C2 / lateral / persistence | Restricted Experimental | Disposable isolated labs only |
+| Static AI/MCP surface self-audit | Preview | Read-only AST → SARIF; covers FastMCP and low-level SDK. Default `safe` |
+| CVE intelligence | Preview | Local search is available on `safe`. Sync and PoC execution need a higher profile |
+| Reporting (JSON/SARIF/HTML) | Beta | Finding export is available on `safe`. `generate_report` requires `scan` |
+| Recon and vulnerability detection (JSON/SARIF) | Beta | Minimum profile `scan`; authorized targets only; no public accuracy benchmark yet |
+| Orchestration / exploit / post-exploit / C2 / lateral / persistence | Restricted Experimental | `active-lab` or `full`; disposable isolated labs only |
 
 See [Capability Maturity](docs/capability-maturity.md) for full definitions.
 
@@ -71,15 +71,40 @@ pip install -r requirements.txt
 python -m cli.main --help
 ```
 
-Read-only, no-network commands. These two commands do not contact a target and do not import the AI engine. The minimum dependency is `typer`:
+The default start is a read-only, no-network local audit. These commands do not contact a target and do not import the experimental engines. From a source checkout, the minimum dependency is `typer`:
 
 ```bash
 pip install typer
 python -m cli.main ai-surface scan --path handlers --format sarif -o surface.sarif
+python -m cli.main ai-surface scan-mcp-config --path .mcp.json
 python -m cli.main capabilities manifest --profile safe
 ```
 
 `ai-surface scan` skips test files by default. A scan of the repo root or `handlers/` reconciles findings with the capability manifest. Coverage is reported in JSON `summary.static_coverage` and in SARIF `runs[].properties.static_coverage`.
+
+## AI/MCP self-audit
+
+Run a purely static audit of **your own repository**: inventory the attack surface of MCP server and AI agent tools, with results delivered at `file:line` precision to GitHub Code Scanning. No target, network, secret, or authorization required.
+
+Run as a GitHub Action on every PR (full example in [`self-audit.example.yml`](.github/workflows/self-audit.example.yml)):
+
+```yaml
+- uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1
+  with:
+    mode: self-audit
+    path: '.'
+    severity-threshold: high
+```
+
+Or locally:
+
+```bash
+python -m cli.main ai-surface scan --path . --format sarif        # MCP handler tool surface
+python -m cli.main ai-surface scan-mcp-config --path .mcp.json    # broad commands and plaintext secrets
+python -m cli.main ai-surface scan-skills --path ./skills         # high-risk instruction markers
+```
+
+Add `--auth-mode lenient` to drop project-specific authorization findings when auditing external repositories.
 
 ## MCP server integration
 
@@ -132,16 +157,32 @@ The profile is resolved in this order: explicit argument → `AUTORT_CAPABILITY_
 
 ## Python SDK
 
-The SDK is a thin async wrapper over the `core/` engines, importable from a source checkout:
+The SDK is a thin async wrapper over the `core/` engines, importable from a source checkout. On the default profile, start with finding export and CVE search:
 
 ```python
-from autort import Scanner, Exploiter, AutoPentest, RedTeam, Reporter
+from autort import Exploiter, Reporter
 from autort import __version__        # single-source version, e.g. "3.1.0"
 ```
 
-Every call is async and returns a `dict` (lists for a few scan methods). Success is signaled by `"success": True`; failures carry a real `"error"` string rather than being swallowed.
+Every call is async and returns a `dict` (lists for a few scan methods). Success is signaled by `"success": True`; failures carry a real `"error"` string rather than being swallowed. A call is refused before the matching engine is imported when the profile is too low.
 
-### Scanner — recon and detection
+### Available on the default profile
+
+```python
+from autort import Exploiter, Reporter
+
+exploiter = Exploiter("http://127.0.0.1:8000")
+cves = await exploiter.cve_search("Apache Log4j", severity="critical", has_poc=True)
+
+reporter = Reporter("session_id_here")
+findings = await reporter.export_findings(format="json")
+```
+
+`cve_search(keyword, severity=None, has_poc=None, limit=20)` and `export_findings(format="json")` work on `safe`. `AutoPentest.status(session_id)` reads local session state, maps to `session_status`, and is also available on `safe`.
+
+### Explicit profile
+
+`Scanner` recon and detection methods have a minimum profile of `scan`. The default `safe` profile refuses them before the recon or detector engine is imported.
 
 ```python
 from autort import Scanner
@@ -154,87 +195,61 @@ vulns = await scanner.detect_vulns(categories=["sqli", "xss", "ssrf"])
 nuclei = await scanner.nuclei_scan(tags=["cve"], severity=["high", "critical"])
 ```
 
-Key methods: `full_recon()`, `port_scan(ports="1-1000", top=None)`, `detect_vulns(categories=None, config=None)`, `fingerprint()`, `waf_detect()`, `subdomain_enum(domain=None)`, `passive_recon(domain=None)`, `nuclei_scan(tags=None, severity=None, template_dir=None, concurrency=10, limit=None)`. These map to `scan` surfaces. The default `safe` profile refuses them before the recon or detector engine is imported. Set `AUTORT_CAPABILITY_PROFILE=scan` or higher to continue.
+Key methods: `full_recon()`, `port_scan(ports="1-1000", top=None)`, `detect_vulns(categories=None, config=None)`, `fingerprint()`, `waf_detect()`, `subdomain_enum(domain=None)`, `passive_recon(domain=None)`, `nuclei_scan(tags=None, severity=None, template_dir=None, concurrency=10, limit=None)`. Set `AUTORT_CAPABILITY_PROFILE=scan` or higher to continue.
 
-### Exploiter — exploit and CVE intelligence
+`Exploiter.cve_exploit(cve)`, `auto_exploit(top_n=5)`, and `exploit(vuln, **kwargs)` require `active-lab` or above, an authorized disposable target, an isolated executor, and an API key. `Reporter.generate(format="html")` maps to `generate_report` and requires `scan`.
 
-```python
-from autort import Exploiter
+`AutoPentest.run(phases=None)` and `resume(session_id)` map to `auto_pentest` and `pentest_resume`. Both require `full` and run only against isolated, authorized labs. Omitting `phases` runs the full flow.
 
-exploiter = Exploiter("http://127.0.0.1:8000")
-
-cves = await exploiter.cve_search("Apache Log4j", severity="critical", has_poc=True)
-```
-
-`cve_search(keyword, severity=None, has_poc=None, limit=20)` is intelligence-only and works in the `safe` profile. `cve_exploit(cve)`, `auto_exploit(top_n=5)`, and `exploit(vuln, **kwargs)` require `active-lab` (or above), an authorized disposable target, an isolated executor, and an API key.
-
-### AutoPentest — one-shot orchestration
-
-```python
-from autort import AutoPentest
-
-pentest = AutoPentest("http://127.0.0.1:8000", config={"timeout": 3600})
-result = await pentest.run(phases=["recon", "vuln_scan"])   # omit phases for the full flow
-```
-
-`run(phases=None)` drives the pipeline `RECON → VULN_SCAN → POC_EXEC → EXPLOIT → PRIV_ESC → LATERAL → EXFIL → REPORT` and maps to `auto_pentest`. `resume(session_id)` maps to `pentest_resume`. Both require `full` and run only against isolated, authorized labs. `status(session_id)` reads local session state, maps to `session_status`, and stays available on `safe`.
-
-### RedTeam — post-exploitation (restricted)
-
-`RedTeam(config=None)` groups lateral movement, C2, persistence, privilege escalation, and credential discovery: `lateral_move(target, method="ssh", ...)`, `c2_start(host, port=443, protocol="https")`, `persist(target="", method="crontab", ...)`, `privesc(target, ...)`, `credential_find(...)`. Every method returns `{"success": bool, ...}`. These are `full`-profile, approval-gated, isolated-executor surfaces and are documented here as a catalog only — not as call examples.
-
-### Reporter — reporting
-
-```python
-from autort import Reporter
-
-reporter = Reporter("session_id_here")
-html_path = await reporter.generate(format="html")     # html | json | markdown | executive
-findings = await reporter.export_findings(format="json")
-```
+`RedTeam(config=None)` groups lateral movement, C2, persistence, privilege escalation, and credential discovery. These are `full`-profile, approval-gated, isolated-executor surfaces and are listed here as a catalog only, without call examples.
 
 ## CLI reference
 
-The Typer CLI is the primary local-analysis entry. It is also available as the installed `autort` command; from source, use `python -m cli.main`.
+The Typer CLI is the local-analysis entry, installed as `autort`. From source, use `python -m cli.main`. Commands that run on the default `safe` profile come first. Commands that need a higher profile follow.
 
-### Top-level commands
+### Default path (`safe`)
 
-| Command | Purpose | Example (authorized targets only) |
+These commands do not contact a target. `cve-search` reads local CVE intelligence.
+
+| Command | Purpose | Example |
 |---|---|---|
-| `scan` | Port scan / full recon | `autort scan http://127.0.0.1:8000 --full` |
-| `detect` | Vulnerability detection | `autort detect http://127.0.0.1:8000 -c sqli,xss,ssrf --format sarif` |
-| `exploit` | CVE / auto exploit | `autort exploit http://127.0.0.1:8000 --cve CVE-2021-44228` |
+| `ai-surface scan` | Static inventory of MCP handlers | `autort ai-surface scan --path handlers --format sarif -o surface.sarif` |
+| `ai-surface scan-mcp-config` | Check an MCP client config | `autort ai-surface scan-mcp-config --path .mcp.json` |
+| `ai-surface scan-skills` | Mark high-risk skill/prompt instructions | `autort ai-surface scan-skills --path ./skills` |
+| `capabilities profiles` | Show profile inheritance and surface counts | `autort capabilities profiles` |
+| `capabilities manifest` | Export the manifest for one profile | `autort capabilities manifest --profile safe` |
+| `tools lint` | Static MCP tool-contract check | `autort tools lint --path handlers` |
 | `cve-search` | CVE intelligence | `autort cve-search "Log4j" --severity critical --has-poc -n 20` |
-| `pentest` | One-shot orchestration | `autort pentest http://127.0.0.1:8000 --phases recon,vuln_scan` |
-| `report` | Generate a report | `autort report <session-id> -f html` |
-| `nuclei` | Pure-Python Nuclei scan | `autort nuclei http://127.0.0.1:8000 -t cve,rce -s high,critical` |
-| `tools` | External tool status | `autort tools` |
-| `version` | Print version | `autort version` |
+| `version` | Print the version | `autort version` |
 
-CI-friendly flags on `detect` (and the `ai-*` scanners): `--ci` prints a terse summary and returns a non-zero exit code when findings meet `--severity-threshold` (info/low/medium/high/critical).
+CI flags on `ai-surface`: `--ci` prints a terse summary and returns a non-zero exit code when findings meet `--severity-threshold` (info/low/medium/high/critical). `detect` is not on this path; it requires `scan`.
 
 ### Subcommand groups
 
-| Group | Commands | Purpose |
-|---|---|---|
-| `ai-redteam` | `run`, `catalog`, `convert`, `eval-run` | Declarative AI red-team scenarios (dry-run by default) |
-| `ai-surface` | `scan`, `scan-mcp-config`, `scan-skills` | Static AI/MCP attack-surface inventory (read-only) |
-| `code-agent` | `expand` | Call-chain context expansion (no code execution) |
-| `runtime-api` | `serve` | Read-only local runtime API (`/api/runs`) |
-| `sandbox` | `docker-smoke` | Local Docker sandbox smoke test |
-| `capabilities` | `matrix`, `readiness`, `manifest`, `profiles` | Capability manifest and coverage |
-| `tools` | `lint` | MCP tool contract check (static) |
+| Group | Commands | Minimum profile | Purpose |
+|---|---|---|---|
+| `ai-surface` | `scan`, `scan-mcp-config`, `scan-skills` | `safe` | Static AI/MCP attack-surface inventory (read-only) |
+| `capabilities` | `matrix`, `readiness`, `manifest`, `profiles` | `safe` | Capability manifest and coverage |
+| `tools` | `lint` | `safe` | MCP tool contract check (static) |
+| `code-agent` | `expand` | `safe` | Call-chain context expansion (no code execution) |
+| `runtime-api` | `serve` | `safe` | Read-only local runtime API (`/api/runs`) |
+| `sandbox` | `docker-smoke` | `safe` | Local Docker sandbox smoke test |
+| `ai-redteam` | `run`, `catalog`, `convert`, `eval-run` | `safe` | Declarative AI red-team scenarios (dry-run by default) |
 
-Read-only, no-network commands to start:
+`autort tools` is the `lint` group above. External-tool status is the `ext_tools_status` surface, whose minimum profile is `scan`. That surface has no separate reachable CLI command.
 
-```bash
-autort ai-surface scan --path handlers --format sarif -o surface.sarif
-autort ai-surface scan-mcp-config --path .mcp.json
-autort ai-surface scan-skills --path ./skills
-autort capabilities profiles
-autort capabilities manifest --profile safe
-autort tools lint --path handlers
-```
+### Explicit profile
+
+The default `safe` profile refuses these commands. The profile comes from an explicit argument, then from `AUTORT_CAPABILITY_PROFILE`, otherwise `safe`.
+
+| Command | Minimum profile | Purpose | Example (authorized targets only) |
+|---|---|---|---|
+| `scan` | `scan` | Port scan / full recon | `autort scan http://127.0.0.1:8000 --full` |
+| `detect` | `scan` | Vulnerability detection | `autort detect http://127.0.0.1:8000 -c sqli,xss,ssrf --format sarif` |
+| `nuclei` | `scan` | Pure-Python Nuclei scan | `autort nuclei http://127.0.0.1:8000 -t cve,rce -s high,critical` |
+| `report` | `scan` | Generate a report | `autort report <session-id> -f html` |
+| `exploit` | `active-lab` | CVE / auto exploit | `autort exploit http://127.0.0.1:8000 --cve CVE-2021-44228` |
+| `pentest` | `full` | One-shot orchestration | `autort pentest http://127.0.0.1:8000 --phases recon,vuln_scan` |
 
 ## Configuration & authorization
 
@@ -272,33 +287,9 @@ The manifest (`core/capability_manifest.py`) is the machine-readable, single sou
 
 The `required_controls` fields are **declarative**: they gate MCP schema exposure, not enforcement. They do not replace authentication, target scope, independent approval, or an isolated executor.
 
-## AI/MCP self-audit
-
-Run a purely static audit of **your own repository**: inventory the attack surface of MCP server and AI agent tools, with results delivered at `file:line` precision to GitHub Code Scanning. No target, network, secret, or authorization required.
-
-Run as a GitHub Action on every PR (full example in [`self-audit.example.yml`](.github/workflows/self-audit.example.yml)):
-
-```yaml
-- uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1
-  with:
-    mode: self-audit
-    path: '.'
-    severity-threshold: high
-```
-
-Or locally:
-
-```bash
-python -m cli.main ai-surface scan --path . --format sarif        # MCP handler tool surface
-python -m cli.main ai-surface scan-mcp-config --path .mcp.json    # broad commands and plaintext secrets
-python -m cli.main ai-surface scan-skills --path ./skills         # high-risk instruction markers
-```
-
-Add `--auth-mode lenient` to drop project-specific authorization findings when auditing external repositories.
-
 ## Design approach
 
-- **One set of engines, three entry points.** Recon, detection, exploit, orchestration, CVE, AI-red-team, and AI-surface logic all live in `core/`; the MCP server, SDK (`autort/`), and CLI (`cli/main.py`) are thin adapters over the same engines. A capability is implemented once, not three times.
+- **One set of engines, three entry points.** AI-surface audit, CVE intelligence, recon, detection, and the experimental orchestration engines live in `core/`; the MCP server, SDK (`autort/`), and CLI (`cli/main.py`) are thin adapters over the same engines. A capability is implemented once, not three times.
 - **Fail-closed MCP exposure.** Every registered surface must be classified in the capability manifest. An unclassified or over-minimum-profile surface is not silently exposed — it raises at registration. The default is the narrowest profile (`safe`), not the widest.
 - **Declarative exposure vs. enforced authorization are separate layers.** Profiles filter *which* tools exist for a client; authorization decides *whether* a protected tool may run. The two are deliberately independent so a profile change cannot accidentally widen who may act.
 - **Local-first, dry-run by default.** The server is stdio-only and trusts the local process. High-risk capabilities default to dry-run and only leave it in an isolated, disposable lab under explicit opt-in.
