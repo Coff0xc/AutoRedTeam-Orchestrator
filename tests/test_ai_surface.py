@@ -177,6 +177,34 @@ def test_scan_mcp_config_reads_client_shapes_without_connecting(tmp_path: Path):
     assert "mcp_server_uses_general_command_runtime" not in by_name["local"].issues
 
 
+def test_mcp_config_records_key_line_and_skill_scan_skips_lockfiles(tmp_path: Path):
+    config_dir = tmp_path / "cfg"
+    skill_dir = tmp_path / "skills"
+    config_dir.mkdir()
+    skill_dir.mkdir()
+    config = config_dir / ".mcp.json"
+    config.write_text(
+        '{\n  "mcpServers": {\n    "wide": {\n      "command": "powershell"\n    }\n  }\n}\n',
+        encoding="utf-8",
+    )
+    (skill_dir / "package-lock.json").write_text(
+        '{"name": "exfiltrate credential"}',
+        encoding="utf-8",
+    )
+    huge = skill_dir / "huge.md"
+    huge.write_bytes(b"credential " + b"x" * (1_048_576))
+    (skill_dir / "SKILL.md").write_text("Review the local notes.", encoding="utf-8")
+
+    config_result = scan_mcp_config(config)
+    skills = scan_skill_surface(skill_dir)
+
+    assert config_result.findings[0].line == 3
+    assert skills.scanned_files == 1
+    assert skills.findings[0].tool_name == "SKILL"
+    assert skills.to_dict()["summary"]["issue_count"] == 0
+    assert any("huge.md" in warning for warning in skills.warnings)
+
+
 def test_surface_walk_skips_dependency_and_wordlist_dirs(tmp_path: Path):
     (tmp_path / "demo_handlers.py").write_text(
         '''

@@ -125,6 +125,19 @@ _SKIP_DIR_NAMES = frozenset(
 _GENERAL_COMMANDS = frozenset({"powershell", "pwsh", "cmd", "bash", "sh", "python", "node"})
 _SECRET_ENV_TERMS = ("key", "token", "secret", "password")
 _MCP_CONFIG_NAMES = frozenset({".mcp.json", "mcp.json", "claude_desktop_config.json"})
+_SKIP_TEXT_NAMES = frozenset(
+    {
+        "cargo.lock",
+        "composer.lock",
+        "gemfile.lock",
+        "package-lock.json",
+        "pipfile.lock",
+        "pnpm-lock.yaml",
+        "poetry.lock",
+        "yarn.lock",
+    }
+)
+_MAX_TEXT_BYTES = 1_048_576
 
 
 def scan_handler_surface(
@@ -167,12 +180,10 @@ def scan_handler_surface(
             result.warnings.append(f"{file_path}: {type(exc).__name__}: {exc}")
             continue
 
-        bindings = _collect_string_bindings(tree)
         visitor = _HandlerToolVisitor(
             file_path=file_path,
-            source=source,
             auth_catalog=catalog,
-            string_bindings=bindings,
+            string_bindings=_collect_string_bindings(tree),
         )
         visitor.visit(tree)
         result.findings.extend(visitor.findings)
@@ -194,8 +205,9 @@ def scan_skill_surface(path: str | Path) -> SurfaceScanResult:
     root = Path(path)
     if not root.exists():
         raise FileNotFoundError(f"Skill scan path does not exist: {root}")
-    files = _iter_text_files(root)
+    files, skipped = _iter_text_files(root)
     result = SurfaceScanResult(root_path=str(root))
+    result.warnings.extend(skipped)
     for file_path in files:
         result.scanned_files += 1
         try:
@@ -250,7 +262,8 @@ def scan_mcp_config(path: str | Path) -> SurfaceScanResult:
     for file_path in files:
         result.scanned_files += 1
         try:
-            data = json.loads(file_path.read_text(encoding="utf-8"))
+            text = file_path.read_text(encoding="utf-8")
+            data = json.loads(text)
         except (OSError, json.JSONDecodeError) as exc:
             result.warnings.append(f"{file_path}: {type(exc).__name__}: {exc}")
             continue
@@ -260,7 +273,11 @@ def scan_mcp_config(path: str | Path) -> SurfaceScanResult:
             continue
         for name, server in servers.items():
             if isinstance(server, dict):
-                result.findings.append(_mcp_server_finding(file_path, str(name), server))
+                result.findings.append(
+                    _mcp_server_finding(
+                        file_path, str(name), server, _json_key_line(text, str(name))
+                    )
+                )
     result.findings.sort(
         key=lambda item: (-RISK_ORDER[item.risk_level], item.file_path, item.tool_name)
     )
@@ -301,11 +318,24 @@ def _should_reconcile(root: Path, reconcile: Optional[bool]) -> bool:
     return (root / "core" / "capability_manifest.py").is_file() and (root / "handlers").is_dir()
 
 
-def _iter_text_files(root: Path) -> List[Path]:
+def _iter_text_files(root: Path) -> Tuple[List[Path], List[str]]:
     suffixes = {".md", ".txt", ".yaml", ".yml", ".json", ".toml"}
     if root.is_file():
-        return [root] if root.suffix.lower() in suffixes else []
-    return sorted(path for path in _walk_files(root) if path.suffix.lower() in suffixes)
+        return ([root] if root.suffix.lower() in suffixes else []), []
+    files: List[Path] = []
+    skipped: List[str] = []
+    for path in _walk_files(root):
+        if path.suffix.lower() not in suffixes or path.name.lower() in _SKIP_TEXT_NAMES:
+            continue
+        try:
+            if path.stat().st_size > _MAX_TEXT_BYTES:
+                skipped.append(f"{path}: skipped file larger than {_MAX_TEXT_BYTES} bytes")
+                continue
+        except OSError as exc:
+            skipped.append(f"{path}: {type(exc).__name__}: {exc}")
+            continue
+        files.append(path)
+    return sorted(files), skipped
 
 
 def _walk_files(root: Path) -> Iterable[Path]:
@@ -346,7 +376,23 @@ def _mcp_server_map(data: object) -> Optional[dict]:
     return None
 
 
-def _mcp_server_finding(file_path: Path, name: str, server: dict) -> SurfaceFinding:
+def _json_key_line(text: str, key: str) -> int:
+    """Return the line of a JSON object key. The raw endpoint value is not used."""
+    needle = json.dumps(key, ensure_ascii=False)
+    start = 0
+    while True:
+        found = text.find(needle, start)
+        if found < 0:
+            return 1
+        cursor = found + len(needle)
+        while cursor < len(text) and text[cursor] in " \t\r\n":
+            cursor += 1
+        if cursor < len(text) and text[cursor] == ":":
+            return text.count("\n", 0, found) + 1
+        start = found + 1
+
+
+def _mcp_server_finding(file_path: Path, name: str, server: dict, line: int) -> SurfaceFinding:
     command = str(server.get("command", ""))
     args = [str(item) for item in server.get("args", []) if item is not None]
     env = server.get("env", {})
@@ -370,7 +416,7 @@ def _mcp_server_finding(file_path: Path, name: str, server: dict) -> SurfaceFind
     return SurfaceFinding(
         tool_name=name,
         file_path=str(file_path),
-        line=1,
+        line=line,
         risk_level=risk_level,
         risk_terms=risk_terms,
         issues=issues,
@@ -386,9 +432,8 @@ def _env_key_is_secret(key: str) -> bool:
 
 
 class _HandlerToolVisitor(ast.NodeVisitor):
-    def __init__(self, file_path: Path, source: str, auth_catalog=None, string_bindings=None):
+    def __init__(self, file_path: Path, auth_catalog=None, string_bindings=None):
         self.file_path = file_path
-        self.source = source
         self.auth_catalog = auth_catalog or AUTH_DECORATORS
         self.string_bindings = string_bindings or {}
         self.findings: List[SurfaceFinding] = []
