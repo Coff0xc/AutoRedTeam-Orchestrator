@@ -627,11 +627,14 @@ class TestCLI:
 
         from cli.main import app
 
+        from tests.cli_help import command_help_text
+
         runner = CliRunner()
-        result = runner.invoke(app, ["scan", "--help"])
+        result = runner.invoke(app, ["scan", "--help"], color=False)
+        text = command_help_text(app, "scan")
         assert result.exit_code == 0
-        assert "--full" in result.output
-        assert "--ports" in result.output
+        assert "--full" in text
+        assert "--ports" in text
 
     def test_cli_detect_help(self):
         """测试 detect 子命令 help"""
@@ -639,10 +642,12 @@ class TestCLI:
 
         from cli.main import app
 
+        from tests.cli_help import command_help_text
+
         runner = CliRunner()
-        result = runner.invoke(app, ["detect", "--help"])
+        result = runner.invoke(app, ["detect", "--help"], color=False)
         assert result.exit_code == 0
-        assert "--category" in result.output
+        assert "--category" in command_help_text(app, "detect")
 
     def test_cli_exploit_help(self):
         """测试 exploit 子命令 help"""
@@ -650,11 +655,14 @@ class TestCLI:
 
         from cli.main import app
 
+        from tests.cli_help import command_help_text
+
         runner = CliRunner()
-        result = runner.invoke(app, ["exploit", "--help"])
+        result = runner.invoke(app, ["exploit", "--help"], color=False)
+        text = command_help_text(app, "exploit")
         assert result.exit_code == 0
-        assert "--cve" in result.output
-        assert "--auto" in result.output
+        assert "--cve" in text
+        assert "--auto" in text
 
     def test_cli_pentest_help(self):
         """测试 pentest 子命令 help"""
@@ -662,11 +670,14 @@ class TestCLI:
 
         from cli.main import app
 
+        from tests.cli_help import command_help_text
+
         runner = CliRunner()
-        result = runner.invoke(app, ["pentest", "--help"])
+        result = runner.invoke(app, ["pentest", "--help"], color=False)
+        text = command_help_text(app, "pentest")
         assert result.exit_code == 0
-        assert "--resume" in result.output
-        assert "--timeout" in result.output
+        assert "--resume" in text
+        assert "--timeout" in text
 
     def test_cli_report_help(self):
         """测试 report 子命令 help"""
@@ -674,10 +685,12 @@ class TestCLI:
 
         from cli.main import app
 
+        from tests.cli_help import command_help_text
+
         runner = CliRunner()
-        result = runner.invoke(app, ["report", "--help"])
+        result = runner.invoke(app, ["report", "--help"], color=False)
         assert result.exit_code == 0
-        assert "--format" in result.output
+        assert "--format" in command_help_text(app, "report")
 
     def test_cli_scan_with_full(self):
         """测试 scan --full 执行"""

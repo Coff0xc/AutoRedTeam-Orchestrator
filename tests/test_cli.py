@@ -98,9 +98,11 @@ class TestCLIHelp:
         """runtime-api serve --help 应返回成功"""
         from cli.main import app
 
-        result = runner.invoke(app, ["runtime-api", "serve", "--help"])
+        from tests.cli_help import command_help_text
+
+        result = runner.invoke(app, ["runtime-api", "serve", "--help"], color=False)
         assert result.exit_code == 0
-        assert "run-state" in result.output.lower()
+        assert "run-state" in command_help_text(app, "runtime-api", "serve")
 
     def test_sandbox_docker_smoke_help(self):
         """sandbox docker-smoke --help 应返回成功"""
