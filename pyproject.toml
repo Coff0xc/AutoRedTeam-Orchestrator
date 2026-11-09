@@ -195,13 +195,12 @@ recon = [
     "dnspython>=2.5.0",
     "whois>=0.9.27",
     "beautifulsoup4>=4.12.0",
-    "lxml>=5.1.0",
 ]
 network = [
     "paramiko>=3.4.0",
     "pexpect>=4.9.0",
     "websockets>=12.0",
-    "cryptography>=46.0.6,<48.0.0",  # CVE-2026-26007 (ECDH), CVE-2026-34073 (X.509)
+    "cryptography>=50.0.0,<51.0.0",
 ]
 storage = [
     "sqlalchemy>=2.0.0",
