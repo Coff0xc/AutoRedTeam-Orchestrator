@@ -19,6 +19,7 @@ def reconcile_capability_manifest(
     capabilities: Sequence[Any],
 ) -> Dict[str, Any]:
     """Compare scan findings to manifest entries and store the report on ``result``."""
+    catalog = tuple(capabilities)
     observed: Dict[SurfaceKey, SurfaceFinding] = {}
     for finding in result.findings:
         observed.setdefault((finding.kind, finding.tool_name), finding)
@@ -26,7 +27,8 @@ def reconcile_capability_manifest(
     matched: List[Dict[str, str]] = []
     factory_accounted: List[Dict[str, str]] = []
     invisible: List[Dict[str, str]] = []
-    for capability in capabilities:
+    manifest_keys = {(str(item.kind), str(item.name)) for item in catalog}
+    for capability in catalog:
         key = (str(capability.kind), str(capability.name))
         finding = observed.get(key)
         record = {
@@ -53,11 +55,11 @@ def reconcile_capability_manifest(
             "line": finding.line,
         }
         for key, finding in observed.items()
-        if key not in {(str(item.kind), str(item.name)) for item in capabilities}
+        if key not in manifest_keys
     ]
     unlisted.sort(key=lambda item: (item["file_path"], item["line"], item["name"]))
 
-    manifest_total = len(tuple(capabilities))
+    manifest_total = len(catalog)
     accounted = len(matched)
     coverage = {
         "manifest_total": manifest_total,

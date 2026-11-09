@@ -321,3 +321,61 @@ def test_factory_config_and_manifest_coverage():
     assert coverage["factory_accounted"] == 26
     assert coverage["unlisted_count"] == 0
     assert "sqli_scan" in {finding.tool_name for finding in factory}
+
+
+def test_risk_terms_match_tokens_not_substrings(tmp_path: Path):
+    handler = tmp_path / "naming_handlers.py"
+    handler.write_text(
+        '''
+from handlers.tooling import tool
+
+
+def register_demo(mcp):
+    @tool(mcp)
+    async def scanner_status():
+        """Return the epoch clock."""
+        return {"success": True}
+
+    @tool(mcp)
+    async def port_scan(target: str):
+        """Scan authorized ports."""
+        return {"success": True}
+''',
+        encoding="utf-8",
+    )
+
+    result = scan_handler_surface(tmp_path, reconcile=False)
+    by_name = {finding.tool_name: finding for finding in result.findings}
+
+    assert "scan" not in by_name["scanner_status"].risk_terms
+    assert "poc" not in by_name["scanner_status"].risk_terms
+    assert by_name["scanner_status"].risk_level == SurfaceRiskLevel.LOW
+    assert "scan" in by_name["port_scan"].risk_terms
+    assert by_name["port_scan"].risk_level == SurfaceRiskLevel.MODERATE
+
+
+def test_reconcile_counts_a_one_shot_capability_iterator():
+    from types import SimpleNamespace
+
+    from core.ai_surface.coverage import reconcile_capability_manifest
+    from core.ai_surface.models import SurfaceFinding, SurfaceScanResult
+
+    finding = SurfaceFinding(
+        tool_name="only_tool",
+        file_path="handlers/demo.py",
+        line=3,
+        risk_level=SurfaceRiskLevel.LOW,
+        finding_type="mcp_tool",
+        kind="tool",
+    )
+    result = SurfaceScanResult(root_path="handlers", findings=[finding])
+    capabilities = (
+        SimpleNamespace(kind="tool", name="only_tool", handler="demo") for _ in range(1)
+    )
+
+    coverage = reconcile_capability_manifest(result, capabilities)
+
+    assert coverage["manifest_total"] == 1
+    assert coverage["accounted"] == 1
+    assert coverage["ratio"] == "1/1"
+    assert coverage["invisible_count"] == 0

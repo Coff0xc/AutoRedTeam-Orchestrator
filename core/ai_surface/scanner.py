@@ -501,10 +501,6 @@ def _decorator_keyword(
     return ""
 
 
-def _is_tool_decorator(name: str) -> bool:
-    return name == "tool" or name.endswith(".tool")
-
-
 def _is_tool_constructor(func: ast.AST) -> bool:
     """识别 low-level MCP SDK 的 Tool(...) 构造 (mcp.types.Tool)。"""
     name = _dotted_name(func) or ""
@@ -677,6 +673,26 @@ def _auth_level(
     return level, risk
 
 
+def _contains_term(haystack: str, term: str) -> bool:
+    """Match a risk term on identifier boundaries.
+
+    ``scan`` matches ``port_scan`` and ``scan-host``. It does not match
+    ``scanner`` or ``epoch``. ``_`` and ``-`` are boundaries; the haystack
+    already normalizes ``-`` to ``_``.
+    """
+    start = 0
+    while True:
+        index = haystack.find(term, start)
+        if index < 0:
+            return False
+        end = index + len(term)
+        before_ok = index == 0 or not haystack[index - 1].isalnum()
+        after_ok = end == len(haystack) or not haystack[end].isalnum()
+        if before_ok and after_ok:
+            return True
+        start = index + 1
+
+
 def _risk_terms(
     chunks: List[str], catalog: Optional[Dict[str, SurfaceRiskLevel]] = None
 ) -> Tuple[List[str], SurfaceRiskLevel]:
@@ -684,7 +700,7 @@ def _risk_terms(
     terms: List[str] = []
     risk = SurfaceRiskLevel.INFO
     for term, term_risk in (catalog or RISK_TERMS).items():
-        if term in haystack:
+        if _contains_term(haystack, term):
             terms.append(term)
             risk = max_risk(risk, term_risk)
     return terms, risk
