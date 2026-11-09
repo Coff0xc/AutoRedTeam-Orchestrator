@@ -1,77 +1,21 @@
 # AutoRedTeam-Orchestrator
 
-**本地的 MCP/AI 攻击面审计与证据门禁。** 默认只注册 `safe` 档案：静态分析、dry-run 和本地元数据。仅属于更高档案的后渗透模块不会在这个档案下被导入。
+A local audit and evidence gate for MCP servers and AI-agent tools. You point it at your own handlers, client config, or skill files. It reads them, writes findings with file and line, and refuses anything the selected profile did not declare.
+
+The model can judge. This process keeps the profile, the evidence, and the record.
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Version](https://img.shields.io/badge/version-3.1.0-orange)
 ![Status](https://img.shields.io/badge/status-Beta%20%2F%20Research%20Preview-yellow)
 
-**中文** · [English](README_EN.md) · [Русский](README_RU.md)
+[Capability maturity](docs/capability-maturity.md) · [Security model](docs/security-model.md) · [Security audits](docs/security-audits/)
 
-[能力成熟度](docs/capability-maturity.md) · [安全模型](docs/security-model.md) · [安全审计](docs/security-audits/)
+Beta / research preview. Static analysis, dry-runs, and local labs are the supported path. Exploit, lateral movement, persistence, C2, and exfiltration stay in the source tree as restricted experiments. A policy flag or a sandbox label is not an operating-system or container boundary.
 
-> **Beta / Research Preview** — 优先支持静态分析、dry-run 与本地靶场。exploit、横向移动、持久化、C2、数据外传等高风险能力属于受限实验特性；policy 与 sandbox 元数据不等同于操作系统或容器级隔离。
+## Start here
 
-## 目录
-
-- [概述](#概述)
-- [能力](#能力)
-- [快速开始](#快速开始)
-- [AI/MCP 安全自审](#aimcp-安全自审)
-- [MCP Server 接入](#mcp-server-接入)
-- [Python SDK](#python-sdk)
-- [CLI 命令清单](#cli-命令清单)
-- [配置与授权](#配置与授权)
-- [设计思路与方案](#设计思路与方案)
-- [安全与边界](#安全与边界)
-- [许可与免责](#许可与免责)
-
-## 概述
-
-AutoRedTeam-Orchestrator 的默认产品是本地 MCP/AI 攻击面审计和证据门禁，通过 **MCP Server**、**Python SDK** 和 **Typer CLI** 使用。模型负责判断，进程负责档案、证据和审计记录。
-
-侦察、检测和后渗透代码仍在源码树中，但只在显式选择 `scan`、`active-lab` 或 `full` 时注册。默认 `safe` 不导入仅供这些档案使用的模块。默认安装包不包含这些实验引擎。注册给模型的工具描述只包含档案、风险、效果和约束。适用于授权实验、AI/MCP 安全审计和教学。它不是开箱即用的企业平台、自主攻击 Agent 或生产级 C2。
-
-## 能力
-
-| 能力域 | 状态 | 边界 |
-|---|---|---|
-| AI/MCP 攻击面静态自审 | Preview | 只读 AST → SARIF；覆盖 FastMCP 与 low-level SDK。默认 `safe` |
-| CVE 情报 | Preview | 本地查询在 `safe` 可用。同步和 PoC 执行需要更高档案 |
-| 报告（JSON/SARIF/HTML） | Beta | 导出 findings 在 `safe` 可用。`generate_report` 需要 `scan` |
-| 侦察与漏洞检测（JSON/SARIF） | Beta | 最低档案 `scan`；仅限授权目标；暂无公开准确率基准 |
-| 编排 / 利用 / 后渗透 / C2 / 横向 / 持久化 | Restricted Experimental | `active-lab` 或 `full`；仅限一次性隔离靶场 |
-
-完整定义见[能力成熟度](docs/capability-maturity.md)。
-
-## 快速开始
-
-单行安装（安装 `autort` 与 `autoredteam-mcp` 两个命令）：
-
-```bash
-pip install autoredteam-orchestrator                # PyPI
-pipx install autoredteam-orchestrator               # 隔离环境
-uvx --from autoredteam-orchestrator autort --help    # 免安装直接运行
-```
-
-等不及 PyPI 发布，从 Git 直装：
-
-```bash
-pip install "git+https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git"
-uvx --from git+https://github.com/Coff0xc/AutoRedTeam-Orchestrator autort --help
-```
-
-从源码运行（开发）：
-
-```bash
-git clone https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git
-cd AutoRedTeam-Orchestrator
-pip install -r requirements.txt
-python -m cli.main --help
-```
-
-默认起步是只读、无网络的本地审计。这些命令不访问目标，也不导入实验引擎。从源码运行时，最小依赖是 `typer`：
+From a checkout, `typer` is enough for the read-only commands. They do not contact a target and they do not import the experimental engines.
 
 ```bash
 pip install typer
@@ -80,13 +24,105 @@ python -m cli.main ai-surface scan-mcp-config --path .mcp.json
 python -m cli.main capabilities manifest --profile safe
 ```
 
-`ai-surface scan` 默认跳过测试文件。扫描仓库根或 `handlers/` 时会与 capability manifest 对账，JSON 的 `summary.static_coverage` 和 SARIF 的 `runs[].properties.static_coverage` 给出覆盖率。
+`ai-surface scan` skips tests unless you ask for them. A scan of the repository root or of `handlers/` also reconciles what it saw with the capability manifest. The JSON summary field is `summary.static_coverage`. The SARIF copy lives at `runs[].properties.static_coverage`.
 
-## AI/MCP 安全自审
+Install the two commands if you want them on `PATH`:
 
-对**你自己的仓库**做纯静态审计：盘点 MCP server 与 AI agent 工具的攻击面，结果以 `file:line` 精度进入 GitHub Code Scanning。无需 target、网络、secret 或授权。
+```bash
+pip install autoredteam-orchestrator
+pipx install autoredteam-orchestrator
+uvx --from autoredteam-orchestrator autort --help
+```
 
-作为 GitHub Action 在每个 PR 上运行（完整示例见 [`self-audit.example.yml`](.github/workflows/self-audit.example.yml)）：
+Or from Git, when PyPI is behind the branch you care about:
+
+```bash
+pip install "git+https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git"
+git clone https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git
+cd AutoRedTeam-Orchestrator
+pip install -r requirements.txt
+python -m cli.main --help
+```
+
+Python 3.10 or newer. Version `3.1.0` comes from `_version.py` only. The console scripts are `autort` and `autoredteam-mcp`.
+
+## How the pieces sit
+
+Three thin entries share one manifest. MCP stdio, the Typer CLI, and the async SDK all ask the same gate which surfaces exist for the selected profile. `core/` is where the work lives. A surface that the manifest does not name fails registration with `CapabilityManifestError`.
+
+```mermaid
+flowchart TB
+  subgraph entries [What you start]
+    MCP["MCP stdio<br/>autoredteam-mcp"]
+    CLI["CLI<br/>autort"]
+    SDK["SDK<br/>autort"]
+  end
+
+  Gate["Capability manifest<br/>safe → scan → active-lab → full"]
+
+  subgraph work [What the profile allows]
+    Audit["Static audit<br/>handlers, MCP config, skills"]
+    Local["Local reads<br/>CVE search, finding export, dry-run"]
+    ScanEng["Recon and detection<br/>authorized target"]
+    Lab["Experimental engines<br/>source tree only"]
+  end
+
+  MCP --> Gate
+  CLI --> Gate
+  SDK --> Gate
+  Gate -->|safe| Audit
+  Gate -->|safe| Local
+  Gate -->|scan| ScanEng
+  Gate -->|active-lab or full| Lab
+```
+
+The profile is chosen in this order: an explicit argument, then `AUTORT_CAPABILITY_PROFILE`, then `safe`. A tool whose `minimum_profile` is above the selection is not registered. The same check runs before the CLI or SDK imports the matching engine.
+
+Direct `import` of `core` from your own script does not pass through that gate.
+
+## Profiles
+
+Each profile includes the one before it.
+
+| Profile | What it opens | Where it belongs |
+|---|---|---|
+| `safe` | Static audit, dry-run scenarios, local CVE search, finding export, local session reads | The default. A trusted local process. |
+| `scan` | Recon and vulnerability detection, report generation | An authorized target, with the network path you already control. |
+| `active-lab` | Exploit validation surfaces | A disposable lab, a separate approval, an isolated executor, and an API key. |
+| `full` | Post-exploitation and the rest of the catalog | Explicit opt-in. Isolated, authorized, disposable. |
+
+```bash
+autort capabilities profiles
+autort capabilities manifest --profile safe
+```
+
+Authorization is a second switch, not a synonym for the profile. `AUTOREDTEAM_AUTH_MODE` defaults to `strict`. Protected tools then require `AUTOREDTEAM_API_KEY` (`MCP_API_KEY` is accepted as an alias). `permissive` logs and allows. `disabled` is honored only when `AUTOREDTEAM_ENV=test` or `PYTEST_CURRENT_TEST` is set.
+
+The manifest entry for each surface records kind, name, handler, category, minimum profile, risk, maturity, and declared controls: whether auth is required, whether approval is required, and which executor is expected (`in-process`, `external-process`, or `isolated-required`). Those control fields decide what the MCP schema shows. They do not, by themselves, authenticate a caller or isolate a process.
+
+## What the audit actually reads
+
+`ai-surface` is a static reader. It parses Python with `ast`. It does not import handler modules, register tools, call targets, or open a network connection.
+
+`scan` walks handler files and records three shapes:
+
+- FastMCP decorators `@tool`, `@prompt`, and `@resource`, including `description=` on the decorator
+- low-level SDK `Tool(...)` declarations
+- `DetectorConfig(name=...)` factory tools, which have no inline function body
+
+Test modules, `tests/`, and `conftest.py` are skipped by default. The walk also skips VCS directories, virtualenvs, `node_modules`, build output, and `wordlists`.
+
+`scan-mcp-config` accepts a file or a directory. In a directory it looks for `.mcp.json`, `mcp.json`, and `claude_desktop_config.json`. These objects are the same inventory: `mcpServers`, a top-level `servers` map, and `mcp.servers`. A general command runtime and a secret-like environment **name** become findings. Matching is on identifier boundaries, so a name like `monkey` is not treated as a key. A declared `url`, `serverUrl`, or `baseUrl` is recorded as a remote endpoint. The finding text does not copy that URL. The line number is the line of the server key. The scan never connects.
+
+`scan-skills` reads local markdown, text, YAML, JSON, and TOML. Lockfiles such as `package-lock.json` and `poetry.lock` are left out. A file larger than 1 MiB is skipped and named in the warnings when the path is a directory. Point the command at a single file if you really want that file read.
+
+For an external repository that does not use this project's auth decorators, pass `--auth-mode lenient`. That drops missing-auth issues. It does not change the parse.
+
+CI flags on `ai-surface`: `--ci` prints a short summary, and `--exit-code` returns non-zero when a finding reaches `--severity-threshold` (`info`, `low`, `medium`, `high`, `critical`).
+
+## GitHub Action
+
+The example below is the pin this repository documents. It sets `mode` on purpose. Current `main` defaults the Action to `self-audit`. The `v3.1` tag still defaults to `target-scan`, and that mode requires a `target` input.
 
 ```yaml
 - uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1
@@ -96,34 +132,20 @@ python -m cli.main capabilities manifest --profile safe
     severity-threshold: high
 ```
 
-或本地运行：
+The full workflow is [`.github/workflows/self-audit.example.yml`](.github/workflows/self-audit.example.yml). Output defaults to SARIF and is uploaded for code scanning. `path` is relative to the caller repository unless it is absolute.
+
+`mode: target-scan` remains available for an authorized URL. It runs detection, and it needs `target`.
+
+## MCP client
+
+The server speaks stdio. There is no cloud service and no telemetry.
 
 ```bash
-python -m cli.main ai-surface scan --path . --format sarif        # MCP handler 工具面
-python -m cli.main ai-surface scan-mcp-config --path .mcp.json    # 危险命令与明文 secret
-python -m cli.main ai-surface scan-skills --path ./skills         # 高危指令标记
+autoredteam-mcp --stdio
+python -m mcp_stdio_server --stdio
 ```
 
-审计外部仓库时，以 `--auth-mode lenient` 抑制项目特化的授权判定。
-
-## MCP Server 接入
-
-MCP Server 把安全能力暴露为 MCP 工具，供 AI 编辑器或 Agent 调用。它是 local-first 的：无云端、无遥测，仅限受信本地 stdio。
-
-### 启动服务
-
-两种等价方式：
-
-```bash
-autoredteam-mcp --stdio                # 安装后的命令（PyPI / Git）
-python -m mcp_stdio_server --stdio     # 源码 checkout 运行
-```
-
-`--stdio` 选择 stdio 传输，这正是 MCP 客户端（Claude Code、Cursor、Windsurf、Kiro 等）所用的方式。
-
-### 接入 AI 编辑器
-
-Claude Code、Cursor 等 MCP 客户端读取 `mcpServers` 键下的 JSON 配置。本项目最小 `.mcp.json`：
+A client config can use any of the shapes the scanner understands. This is the usual `mcpServers` form:
 
 ```json
 {
@@ -141,35 +163,65 @@ Claude Code、Cursor 等 MCP 客户端读取 `mcpServers` 键下的 JSON 配置�
 }
 ```
 
-`AUTORT_CAPABILITY_PROFILE` 决定注册哪些工具（见[能力档案](#能力档案)）。省略则回退到 fail-closed 的 `safe` 默认值。
+Leave the profile unset and the server stays on `safe`.
 
-### 档案选择
+The published container is a multi-stage `python:3.12-slim` image. It installs the wheel, sets `AUTORT_CAPABILITY_PROFILE=safe`, runs as `appuser`, and starts `autoredteam-mcp`. The experimental engine packages are excluded from that wheel, the same way `pyproject.toml` excludes them from the default install.
 
-档案按以下顺序解析：显式参数 → `AUTORT_CAPABILITY_PROFILE` 环境变量 → `safe` 默认值。任何 `minimum_profile` 高于所选档案的工具都**不会注册**，任何未在 manifest 中分类的 surface 会在注册阶段 fail-closed（`CapabilityManifestError`）。
+## CLI
 
-### 环境变量
+Installed, the command is `autort`. From a checkout, `python -m cli.main` is the same program.
 
-| 变量 | 取值 | 默认 | 含义 |
-|---|---|---|---|
-| `AUTORT_CAPABILITY_PROFILE` | `safe` \| `scan` \| `active-lab` \| `full` | `safe` | 注册为 MCP 工具的能力层级 |
-| `AUTOREDTEAM_AUTH_MODE` | `strict` \| `permissive` \| `disabled` | `strict` | 受保护工具的授权门禁 |
-| `AUTOREDTEAM_API_KEY` | 任意字符串 | *(未设置)* | `strict` 模式校验的 API Key；`MCP_API_KEY` 为等价别名 |
+### Safe
 
-## Python SDK
+These do not contact a target. `cve-search` reads local CVE intelligence.
 
-SDK 是 `core/` 引擎之上的薄异步封装，从源码 checkout 导入。默认档案下先用报告导出和 CVE 查询：
+| Command | What you get | Example |
+|---|---|---|
+| `ai-surface scan` | Handler inventory, SARIF or JSON | `autort ai-surface scan --path handlers --format sarif -o surface.sarif` |
+| `ai-surface scan-mcp-config` | Client config inventory | `autort ai-surface scan-mcp-config --path .mcp.json` |
+| `ai-surface scan-skills` | Instruction markers in skill files | `autort ai-surface scan-skills --path ./skills` |
+| `capabilities profiles` | Inheritance and surface counts | `autort capabilities profiles` |
+| `capabilities manifest` | One profile, as data | `autort capabilities manifest --profile safe` |
+| `tools lint` | Static MCP tool-contract check | `autort tools lint --path handlers` |
+| `cve-search` | Local CVE search | `autort cve-search "Log4j" --severity critical --has-poc -n 20` |
+| `version` | The version string | `autort version` |
+
+### Other safe groups
+
+| Group | Commands | What it is |
+|---|---|---|
+| `ai-surface` | `scan`, `scan-mcp-config`, `scan-skills` | The audit above |
+| `capabilities` | `matrix`, `readiness`, `manifest`, `profiles` | Manifest and coverage |
+| `tools` | `lint` | Contract check |
+| `code-agent` | `expand` | Call-chain context. It does not run the code. |
+| `runtime-api` | `serve` | Read-only local view of run state at `/api/runs` |
+| `sandbox` | `docker-smoke` | Local Docker smoke test |
+| `ai-redteam` | `run`, `catalog`, `convert`, `eval-run` | Declarative scenarios. Dry-run unless you opt further in. |
+
+`autort tools` is that `lint` group. External-tool status is the manifest surface `ext_tools_status`, minimum profile `scan`, and it has no separate CLI command today.
+
+### Higher profiles
+
+`safe` refuses these. Examples assume an authorized target.
+
+| Command | Minimum profile | Example |
+|---|---|---|
+| `scan` | `scan` | `autort scan http://127.0.0.1:8000 --full` |
+| `detect` | `scan` | `autort detect http://127.0.0.1:8000 -c sqli,xss,ssrf --format sarif` |
+| `nuclei` | `scan` | `autort nuclei http://127.0.0.1:8000 -t cve,rce -s high,critical` |
+| `report` | `scan` | `autort report <session-id> -f html` |
+| `exploit` | `active-lab` | `autort exploit http://127.0.0.1:8000 --cve CVE-2021-44228` |
+| `pentest` | `full` | `autort pentest http://127.0.0.1:8000 --phases recon,vuln_scan` |
+
+## SDK
+
+Import it from a checkout. Calls are async. Most return a `dict`. A few scan methods return a list. Success is `"success": True`. A failure carries an `"error"` string. If the profile is too low, the call stops before the engine import.
+
+On `safe`, start with local search and finding export:
 
 ```python
 from autort import Exploiter, Reporter
-from autort import __version__        # 单源版本号，如 "3.1.0"
-```
-
-所有调用均为 async，返回 `dict`（少数扫描方法返回列表）。成功以 `"success": True` 标记；失败携带真实的 `"error"` 字符串，不吞异常。档案不足时，调用在导入对应引擎之前拒绝。
-
-### 默认档案可用
-
-```python
-from autort import Exploiter, Reporter
+from autort import __version__  # "3.1.0"
 
 exploiter = Exploiter("http://127.0.0.1:8000")
 cves = await exploiter.cve_search("Apache Log4j", severity="critical", has_poc=True)
@@ -178,133 +230,30 @@ reporter = Reporter("session_id_here")
 findings = await reporter.export_findings(format="json")
 ```
 
-`cve_search(keyword, severity=None, has_poc=None, limit=20)` 和 `export_findings(format="json")` 在 `safe` 可用。`AutoPentest.status(session_id)` 只读本地会话，对应 `session_status`，同样在 `safe` 可用。
+`AutoPentest.status(session_id)` reads local session state. That maps to `session_status` and stays on `safe`.
 
-### 显式档案
+`Scanner` needs `scan`. The methods are `full_recon()`, `port_scan()`, `detect_vulns()`, `fingerprint()`, `waf_detect()`, `subdomain_enum()`, `passive_recon()`, and `nuclei_scan()`. Set `AUTORT_CAPABILITY_PROFILE=scan` or pass a higher profile before calling them.
 
-`Scanner` 的侦察和检测方法最低档案是 `scan`。默认 `safe` 会在导入侦察或检测引擎之前拒绝。
+`Reporter.generate()` maps to `generate_report` and also needs `scan`. `Exploiter.cve_exploit()`, `auto_exploit()`, and `exploit()` need `active-lab` or above. `AutoPentest.run()` and `resume()` need `full`. `RedTeam` collects lateral movement, C2, persistence, privilege escalation, and credential discovery. Those are `full` surfaces. This page lists them as a catalog and does not show call examples.
 
-```python
-from autort import Scanner
+## What is in the default install
 
-scanner = Scanner("http://127.0.0.1:8000")
+The wheel and the container include the audit, the manifest, the CLI, the SDK, and the handlers. They omit the experimental engine packages: C2, lateral movement, persistence, post-exploitation, privilege escalation, exfiltration, evasion, credentials, Active Directory, and exploit. A source checkout can still import those packages when the profile allows it.
 
-ports = await scanner.port_scan(ports="1-1000")          # 或 top=100
-recon = await scanner.full_recon()                        # 完整 10 阶段侦察
-vulns = await scanner.detect_vulns(categories=["sqli", "xss", "ssrf"])
-nuclei = await scanner.nuclei_scan(tags=["cve"], severity=["high", "critical"])
-```
+Recon and detection ship, and they stay behind `scan`. There is no public accuracy benchmark for the detectors, so their thresholds are not a claim this document makes.
 
-关键方法：`full_recon()`、`port_scan(ports="1-1000", top=None)`、`detect_vulns(categories=None, config=None)`、`fingerprint()`、`waf_detect()`、`subdomain_enum(domain=None)`、`passive_recon(domain=None)`、`nuclei_scan(tags=None, severity=None, template_dir=None, concurrency=10, limit=None)`。设置 `AUTORT_CAPABILITY_PROFILE=scan` 或更高档案后才会继续。
-
-`Exploiter.cve_exploit(cve)`、`auto_exploit(top_n=5)`、`exploit(vuln, **kwargs)` 需要 `active-lab` 及以上、授权的一次性目标、隔离执行器与 API Key。`Reporter.generate(format="html")` 对应 `generate_report`，最低档案是 `scan`。
-
-`AutoPentest.run(phases=None)` 和 `resume(session_id)` 对应 `auto_pentest` 与 `pentest_resume`，都需要 `full`，仅在隔离、授权的靶场运行。省略 `phases` 会跑完整流程。
-
-`RedTeam(config=None)` 聚合横向移动、C2、持久化、提权与凭据发现。这些方法属于 `full` 档案、需审批、隔离执行器的 surface，此处仅作目录列出，不写调用示例。
-
-## CLI 命令清单
-
-Typer CLI 是本地分析的主入口，也是安装后的 `autort` 命令；源码下用 `python -m cli.main`。先列默认 `safe` 就能运行的命令，再列必须显式提高档案的命令。
-
-### 默认路径（`safe`）
-
-这些命令不访问目标。`cve-search` 只查本地情报。
-
-| 命令 | 用途 | 示例 |
+| Area | Status | Boundary |
 |---|---|---|
-| `ai-surface scan` | 静态盘点 MCP handler | `autort ai-surface scan --path handlers --format sarif -o surface.sarif` |
-| `ai-surface scan-mcp-config` | 检查 MCP 客户端配置 | `autort ai-surface scan-mcp-config --path .mcp.json` |
-| `ai-surface scan-skills` | 标记 skill/prompt 中的高危指令 | `autort ai-surface scan-skills --path ./skills` |
-| `capabilities profiles` | 查看档案继承和 surface 数量 | `autort capabilities profiles` |
-| `capabilities manifest` | 导出所选档案的 manifest | `autort capabilities manifest --profile safe` |
-| `tools lint` | 静态检查 MCP 工具契约 | `autort tools lint --path handlers` |
-| `cve-search` | CVE 情报 | `autort cve-search "Log4j" --severity critical --has-poc -n 20` |
-| `version` | 显示版本 | `autort version` |
+| Static AI/MCP audit | Preview | Read-only AST to SARIF. Default `safe`. |
+| CVE intelligence | Preview | Local search on `safe`. Sync and PoC execution need a higher profile. |
+| Reports | Beta for JSON and SARIF export. HTML is still hardening. | `export_findings` is `safe`. `generate_report` is `scan`. |
+| Recon and detection | Beta | `scan`, authorized targets. |
+| Orchestration and post-exploitation | Restricted experimental | `active-lab` or `full`, disposable labs. |
 
-`ai-surface` 的 CI 参数：`--ci` 输出精简摘要，并在发现达到 `--severity-threshold`（info/low/medium/high/critical）的项时返回非零退出码。`detect` 不在这条路径上，它需要 `scan`。
+The longer matrix is [Capability maturity](docs/capability-maturity.md). Trust boundaries are in the [Security model](docs/security-model.md).
 
-### 子命令组
+## License
 
-| 分组 | 命令 | 最低档案 | 用途 |
-|---|---|---|---|
-| `ai-surface` | `scan`、`scan-mcp-config`、`scan-skills` | `safe` | 静态 AI/MCP 攻击面盘点（只读） |
-| `capabilities` | `matrix`、`readiness`、`manifest`、`profiles` | `safe` | 能力 manifest 与覆盖 |
-| `tools` | `lint` | `safe` | MCP 工具契约检查（静态） |
-| `code-agent` | `expand` | `safe` | 调用链上下文扩展（不执行代码） |
-| `runtime-api` | `serve` | `safe` | 只读本地 runtime API（`/api/runs`） |
-| `sandbox` | `docker-smoke` | `safe` | 本地 Docker 沙箱 smoke |
-| `ai-redteam` | `run`、`catalog`、`convert`、`eval-run` | `safe` | 声明式 AI 红队场景（默认 dry-run） |
+MIT. See [`LICENSE`](LICENSE).
 
-`autort tools` 是上面的 `lint` 子命令组。外部工具状态对应 manifest 的 `ext_tools_status`，最低档案是 `scan`，当前没有单独可达的 CLI 入口。
-
-### 显式档案
-
-默认 `safe` 会拒绝这些命令。档案来自显式参数，否则来自 `AUTORT_CAPABILITY_PROFILE`，再否则是 `safe`。
-
-| 命令 | 最低档案 | 用途 | 示例（仅限授权目标） |
-|---|---|---|---|
-| `scan` | `scan` | 端口扫描 / 完整侦察 | `autort scan http://127.0.0.1:8000 --full` |
-| `detect` | `scan` | 漏洞检测 | `autort detect http://127.0.0.1:8000 -c sqli,xss,ssrf --format sarif` |
-| `nuclei` | `scan` | 纯 Python Nuclei 扫描 | `autort nuclei http://127.0.0.1:8000 -t cve,rce -s high,critical` |
-| `report` | `scan` | 生成报告 | `autort report <session-id> -f html` |
-| `exploit` | `active-lab` | CVE / 自动利用 | `autort exploit http://127.0.0.1:8000 --cve CVE-2021-44228` |
-| `pentest` | `full` | 一键编排 | `autort pentest http://127.0.0.1:8000 --phases recon,vuln_scan` |
-
-## 配置与授权
-
-### 能力档案
-
-档案是有序的暴露层级，每个继承上一个：
-
-| 档案 | 包含 | 运行边界 |
-|---|---|---|
-| `safe` | 本地分析、dry-run、元数据、受控本地状态 | 受信本地进程；无目标网络访问或主机命令执行 |
-| `scan` | `safe` + 授权侦察与漏洞扫描 | 需明确目标范围与外部网络控制 |
-| `active-lab` | `scan` + 利用验证与攻击规划 | 需一次性靶场、独立审批、隔离执行器 |
-| `full` | 全部 surface，含后渗透与受限研究特性 | 仅显式 opt-in 的隔离、授权、一次性环境 |
-
-查看实时定义：
-
-```bash
-autort capabilities profiles              # 有序档案、继承关系、surface 数量
-autort capabilities manifest -p scan      # 按档案过滤的完整 manifest
-```
-
-### 授权模式
-
-授权通过装饰器按工具施加。由 `AUTOREDTEAM_AUTH_MODE` 选择，共三档：
-
-| 模式 | 行为 |
-|---|---|
-| `strict`（默认） | 受保护工具要求有效 API Key（`AUTOREDTEAM_API_KEY` 或 `MCP_API_KEY`） |
-| `permissive` | 记录警告但放行 |
-| `disabled` | 不校验——仅在 `AUTOREDTEAM_ENV=test` 或设置 `PYTEST_CURRENT_TEST` 时生效 |
-
-### 能力 manifest
-
-manifest（`core/capability_manifest.py`）是每个暴露 MCP surface 的机器可读、单一事实来源。每条声明 `kind`、`name`、`handler`、`category`、`minimum_profile`、`risk`、`maturity`，以及必需控制——`auth_required`、`approval_required` 与 `executor`（`in-process` / `external-process` / `isolated-required`）。任何未分类的 surface 注册即 fail-closed。
-
-`required_controls` 字段是**声明式**的：它们只控制 MCP schema 暴露，不负责强制。它们不替代认证、目标范围、独立审批或隔离执行器。
-
-## 设计思路与方案
-
-- **一套引擎，三个入口。** AI 攻击面、CVE 情报，以及侦察、检测和实验性编排都落在 `core/`；MCP Server、SDK（`autort/`）与 CLI（`cli/main.py`）都是同一引擎之上的薄适配层。能力只实现一次，而非三遍。
-- **fail-closed 的 MCP 暴露。** 每个注册的 surface 必须在 capability manifest 中分类。未分类或超出所选档案的 surface 不会被静默暴露——注册即抛错。默认是最窄的 `safe` 档案，而非最宽的。
-- **声明式暴露与强制授权分层。** 档案过滤「哪些工具对客户端存在」；授权决定「受保护工具能否运行」。二者刻意独立，避免改档案时意外放宽「谁能行动」。
-- **本地优先、默认 dry-run。** 服务仅 stdio，信任本地进程。高风险能力默认 dry-run，仅在显式 opt-in 的隔离一次性靶场中离开 dry-run。
-- **自审是一等公民。** 同一仓库自带对 MCP handler、MCP 客户端配置、skill/prompt 文件的只读扫描器，无需目标或网络即可审 AI/MCP 攻击面本身。
-
-## 安全与边界
-
-- 同一套 capability profile（`safe`/`scan`/`active-lab`/`full`）同时约束 MCP 注册，以及映射到 manifest surface 的 CLI 和 SDK 调用。它不替代认证、目标范围、独立审批或隔离执行器。入口之外直接导入 `core` 模块不受这道门控制。
-- 高风险能力默认 dry-run，仅应在一次性隔离环境中启用。
-- 认证由单个工具装饰器接入，尚未构成覆盖全部注册面的统一边界。
-
-详见[安全模型](docs/security-model.md)与[能力成熟度](docs/capability-maturity.md)。
-
-## 许可与免责
-
-MIT License，见 [`LICENSE`](LICENSE)。
-
-仅供明确授权的安全测试、内部验证、教育研究与本地实验使用。使用者须遵守适用法律并取得目标所有者的书面授权；禁止用于未授权的扫描、利用、持久化、数据外传或规避安全控制。
+Use it for authorized testing, internal review, education, and local labs. Get permission from the owner of any target. Unauthorized scanning, exploitation, persistence, exfiltration, or evasion is out of scope for this project.
