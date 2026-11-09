@@ -9,7 +9,7 @@ from __future__ import annotations
 import ast
 import json
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from core.ai_surface.models import (
     RISK_ORDER,
@@ -110,6 +110,8 @@ def scan_handler_surface(
     *,
     auth_decorators: Optional[Dict[str, Tuple[str, SurfaceRiskLevel]]] = None,
     flag_missing_auth: bool = True,
+    exclude_tests: bool = True,
+    reconcile: Optional[bool] = None,
 ) -> SurfaceScanResult:
     """Scan MCP handler files for tool exposure and local risk gates.
 
@@ -119,6 +121,10 @@ def scan_handler_surface(
             注册自己的授权装饰器，避免"有授权却误报缺失"。
         flag_missing_auth: True(默认) 时对高危、无已知授权装饰器的工具报 auth-gate
             issue；False 时移除该类 issue，适合确认不采用此授权体系的外部仓库。
+        exclude_tests: True(默认) 时跳过 ``tests/``、``test_*.py``、``*_test.py``
+            和 ``conftest.py``，避免测试夹具被当成生产工具面。
+        reconcile: 是否与本仓库 capability manifest 对账。None 时，扫描仓库根或
+            ``handlers/`` 目录会自动对账；单文件和外部目录不对账。
     """
     root = Path(path)
     if not root.exists():
@@ -128,7 +134,7 @@ def scan_handler_surface(
     if auth_decorators:
         catalog.update(auth_decorators)
 
-    files = _iter_python_files(root)
+    files = _iter_python_files(root, exclude_tests=exclude_tests)
     result = SurfaceScanResult(root_path=str(root))
     for file_path in files:
         result.scanned_files += 1
@@ -153,6 +159,11 @@ def scan_handler_surface(
         _relax_missing_auth_issues(result.findings)
 
     result.findings.sort(key=lambda item: (-RISK_ORDER[item.risk_level], item.file_path, item.line))
+    if _should_reconcile(root, reconcile):
+        from core.ai_surface.coverage import reconcile_capability_manifest
+        from core.capability_manifest import CAPABILITIES
+
+        reconcile_capability_manifest(result, CAPABILITIES)
     return result
 
 
@@ -256,14 +267,38 @@ def scan_mcp_config(path: str | Path) -> SurfaceScanResult:
     return result
 
 
-def _iter_python_files(root: Path) -> List[Path]:
+def _iter_python_files(root: Path, *, exclude_tests: bool = False) -> List[Path]:
     if root.is_file():
-        return [root] if root.suffix == ".py" else []
-    return sorted(
+        if root.suffix != ".py":
+            return []
+        if exclude_tests and _is_test_path(root):
+            return []
+        return [root]
+    files = [
         path
         for path in root.rglob("*.py")
         if "__pycache__" not in path.parts and path.name != "__init__.py"
-    )
+    ]
+    if exclude_tests:
+        files = [path for path in files if not _is_test_path(path)]
+    return sorted(files)
+
+
+def _is_test_path(path: Path) -> bool:
+    """True for pytest modules and the tests directory."""
+    if "tests" in path.parts or path.name == "conftest.py":
+        return True
+    return path.name.startswith("test_") or path.name.endswith("_test.py")
+
+
+def _should_reconcile(root: Path, reconcile: Optional[bool]) -> bool:
+    if reconcile is not None:
+        return reconcile
+    if root.is_file():
+        return False
+    if root.name == "handlers" and (root.parent / "core" / "capability_manifest.py").is_file():
+        return True
+    return (root / "core" / "capability_manifest.py").is_file() and (root / "handlers").is_dir()
 
 
 def _iter_text_files(root: Path) -> List[Path]:
@@ -286,12 +321,15 @@ class _HandlerToolVisitor(ast.NodeVisitor):
         self.findings: List[SurfaceFinding] = []
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        self.generic_visit(node)
+        self._visit_function(node)
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-        decorators = [_decorator_name(item) for item in node.decorator_list]
-        if any(_is_tool_decorator(name) for name in decorators):
-            self.findings.append(self._build_finding(node, decorators))
+        self._visit_function(node)
+
+    def _visit_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        kind = _surface_kind(node.decorator_list)
+        if kind is not None:
+            self.findings.append(self._build_finding(node, kind))
         self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call) -> None:
@@ -300,9 +338,16 @@ class _HandlerToolVisitor(ast.NodeVisitor):
             finding = self._build_lowlevel_finding(node)
             if finding is not None:
                 self.findings.append(finding)
+        elif _is_detector_config(node.func):
+            finding = self._build_factory_finding(node)
+            if finding is not None:
+                self.findings.append(finding)
         self.generic_visit(node)
 
-    def _build_finding(self, node: ast.AsyncFunctionDef, decorators: List[str]) -> SurfaceFinding:
+    def _build_finding(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef, kind: str
+    ) -> SurfaceFinding:
+        decorators = [_decorator_name(item) for item in node.decorator_list]
         parameters = _parameter_names(node)
         annotations = _parameter_annotations(node)
         called_names = sorted(_risk_relevant_called_names(_called_names(node)))
@@ -319,10 +364,19 @@ class _HandlerToolVisitor(ast.NodeVisitor):
         if risk_level == SurfaceRiskLevel.INFO and description:
             risk_level = SurfaceRiskLevel.LOW
 
-        issues = _issues(risk_level, auth_level, decorators, target_params, risk_terms)
-        recommendations = _recommendations(risk_level, auth_level, target_params, issues)
-        return SurfaceFinding(
-            tool_name=node.name,
+        declared_name = _decorator_keyword(node.decorator_list, kind, "name", self.string_bindings)
+        tool_name = declared_name or node.name
+        # prompt/resource 不用 @tool 的授权装饰器模型，授权以 manifest 为准。
+        if kind == "tool":
+            issues = _issues(risk_level, auth_level, decorators, target_params, risk_terms)
+            recommendations = _recommendations(risk_level, auth_level, target_params, issues)
+        else:
+            issues = []
+            recommendations = [
+                "Prompt and resource authorization is declared in the capability manifest."
+            ]
+        finding = SurfaceFinding(
+            tool_name=tool_name,
             file_path=str(self.file_path),
             line=node.lineno,
             risk_level=risk_level,
@@ -333,7 +387,13 @@ class _HandlerToolVisitor(ast.NodeVisitor):
             issues=issues,
             recommendations=recommendations,
             description=description,
+            finding_type={"tool": "mcp_tool", "prompt": "mcp_prompt", "resource": "mcp_resource"}[
+                kind
+            ],
+            kind=kind,
         )
+        finding.rule_id = _surface_rule_id(finding)
+        return finding
 
     def _build_lowlevel_finding(self, node: ast.Call) -> Optional[SurfaceFinding]:
         keywords = {kw.arg: kw.value for kw in node.keywords if kw.arg}
@@ -354,7 +414,7 @@ class _HandlerToolVisitor(ast.NodeVisitor):
 
         issues = _issues(risk_level, "none", [], target_params, risk_terms)
         recommendations = _recommendations(risk_level, "none", target_params, issues)
-        return SurfaceFinding(
+        finding = SurfaceFinding(
             tool_name=tool_name,
             file_path=str(self.file_path),
             line=node.lineno,
@@ -367,7 +427,37 @@ class _HandlerToolVisitor(ast.NodeVisitor):
             recommendations=recommendations,
             description=description.strip().splitlines()[0] if description.strip() else "",
             finding_type="mcp_tool_lowlevel",
+            kind="tool",
         )
+        finding.rule_id = _surface_rule_id(finding)
+        return finding
+
+    def _build_factory_finding(self, node: ast.Call) -> Optional[SurfaceFinding]:
+        """detector_factory.DetectorConfig(name=...) 动态生成的工具，函数体不可见。"""
+        tool_name = _call_string_arg(node, 0, "name", self.string_bindings)
+        if not tool_name:
+            return None
+        description = _call_string_arg(node, 2, "description", self.string_bindings)
+        description = description.strip().splitlines()[0] if description.strip() else ""
+        risk_terms, term_risk = _risk_terms([tool_name, description])
+        risk_level = term_risk if term_risk != SurfaceRiskLevel.INFO else SurfaceRiskLevel.LOW
+        finding = SurfaceFinding(
+            tool_name=tool_name,
+            file_path=str(self.file_path),
+            line=node.lineno,
+            risk_level=risk_level,
+            parameters=["url", "params"],
+            risk_terms=risk_terms,
+            recommendations=[
+                "Registered by detector_factory. Auth and input validation are applied in "
+                "create_detector_tool, not as a visible function decorator."
+            ],
+            description=description or "Detector factory tool",
+            finding_type="mcp_tool_factory",
+            kind="tool",
+        )
+        finding.rule_id = _surface_rule_id(finding)
+        return finding
 
 
 def _decorator_name(node: ast.AST) -> str:
@@ -385,6 +475,32 @@ def _dotted_name(node: ast.AST) -> Optional[str]:
     return None
 
 
+def _surface_kind(decorators: Sequence[ast.expr]) -> Optional[str]:
+    """Return tool, prompt, or resource when a function registers an MCP surface."""
+    found: Optional[str] = None
+    for decorator in decorators:
+        short = _decorator_name(decorator).rsplit(".", 1)[-1]
+        if short == "tool":
+            return "tool"
+        if short in {"prompt", "resource"}:
+            found = short
+    return found
+
+
+def _decorator_keyword(
+    decorators: Sequence[ast.expr], kind: str, key: str, bindings: Dict[str, str]
+) -> str:
+    for decorator in decorators:
+        if not isinstance(decorator, ast.Call):
+            continue
+        if _decorator_name(decorator).rsplit(".", 1)[-1] != kind:
+            continue
+        for keyword in decorator.keywords:
+            if keyword.arg == key:
+                return _resolve_str(keyword.value, bindings)
+    return ""
+
+
 def _is_tool_decorator(name: str) -> bool:
     return name == "tool" or name.endswith(".tool")
 
@@ -393,6 +509,50 @@ def _is_tool_constructor(func: ast.AST) -> bool:
     """识别 low-level MCP SDK 的 Tool(...) 构造 (mcp.types.Tool)。"""
     name = _dotted_name(func) or ""
     return name == "Tool" or name.endswith(".Tool")
+
+
+def _is_detector_config(func: ast.AST) -> bool:
+    name = _dotted_name(func) or ""
+    return name == "DetectorConfig" or name.endswith(".DetectorConfig")
+
+
+def _call_string_arg(node: ast.Call, index: int, keyword: str, bindings: Dict[str, str]) -> str:
+    for item in node.keywords:
+        if item.arg == keyword:
+            return _resolve_str(item.value, bindings)
+    if index < len(node.args):
+        return _resolve_str(node.args[index], bindings)
+    return ""
+
+
+def _surface_rule_id(finding: SurfaceFinding) -> str:
+    """Stable SARIF rule ids so Code Scanning can group by risk class."""
+    issues = set(finding.issues)
+    if "critical_tool_without_critical_auth" in issues:
+        return "mcp_tool.auth-critical"
+    if "high_risk_tool_without_dangerous_auth" in issues or (
+        "payload_generation_without_auth_gate" in issues
+    ):
+        return "mcp_tool.auth-missing"
+    if "target_input_without_handler_validator" in issues:
+        return "mcp_tool.target-input"
+    if finding.kind == "prompt":
+        return "mcp_prompt"
+    if finding.kind == "resource":
+        return "mcp_resource"
+    if finding.finding_type == "mcp_tool_factory":
+        return "mcp_tool.factory"
+    if finding.finding_type == "mcp_tool_lowlevel":
+        return "mcp_tool.lowlevel"
+    if finding.risk_level in {SurfaceRiskLevel.HIGH, SurfaceRiskLevel.CRITICAL}:
+        return "mcp_tool.high-risk"
+    if finding.parameters and any(name.lower() in TARGET_PARAMS for name in finding.parameters):
+        return "mcp_tool.network"
+    if finding.finding_type == "skill_instruction":
+        return "skill_instruction"
+    if finding.finding_type == "mcp_config":
+        return "mcp_config"
+    return "mcp_tool"
 
 
 def _collect_string_bindings(tree: ast.AST) -> Dict[str, str]:
@@ -458,7 +618,7 @@ def _input_schema_params(node: Optional[ast.AST]) -> List[str]:
     return []
 
 
-def _parameter_names(node: ast.AsyncFunctionDef) -> List[str]:
+def _parameter_names(node: ast.FunctionDef | ast.AsyncFunctionDef) -> List[str]:
     args = list(node.args.args) + list(node.args.kwonlyargs)
     names = [arg.arg for arg in args]
     if node.args.vararg:
@@ -468,7 +628,7 @@ def _parameter_names(node: ast.AsyncFunctionDef) -> List[str]:
     return names
 
 
-def _parameter_annotations(node: ast.AsyncFunctionDef) -> Dict[str, str]:
+def _parameter_annotations(node: ast.FunctionDef | ast.AsyncFunctionDef) -> Dict[str, str]:
     annotations: Dict[str, str] = {}
     args = list(node.args.args) + list(node.args.kwonlyargs)
     for arg in args:
@@ -483,7 +643,7 @@ def _parameter_annotations(node: ast.AsyncFunctionDef) -> Dict[str, str]:
     return annotations
 
 
-def _called_names(node: ast.AsyncFunctionDef) -> Iterable[str]:
+def _called_names(node: ast.FunctionDef | ast.AsyncFunctionDef) -> Iterable[str]:
     for child in ast.walk(node):
         if isinstance(child, ast.Call):
             name = _dotted_name(child.func)

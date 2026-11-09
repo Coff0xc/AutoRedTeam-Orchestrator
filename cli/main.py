@@ -471,7 +471,9 @@ def _emit_surface_result(
     if fmt.lower() == "sarif":
         from core.reporting.sarif import findings_to_sarif
 
-        _output(findings_to_sarif(findings), output)
+        coverage = data.get("summary", {}).get("static_coverage")
+        run_properties = {"static_coverage": coverage} if coverage else None
+        _output(findings_to_sarif(findings, run_properties=run_properties), output)
     else:
         _output(data, output)
 
@@ -498,12 +500,27 @@ def ai_surface_scan(
         "--auth-mode",
         help="auth-gate 检测: strict(报高危缺授权) | lenient(外部仓库不报缺授权)",
     ),
+    exclude_tests: bool = typer.Option(
+        True,
+        "--exclude-tests/--include-tests",
+        help="跳过 tests/、test_*.py、*_test.py 和 conftest.py",
+    ),
+    reconcile: Optional[bool] = typer.Option(
+        None,
+        "--reconcile/--no-reconcile",
+        help="与本仓库 capability manifest 对账。默认在仓库根和 handlers/ 上开启",
+    ),
 ):
     """静态盘点 MCP/AI 工具边界 — 解析源码，不导入或执行 handler"""
     from core.ai_surface import scan_handler_surface
 
     try:
-        result = scan_handler_surface(path, flag_missing_auth=(auth_mode.lower() != "lenient"))
+        result = scan_handler_surface(
+            path,
+            flag_missing_auth=(auth_mode.lower() != "lenient"),
+            exclude_tests=exclude_tests,
+            reconcile=reconcile,
+        )
     except (OSError, SyntaxError, UnicodeDecodeError, ValueError) as exc:
         typer.echo(f"AI surface scan failed: {exc}", err=True)
         raise typer.Exit(2) from exc

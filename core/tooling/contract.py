@@ -298,8 +298,18 @@ def lint_tool_contracts(
     Returns:
         ToolLintResult，包含每个工具的问题清单与汇总
     """
-    surface = scan_handler_surface(path, flag_missing_auth=flag_missing_auth)
-    findings = surface.findings
+    surface = scan_handler_surface(
+        path,
+        flag_missing_auth=flag_missing_auth,
+        reconcile=False,
+    )
+    # 契约检查只覆盖手写的 tool 函数。prompt/resource 的授权在 manifest，
+    # detector factory 的装饰器在 create_detector_tool 里动态套上。
+    findings = [
+        finding
+        for finding in surface.findings
+        if finding.kind == "tool" and finding.finding_type in {"mcp_tool", "mcp_tool_lowlevel"}
+    ]
     index = _function_index(sorted({finding.file_path for finding in findings}))
 
     reports: List[ToolContractReport] = []

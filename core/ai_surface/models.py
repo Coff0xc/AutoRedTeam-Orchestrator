@@ -47,6 +47,8 @@ class SurfaceFinding:
     recommendations: List[str] = field(default_factory=list)
     description: str = ""
     finding_type: str = "mcp_tool"
+    kind: str = "tool"
+    rule_id: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -62,6 +64,8 @@ class SurfaceFinding:
             "recommendations": self.recommendations,
             "description": self.description,
             "finding_type": self.finding_type,
+            "kind": self.kind,
+            "rule_id": self.rule_id or self.finding_type,
         }
 
 
@@ -73,6 +77,7 @@ class SurfaceScanResult:
     scanned_files: int = 0
     findings: List[SurfaceFinding] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
+    coverage: Dict[str, Any] = field(default_factory=dict)
 
     def risk_counts(self) -> Dict[str, int]:
         counts = {level.value: 0 for level in SurfaceRiskLevel}
@@ -92,6 +97,7 @@ class SurfaceScanResult:
                 "tools_scanned": len(self.findings),
                 "risk_counts": self.risk_counts(),
                 "issue_count": self.issue_count(),
+                **({"static_coverage": self.coverage} if self.coverage else {}),
             },
             "findings": [finding.to_dict() for finding in self.findings],
             "warnings": self.warnings,

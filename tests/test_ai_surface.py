@@ -238,4 +238,86 @@ async def list_tools():
     finding = by_name["shell_execute"]
     assert finding.risk_level == SurfaceRiskLevel.HIGH
     assert finding.finding_type == "mcp_tool_lowlevel"
+    assert finding.rule_id == "mcp_tool.auth-missing"
     assert "command" in finding.parameters
+
+
+def test_scan_prompt_and_resource_surfaces(tmp_path: Path):
+    handler = tmp_path / "prompt_handlers.py"
+    handler.write_text(
+        '''
+def register(mcp):
+    @mcp.prompt(name="plan_pentest")
+    def plan(target: str):
+        """Plan a test."""
+        return []
+
+    @mcp.resource(uri="redteam://sessions", name="active_sessions")
+    def list_sessions():
+        """List sessions."""
+        return {}
+''',
+        encoding="utf-8",
+    )
+
+    result = scan_handler_surface(tmp_path, reconcile=False)
+    by_name = {finding.tool_name: finding for finding in result.findings}
+
+    assert set(by_name) == {"plan_pentest", "active_sessions"}
+    assert by_name["plan_pentest"].kind == "prompt"
+    assert by_name["plan_pentest"].finding_type == "mcp_prompt"
+    assert by_name["plan_pentest"].rule_id == "mcp_prompt"
+    assert by_name["active_sessions"].kind == "resource"
+    assert by_name["active_sessions"].rule_id == "mcp_resource"
+    assert by_name["plan_pentest"].issues == []
+
+
+def test_exclude_tests_skips_pytest_modules(tmp_path: Path):
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_fake.py").write_text(
+        '''
+def register(mcp):
+    @mcp.tool()
+    async def fixture_tool(target: str):
+        """Fixture tool that must not be scanned by default."""
+        return {}
+''',
+        encoding="utf-8",
+    )
+    (tmp_path / "live_handlers.py").write_text(
+        '''
+def register(mcp):
+    @mcp.tool()
+    async def live_tool():
+        """Live tool."""
+        return {}
+''',
+        encoding="utf-8",
+    )
+
+    excluded = scan_handler_surface(tmp_path, reconcile=False)
+    included = scan_handler_surface(tmp_path, exclude_tests=False, reconcile=False)
+
+    assert {finding.tool_name for finding in excluded.findings} == {"live_tool"}
+    assert {finding.tool_name for finding in included.findings} == {"fixture_tool", "live_tool"}
+
+
+def test_factory_config_and_manifest_coverage():
+    result = scan_handler_surface("handlers")
+    coverage = result.coverage
+
+    prompts = [finding for finding in result.findings if finding.kind == "prompt"]
+    resources = [finding for finding in result.findings if finding.kind == "resource"]
+    factory = [finding for finding in result.findings if finding.finding_type == "mcp_tool_factory"]
+
+    assert len(prompts) == 6
+    assert len(resources) == 4
+    assert len(factory) == 26
+    assert coverage["manifest_total"] == 142
+    assert coverage["accounted"] == 142
+    assert coverage["ratio"] == "142/142"
+    assert coverage["invisible_count"] == 0
+    assert coverage["factory_accounted"] == 26
+    assert coverage["unlisted_count"] == 0
+    assert "sqli_scan" in {finding.tool_name for finding in factory}

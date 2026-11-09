@@ -277,6 +277,27 @@ class TestSurfaceFindingsToSarif:
         sarif = findings_to_sarif(surface_findings)
         assert sarif["runs"][0]["results"][1]["level"] == "warning"
 
+    def test_tool_name_and_risk_rule_are_structured(self, surface_findings):
+        """表面 finding 带 tool_name，并按风险类拆 rule，而不是共用一个 mcp_tool。"""
+        surface_findings[0]["rule_id"] = "mcp_tool.auth-critical"
+        surface_findings[0]["kind"] = "tool"
+        surface_findings[1]["rule_id"] = "mcp_tool.network"
+        surface_findings[1]["kind"] = "tool"
+        sarif = findings_to_sarif(
+            surface_findings,
+            run_properties={"static_coverage": {"ratio": "1/1"}},
+        )
+        results = sarif["runs"][0]["results"]
+        rules = {rule["id"]: rule for rule in sarif["runs"][0]["tool"]["driver"]["rules"]}
+
+        assert results[0]["ruleId"] == "mcp_tool.auth-critical"
+        assert results[0]["properties"]["tool_name"] == "lateral_smb"
+        assert results[0]["properties"]["kind"] == "tool"
+        assert results[1]["properties"]["tool_name"] == "cve_search"
+        assert set(rules) == {"mcp_tool.auth-critical", "mcp_tool.network"}
+        assert "authorization gate" in rules["mcp_tool.auth-critical"]["shortDescription"]["text"]
+        assert sarif["runs"][0]["properties"]["static_coverage"]["ratio"] == "1/1"
+
     def test_rule_id_falls_back_to_finding_type(self, surface_findings):
         """无 type 字段时用 finding_type 作 ruleId"""
         sarif = findings_to_sarif(surface_findings)
