@@ -23,7 +23,7 @@ only because an implementation exists in the repository.
 | Capability | Status | Current boundary |
 |---|---|---|
 | Python SDK and Typer CLI entry points | Beta | Validated primarily from a source checkout. |
-| Local static AI/MCP surface scan | Preview | Read-only AST analysis of FastMCP and low-level-SDK tools; emits `file:line` SARIF for GitHub Code Scanning / Action self-audit; does not execute handlers. |
+| Local static AI/MCP surface scan | Preview | Read-only AST analysis of FastMCP `@tool` / `@prompt` / `@resource`, low-level `Tool(...)`, and `DetectorConfig` factory names. Factory tools have no inline function body, so they are accounted for by config name. `--exclude-tests` is the default. `--reconcile` (automatic for the repo root and `handlers/`) reports manifest coverage. SARIF findings carry `properties.tool_name` and risk-class `ruleId`s. The scan does not execute handlers. |
 | Reconnaissance and vulnerability detectors | Beta | Authorized targets only; accuracy is not yet backed by a public benchmark. |
 | JSON and SARIF export primitives | Beta | Finding and artifact schemas still need consolidation. |
 | HTML reporting | Preview | Untrusted finding content needs escaping hardening before reports are broadly shared. |

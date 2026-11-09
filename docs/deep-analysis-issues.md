@@ -2,6 +2,16 @@
 
 > 依据 2026-11-08 对 596dbca (v3.1.0) 的分析。每条含证据、建议、验收标准，相互独立。
 
+## 状态（2026-11-09）
+
+五条都已在代码里闭环，原始问题描述保留作记录：
+
+1. `ai-surface scan` 在仓库根和 `handlers/` 上与 manifest 对账，覆盖率写入 JSON summary 和 SARIF run properties。工厂工具按 `DetectorConfig` 名称计入，不再算漏报。
+2. SARIF result 带 `properties.tool_name`，`ruleId` 按 `mcp_tool.auth-critical`、`mcp_tool.auth-missing`、`mcp_tool.factory`、`mcp_prompt`、`mcp_resource` 等风险类拆分。
+3. 扫描器识别 `@mcp.prompt` / `@mcp.resource`（含 `name=`）和同步函数；`--exclude-tests` 默认开启。
+4. CI mypy 不再指向已删除的 `core/container.py`。门禁改为 `core/result.py`、`core/capability_manifest.py`、`core/mcts_planner.py`、`core/ai_surface`、`core/agent_runtime`、`core/reporting/sarif.py`，并用 `--follow-imports=silent` 避免把历史错误算进这道门。`handlers/` 仍有约 200 个既有类型错误，没有整包放进阻断门禁。另增加 `windows-latest` 测试 job。
+5. `core/__init__.py` 对 AI 引擎懒加载。只读命令的最小依赖是 `typer`，README 已写明。
+
 ---
 
 ## Issue 1 — feat(ai-surface): 用 capability manifest 对账静态扫描覆盖率
