@@ -84,3 +84,6 @@ data/admin_key.txt
 tools/sqlmap/
 tools/nuclei-templates/
 tools/bin/
+
+# Unreferenced payload catalog
+payloads/
