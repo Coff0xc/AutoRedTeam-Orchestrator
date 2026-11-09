@@ -393,11 +393,11 @@ def action_from_dict(data: Mapping[str, Any]) -> Action:
     raw = _as_mapping(data)
     return Action(
         name=str(raw.get("name") or "action"),
-        kind=raw.get("kind") or ActionKind.TOOL_CALL.value,
+        kind=ActionKind(str(raw.get("kind") or ActionKind.TOOL_CALL.value)),
         inputs=dict(_as_mapping(raw.get("inputs"))),
         policy=action_policy_from_dict(_as_mapping(raw.get("policy"))),
         action_id=str(raw.get("action_id") or _id("action")),
-        status=raw.get("status") or ActionStatus.PENDING.value,
+        status=ActionStatus(str(raw.get("status") or ActionStatus.PENDING.value)),
         output=raw.get("output"),
         error=raw.get("error"),
         artifact_ids=list(raw.get("artifact_ids") or []),

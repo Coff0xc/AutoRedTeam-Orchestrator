@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
-from core.agent_runtime.models import Action, ActionKind, ActionPolicy, RunMode
+from core.agent_runtime.models import Action, ActionKind, ActionPolicy, RiskLevel, RunMode
 from core.sandbox.config import CommandResult, SandboxConfig
 
 
@@ -165,7 +165,7 @@ def smoke_docker_sandbox(
         name="docker_sandbox_smoke",
         kind=ActionKind.SHELL,
         policy=ActionPolicy(
-            risk_level="low",
+            risk_level=RiskLevel.LOW,
             network_policy="deny",
             artifact_policy="metadata-only",
         ),

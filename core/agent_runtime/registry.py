@@ -9,7 +9,9 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
 from threading import RLock
-from typing import Optional
+from typing import Any, List, Optional, TypeVar, overload
+
+_T = TypeVar("_T")
 
 from core.agent_runtime.models import AgentRunState
 
@@ -27,7 +29,16 @@ class RuntimeRunRegistry(Mapping[str, AgentRunState]):
             self._runs[run_state.run_id] = run_state
         return run_state
 
-    def get(self, run_id: str, default: Optional[AgentRunState] = None) -> Optional[AgentRunState]:
+    @overload
+    def get(self, run_id: str, /) -> AgentRunState: ...
+
+    @overload
+    def get(self, run_id: str, default: AgentRunState, /) -> AgentRunState: ...
+
+    @overload
+    def get(self, run_id: str, default: _T, /) -> AgentRunState | _T: ...
+
+    def get(self, run_id: str, default: Any = None) -> Any:
         """Return a run state by id, or default if it is unknown."""
         with self._lock:
             return self._runs.get(run_id, default)
@@ -42,7 +53,7 @@ class RuntimeRunRegistry(Mapping[str, AgentRunState]):
         with self._lock:
             self._runs.clear()
 
-    def values(self) -> list[AgentRunState]:  # type: ignore[override]
+    def values(self) -> List[AgentRunState]:  # type: ignore[override]
         """Return values as a snapshot list for API compatibility."""
         return self.list()
 
