@@ -1,12 +1,12 @@
-name: 'AutoRedTeam Security Scan'
-description: 'Authorized security scanning and AI/MCP attack-surface self-audit in CI'
+name: 'AutoRedTeam Surface Audit'
+description: 'Local MCP/AI attack-surface audit and evidence gate for authorized testing'
 branding:
   icon: 'shield'
   color: 'red'
 
 inputs:
   mode:
-    description: 'Scan mode: target-scan (active scan of an authorized URL) | self-audit (static AI/MCP surface scan of this repo)'
+    description: 'Mode: self-audit (static AI/MCP surface scan of this repo) | target-scan (active scan of an authorized URL). The default is target-scan.'
     required: false
     default: 'target-scan'
   target:

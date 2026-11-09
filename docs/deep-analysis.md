@@ -9,7 +9,7 @@
 
 ## 1. 项目定位与规模
 
-**一句话定位**：local-first、MCP-native 的授权安全测试工作台——一套 core 引擎，三个入口（MCP Server / Python SDK / Typer CLI），主线是「AI 编辑器通过 MCP 使用受控安全能力」+「对 AI/MCP 系统自身攻击面做静态审计」。
+**一句话定位（2026-11-10 对齐）**：本地 MCP/AI 攻击面审计和证据门禁。三个入口仍是 MCP Server、Python SDK 和 Typer CLI。默认档案是 `safe`：静态分析、dry-run 和本地元数据。侦察、检测和实验引擎留在源码树里，只在显式选择 `scan`、`active-lab` 或 `full` 时注册。下文的规模和计数仍是 2026-11-08、提交 `596dbca` 的快照。
 
 | 维度 | 数据 |
 |---|---|
