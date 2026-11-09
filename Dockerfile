@@ -1,84 +1,47 @@
-# AutoRedTeam-Orchestrator Docker Image
-# Multi-stage build for smaller image size
-
-# ============ Build Stage ============
-FROM python:3.10-slim as builder
+# Published image installs the default wheel. Experimental engine packages stay
+# in a source checkout and are omitted here by the same setuptools excludes.
+FROM python:3.12-slim AS builder
 
 WORKDIR /build
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libffi-dev \
-    libxml2-dev \
-    libxslt1-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir build
 
-# Copy and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+COPY pyproject.toml _version.py mcp_stdio_server.py README.md ./
+COPY core ./core
+COPY handlers ./handlers
+COPY utils ./utils
+COPY autort ./autort
+COPY cli ./cli
 
-# ============ Runtime Stage ============
-FROM python:3.10-slim
+RUN python -m build --wheel --outdir /tmp/dist \
+    && pip install --no-cache-dir --prefix=/opt/autort /tmp/dist/*.whl
 
-ARG APP_VERSION=3.0.2
+FROM python:3.12-slim
 
 LABEL maintainer="coff0xc"
-LABEL description="AI-driven automated penetration testing framework based on MCP"
-LABEL version="${APP_VERSION}"
 LABEL org.opencontainers.image.source="https://github.com/Coff0xc/AutoRedTeam-Orchestrator"
-LABEL org.opencontainers.image.description="AI-driven automated penetration testing framework with 101 MCP tools"
+LABEL org.opencontainers.image.description="Local MCP/AI attack-surface audit and evidence gate"
 LABEL org.opencontainers.image.licenses="MIT"
+
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
+
+COPY --from=builder /opt/autort /usr/local
 
 WORKDIR /app
 
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libxml2 \
-    libxslt1.1 \
-    # Optional: common security tools
-    nmap \
-    curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+RUN mkdir -p /app/data /app/logs /app/reports \
+    && chown -R appuser:appuser /app
 
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=utf-8 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    AUTORT_CAPABILITY_PROFILE=safe
 
-# Copy Python packages from builder
-COPY --from=builder /root/.local /home/appuser/.local
-ENV PATH=/home/appuser/.local/bin:$PATH
+VOLUME ["/app/data", "/app/logs", "/app/reports"]
 
-# Copy application code
-COPY core/ ./core/
-COPY handlers/ ./handlers/
-COPY modules/ ./modules/
-COPY utils/ ./utils/
-COPY config/ ./config/
-COPY templates/ ./templates/
-COPY payloads/ ./payloads/
-COPY wordlists/ ./wordlists/
-COPY mcp_stdio_server.py .
-COPY VERSION .
-
-# Create necessary directories
-RUN mkdir -p /app/data /app/logs /app/reports && \
-    chown -R appuser:appuser /app
-
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONIOENCODING=utf-8
-ENV PYTHONDONTWRITEBYTECODE=1
-
-# Expose volume mount points
-VOLUME ["/app/config", "/app/data", "/app/logs", "/app/reports"]
-
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import mcp_stdio_server; print('ok')" || exit 1
 
-# Run as non-root user
 USER appuser
 
-# Default command
-CMD ["python", "mcp_stdio_server.py"]
+CMD ["autoredteam-mcp"]

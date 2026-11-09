@@ -763,6 +763,23 @@ def resolve_profile(
     return normalize_profile(selected)
 
 
+def render_prompt_body(name: str, parameters: Mapping[str, str]) -> str:
+    """Return the constraint text a prompt invocation gives to a model.
+
+    The body repeats the registered description and the declared parameter
+    values. It does not add a procedure.
+    """
+
+    capability = get_capability("prompt", name)
+    lines = [capability.public_description(), "Declared parameters:"]
+    lines.extend(f"{key}: {value}" for key, value in parameters.items())
+    lines.append(
+        "This prompt returns the declared constraint and parameters. "
+        "It does not provide a procedure or an authorization."
+    )
+    return "\n".join(lines)
+
+
 def get_capability(kind: str, name: str) -> Capability:
     """Return one capability, failing closed when a surface is unclassified."""
 

@@ -43,7 +43,20 @@ htmlcov/
 .bandit
 requirements-dev.txt
 requirements-optional.txt
-pyproject.toml
+
+# Same packages the default wheel excludes. The image build must not receive them.
+core/c2
+core/lateral
+core/persistence
+core/post_exploit
+core/privilege_escalation
+core/exfiltration
+core/evasion
+core/credential
+core/ad
+core/exploit
+payloads
+wordlists
 
 # Local data (will be mounted as volumes)
 data/

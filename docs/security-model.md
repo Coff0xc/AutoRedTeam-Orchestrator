@@ -56,13 +56,15 @@ surfaces. `safe` therefore does not import modules that exist only for `scan`, `
 or `full`. A module that mixes profiles is still imported as a unit; higher-profile functions
 in that module are not registered.
 
-The published wheel omits `core.c2`, `core.lateral`, `core.persistence`, `core.post_exploit`,
-`core.privilege_escalation`, `core.exfiltration`, `core.evasion`, `core.credential`, `core.ad`,
-and `core.exploit`. Those packages stay in a source checkout. A handler that needs one of them
-fails with `ImportError` when the package is absent.
+The published wheel and the GHCR image omit `core.c2`, `core.lateral`, `core.persistence`,
+`core.post_exploit`, `core.privilege_escalation`, `core.exfiltration`, `core.evasion`,
+`core.credential`, `core.ad`, and `core.exploit`. Those packages stay in a source checkout.
+The image installs that wheel, sets `AUTORT_CAPABILITY_PROFILE=safe`, and does not add host
+scanner packages. A handler that needs an omitted package fails with `ImportError`.
 
-Registered MCP descriptions come from the capability manifest. They state the profile, risk,
-effects, and controls. They do not copy handler docstrings or procedures into the tool schema.
+Registered MCP descriptions and prompt return bodies come from the capability manifest. They
+state the profile, risk, effects, and controls, plus the declared parameter values. They do not
+copy procedures into the tool schema or the prompt body.
 
 ### Runtime policy and approval
 

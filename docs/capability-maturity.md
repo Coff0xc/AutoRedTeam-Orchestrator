@@ -73,8 +73,8 @@ or an isolated executor.
 
 ## Known limitations
 
-- The recommended installation path is currently a source checkout; wheel and container release
-  artifacts are not yet release-certified.
+- The recommended installation path is a source checkout. The published wheel and the GHCR image
+  omit the same experimental engine packages. Neither artifact is release-certified.
 - CLI, SDK, and MCP share `resolve_profile` and each surface's minimum profile. Under `safe`,
   those entry points refuse higher surfaces before importing the mapped engine. The gate is not
   authentication, target scope, approval, or process isolation, and direct `core` imports outside
