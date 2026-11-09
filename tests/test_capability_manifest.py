@@ -130,22 +130,27 @@ def test_unknown_profile_and_surface_fail_closed():
         proxy.add_tool
 
 
-def test_manifest_drift_aborts_handler_registration():
+def test_manifest_drift_aborts_handler_registration(monkeypatch):
+    import handlers
+
     def register_unknown(mcp, counter, logger):
         @mcp.tool()
         async def unclassified_surface():
             return {}
 
+    monkeypatch.setattr(
+        handlers,
+        "_handler_specs",
+        lambda: [("AI辅助工具", "ai", "register_unknown_surface")],
+    )
+    monkeypatch.setattr(handlers, "register_unknown_surface", register_unknown, raising=False)
+
     mcp = MagicMock()
     counter = Counter()
     logger = MagicMock()
 
-    with patch(
-        "handlers._handler_specs",
-        return_value=[("AI辅助工具", "ai", register_unknown)],
-    ):
-        with pytest.raises(CapabilityManifestError, match="Unclassified MCP surface"):
-            register_all_handlers(mcp, counter, logger, profile="safe")
+    with pytest.raises(CapabilityManifestError, match="Unclassified MCP surface"):
+        register_all_handlers(mcp, counter, logger, profile="safe")
 
     assert counter.total == 0
     logger.warning.assert_not_called()

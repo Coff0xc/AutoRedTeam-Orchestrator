@@ -35,10 +35,14 @@ jobs:
         run: pip install mypy
 
       - name: Type check with mypy
-        # handlers/ stays out of this gate: a full check still reports pre-existing
-        # errors in legacy modules. --follow-imports=silent keeps the gate on the
-        # modules listed here. core/container.py was removed in 3.1.0.
-        run: mypy --python-version 3.10 --ignore-missing-imports --no-strict-optional --follow-imports=silent core/result.py core/capability_manifest.py core/mcts_planner.py core/ai_surface core/agent_runtime core/reporting/sarif.py
+        # --follow-imports=silent keeps the gate on the modules listed here.
+        # core/container.py was removed in 3.1.0.
+        # These handler modules typecheck. The rest still disagree with current
+        # core APIs, so they stay out until those calls are aligned:
+        # api_security, cloud_security, error_handling, evidence, misc,
+        # orchestration, persistence, recon, redteam, report, resource,
+        # runtime_helpers, session, supply_chain.
+        run: mypy --python-version 3.10 --ignore-missing-imports --no-strict-optional --follow-imports=silent core/result.py core/capability_manifest.py core/mcts_planner.py core/ai_surface core/agent_runtime core/reporting/sarif.py handlers/__init__.py handlers/ad_handlers.py handlers/ai_handlers.py handlers/cve_handlers.py handlers/detector_factory.py handlers/external_tools_handlers.py handlers/knowledge_handlers.py handlers/lateral_handlers.py handlers/mcts_handlers.py handlers/parallel_handlers.py handlers/prompt_handlers.py handlers/tooling.py
 
   test-windows:
     runs-on: windows-latest

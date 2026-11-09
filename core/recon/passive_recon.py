@@ -40,6 +40,8 @@ class PassiveRecon:
 
     async def discover_subdomains(self, domain: str) -> List[str]:
         """查询所有被动源，合并去重"""
+        if not domain or not domain.strip():
+            return []
         from utils.async_utils import gather_with_limit
 
         sources = [
@@ -201,6 +203,8 @@ class PassiveRecon:
         Returns:
             字典 {源名称: [子域名列表]}
         """
+        if not domain or not domain.strip():
+            return {}
         from utils.async_utils import gather_with_limit
 
         sources = [

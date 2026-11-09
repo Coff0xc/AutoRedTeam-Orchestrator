@@ -137,7 +137,14 @@ class TestLocalExecutor:
         """测试成功执行命令"""
         cfg = SandboxConfig()
         executor = LocalExecutor(cfg)
-        result = executor.run_command("echo hello")
+        clock = {"now": 1.0}
+
+        def tick() -> float:
+            clock["now"] += 0.25
+            return clock["now"]
+
+        with patch("core.sandbox.fallback.time.monotonic", side_effect=tick):
+            result = executor.run_command("echo hello")
         assert result.exit_code == 0
         assert "hello" in result.stdout
         assert result.duration > 0
