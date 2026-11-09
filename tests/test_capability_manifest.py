@@ -18,6 +18,7 @@ from core.capability_manifest import (
     get_capability,
     normalize_profile,
     resolve_profile,
+    search_surfaces,
 )
 from handlers import register_all_handlers
 
@@ -39,8 +40,8 @@ def test_manifest_has_unique_complete_surface_totals():
     keys = {(capability.kind, capability.name) for capability in CAPABILITIES}
     summary = capability_manifest()["summary"]
 
-    assert len(keys) == len(CAPABILITIES) == 142
-    assert summary["by_kind"] == {"prompt": 6, "resource": 4, "tool": 132}
+    assert len(keys) == len(CAPABILITIES) == 144
+    assert summary["by_kind"] == {"prompt": 6, "resource": 4, "tool": 134}
 
 
 def test_profiles_are_monotonic_and_have_stable_counts():
@@ -48,7 +49,9 @@ def test_profiles_are_monotonic_and_have_stable_counts():
     counts = {profile["name"]: profile["surface_count"] for profile in profiles}
 
     assert tuple(counts) == PROFILE_ORDER
-    assert counts == {"safe": 23, "scan": 86, "active-lab": 106, "full": 142}
+    assert counts == {"safe": 24, "scan": 88, "active-lab": 108, "full": 144}
+    registered = {profile["name"]: profile["registered_count"] for profile in profiles}
+    assert registered == {"safe": 24, "scan": 62, "active-lab": 82, "full": 118}
 
     previous: set[tuple[str, str]] = set()
     for profile in PROFILE_ORDER:
@@ -214,7 +217,9 @@ async def test_real_fastmcp_registration_matches_manifest(profile):
     actual.update(("resource", item.name) for item in resources)
     actual.update(("resource", item.name) for item in templates)
     expected = {
-        (item["kind"], item["name"]) for item in capability_manifest(profile)["capabilities"]
+        (item.kind, item.name)
+        for item in CAPABILITIES
+        if item.allowed_in(profile) and item.resident
     }
 
     assert actual == expected
@@ -237,7 +242,7 @@ def test_legacy_registration_default_remains_full():
 
     register_all_handlers(mcp, counter, MagicMock())
 
-    assert counter.total == 142
+    assert counter.total == 118
 
 
 def test_server_default_profile_is_safe(monkeypatch):
@@ -278,7 +283,77 @@ def test_production_counter_uses_manifest_categories():
 
     register_all_handlers(mcp, counter, MagicMock(), profile="full")
 
-    assert counter.total == 142
+    assert counter.total == 118
     assert counter.counts["knowledge"] == 3
     assert counter.counts["mcts"] == 1
     assert "MCP surface" in counter.summary()
+
+
+def test_factory_detector_tools_are_catalog_only():
+    sqli = get_capability("tool", "sqli_scan")
+    detect_run = get_capability("tool", "detect_run")
+    tool_search = get_capability("tool", "tool_search")
+
+    assert sqli.resident is False
+    assert sqli.allowed_in("scan")
+    assert detect_run.resident is True
+    assert detect_run.minimum_profile == "scan"
+    assert tool_search.resident is True
+    assert tool_search.minimum_profile == "safe"
+    assert get_capability("tool", "vuln_scan").resident is True
+    assert get_capability("tool", "nuclei_scan").resident is True
+
+
+@pytest.mark.asyncio
+async def test_scan_profile_list_tools_hides_factory_detectors():
+    mcp = MCPServer("scan-resident")
+    register_all_handlers(mcp, Counter(), logging.getLogger(__name__), profile="scan")
+    names = {item.name for item in await mcp.list_tools()}
+
+    assert "detect_run" in names
+    assert "tool_search" in names
+    assert "vuln_scan" in names
+    assert "sqli_scan" not in names
+    assert "xss_scan" not in names
+
+
+def test_search_surfaces_empty_query_lists_resident_only():
+    result = search_surfaces("", profile="scan", limit=50)
+
+    assert result["profile"] == "scan"
+    assert result["matches"]
+    assert all(item["resident"] is True for item in result["matches"])
+    names = {item["name"] for item in result["matches"]}
+    assert "detect_run" in names
+    assert "sqli_scan" not in names
+
+
+def test_search_surfaces_finds_catalog_detector_and_points_at_detect_run():
+    result = search_surfaces("sqli", profile="scan", kind="tool", limit=12)
+    by_name = {item["name"]: item for item in result["matches"]}
+
+    assert "sqli_scan" in by_name
+    card = by_name["sqli_scan"]
+    assert card["resident"] is False
+    assert card["invoke"] == {"tool": "detect_run", "classes": ["sqli"]}
+
+
+def test_canonical_detector_class_aliases():
+    from core.detectors.names import canonical_detector_class, known_detector_classes
+
+    assert canonical_detector_class("sqli_scan") == "sqli"
+    assert canonical_detector_class("security_headers") == "headers"
+    assert canonical_detector_class("upload_scan") == "file_upload"
+    assert "deserialize" in known_detector_classes()
+    assert "jwt" in known_detector_classes()
+
+
+def test_search_surfaces_safe_profile_omits_scan_detectors():
+    result = search_surfaces("sqli", profile="safe", kind="tool", limit=12)
+    names = {item["name"] for item in result["matches"]}
+
+    assert "sqli_scan" not in names
+    assert "detect_run" not in names
+    assert "tool_search" in {
+        item["name"] for item in search_surfaces("tool_search", profile="safe")["matches"]
+    }

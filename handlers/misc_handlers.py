@@ -1,10 +1,10 @@
 """
 杂项工具处理器
-包含: registry_stats, health_check, js_analyze
+包含: registry_stats, health_check, tool_search, js_analyze
 """
 
 import platform
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from core import __version__
 
@@ -34,6 +34,29 @@ def register_misc_tools(mcp, counter, logger):
             "by_category": counter.counts,
             "version": __version__,
         }
+
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.MISC)
+    async def tool_search(
+        query: str = "",
+        kind: Optional[str] = None,
+        limit: int = 12,
+    ) -> Dict[str, Any]:
+        """Search the capability catalog for tools, prompts, and resources.
+
+        Args:
+            query: Name, category, handler, or effect tokens. Empty lists resident surfaces.
+            kind: Optional filter: tool, prompt, or resource
+            limit: Maximum cards to return (1-50)
+        """
+        from core.capability_manifest import resolve_profile, search_surfaces
+
+        profile = getattr(mcp, "capability_profile", None)
+        if not isinstance(profile, str) or not profile:
+            profile = resolve_profile()
+        payload = search_surfaces(query, profile=profile, kind=kind, limit=limit)
+        payload["success"] = True
+        return payload
 
     @tool(mcp)
     async def health_check() -> Dict[str, Any]:
@@ -72,5 +95,5 @@ def register_misc_tools(mcp, counter, logger):
 
         return {"success": True, "url": url, "findings": results}
 
-    counter.add("misc", 3)
-    logger.info("[Misc] 已注册 3 个杂项工具")
+    counter.add("misc", 4)
+    logger.info("[Misc] 已注册 4 个杂项工具")

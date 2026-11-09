@@ -26,7 +26,7 @@ class TestDetectorHandlersRegistration:
 
         from handlers.detector_factory import DETECTOR_CONFIGS
 
-        expected_total = 2 + len(DETECTOR_CONFIGS)
+        expected_total = 3 + len(DETECTOR_CONFIGS)
 
         detector_calls = [c for c in mock_counter.add.call_args_list if c[0][0] == "detector"]
         total_detectors = sum(c[0][1] for c in detector_calls)
@@ -648,3 +648,91 @@ class TestSecurityHeadersScanTool:
             assert result["success"] is True
             assert "findings" in result["data"]
             assert len(result["data"]["findings"]) == 1
+
+
+def _register_detector_tools():
+    from handlers.detector_factory import register_detector_tools
+
+    mock_mcp = MagicMock()
+    mock_counter = MagicMock()
+    mock_logger = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(**_kwargs):
+        def decorator(func):
+            registered_tools[func.__name__] = func
+            return func
+
+        return decorator
+
+    mock_mcp.tool = capture_tool
+    register_detector_tools(mock_mcp, mock_counter, mock_logger)
+    return registered_tools
+
+
+class TestDetectRunTool:
+    """Resident detect_run entry point."""
+
+    @pytest.mark.asyncio
+    async def test_detect_run_with_classes_uses_factory(self):
+        registered_tools = _register_detector_tools()
+        mock_vuln = MagicMock()
+        mock_vuln.vulnerable = True
+        mock_vuln.to_dict.return_value = {"type": "sqli", "param": "id"}
+        mock_composite = MagicMock()
+        mock_composite.async_detect = AsyncMock(return_value=[mock_vuln])
+
+        with patch("core.detectors.DetectorFactory") as mock_factory:
+            mock_factory.exists.return_value = True
+            mock_factory.create_composite.return_value = mock_composite
+            result = await registered_tools["detect_run"](
+                url="https://example.com/page",
+                classes=["sqli_scan", "xss"],
+                params={"id": "1"},
+            )
+
+        assert result["success"] is True
+        assert result["data"]["vulnerable"] is True
+        assert result["data"]["total_vulns"] == 1
+        assert result["data"]["detectors_used"] == ["sqli", "xss"]
+        mock_factory.create_composite.assert_called_once_with(["sqli", "xss"])
+        mock_composite.async_detect.assert_awaited_once_with(
+            "https://example.com/page", params={"id": "1"}
+        )
+
+    @pytest.mark.asyncio
+    async def test_detect_run_omitted_classes_uses_owasp_preset(self):
+        registered_tools = _register_detector_tools()
+        mock_composite = MagicMock()
+        mock_composite.async_detect = AsyncMock(return_value=[])
+
+        with patch("core.detectors.DetectorPresets") as mock_presets:
+            mock_presets.owasp_top10.return_value = mock_composite
+            result = await registered_tools["detect_run"](url="https://example.com")
+
+        assert result["success"] is True
+        assert result["data"]["detectors_used"] == ["owasp_top10"]
+        assert result["data"]["classes"] is None
+        assert result["data"]["total_vulns"] == 0
+
+    @pytest.mark.asyncio
+    async def test_detect_run_comma_string_and_unknown_class(self):
+        registered_tools = _register_detector_tools()
+        mock_composite = MagicMock()
+        mock_composite.async_detect = AsyncMock(return_value=[])
+
+        with patch("core.detectors.DetectorFactory") as mock_factory:
+            mock_factory.exists.return_value = True
+            mock_factory.create_composite.return_value = mock_composite
+            result = await registered_tools["detect_run"](
+                url="https://example.com", classes="sqli, xss"
+            )
+
+        assert result["success"] is True
+        assert result["data"]["detectors_used"] == ["sqli", "xss"]
+
+        result = await registered_tools["detect_run"](
+            url="https://example.com", classes=["not_a_detector"]
+        )
+        assert result["success"] is False
+        assert "unknown detector class" in result["error"]

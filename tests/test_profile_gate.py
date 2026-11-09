@@ -46,6 +46,16 @@ def test_unknown_surface_still_fails_closed():
         require_surface("not_a_surface")
 
 
+def test_detect_run_and_tool_search_profile_gates(monkeypatch):
+    monkeypatch.delenv(CAPABILITY_PROFILE_ENV, raising=False)
+
+    assert require_surface("tool_search") == "safe"
+    with pytest.raises(ProfileDenied):
+        require_surface("detect_run")
+    assert require_surface("detect_run", profile="scan") == "scan"
+    assert require_surface("sqli_scan", profile="scan") == "scan"
+
+
 @pytest.mark.asyncio
 async def test_safe_blocks_engine_imports(monkeypatch):
     monkeypatch.delenv(CAPABILITY_PROFILE_ENV, raising=False)

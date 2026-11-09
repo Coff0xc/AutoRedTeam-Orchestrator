@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 
-def _register():
+def _register(profile=None):
     from handlers.misc_handlers import register_misc_tools
 
     mock_mcp = MagicMock()
@@ -26,6 +26,8 @@ def _register():
         return decorator
 
     mock_mcp.tool = capture_tool
+    if profile:
+        mock_mcp.capability_profile = profile
     register_misc_tools(mock_mcp, mock_counter, mock_logger)
     return registered_tools
 
@@ -48,3 +50,21 @@ async def test_health_check_reports_package_version():
     tools = _register()
     result = await tools["health_check"]()
     assert result["data"]["version"] == __version__
+
+
+@pytest.mark.asyncio
+async def test_tool_search_lists_resident_and_finds_catalog_detector():
+    tools = _register("scan")
+    empty = await tools["tool_search"](limit=50)
+    names = {item["name"] for item in empty["data"]["matches"]}
+
+    assert empty["success"] is True
+    assert "detect_run" in names
+    assert all(item["resident"] is True for item in empty["data"]["matches"])
+    self_hit = await tools["tool_search"](query="tool_search")
+    assert any(item["name"] == "tool_search" for item in self_hit["data"]["matches"])
+
+    found = await tools["tool_search"](query="sqli", kind="tool", limit=12)
+    by_name = {item["name"]: item for item in found["data"]["matches"]}
+    assert "sqli_scan" in by_name
+    assert by_name["sqli_scan"]["invoke"] == {"tool": "detect_run", "classes": ["sqli"]}

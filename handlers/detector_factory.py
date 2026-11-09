@@ -19,7 +19,7 @@
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from .error_handling import ErrorCategory, extract_url, handle_errors, validate_inputs
 from .tooling import tool
@@ -264,6 +264,75 @@ def create_detector_tool(
     return wrapped
 
 
+def _normalize_detector_classes(
+    classes: Optional[Union[str, Sequence[str]]],
+) -> Optional[List[str]]:
+    """Accept a list or a comma-separated string. None means the OWASP preset."""
+    if classes is None:
+        return None
+    if isinstance(classes, str):
+        parts = [part.strip() for part in classes.replace(";", ",").split(",")]
+        names = [part for part in parts if part]
+    else:
+        names = [str(item).strip() for item in classes if str(item).strip()]
+    if not names:
+        raise ValueError(
+            "classes is empty; omit it to run owasp_top10, or pass detector class names"
+        )
+    return names
+
+
+def _register_detect_run(mcp, logger):
+    """Register the resident detector entry point (detect_run)."""
+
+    @tool(mcp)
+    @validate_inputs(url="url")
+    @handle_errors(logger, category=ErrorCategory.DETECTOR, context_extractor=extract_url)
+    async def detect_run(
+        url: str,
+        classes: Optional[Union[str, List[str]]] = None,
+        params: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
+        """Run one or more vulnerability detectors against a URL.
+
+        Args:
+            url: Target URL
+            classes: Detector class names (sqli, xss) or MCP aliases (sqli_scan).
+                Omit to run the OWASP Top 10 preset.
+            params: Request parameters
+        """
+        import core.detectors  # noqa: F401  # register detectors
+        from core.detectors import DetectorFactory, DetectorPresets
+        from core.detectors.names import canonical_detector_class
+
+        selected = _normalize_detector_classes(classes)
+        if selected is None:
+            composite = DetectorPresets.owasp_top10()
+            detectors_used = ["owasp_top10"]
+        else:
+            resolved = [canonical_detector_class(name) for name in selected]
+            missing = [name for name in resolved if not DetectorFactory.exists(name)]
+            if missing:
+                available = ", ".join(sorted(DetectorFactory.list_detectors()))
+                raise ValueError(f"unknown detector class {missing!r}; available: {available}")
+            composite = DetectorFactory.create_composite(resolved)
+            detectors_used = resolved
+
+        results = await composite.async_detect(url, params=params or {})
+        findings = _format_findings(results)
+        return {
+            "success": True,
+            "url": url,
+            "vulnerable": len(findings) > 0,
+            "findings": findings,
+            "total_vulns": len(findings),
+            "classes": selected,
+            "detectors_used": detectors_used,
+        }
+
+    return detect_run
+
+
 def _register_vuln_scan(mcp, logger):
     """注册综合漏洞扫描工具 (vuln_scan)
 
@@ -389,18 +458,16 @@ def _register_nuclei_scan(mcp, logger):
 def register_detector_tools(mcp, counter, logger):
     """使用工厂模式注册所有检测器工具
 
-    包含 1 个综合扫描工具 (vuln_scan) + N 个单检测器工具 (工厂生成) + 1 个 nuclei_scan
+    包含 detect_run + vuln_scan + nuclei_scan + N 个单检测器工具 (工厂生成)。
+    单检测器工具在 capability manifest 里是 catalog-only，默认不进入 tools/list。
     """
-    # 综合扫描工具 (特殊逻辑，单独注册)
+    _register_detect_run(mcp, logger)
     _register_vuln_scan(mcp, logger)
-
-    # Nuclei 模板扫描工具
     _register_nuclei_scan(mcp, logger)
 
-    # 单检测器工具 (工厂批量注册)
     for config in DETECTOR_CONFIGS:
         create_detector_tool(config, mcp, logger)
 
-    total = 2 + len(DETECTOR_CONFIGS)  # vuln_scan + nuclei_scan + factory tools
+    total = 3 + len(DETECTOR_CONFIGS)
     counter.add("detector", total)
     logger.info("[Detector] 已注册 %d 个漏洞检测工具 (工厂模式)", total)

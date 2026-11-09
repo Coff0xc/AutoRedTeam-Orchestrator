@@ -18,6 +18,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..base import BaseDetector
+from ..factory import register_detector
 from ..result import DetectionResult, DetectorType, Severity
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,7 @@ class DeserializePayload:
     description: str = ""
 
 
+@register_detector("deserialize")
 class DeserializeDetector(BaseDetector):
     """反序列化漏洞检测器
 

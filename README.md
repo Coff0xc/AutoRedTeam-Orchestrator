@@ -30,7 +30,7 @@ flowchart LR
   files --> reader --> report
 ```
 
-The counts in this page come from the allowed list in this tree: **142 entries** (132 tools, 6 prompts, 4 resources). `autort capabilities profiles` is the live count after a later change.
+The counts in this page come from the allowed list in this tree: **144 entries** (134 tools, 6 prompts, 4 resources). `tools/list` registers resident surfaces only (`registered_count`). Catalog-only detector tools are found with `tool_search` and run through `detect_run`. `autort capabilities profiles` is the live count after a later change.
 
 ## Contents
 
@@ -116,14 +116,14 @@ The level is an argument, or the environment variable `AUTORT_CAPABILITY_PROFILE
 
 ```mermaid
 flowchart BT
-  safe["safe · 23 entries<br/>read your own project"]
-  scan["scan · 86 entries<br/>a system you are allowed to test"]
-  lab["active-lab · 106 entries<br/>a disposable lab"]
-  full["full · 142 entries<br/>you turned the rest on"]
+  safe["safe · 24 entries<br/>read your own project"]
+  scan["scan · 88 entries<br/>a system you are allowed to test"]
+  lab["active-lab · 108 entries<br/>a disposable lab"]
+  full["full · 144 entries<br/>you turned the rest on"]
   safe --> scan --> lab --> full
 ```
 
-The numbers are totals, including the levels below. New tools at each step: 23, then 63, then 20, then 36.
+The numbers are totals, including the levels below. New tools at each step: 24, then 64, then 20, then 36. `scan` registers 62 resident surfaces; 26 factory detector tools stay in the catalog.
 
 | Level | Use it for | What it adds |
 |---|---|---|

@@ -97,7 +97,6 @@ class TestCLIHelp:
     def test_runtime_api_serve_help(self):
         """runtime-api serve --help 应返回成功"""
         from cli.main import app
-
         from tests.cli_help import command_help_text
 
         result = runner.invoke(app, ["runtime-api", "serve", "--help"], color=False)
@@ -267,7 +266,7 @@ class TestCLICapabilities:
 
         assert result.exit_code == 0
         assert payload["profile"] == "safe"
-        assert payload["summary"]["total"] == 23
+        assert payload["summary"]["total"] == 24
         assert all("safe" in item["profiles"] for item in payload["capabilities"])
 
     def test_capabilities_profiles_outputs_boundaries(self):
@@ -278,7 +277,8 @@ class TestCLICapabilities:
 
         assert result.exit_code == 0
         assert payload["default_mcp_profile"] == "safe"
-        assert [item["surface_count"] for item in payload["profiles"]] == [23, 86, 106, 142]
+        assert [item["surface_count"] for item in payload["profiles"]] == [24, 88, 108, 144]
+        assert [item["registered_count"] for item in payload["profiles"]] == [24, 62, 82, 118]
         assert "do not replace authentication" in payload["security_note"]
 
     def test_capabilities_manifest_rejects_unknown_profile(self):

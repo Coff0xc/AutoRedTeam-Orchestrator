@@ -39,7 +39,7 @@ class CapabilityProfile:
     description: str
     operating_boundary: str
 
-    def to_dict(self, surface_count: int) -> dict[str, Any]:
+    def to_dict(self, surface_count: int, registered_count: int) -> dict[str, Any]:
         index = PROFILE_ORDER.index(self.name)
         inherits = PROFILE_ORDER[index - 1] if index else None
         return {
@@ -48,6 +48,7 @@ class CapabilityProfile:
             "description": self.description,
             "operating_boundary": self.operating_boundary,
             "surface_count": surface_count,
+            "registered_count": registered_count,
         }
 
 
@@ -95,6 +96,7 @@ class Capability:
     executor: str
     effects: tuple[str, ...]
     locator: Optional[str] = None
+    resident: bool = True
 
     @property
     def profiles(self) -> tuple[str, ...]:
@@ -138,6 +140,7 @@ class Capability:
             },
             "manifest_enforces": ["profile-registration"],
             "effects": list(self.effects),
+            "resident": self.resident,
         }
         if self.locator:
             payload["locator"] = self.locator
@@ -158,6 +161,7 @@ def _surface_group(
     effects: Sequence[str] = (),
     kind: str = "tool",
     locators: Optional[Mapping[str, str]] = None,
+    resident: bool = True,
 ) -> list[Capability]:
     return [
         Capability(
@@ -173,6 +177,7 @@ def _surface_group(
             executor=executor,
             effects=tuple(effects),
             locator=locators.get(name) if locators else None,
+            resident=resident,
         )
         for name in names
     ]
@@ -206,9 +211,19 @@ def _build_capabilities() -> tuple[Capability, ...]:
     )
     add(
         _surface_group(
+            ("detect_run", "vuln_scan", "nuclei_scan"),
+            handler="detector",
+            category="detector",
+            minimum_profile="scan",
+            risk="moderate",
+            maturity="beta",
+            auth_required=True,
+            effects=("network-probe", "offensive-content"),
+        )
+    )
+    add(
+        _surface_group(
             (
-                "vuln_scan",
-                "nuclei_scan",
                 "sqli_scan",
                 "xss_scan",
                 "ssrf_scan",
@@ -243,6 +258,7 @@ def _build_capabilities() -> tuple[Capability, ...]:
             maturity="beta",
             auth_required=True,
             effects=("network-probe", "offensive-content"),
+            resident=False,
         )
     )
     add(
@@ -550,7 +566,7 @@ def _build_capabilities() -> tuple[Capability, ...]:
     )
     add(
         _surface_group(
-            ("registry_stats", "health_check"),
+            ("registry_stats", "health_check", "tool_search"),
             handler="misc",
             category="misc",
             minimum_profile="safe",
@@ -872,13 +888,128 @@ def capability_profiles() -> dict[str, Any]:
         "default_mcp_profile": DEFAULT_MCP_PROFILE,
         "environment_variable": CAPABILITY_PROFILE_ENV,
         "profiles": [
-            profile.to_dict(sum(capability.allowed_in(profile.name) for capability in CAPABILITIES))
+            profile.to_dict(
+                sum(capability.allowed_in(profile.name) for capability in CAPABILITIES),
+                registered_count=sum(
+                    capability.allowed_in(profile.name) and capability.resident
+                    for capability in CAPABILITIES
+                ),
+            )
             for profile in PROFILES
         ],
         "security_note": (
             "Required controls are declarative. Profiles gate MCP registration and the "
             "CLI and SDK calls that map to a manifest surface; they do not replace "
             "authentication, target scope, independent approval, or an isolated executor. "
-            "Direct imports outside those entry points stay ungated."
+            "Direct imports outside those entry points stay ungated. "
+            "tools/list registers resident surfaces only; catalog-only surfaces are "
+            "found with tool_search."
         ),
+    }
+
+
+def _invoke_card(capability: Capability) -> dict[str, Any]:
+    """Compact invocation hint for tool_search cards."""
+    if capability.resident:
+        return {"tool": capability.name}
+    if capability.handler == "detector":
+        from core.detectors.names import canonical_detector_class
+
+        try:
+            detector_class = canonical_detector_class(capability.name)
+        except ValueError:
+            detector_class = capability.name
+        return {"tool": "detect_run", "classes": [detector_class]}
+    return {"tool": capability.name}
+
+
+def _search_score(capability: Capability, query: str) -> int:
+    name = capability.name.lower()
+    if name == query:
+        return 100
+    if name.startswith(query) or name.startswith(f"{query}_"):
+        return 80
+    haystack = " ".join(
+        (
+            name,
+            capability.kind,
+            capability.category,
+            capability.handler,
+            capability.risk,
+            "resident" if capability.resident else "catalog",
+            *capability.effects,
+        )
+    ).lower()
+    if query in haystack:
+        return 50
+    tokens = [token for token in query.split() if token]
+    if tokens and all(token in haystack for token in tokens):
+        return 40
+    return 0
+
+
+def search_surfaces(
+    query: str = "",
+    *,
+    profile: Optional[str] = None,
+    kind: Optional[str] = None,
+    limit: int = 12,
+) -> dict[str, Any]:
+    """Return compact catalog cards for surfaces allowed in a profile.
+
+    An empty query lists resident surfaces first. A non-empty query searches
+    the full profile catalog, including catalog-only detector tools.
+    """
+
+    normalized = normalize_profile(profile) if profile is not None else resolve_profile()
+    kind_filter = str(kind).strip().lower() if kind else ""
+    if kind_filter and kind_filter not in {"tool", "prompt", "resource"}:
+        raise ValueError("kind must be tool, prompt, or resource")
+    try:
+        limit_n = int(limit)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("limit must be an integer") from exc
+    if limit_n < 1:
+        limit_n = 1
+    if limit_n > 50:
+        limit_n = 50
+
+    query_text = str(query or "").strip().lower()
+    scored: list[tuple[int, Capability]] = []
+    for capability in CAPABILITIES:
+        if not capability.allowed_in(normalized):
+            continue
+        if kind_filter and capability.kind != kind_filter:
+            continue
+        if query_text:
+            score = _search_score(capability, query_text)
+            if score <= 0:
+                continue
+        elif not capability.resident:
+            continue
+        else:
+            score = 1
+        scored.append((score, capability))
+
+    scored.sort(key=lambda item: (-item[0], item[1].kind, item[1].name))
+    matches = [
+        {
+            "name": capability.name,
+            "kind": capability.kind,
+            "resident": capability.resident,
+            "minimum_profile": capability.minimum_profile,
+            "risk": capability.risk,
+            "effects": list(capability.effects),
+            "category": capability.category,
+            "invoke": _invoke_card(capability),
+        }
+        for _, capability in scored[:limit_n]
+    ]
+    return {
+        "profile": normalized,
+        "query": str(query or ""),
+        "kind": kind_filter or None,
+        "limit": limit_n,
+        "total_matches": len(scored),
+        "matches": matches,
     }

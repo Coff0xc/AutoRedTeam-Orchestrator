@@ -141,6 +141,10 @@ class _ProfiledMCP:
         self._profile = profile
         self._handler = handler
 
+    @property
+    def capability_profile(self) -> str:
+        return self._profile
+
     def _decorator(
         self,
         kind: str,
@@ -156,7 +160,7 @@ class _ProfiledMCP:
                     f"MCP surface {kind}:{public_name} is assigned to handler "
                     f"{capability.handler!r}, not {self._handler!r}"
                 )
-            if not capability.allowed_in(self._profile):
+            if not capability.allowed_in(self._profile) or not capability.resident:
                 return func
 
             description = capability.public_description()
