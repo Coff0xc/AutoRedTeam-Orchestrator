@@ -40,9 +40,10 @@ only because an implementation exists in the repository.
 
 ## Recommended usage profiles
 
-These cumulative profiles are enforced when MCP surfaces are registered. They do not yet govern
-direct CLI or SDK calls, and they do not replace authentication, target scope, independent approval,
-or an isolated executor.
+These cumulative profiles are enforced when MCP surfaces are registered and when a CLI or SDK
+call maps to a manifest surface. A direct import of `core` outside those entries stays ungated.
+The profile does not replace authentication, target scope, independent approval, or an isolated
+executor.
 
 ### Safe
 

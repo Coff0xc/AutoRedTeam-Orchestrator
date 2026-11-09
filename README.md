@@ -116,6 +116,8 @@ Test modules, `tests/`, and `conftest.py` are skipped by default. The walk also 
 
 `scan-skills` reads local markdown, text, YAML, JSON, and TOML. Lockfiles such as `package-lock.json` and `poetry.lock` are left out. A file larger than 1 MiB is skipped and named in the warnings when the path is a directory. Point the command at a single file if you really want that file read.
 
+`diff` takes a JSON file written by an earlier `ai-surface scan` and compares it with a fresh handler scan. It reports surfaces that were added, removed, or whose description or parameter names changed. It still does not connect or call a tool.
+
 For an external repository that does not use this project's auth decorators, pass `--auth-mode lenient`. That drops missing-auth issues. It does not change the parse.
 
 CI flags on `ai-surface`: `--ci` prints a short summary, and `--exit-code` returns non-zero when a finding reaches `--severity-threshold` (`info`, `low`, `medium`, `high`, `critical`).
@@ -180,6 +182,7 @@ These do not contact a target. `cve-search` reads local CVE intelligence.
 | `ai-surface scan` | Handler inventory, SARIF or JSON | `autort ai-surface scan --path handlers --format sarif -o surface.sarif` |
 | `ai-surface scan-mcp-config` | Client config inventory | `autort ai-surface scan-mcp-config --path .mcp.json` |
 | `ai-surface scan-skills` | Instruction markers in skill files | `autort ai-surface scan-skills --path ./skills` |
+| `ai-surface diff` | Saved scan JSON against the current handlers | `autort ai-surface diff --baseline surface.json --path handlers` |
 | `capabilities profiles` | Inheritance and surface counts | `autort capabilities profiles` |
 | `capabilities manifest` | One profile, as data | `autort capabilities manifest --profile safe` |
 | `tools lint` | Static MCP tool-contract check | `autort tools lint --path handlers` |

@@ -440,6 +440,88 @@ def test_labeled_fixtures_pin_description_false_positives_and_false_negatives():
             assert term not in finding.risk_terms
 
 
+def test_diff_surface_inventory_reports_added_removed_and_changed():
+    from core.ai_surface import diff_surface_inventory
+    from core.ai_surface.models import SurfaceFinding, SurfaceRiskLevel, SurfaceScanResult
+
+    current = SurfaceScanResult(
+        root_path="handlers",
+        scanned_files=1,
+        findings=[
+            SurfaceFinding(
+                tool_name="clock",
+                file_path="a.py",
+                line=4,
+                risk_level=SurfaceRiskLevel.LOW,
+                description="Return the local clock.",
+                parameters=["epoch"],
+                kind="tool",
+            ),
+            SurfaceFinding(
+                tool_name="added",
+                file_path="a.py",
+                line=12,
+                risk_level=SurfaceRiskLevel.LOW,
+                description="New local note.",
+                kind="tool",
+            ),
+            SurfaceFinding(
+                tool_name="steady",
+                file_path="a.py",
+                line=20,
+                risk_level=SurfaceRiskLevel.LOW,
+                description="Unchanged.",
+                parameters=["n"],
+                kind="tool",
+            ),
+        ],
+    )
+    baseline = {
+        "findings": [
+            {
+                "kind": "tool",
+                "tool_name": "clock",
+                "description": "Return the old clock.",
+                "parameters": ["n"],
+                "file_path": "a.py",
+                "line": 3,
+                "risk_level": "low",
+            },
+            {
+                "kind": "tool",
+                "tool_name": "gone",
+                "description": "Retired note.",
+                "parameters": [],
+                "file_path": "b.py",
+                "line": 2,
+                "risk_level": "low",
+            },
+            {
+                "kind": "tool",
+                "tool_name": "steady",
+                "description": "Unchanged.",
+                "parameters": ["n"],
+                "file_path": "a.py",
+                "line": 20,
+                "risk_level": "low",
+            },
+        ]
+    }
+
+    result = diff_surface_inventory(baseline, current)
+    by_name = {finding.tool_name: finding for finding in result.findings}
+
+    assert set(by_name) == {"clock", "added", "gone"}
+    assert by_name["clock"].issues == [
+        "surface_description_changed",
+        "surface_parameters_changed",
+    ]
+    assert "Saved description: Return the old clock." in by_name["clock"].recommendations
+    assert by_name["added"].issues == ["surface_added"]
+    assert by_name["gone"].issues == ["surface_removed"]
+    assert by_name["gone"].file_path == "b.py"
+
+
 def test_action_v3_1_still_runs_ai_surface_scan():
     action = Path("action.yml").read_text(encoding="utf-8")
     example = Path(".github/workflows/self-audit.example.yml").read_text(encoding="utf-8")

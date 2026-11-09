@@ -596,6 +596,47 @@ def ai_surface_scan_skills(
     _emit_surface_result(result, output, format, severity_threshold, exit_code)
 
 
+@ai_surface_app.command("diff")
+def ai_surface_diff(
+    baseline: str = typer.Option(..., "--baseline", "-b", help="先前 ai-surface scan 的 JSON"),
+    path: str = typer.Option("handlers", "--path", "-p", help="当前 handler 文件或目录"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+    format: str = typer.Option("json", "--format", "-f", help="输出格式: json/sarif"),
+    severity_threshold: str = typer.Option(
+        "high", "--severity-threshold", help="CI 失败阈值: info/low/moderate/high/critical"
+    ),
+    exit_code: bool = typer.Option(False, "--exit-code", help="发现达阈值项时返回非零退出码"),
+    exclude_tests: bool = typer.Option(
+        True,
+        "--exclude-tests/--include-tests",
+        help="跳过 tests/、test_*.py、*_test.py 和 conftest.py",
+    ),
+    reconcile: Optional[bool] = typer.Option(
+        None,
+        "--reconcile/--no-reconcile",
+        help="与本仓库 capability manifest 对账。默认在仓库根和 handlers/ 上开启",
+    ),
+):
+    """对照已保存的工具清单和当前源码，不连接服务器，也不调用工具"""
+    from core.ai_surface import diff_surface_inventory, scan_handler_surface
+
+    try:
+        saved = json.loads(Path(baseline).read_text(encoding="utf-8"))
+        if not isinstance(saved, dict):
+            raise ValueError("baseline JSON must be an object")
+        current = scan_handler_surface(
+            path,
+            exclude_tests=exclude_tests,
+            reconcile=reconcile,
+        )
+        result = diff_surface_inventory(saved, current)
+    except (OSError, SyntaxError, UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
+        typer.echo(f"AI surface diff failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    _emit_surface_result(result, output, format, severity_threshold, exit_code)
+
+
 # ──────────────────────────── tools ────────────────────────────
 
 
