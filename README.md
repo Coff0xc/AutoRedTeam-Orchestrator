@@ -1,45 +1,85 @@
 # AutoRedTeam-Orchestrator
 
-A local audit and evidence gate for MCP servers and AI-agent tools. You point it at your own handlers, client config, or skill files. It reads them, writes findings with file and line, and refuses anything the selected profile did not declare.
+You point it at your own code, your AI client config, or your instruction files. It reads them, writes what it found with a file and a line, and only offers the tools your permission level allows.
 
-The model can judge. This process keeps the profile, the evidence, and the record.
+The model can decide. This program keeps the permission, the evidence, and the record.
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Version](https://img.shields.io/badge/version-3.1.0-orange)
 ![Status](https://img.shields.io/badge/status-Beta%20%2F%20Research%20Preview-yellow)
 
-[Capability maturity](docs/capability-maturity.md) · [Security model](docs/security-model.md) · [Security audits](docs/security-audits/)
+[Maturity notes](docs/capability-maturity.md) · [Trust boundaries](docs/security-model.md) · [Security audits](docs/security-audits/)
 
-Beta / research preview. Static analysis, dry-runs, and local labs are the supported path. Exploit, lateral movement, persistence, C2, and exfiltration stay in the source tree as restricted experiments. A policy flag or a sandbox label is not an operating-system or container boundary.
+> [!IMPORTANT]
+> Beta. The supported work is reading your own project, dry-runs, and tests on systems you are allowed to touch. A setting named "sandbox" is a note in the record. It is not a container, and it is not an operating-system boundary.
 
-The numbers below come from `core/capability_manifest.py` in this tree: **142 surfaces** (132 tools, 6 prompts, 4 resources). A later registration change shows up in `autort capabilities profiles` before this page does.
+## In one minute
+
+- The default permission level is `safe`. It reads your project. It does not contact a target.
+- There are four levels. Each higher level includes everything below it.
+- The model does not read the old notes in the code. It reads a short card: name, level, risk, effects, and limits.
+- The file reader parses Python. It does not import it, and it does not call the tools.
+- `pip install` and the container leave out the experimental engines. The git repository still has them.
+
+```mermaid
+flowchart LR
+  files["Your code, client config, or notes"]
+  reader["Read only<br/>no tool calls"]
+  report["Findings<br/>file and line"]
+  files --> reader --> report
+```
+
+The counts in this page come from the allowed list in this tree: **142 entries** (132 tools, 6 prompts, 4 resources). `autort capabilities profiles` is the live count after a later change.
 
 ## Contents
 
-- [Start here](#start-here)
-- [Why the repository is shaped this way](#why-the-repository-is-shaped-this-way)
-- [How a call moves](#how-a-call-moves)
-- [The capability record](#the-capability-record)
-- [How a surface reaches the MCP server](#how-a-surface-reaches-the-mcp-server)
-- [Why the audit parses source](#why-the-audit-parses-source)
-- [Client configs and skill files](#client-configs-and-skill-files)
-- [Inventory diff](#inventory-diff)
-- [Tool-contract lint](#tool-contract-lint)
-- [Evidence gate](#evidence-gate)
-- [Session, configuration, and reports](#session-configuration-and-reports)
-- [Recon and detection](#recon-and-detection)
-- [Orchestration and the experimental tree](#orchestration-and-the-experimental-tree)
-- [Agent runtime, scenarios, and code context](#agent-runtime-scenarios-and-code-context)
-- [CLI and SDK](#cli-and-sdk)
+- [Three ways in](#three-ways-in)
+- [Start](#start)
+- [Four permission levels](#four-permission-levels)
+- [The card the model reads](#the-card-the-model-reads)
+- [What the server does at startup](#what-the-server-does-at-startup)
+- [How a project check works](#how-a-project-check-works)
+- [When a result counts](#when-a-result-counts)
+- [The install and the git tree](#the-install-and-the-git-tree)
+- [Commands](#commands)
 - [GitHub Action](#github-action)
-- [Container](#container)
-- [What this tree leaves undone](#what-this-tree-leaves-undone)
+- [Container and client](#container-and-client)
+- [Names in the code](#names-in-the-code)
 - [License](#license)
 
-## Start here
+## Three ways in
 
-From a checkout, `typer` is enough for the read-only commands. They do not contact a target and they do not import the experimental engines.
+Same program, three doors. All three ask the same allowed list before they run a tool.
+
+```mermaid
+flowchart TB
+  subgraph doors ["How you call it"]
+    cli["autort<br/>the command line"]
+    mcp["autoredteam-mcp<br/>stdio, for an editor"]
+    sdk["import autort<br/>Python"]
+  end
+  list["Allowed list<br/>core/capability_manifest.py"]
+  work["Only the tools this level permits"]
+  cli --> list
+  mcp --> list
+  sdk --> list
+  list --> work
+```
+
+| Door | Command | What a first run should be |
+|---|---|---|
+| Command line | `autort` or `python -m cli.main` | Read your own handlers |
+| Editor server | `autoredteam-mcp --stdio` | Start at `safe` |
+| Python | `from autort import Scanner` | Search local CVE notes, or export findings you already have |
+
+`Scanner` and `Reporter` load immediately. `Exploiter`, `AutoPentest`, and `RedTeam` load the first time you ask for them. Importing `Scanner` does not load those three.
+
+A script that imports `core` directly does not pass this check. The check is the three doors above. It is also separate from the API key, from "did a person approve this", and from any container.
+
+## Start
+
+From a checkout, `typer` is enough for the read-only commands.
 
 ```bash
 pip install typer
@@ -48,9 +88,7 @@ python -m cli.main ai-surface scan-mcp-config --path .mcp.json
 python -m cli.main capabilities manifest --profile safe
 ```
 
-`ai-surface scan` skips tests unless you ask for them. A scan of the repository root or of `handlers/` also reconciles what it saw with the capability manifest. The JSON summary field is `summary.static_coverage`. The SARIF copy lives at `runs[].properties.static_coverage`.
-
-Install the two commands if you want them on `PATH`:
+On your path:
 
 ```bash
 pip install autoredteam-orchestrator
@@ -58,7 +96,7 @@ pipx install autoredteam-orchestrator
 uvx --from autoredteam-orchestrator autort --help
 ```
 
-Or from Git, when PyPI is behind the branch you care about:
+Or from git, when the package index is behind the branch you want:
 
 ```bash
 pip install "git+https://github.com/Coff0xc/AutoRedTeam-Orchestrator.git"
@@ -68,383 +106,247 @@ pip install -r requirements.txt
 python -m cli.main --help
 ```
 
-Python 3.10 or newer. Version `3.1.0` comes from `_version.py` only. The console scripts are `autort` (`cli.main:app`) and `autoredteam-mcp` (`mcp_stdio_server:main`).
+Python 3.10 or newer. Version `3.1.0` lives only in `_version.py`. The two commands are `autort` and `autoredteam-mcp`.
 
-## Why the repository is shaped this way
+Any subcommand, including `--help`, prints the legal notice on stderr. `--help` does not ask the allowed list.
 
-The default product is a local reviewer of MCP and agent surfaces, plus a record of what was allowed to run. A large tool menu is still in the tree because those modules already exist and some labs still call them. The published install and the default profile do not expose them.
+## Four permission levels
 
-Four decisions follow from that.
+The level is an argument, or the environment variable `AUTORT_CAPABILITY_PROFILE`, or `safe` when you set neither. `active_lab` and `active-lab` are the same name. Anything else is an error.
 
-**One record decides exposure.** `Capability` in `core/capability_manifest.py` is the registration source of truth. MCP, the CLI, and the SDK ask that record. A surface the record does not name raises `CapabilityManifestError` and registration stops. Duplicate `(kind, name)` pairs fail at import, when `_CAPABILITY_INDEX` is built.
+```mermaid
+flowchart BT
+  safe["safe · 23 entries<br/>read your own project"]
+  scan["scan · 86 entries<br/>a system you are allowed to test"]
+  lab["active-lab · 106 entries<br/>a disposable lab"]
+  full["full · 142 entries<br/>you turned the rest on"]
+  safe --> scan --> lab --> full
+```
 
-**The model sees the record, not the handler docstring.** `public_description()` is the text FastMCP stores. It states the name, kind, minimum profile, risk, declared effects, and controls, then tells the caller to use only the declared parameters. Handler prose used to be what the model read. That prose could describe a procedure the profile was supposed to withhold, so registration overwrites both `description=` and `func.__doc__`.
+The numbers are totals, including the levels below. New tools at each step: 23, then 63, then 20, then 36.
 
-**Parsing stays on the far side of import.** `core/ai_surface` uses `ast`. Importing `handlers` would execute registration and pull engines. The audit has to be able to read a checkout, including one that still contains experimental packages, without starting those packages.
+| Level | Use it for | What it adds |
+|---|---|---|
+| `safe` | Your own checkout, on your own machine | The reader, local CVE search, exporting findings |
+| `scan` | A target the owner allowed | Recon and detection. They ship in the install, and they stay behind this level |
+| `active-lab` | A machine you can throw away | Lab-only tools. They ask for a separate approval in the record |
+| `full` | The same kind of lab, with the rest switched on | The experimental engines that are still in git |
 
-**The wheel is smaller than the git tree.** `pyproject.toml` excludes C2, lateral movement, persistence, post-exploitation, privilege escalation, exfiltration, evasion, credentials, Active Directory, and exploit. Those packages remain for an explicit `full` checkout. Deleting them would break that checkout. A second repository would split the manifest from the code it describes. Exclusion plus lazy import is the boundary that keeps one tree and two audiences.
+A second switch is the API key. `AUTOREDTEAM_AUTH_MODE` defaults to `strict`, and protected tools then need `AUTOREDTEAM_API_KEY` (`MCP_API_KEY` is the other accepted name). `permissive` logs and allows. `disabled` works only when `AUTOREDTEAM_ENV=test` or pytest is running. Choosing `full` does not turn the key off.
 
-Direct `import` of `core` from your own script does not pass through the gate. The gate is the three entries. It is also not authentication, target scope, approval, or process isolation. Those are separate fields on the same record, and they stay declarative until a decorator or an executor actually enforces them.
+```mermaid
+sequenceDiagram
+  participant You
+  participant CLI as autort
+  participant List as Allowed list
+  You->>CLI: autort scan, level safe
+  CLI->>List: Is port scan allowed?
+  List-->>CLI: No. It needs scan.
+  CLI-->>You: Stop, exit 2. Nothing was contacted.
+```
 
-## How a call moves
+## The card the model reads
+
+Every tool, prompt, and resource has one row in the allowed list. That row is the source of truth. A name that is not on the list stops registration. Two rows with the same kind and name fail when the list is imported.
+
+The model used to read the notes written above each function. Those notes could describe steps the permission level was meant to withhold. At startup the server replaces both the tool description and the function notes with one card:
+
+```text
+{name} is a {kind} in the {level} profile. Risk: {risk}. Effects: {effects}. Controls: {controls}. Use only the declared parameters. This description does not authorize a target or an action.
+```
+
+```mermaid
+flowchart LR
+  notes["Notes in the handler"]
+  row["One row on the allowed list"]
+  card["Short card stored for the model"]
+  notes -.->|"not what the model reads"| card
+  row --> card
+```
+
+Prompts return that card, the parameter names, and one line: this prompt returns the constraint and the parameters. The Python function names stay the names on the list, including `plan_pentest`. The name is an identifier. The text is the constraint. `plan_pentest` is level `active-lab`. This page does not show a planning procedure.
+
+Effects are labels on the row, such as `local-read`, `network-probe`, `network-active`, `target-write`, `host-exec`, `credential-use`, `persistence`, `offensive-content`, and `dry-run`. The reader can see parameter names. It does not yet compare those names with the effect labels. A tool can say `local-read` and still accept a URL. That comparison is not built.
+
+## What the server does at startup
+
+`mcp_stdio_server.py` builds the server, reads the permission level, and asks `handlers` to register. Then it logs the legal notice and the auth mode. `--stdio` speaks over standard input. There is no cloud service and no telemetry.
 
 ```mermaid
 flowchart TB
-  subgraph entries [Entries stay thin]
-    MCP["mcp_stdio_server.py<br/>autoredteam-mcp"]
-    CLI["cli/main.py<br/>autort"]
-    SDK["autort/<br/>Scanner, Reporter, lazy engines"]
-  end
-
-  Resolve["resolve_profile<br/>argument, then AUTORT_CAPABILITY_PROFILE, then safe"]
-  Manifest["CAPABILITIES<br/>frozen Capability rows"]
-
-  subgraph gate [Same record, two enforcement points]
-    Reg["_ProfiledMCP<br/>skip, or register public_description"]
-    Call["require_surface<br/>ProfileDenied before the engine import"]
-  end
-
-  subgraph read [Read path, no registration]
-    AST["ai_surface scanner<br/>ast, no handler import"]
-    Recon["reconcile_capability_manifest"]
-    Diff["diff_surface_inventory"]
-  end
-
-  subgraph work [Work behind the profile]
-    SafeWork["Audit, local CVE search, finding export"]
-    ScanWork["StandardReconEngine, DetectorFactory"]
-    Lab["Experimental packages<br/>git tree, omitted from the wheel"]
-  end
-
-  MCP --> Resolve
-  CLI --> Resolve
-  SDK --> Resolve
-  Resolve --> Manifest
-  Manifest --> Reg
-  Manifest --> Call
-  AST --> Recon
-  Recon -.-> Manifest
-  AST --> Diff
-  Reg --> SafeWork
-  Call --> SafeWork
-  Call --> ScanWork
-  Call --> Lab
+  start["Process starts"]
+  level["Read the permission level"]
+  group["Next tool group"]
+  skip["This level cannot use the group<br/>do not import it"]
+  own["Each tool must be on the list<br/>and owned by this group"]
+  card["Write the card over the old notes"]
+  reg["Register this tool"]
+  once["Same server object cannot register twice"]
+  start --> level --> group
+  group --> skip
+  group --> own --> card --> reg --> once
 ```
 
-Profile order is cumulative: `safe`, then `scan`, then `active-lab`, then `full`. `resolve_profile` takes an explicit argument, then `AUTORT_CAPABILITY_PROFILE`, then `safe`. Names are stripped, lower-cased, and `_` is rewritten to `-`, so `active_lab` and `active-lab` are the same value. Anything else raises `CapabilityManifestError`.
+`import handlers` does not load all 22 groups. A group is imported the first time something asks for its register function. Under `safe`, groups that have nothing at that level stay unloaded. That is separate from what the install package leaves out.
 
-`allowed_in` is index arithmetic on `PROFILE_ORDER`. A surface whose `minimum_profile` is `scan` is present in `scan`, `active-lab`, and `full`. It is absent from `safe`.
+A tool pasted into the wrong file fails. The row names the group that owns it. One file may contain a `safe` tool and a `full` tool. The `full` function stays an ordinary function and is not registered.
 
-| Profile | Minimum-profile rows | Surfaces visible, including earlier profiles | Operating boundary stored on the profile |
-|---|---:|---:|---|
-| `safe` | 23 | 23 | Trusted local process. |
-| `scan` | 63 | 86 | An authorized target and the network path you already control. |
-| `active-lab` | 20 | 106 | A disposable lab, a separate approval, an isolated executor. |
-| `full` | 36 | 142 | Explicit opt-in. Isolated, authorized, disposable. |
+If one group cannot import, the server logs it and continues with the others. A missing optional library should not blank the reader. A tool missing from the allowed list is different: registration stops. The server should not start half-described.
 
-Authorization is a second switch. `AUTOREDTEAM_AUTH_MODE` defaults to `strict`. Protected tools then require `AUTOREDTEAM_API_KEY` (`MCP_API_KEY` is accepted as an alias). `permissive` logs and allows. `disabled` is honored only when `AUTOREDTEAM_ENV=test` or `PYTEST_CURRENT_TEST` is set, which is how the test session runs without a key. A profile of `full` does not turn auth off.
+The order of the 22 groups is fixed so the startup log stays stable, and so each tool is registered by the group the list names. A later group does not need an earlier group to have finished.
 
-## The capability record
+## How a project check works
 
-`Capability` is a frozen dataclass. One row is one public surface.
-
-| Field | What it is for |
-|---|---|
-| `kind` | `tool`, `prompt`, or `resource`. The index key is `(kind, name)`. |
-| `name` | The public MCP name. It must match the decorator `name=` or the function name. |
-| `handler` | Which registration module owns it. `_ProfiledMCP` refuses a mismatch. |
-| `category` | Counter bucket in the startup log (`recon`, `detector`, `cve`, …). |
-| `minimum_profile` | Lowest profile that may register or call it. |
-| `risk` | `low`, `moderate`, `high`, or `critical`. This is policy metadata. |
-| `maturity` | `preview`, `beta`, `experimental`, `restricted-experimental`, or `internal`. |
-| `auth_required` | Whether the MCP schema should demand an auth gate. |
-| `approval_required` | Whether an independent approval is part of the declared control set. |
-| `executor` | `in-process` (80), `isolated-required` (56), or `external-process` (6). |
-| `effects` | Declared effect labels, joined into the model-facing sentence. |
-| `locator` | Resource URI, when the surface is a resource. |
-
-Current risk mix: moderate 59, critical 46, high 19, low 18. Current maturity mix: restricted-experimental 46, preview 41, beta 38, experimental 11, internal 6. Maturity is a label for readers of the manifest. It does not change registration.
-
-`public_description()` always has the same shape:
-
-```text
-{name} is a {kind} in the {minimum_profile} profile. Risk: {risk}. Effects: {effects}. Controls: {controls}. Use only the declared parameters. This description does not authorize a target or an action.
+```mermaid
+flowchart TB
+  file["A Python file on disk"]
+  parse["Parse the structure<br/>do not import, do not run"]
+  found["Name, text, arguments, calls"]
+  compare["Compare with the allowed list<br/>when the folder is handlers or the repo root"]
+  out["JSON, or SARIF for GitHub code scanning"]
+  file --> parse --> found --> compare --> out
 ```
 
-Controls start with `profile-registration`, then `authentication` and `independent-approval` when those flags are set, then the executor name. Empty effects render as `none`.
+Importing a handler would register tools and could pull in engines. The check has to be able to read a checkout that still contains those engines without starting them.
 
-Prompt *functions* return `render_prompt_body`. That body repeats the description, lists `Declared parameters:`, and ends with one sentence: the prompt returns the constraint and the parameters. The Python function names stay the manifest names (`plan_pentest`, `plan_attack_chain`, `suggest_next_phase`, and the safe prompts `analyze_findings`, `write_report`, `explain_vulnerability`). The names are stable identifiers. The returned text is the constraint. `plan_pentest` is `active-lab`, high risk, experimental, and requires auth plus approval. It is registered as a prompt surface. It is not a procedure generator.
+It understands three ways a tool can appear in source:
 
-`require_surface(name)` resolves the profile, loads the row, and raises `ProfileDenied` when `allowed_in` is false. The CLI turns that into `typer.Exit(2)` after echoing the message. SDK methods call `require_surface` before they import the mapped engine, and before the broad `except Exception` that turns engine failures into `{"success": False, "error": ...}`. A denied profile is therefore a distinct failure, not a swallowed engine error.
-
-`handler_enabled(profile, handler)` is true when that handler owns at least one surface allowed in the profile. An unknown handler name is `CapabilityManifestError`. This is what lets `safe` skip whole modules.
-
-`capability_manifest(profile)` and `capability_profiles()` are the JSON behind `autort capabilities manifest` and `autort capabilities profiles`. `reconcile_capability_manifest` materializes the capability sequence once. A one-shot iterator is not consumed by a count and then found empty.
-
-## How a surface reaches the MCP server
-
-`mcp_stdio_server.py` builds `FastMCP("AutoRedTeam")`, resolves the profile, and calls `handlers.register_all_handlers`. Startup then logs the legal disclaimer and the auth mode. `--stdio` selects the stdio transport. There is no cloud service and no telemetry.
-
-`handlers/__init__.py` does not import the twenty-two handler modules at package import. `_REGISTER_LOADERS` maps each `register_*` name to a module, and module `__getattr__` imports that module on first use. `from handlers import register_recon_tools` therefore loads recon. `import handlers` does not load lateral, persistence, or the rest.
-
-Registration order is fixed, because a later module must not depend on an earlier one having run, and because the startup log should be stable:
-
-| Order | Module | Manifest `handler` | Surfaces in this tree |
-|---:|---|---|---:|
-| 1 | `recon_handlers` | `recon` | 9 |
-| 2 | `detector_factory` | `detector` | 28 |
-| 3 | `evidence_handlers` | `evidence` | 1 |
-| 4 | `cve_handlers` | `cve` | 8 |
-| 5 | `api_security_handlers` | `api_security` | 7 |
-| 6 | `cloud_security_handlers` | `cloud_security` | 3 |
-| 7 | `supply_chain_handlers` | `supply_chain` | 3 |
-| 8 | `redteam_handlers` | `redteam` | 14 |
-| 9 | `orchestration_handlers` | `orchestration` | 11 |
-| 10 | `lateral_handlers` | `lateral` | 9 |
-| 11 | `persistence_handlers` | `persistence` | 3 |
-| 12 | `ad_handlers` | `ad` | 3 |
-| 13 | `session_handlers` | `session` | 4 |
-| 14 | `report_handlers` | `report` | 2 |
-| 15 | `ai_handlers` | `ai` | 11 |
-| 16 | `misc_handlers` | `misc` | 3 |
-| 17 | `external_tools_handlers` | `external_tools` | 8 |
-| 18 | `parallel_handlers` | `parallel` | 1 |
-| 19 | `knowledge_handlers` | `knowledge` | 3 |
-| 20 | `mcts_handlers` | `mcts` | 1 |
-| 21 | `prompt_handlers` | `prompts` | 6 |
-| 22 | `resource_handlers` | `resources` | 4 |
-
-The module docstring at the top of `handlers/__init__.py` is an older catalog (it still says 8 recon tools and 26 detector tools). The table above is the live manifest. When the two disagree, the manifest wins, and registration will refuse a name the manifest does not list.
-
-For each row, `register_all_handlers` does four things.
-
-1. If `handler_enabled` is false, the module is not imported. Under `safe`, lateral, persistence, AD, red team, and the other higher-only modules stay unloaded. That is the import boundary, distinct from the wheel boundary.
-2. The module's `register_*` function receives a `_ProfiledMCP`, not the raw FastMCP instance.
-3. `_ProfiledMCP.tool` / `.prompt` / `.resource` look up `(kind, public_name)`. `public_name` is the decorator `name=` when set, otherwise `func.__name__`. The row's `handler` must equal the module currently registering. A copy-pasted tool in the wrong file fails closed.
-4. When `allowed_in` is false, the decorator returns the original function and does not call FastMCP. A mixed module can contain one `safe` tool and one `full` tool. The `full` function stays a plain function. When `allowed_in` is true, the wrapper writes `public_description()` onto the function and into the decorator `description=`, then registers, then increments the counter by one.
-
-The counter the modules see is a `_CounterView`. Its `add` ignores the historical "I registered N tools" batch calls. Only `_ProfiledMCP` increments, so a filtered profile cannot report the old full-catalog total. When the profile is not `full`, a `_ProfileLoggerView` drops log lines that contain `已注册` or `注册完成`, which were the old per-module success lines.
-
-Registration is once per FastMCP instance. The wrapper sets `_autort_capability_profile` on the instance. A second call raises `CapabilityManifestError` and tells you to construct a new instance. That prevents a `safe` server from later gaining `full` tools on the same object.
-
-`ImportError`, `AttributeError`, and `TypeError` from one module are logged and the loop continues. A missing optional dependency in one experimental module does not blank the audit tools. `CapabilityManifestError` is re-raised. An unclassified or mis-filed surface is a packaging bug, and the server should not start half-described. Any other exception is also logged and skipped, so a broken third-party import in one module leaves the others registered.
-
-`_ProfiledMCP` is why tests can assert that every listed description equals `public_description()` for all four profiles. MCP 2.3 stores the `description=` argument and returns it from `list_*`. The docstring overwrite keeps older callers that still read `__doc__` on the same text.
-
-## Why the audit parses source
-
-`scan_handler_surface` walks Python files, `ast.parse`s each one, and never imports the module. A syntax error, an unreadable file, or a decode error becomes a warning and the walk continues. Findings sort by risk, then path, then line.
-
-The visitor records three declaration shapes, because this repository and the clients it audits do not share one style.
-
-| Shape | AST the visitor looks for | Why it exists |
-|---|---|---|
-| Decorator | `@tool`, `@prompt`, `@resource` on a function or async function | FastMCP handlers in this repo. |
-| Low-level constructor | `Tool(...)` or `*.Tool(...)` | The MCP SDK type `mcp.types.Tool`, used where there is no wrapper decorator. |
-| Factory | `DetectorConfig(name=...)` | Detector tools are generated from configuration. There is no function body to walk, so the config call is the surface. |
-
-Decorator `name=` and `description=` are often not string literals. Low-level tools in particular use `Tool(name=self.name)`. `_collect_string_bindings` records module-level `X = "..."` and `self.X = "..."` assignments of string constants, first assignment wins. `_resolve_str` then resolves a constant, a name, an attribute, or the constant parts of an f-string. A dynamic name that is only built at runtime stays invisible to the scanner. That is accepted: the scanner reports what the source says, and reconcile reports what the manifest still cannot see.
-
-Risk is a haystack, not the first line of the docstring. The haystack includes the function name, the full decorator `description=`, the docstring's first line, and called names. The displayed description is the decorator description's first line when that keyword exists, otherwise the docstring's first line. A keyword in `description=` cannot hide from the haystack by staying out of the docstring, and a long description does not flood the finding text.
-
-Called names pass through `_risk_relevant_called_names`. `SAFE_RUNTIME_HELPER_CALLS` (`blocked_handler_runtime_response`, `complete_handler_runtime_action`, `complete_handler_runtime_payload`, `gate_handler_runtime_action`, `sanitize_runtime_inputs`) are removed first. Those helpers are the gate itself. Matching them would mark a gated tool as risky because it called the gate.
-
-`_contains_term` matches on identifier boundaries. `_` and `-` are boundaries, and the haystack already rewrites `-` to `_`. `scan` matches `port_scan` and `scan-host`. It does not match `scanner` or `epoch`. The term lists live next to the scanner: critical terms include `c2`, `credential`, `lateral`, `persistence`; high terms include `exploit`, `payload`, `poc`, `shell`; moderate terms include `scan`, `recon`, `detect`. Auth decorators `require_moderate_auth`, `require_dangerous_auth`, and `require_critical_auth` set a floor. Target-shaped parameters (`url`, `host`, `target`, `domain`, and the rest of `TARGET_PARAMS`) raise the floor to moderate unless the annotation contains `dict`. An INFO finding that still has a description is stored as LOW, so a described tool is visible in a risk-sorted report.
-
-A second helper, `_downgrade_read_only_risk`, is deliberately narrower and older. It runs only for HIGH-or-above findings that have no target parameter, whose matched terms are only `poc`, and whose tool name contains `list`, `search`, `stats`, `status`, or `query` as a substring, while not containing `execute`, `exploit`, `generate`, `spray`, or `start`. That substring check is not `_contains_term`. A name such as `poc_listener` contains `list`, so this helper lowers it. The labeled fixture `tests/fixtures/ai_surface/labels.json` pins that result. Replacing the substring check with identifier boundaries changes the default `handlers/` scan and is a separate, measured change.
-
-Issues the visitor can attach:
-
-| Issue | When |
+| What you wrote | Why the reader looks for it |
 |---|---|
-| `high_risk_tool_without_dangerous_auth` | Risk is HIGH or above and the auth decorator is below dangerous. |
-| `critical_tool_without_critical_auth` | Risk is CRITICAL and the auth decorator is not critical. |
-| `target_input_without_handler_validator` | A target-shaped parameter has no `validate_inputs` decorator. |
-| `payload_generation_without_auth_gate` | The haystack matched `payload` and there is no auth decorator. |
+| `@tool`, `@prompt`, or `@resource` on a function | The usual style in this repository |
+| `Tool(name=...)` | The lower-level MCP type, used where there is no decorator |
+| `DetectorConfig(name=...)` | Detector tools are built from a config. There is no function body to walk |
 
-Prompts and resources skip that issue list. Their authorization lives on the manifest row, not on `@tool` auth decorators.
+Names are often not written as quotes. `Tool(name=self.name)` is common. The reader remembers simple string assignments in the file, first assignment wins, and follows a name or an attribute back to that string. A name built only at runtime stays invisible. The comparison step then reports which allowed tools the reader never saw.
 
-SARIF rule ids are grouped by class (`mcp_tool.auth-critical`, `mcp_tool.auth-missing`, `mcp_tool.target-input`, `mcp_tool.factory`, `mcp_tool.lowlevel`, `mcp_prompt`, `mcp_resource`, `mcp_config`, `skill_instruction`, `surface_inventory_diff`). Code Scanning can aggregate. One rule per tool name would make the alert list a catalog.
+Risk words are matched on word boundaries. `scan` matches `port_scan`. It does not match `scanner` or `epoch`. The text that is searched is the function name, the full decorator description, the first line of the notes, and the names the function calls. The line stored in the finding is shorter: the first line of the decorator description, or the first line of the notes.
 
-### Reconcile
+Calls to the permission helpers themselves are ignored. A tool should not look dangerous only because it called the check.
 
-The scanner sees source patterns. The manifest sees what registration will accept. `reconcile_capability_manifest` joins them on `(kind, name)` and stores the report on the scan result.
+An older shortcut is separate from that word matcher. If the only risky word is `poc`, and the tool name contains the letters `list`, `search`, `stats`, `status`, or `query`, the rating is lowered. `poc_listener` contains `list`, so it is lowered. `tests/fixtures/ai_surface/labels.json` locks that result. Changing the shortcut changes the default handlers scan. It is a measured change, not a cleanup.
 
-| Bucket | Meaning |
-|---|---|
-| `statically_observed` | A finding name matches a manifest row and the finding is not a factory config. |
-| `factory_accounted` | The match came from `DetectorConfig`. The tool has no inline body, so this is how the detector catalog stays visible. |
-| `invisible` | A manifest row had no matching finding. Reasons are `factory-generated` (detector handler, no config call seen), `prompt`, `resource`, or `unseen`. |
-| `unlisted` | A finding name is not in the manifest. Registration would reject that name. |
+A scan of this repository's `handlers/` folder is expected to have **zero issues**. New issues there are a regression in the handlers or in the rules.
 
-Reconcile runs when you scan the repository root or a directory named `handlers`, unless you pass `reconcile=False`. A single file or a foreign directory stays a pure parse. Default `exclude_tests=True` skips `tests/`, `test_*.py`, `*_test.py`, and `conftest.py`, so the labeled fixtures are not production surfaces. The fixture tests opt back in.
+### Client config and instruction files
 
-The walk also skips `.git`, `.hg`, `.svn`, `.venv`, `venv`, `node_modules`, `__pycache__`, `.mypy_cache`, `.pytest_cache`, `.tox`, `build`, `dist`, `wordlists`, and symlinks. Wordlists and dependency trees are large and they are not handler source.
-
-A clean scan of this repository's `handlers/` is expected to have `issue_count == 0`. New issues there are regressions in the handlers or in the rules, and the labeled fixtures are where rule changes are supposed to show up.
-
-## Client configs and skill files
-
-`scan-mcp-config` accepts a file or a directory. In a directory it looks for `.mcp.json`, `mcp.json`, and `claude_desktop_config.json`. One inventory pass reads the file. Three object shapes are the same catalog, tried in order: `mcpServers`, a top-level `servers` map, then `mcp.servers`. The scan never connects, never sends `initialize`, and never calls `tools/list`.
-
-| Finding | Rule | Why this signal |
-|---|---|---|
-| Command is `powershell`, `pwsh`, `cmd`, `bash`, `sh`, `python`, or `node` | `mcp_server_uses_general_command_runtime` (HIGH) | A general interpreter can run whatever follows. A narrow wrapper command is the shape the recommendation asks for. |
-| Env **name** matches `key`, `token`, `secret`, or `password` | `mcp_server_env_contains_secret_like_keys` (MODERATE) | The scanner sees names, not secret values. Matching uses `_contains_term` after `-` becomes `_`, so `monkey` is not a key and `api_key` is. |
-| Object has `url`, `serverUrl`, or `baseUrl` | `mcp_server_declares_remote_endpoint` (MODERATE) | A remote endpoint is a different trust boundary from stdio. The finding records the key and the line. It does not copy the URL into the description. |
-
-The line number is the line of the server's object key, from `_json_key_line`, using the same text the parser already read. A second read would drift if the file changed, and a JSON library's own line numbers are not stable across the three client shapes.
-
-`scan-skills` reads local markdown, text, YAML, JSON, and TOML for instruction markers (`credential`, `exfil`, `persistence`, `c2`, `shell`, `command`, `network`, `write`, `delete`, `token`, `secret`). Lockfiles are skipped by name: `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `poetry.lock`, `pipfile.lock`, `cargo.lock`, `composer.lock`, `gemfile.lock`. Those files are large, generated, and full of words that collide with the marker list. When the path is a directory, a file over 1,048,576 bytes is skipped and named in the warnings. A single-file invocation is not size-capped, because you named the file.
-
-`--auth-mode lenient` drops missing-auth issues only. It does not change the parse, the risk terms, or the config findings. Use it for a repository that has its own auth decorators and has not registered them through the `auth_decorators` argument.
-
-`--ci` prints a short summary. `--exit-code` returns non-zero when a finding reaches `--severity-threshold` (`info`, `low`, `medium`, `high`, `critical`).
-
-## Inventory diff
-
-`diff_surface_inventory` compares a saved `ai-surface scan` JSON document with a fresh handler scan. It is a CLI command, `autort ai-surface diff --baseline surface.json --path handlers`. It is not an MCP tool, so it has no manifest row and it cannot be called by a model through this server.
-
-The join key is `(kind or "tool", tool_name)`. Description and parameter drift are the two changes that matter to a model: the text it reads, and the arguments it is offered. Parameter lists are sorted before compare, so source order alone is not a change. Unchanged surfaces are omitted. Each emitted finding is at least MODERATE.
-
-| Issue | Meaning |
-|---|---|
-| `surface_added` | The name is in the fresh scan and absent from the file. |
-| `surface_removed` | The name is in the file and absent from the fresh scan. |
-| `surface_description_changed` | The description strings differ. The recommendation quotes the first 200 characters of the saved description. |
-| `surface_parameters_changed` | The sorted parameter names differ. The recommendation lists the saved names. |
-
-A saved document with no `findings` list adds the warning `Saved inventory has no findings list` and then treats every current surface as added. Rule id is `surface_inventory_diff`. The command still does not connect and does not call a tool.
-
-## Tool-contract lint
-
-`core/tooling/contract.py` is the implementation behind `autort tools lint`. It consumes the same AST result and adds contract rules on top: duplicate tool names, missing parameter annotations, a missing `Args:` section in the docstring, and whether a high-risk tool looks able to return evidence. It also promotes the four auth and target issues above to contract errors.
-
-`autort tools` is that lint group. A function named `tools` in `cli/main.py` still exists and is gated on `ext_tools_status`, but the Typer group occupies the command name, so `autort tools` does not call it. `ext_tools_status` remains a `scan` surface with no separate CLI entry.
-
-Lint reads source. It does not import handlers and it does not execute them.
-
-## Evidence gate
-
-`core/evidence/gate.py` turns a verification result into an `EvidenceAssessment` and decides whether a finding counts as confirmed. The orchestrator and the report path need one definition of "confirmed". Detectors do not share one result class, and several of them set `verified=True` after a single echo or syntax check. Treating that flag as proof made the gate a test of whether a field was filled in.
-
-The gate therefore refuses to import `core.vuln_verifier`. Verifier modules pull heavier dependencies, and a report should still normalize a dict that came from somewhere else. Attributes and keys are read by duck typing from `VerificationResult`, `StatisticalVerification`, or a plain dict. The caller's dict is copied. The gate returns the copy.
-
-Independent provenance is the allow-list `vuln_verifier`, `statistical_verifier`, `oob_callback`, and `manual_review`. A detector's own `verified=True` is not on that list. Numeric confidence maps at `>= 0.7` high and `>= 0.4` medium. Anything lower is low. An unconfirmed finding is prefixed with `[UNCONFIRMED] ` (the prefix is the idempotency mark) and its severity is capped. The raw fields copied onto `EvidenceItem.raw` are the fixed `_RAW_FIELDS` tuple, so a surprise attribute on a verifier object does not become part of the stored evidence by accident.
-
-## Session, configuration, and reports
-
-`core/session/target.py` parses a target string into a `Target`. The fields are `value` (the original string), `type` (`url`, `ip`, `domain`, `cidr`, `host_port`), `status`, `scheme`, `host`, `port`, and `path`. There is no `url` attribute. Callers that need a URL build it from those parts. Session storage is also where scan and orchestration state is written so a later command can resume.
-
-Configuration is a Pydantic model loaded once. Priority is environment variables with the `AUTORT_` prefix, then YAML, then field defaults. `AUTORT_CONFIG` points at a YAML file. Otherwise the loader looks for `config/config.yaml`, `config/config.yml`, `config.yaml`, and `config.yml` under the repository root. Missing PyYAML skips the file and keeps the defaults. `AUTORT_SCAN_TIMEOUT` is the pattern for a single field override.
-
-Two output stacks share the SARIF 2.1.0 schema (`https://json.schemastore.org/sarif-2.1.0.json`). `core/reporting/sarif.py` maps detector severities onto SARIF levels: critical and high become `error`, medium becomes `warning`, low and info become `note`. The surface scanner uses the same document shape and the stable rule ids above, and it attaches `static_coverage` on the run properties. `export_findings` is a `safe` surface. `generate_report` is a `scan` surface. JSON and SARIF export are the beta path. HTML is still hardening.
-
-The CLI callback prints `LEGAL_DISCLAIMER` on stderr whenever a subcommand runs, including `--help`. `--help` does not call `require_surface`.
-
-## Recon and detection
-
-These engines ship in the wheel. They stay behind `scan`. There is no public accuracy benchmark, so detector thresholds, payloads, and match rules are frozen. A coverage gap in `core/detectors/` is not a reason to edit a detector.
-
-`StandardReconEngine` (`core/recon/engine.py`) is the pipeline behind `Scanner.full_recon` and `autort scan --full`. `ReconPhase` is a fixed order: init, DNS, port scan, fingerprint, technology detection, WAF detection, subdomain enumeration, directory scan, sensitive-file notes, then a summary. The pieces are pure Python (`dns_resolver`, `port_scanner`, `fingerprint`, `tech_detect`, `waf_detect`, `subdomain`, `passive_recon`, `directory`, `js_analyzer`, `service_probe`). There is no backend selector. `core/engine_router.py` was removed because nothing called it and its external-tool branch was unreachable in a clean checkout. `nmap`, `nuclei`, `ffuf`, and `sqlmap` appear as optional manifest surfaces (`external_tools`, some of them `external-process`). The default scan path does not shell out to them.
-
-`DetectorFactory` is a class-level registry. Detectors subclass `BaseDetector`, implement `detect`, and register under a short name (`sqli`, and the rest). `create`, `create_by_type`, and severity filters are how the factory handlers and `vuln_scan` build a set without importing every detector by hand at the call site. Groups on disk are `access`, `auth`, `file`, `injection`, `misc`, and `request`. Results use `core/detectors/result.py` (`DetectionResult`, `DetectorType`, `Severity`). `false_positive_filter` and `advanced_verifier` sit beside the detectors. They do not replace the evidence gate. A detector that marks itself verified still has to pass provenance in `core/evidence` before a report treats the finding as confirmed.
-
-`core/http` is the shared client, session, and middleware those engines use. `core/concurrency` holds the pool, rate limiter, semaphore, circuit breaker, and scheduler they share. `core/security/mcp_security.py` is the in-process middleware for target validation, rate limits, and parameter cleanup on the MCP side. It is not a substitute for the profile gate.
-
-CVE search on `safe` reads the local intelligence store (`core/cve/search.py`, `storage.py`, `sources.py`). Sync and PoC execution are higher-profile surfaces (`cve_auto_exploit` is `active-lab`). The CLI flag check for `exploit` without `--cve` or `--auto` exits 1 before the profile gate runs.
-
-## Orchestration and the experimental tree
-
-`AutoPentestOrchestrator` is a phase machine. `PHASE_ORDER` is recon, vuln scan, PoC execution, exploit, privilege escalation, lateral movement, exfiltrate, report. Each phase has an executor under `core/orchestrator/phases/`. `core/orchestrator/phases.py` is a compatibility re-export so older imports keep working. `decision.py` can skip or select phases from state. `state.py` stores phase status. `resume(session_id)` rebuilds the orchestrator from the last checkpoint in the session store. `runtime_policy_enabled`, `runtime_mode`, `runtime_network_policy`, and `runtime_sandbox_provider` on the orchestrator config are metadata the runtime pipeline reads. They do not create a container.
-
-CLI and SDK names map onto manifest rows:
-
-| Call | Manifest surface | Minimum profile |
-|---|---|---|
-| `scan` without `--full` | `port_scan` | `scan` |
-| `scan --full` / `--recon-only` | `full_recon` | `scan` |
-| `detect` | `vuln_scan` | `scan` |
-| `nuclei` | `nuclei_scan` | `scan` |
-| `report` | `generate_report` | `scan` |
-| `cve-search` | `cve_search` | `safe` |
-| `exploit --cve` | `cve_auto_exploit` | `active-lab` |
-| `exploit --auto` | `exploit_orchestrate` | `active-lab` |
-| `exploit` with neither flag | no surface; the process exits 1 | before `require_surface` |
-| `Exploiter.exploit()` | `exploit_vulnerability` | `active-lab` |
-| `pentest` | `auto_pentest` | `full` |
-| `pentest --resume` | `pentest_resume` | `full` |
-| `AutoPentest.status` | `session_status` | `safe` |
-
-`RedTeam` methods (lateral movement, C2, persistence, privilege escalation, credential discovery) are `full` surfaces. They are listed in the manifest and loaded lazily. This page does not show call examples.
-
-The default wheel's `[tool.setuptools.packages.find]` includes `core*`, `handlers*`, `utils*`, `autort*`, and `cli*`, then excludes `tests*`, `scripts*`, `backup*`, and:
-
-```text
-core.c2*  core.lateral*  core.persistence*  core.post_exploit*
-core.privilege_escalation*  core.exfiltration*  core.evasion*
-core.credential*  core.ad*  core.exploit*
+```mermaid
+flowchart LR
+  json[".mcp.json, mcp.json, or claude_desktop_config.json"]
+  shapes["mcpServers, or servers, or mcp.servers"]
+  flags["General shell, secret-like env name, or a remote URL key"]
+  json --> shapes --> flags
 ```
 
-`py-modules` lists `_version` and `mcp_stdio_server` because they are root modules, not packages. `packages.find` would miss them, and the console script would fail with `ModuleNotFoundError`.
+The reader never connects, never sends `initialize`, and never calls `tools/list`.
 
-`autort/__init__.py` imports `Scanner` and `Reporter` immediately. `Exploiter`, `AutoPentest`, and `RedTeam` load through `__getattr__` on first use. `from autort import Scanner` does not import those three. A handler that imports an excluded package raises `ImportError` at registration, which is logged, and the other modules still register. That is why a wheel install can serve the `safe` audit even though the git tree contains the experimental packages.
+| What it sees | Why it cares |
+|---|---|
+| Command is `powershell`, `pwsh`, `cmd`, `bash`, `sh`, `python`, or `node` | A general interpreter can run whatever follows. High. |
+| An environment **name** matches `key`, `token`, `secret`, or `password` as a word | It sees names, not secret values. `monkey` is not a key. `api_key` is. Moderate. |
+| The object has `url`, `serverUrl`, or `baseUrl` | A remote address is a different trust boundary from stdio. The finding records the key and the line. It does not copy the URL. Moderate. |
 
-The CI build job installs that wheel into a clean virtual environment. The ten packages above are not importable there. `capabilities manifest --profile safe` still runs, an `ai-surface scan` of the installed `handlers` package still reports `issue_count == 0`, and importing `Scanner` does not load `Exploiter`, `AutoPentest`, or `RedTeam`. The source-tree unit tests do not prove this, because those tests can still import the engines from the checkout.
+Instruction files are markdown, text, YAML, JSON, and TOML. Lockfiles are skipped by name. In a directory, a file over 1 MB is skipped and named in the warnings. A file you named yourself is not size-capped.
 
-Repo-level content classifiers still see the experimental tree. The wheel, the container, and the `safe` import boundary do not change that.
+`--auth-mode lenient` drops missing-auth issues only. It does not change the rest of the parse.
 
-Coverage in CI is scoped to the same default wheel. The ten engine globs are omitted from both `[tool.coverage.run]` and `[tool.coverage.report]`, and the workflow uses `--cov-fail-under=50`. Run-omit alone does not hide files already stored in a `.coverage` data file, which is why the report omit exists. The gate is "the published install stays measured." It is not a claim that the detectors are fully covered, and it is not a reason to edit them.
+### Two scans, side by side
 
-## Agent runtime, scenarios, and code context
+`autort ai-surface diff` compares a saved JSON scan with a fresh read of the handlers. It is a command, not a tool the model can call.
 
-`core/agent_runtime` is plan-time state for a controlled run. `AgentRunState` holds tasks, actions, artifacts, a flow, and trace events. `ActionPolicy` and `RiskLevel` describe what an action is allowed to mean. `HumanGate` is the approval marker. `RuntimePipeline` runs `PolicyMiddleware` and `SandboxMiddleware` over that state. `ObservabilitySnapshot` and the in-process `RuntimeRunRegistry` are how a run becomes inspectable after the fact.
+```mermaid
+flowchart LR
+  old["Saved scan JSON"]
+  new["Fresh read"]
+  diff["Added, removed, or changed text or arguments"]
+  old --> diff
+  new --> diff
+```
 
-`core/agent_runtime/sandbox.py` records a `SandboxPolicy`: enabled flag, provider, network policy defaulting to `deny`, an allow-list of tool names, artifact policy defaulting to `metadata-only`, and a timeout. `enforce_sandbox_policy` returns a decision. `execute_action_in_docker_sandbox` stays policy-only unless the caller passes `allow_execute=True`, and only then does it call `DockerExecutor`. `autort sandbox docker-smoke` calls `smoke_docker_sandbox`: a local container with `network_mode=none`, and a missing Docker daemon is an explicit skip rather than a failed scan. A policy object with `provider` set is still metadata until one of those two functions runs.
+Unchanged tools are left out. Parameter order alone is not a change. Each reported row is at least moderate. A saved file with no findings list warns you, then treats every current tool as added.
 
-`autort runtime-api serve` exposes a read-only HTTP view of run state. The routes are the runs index and a single run, under `/api/runs`, bound to the host and port you pass (the usual local pair is `127.0.0.1` and `8765`). The view reads the registry. It does not invoke tools.
+## When a result counts
 
-`AIRedTeamRunner` (`core/ai_redteam/runner.py`) plans attempts from a declarative scenario. The default mode is dry-run. `ScenarioMode.ACTIVE` raises `PermissionError` unless the caller passed `allow_active=True`. The default pipeline installs `SandboxMiddleware` with the sandbox enabled only when the scenario mode is active. Catalog, convert, and eval-run are the other CLI verbs. Scorers and converters stay inside the scenario document. They are not a live agent loop.
+Detectors do not share one result type. Several of them set `verified=True` after a single echo or a syntax check. Treating that flag as proof made the check a test of whether a field was filled in.
 
-`core/code_agent` expands a Python call chain with `ast`. It maps local functions, resolves simple intra-project calls, and scores whether the neighborhood contains sinks such as `subprocess` or `eval`. `autort code-agent expand` does not run the program.
+```mermaid
+flowchart TB
+  det["A detector says verified"]
+  ask{"Did an outside check say so?"}
+  yes["Confirmed"]
+  no["Title starts with UNCONFIRMED<br/>severity is capped"]
+  det --> ask
+  ask -->|"verifier, statistics, callback, or a person"| yes
+  ask -->|"only the detector's own flag"| no
+```
 
-The knowledge graph (`kg_store`, `kg_query`, `kg_attack_paths`) and the MCTS planner (`plan_attack_path`) are `full` surfaces, high risk, maturity `experimental`, with auth, approval, and `isolated-required`. They are optional catalog entries. This repository does not treat them as measured planning results.
+The outside sources are `vuln_verifier`, `statistical_verifier`, `oob_callback`, and `manual_review`. The evidence code does not import the verifier package. Verifiers pull heavier libraries, and a report still has to accept a plain dict. The caller's dict is copied. The check returns the copy.
 
-## CLI and SDK
+Confidence from a number: `0.7` and above is high, `0.4` and above is medium, below that is low.
 
-Installed, the command is `autort`. From a checkout, `python -m cli.main` is the same program.
+## The install and the git tree
+
+```mermaid
+flowchart LR
+  subgraph gitTree ["Git checkout"]
+    reader2["Reader, list, recon, detection"]
+    extra["Experimental engines<br/>still on disk"]
+  end
+  subgraph install ["pip install and the container"]
+    published["Reader, list, command line, server, recon, detection"]
+  end
+  reader2 --> published
+  extra -.->|"left out of the package"| published
+```
+
+Left out of the package: command-and-control, moving between machines, staying on a machine, post-access work, raising privilege, taking data out, hiding, credentials, Active Directory, and exploit code. They remain in git so an explicit `full` checkout can still import them. Deleting them would break that checkout. A second repository would split the allowed list from the code it describes.
+
+The CI build job installs the package into a clean virtual environment. Those ten packages are not importable there. The `safe` list still prints. A scan of the installed `handlers` folder still reports zero issues. Importing `Scanner` still does not load the three lazy engines. Tests that run inside the checkout do not prove this. Those tests can still import the engines from the working tree.
+
+A published install can still serve the `safe` reader when a handler fails to import a missing engine. That failure is logged. The other groups still register.
+
+Repo scanners that read the git tree still see the experimental code. The package, the container, and the `safe` import rule do not change that.
+
+There is no switch that picks nmap or another outside binary at scan time. Recon and detection call the Python engines in this tree. Outside-tool rows still exist on the allowed list for the levels that name them. The default scan does not shell out to them.
+
+Detector thresholds stay where they are. There is no public accuracy test to tune them against.
+
+## Commands
+
+Installed, the command is `autort`. From a checkout it is `python -m cli.main`.
 
 ### Safe
 
-These do not contact a target. `cve-search` reads local CVE intelligence.
+These do not contact a target. CVE search reads the local notes.
 
-| Command | What you get | Example |
+| Command | You get | Example |
 |---|---|---|
-| `ai-surface scan` | Handler inventory, SARIF or JSON | `autort ai-surface scan --path handlers --format sarif -o surface.sarif` |
-| `ai-surface scan-mcp-config` | Client config inventory | `autort ai-surface scan-mcp-config --path .mcp.json` |
-| `ai-surface scan-skills` | Instruction markers in skill files | `autort ai-surface scan-skills --path ./skills` |
-| `ai-surface diff` | Saved scan JSON against the current handlers | `autort ai-surface diff --baseline surface.json --path handlers` |
-| `capabilities profiles` | Inheritance and surface counts | `autort capabilities profiles` |
-| `capabilities manifest` | One profile, as data | `autort capabilities manifest --profile safe` |
-| `tools lint` | Static MCP tool-contract check | `autort tools lint --path handlers` |
+| `ai-surface scan` | An inventory of the handlers | `autort ai-surface scan --path handlers --format sarif -o surface.sarif` |
+| `ai-surface scan-mcp-config` | A read of a client config | `autort ai-surface scan-mcp-config --path .mcp.json` |
+| `ai-surface scan-skills` | Markers in instruction files | `autort ai-surface scan-skills --path ./skills` |
+| `ai-surface diff` | What changed since a saved scan | `autort ai-surface diff --baseline surface.json --path handlers` |
+| `capabilities profiles` | The four levels and their counts | `autort capabilities profiles` |
+| `capabilities manifest` | One level, as data | `autort capabilities manifest --profile safe` |
+| `tools lint` | A contract check of the same parse | `autort tools lint --path handlers` |
 | `cve-search` | Local CVE search | `autort cve-search "Log4j" --severity critical --has-poc -n 20` |
 | `version` | The version string | `autort version` |
 
+`autort tools` is the lint group. A function of the same name still exists and is limited to the `scan` level, but the group occupies the command, so that function is not what `autort tools` runs.
+
 | Group | Commands | What it is |
 |---|---|---|
-| `ai-surface` | `scan`, `scan-mcp-config`, `scan-skills`, `diff` | The audit above |
-| `capabilities` | `matrix`, `readiness`, `manifest`, `profiles` | Manifest and coverage |
+| `ai-surface` | `scan`, `scan-mcp-config`, `scan-skills`, `diff` | The reader |
+| `capabilities` | `matrix`, `readiness`, `manifest`, `profiles` | The allowed list |
 | `tools` | `lint` | Contract check |
-| `code-agent` | `expand` | Call-chain context |
-| `runtime-api` | `serve` | Read-only local view of run state |
-| `sandbox` | `docker-smoke` | Local Docker smoke test |
-| `ai-redteam` | `run`, `catalog`, `convert`, `eval-run` | Declarative scenarios, dry-run unless you opt further in |
+| `code-agent` | `expand` | Who calls whom, from the source |
+| `runtime-api` | `serve` | A local read-only view of a saved run |
+| `sandbox` | `docker-smoke` | A local Docker smoke test, network off |
+| `ai-redteam` | `run`, `catalog`, `convert`, `eval-run` | A written scenario. Dry-run unless you go further |
 
-### Higher profiles
+### Higher levels
 
-`safe` refuses these. Examples assume an authorized local target.
+`safe` refuses these. The examples assume a local target you are allowed to test.
 
-| Command | Minimum profile | Example |
+| Command | Level | Example |
 |---|---|---|
 | `scan` | `scan` | `autort scan http://127.0.0.1:8000 --full` |
 | `detect` | `scan` | `autort detect http://127.0.0.1:8000 -c sqli,xss,ssrf --format sarif` |
@@ -453,9 +355,11 @@ These do not contact a target. `cve-search` reads local CVE intelligence.
 | `exploit` | `active-lab` | `autort exploit http://127.0.0.1:8000 --cve CVE-2021-44228` |
 | `pentest` | `full` | `autort pentest http://127.0.0.1:8000 --phases recon,vuln_scan` |
 
-### SDK
+`exploit` with neither `--cve` nor `--auto` exits 1 before the permission check.
 
-Calls are async. Most return a `dict`. A few scan methods return a list. Success is `"success": True`. A failure carries an `"error"` string. If the profile is too low, the call stops before the engine import.
+### Python
+
+Calls are async. Most return a dict. A failure carries an `"error"` string. If the level is too low, the call stops before the engine is imported.
 
 ```python
 from autort import Exploiter, Reporter
@@ -468,13 +372,13 @@ reporter = Reporter("session_id_here")
 findings = await reporter.export_findings(format="json")
 ```
 
-`Scanner` needs `scan`. The methods are `full_recon()`, `port_scan()`, `detect_vulns()`, `fingerprint()`, `waf_detect()`, `subdomain_enum()`, `passive_recon()`, and `nuclei_scan()`, mapped to `full_recon`, `port_scan`, `vuln_scan`, `fingerprint`, `waf_detect`, `subdomain_enum`, `passive_subdomain_enum`, and `nuclei_scan`. Set `AUTORT_CAPABILITY_PROFILE=scan` before calling them.
+`Scanner` needs `scan`. Set `AUTORT_CAPABILITY_PROFILE=scan` before `full_recon()`, `port_scan()`, `detect_vulns()`, `fingerprint()`, `waf_detect()`, `subdomain_enum()`, `passive_recon()`, or `nuclei_scan()`.
 
-`Reporter.generate()` maps to `generate_report` and also needs `scan`. `Exploiter.cve_exploit()`, `auto_exploit()`, and `exploit()` need `active-lab` or above. `AutoPentest.run()` and `resume()` need `full`. `AutoPentest.status(session_id)` stays on `safe`.
+`Reporter.generate()` also needs `scan`. `Exploiter.cve_exploit()`, `auto_exploit()`, and `exploit()` need `active-lab` or above. `AutoPentest.run()` and `resume()` need `full`. `AutoPentest.status(session_id)` stays on `safe`. This page does not show `RedTeam` calls. Those methods are `full`.
 
 ## GitHub Action
 
-The example below is the pin this repository documents. It sets `mode` on purpose. Current `main` defaults the Action to `self-audit`. The `v3.1` tag still defaults to `target-scan`, and that mode requires a `target` input. The tag was not moved when the default changed.
+The example sets `mode` on purpose. Current `main` defaults the Action to `self-audit`. The `v3.1` tag still defaults to `target-scan`, and that mode requires a `target`. The tag was not moved when the default changed.
 
 ```yaml
 - uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1
@@ -484,15 +388,22 @@ The example below is the pin this repository documents. It sets `mode` on purpos
     severity-threshold: high
 ```
 
-The full workflow is [`.github/workflows/self-audit.example.yml`](.github/workflows/self-audit.example.yml). Output defaults to SARIF and is uploaded for code scanning. `path` is relative to the caller repository unless it is absolute. `self-audit` runs `python -m cli.main ai-surface scan`.
+The full workflow is [`.github/workflows/self-audit.example.yml`](.github/workflows/self-audit.example.yml). Output defaults to SARIF and is uploaded for code scanning. `self-audit` runs `python -m cli.main ai-surface scan`.
 
-`mode: target-scan` remains available for an authorized URL. It runs detection, and it needs `target`.
+`mode: target-scan` remains for an authorized URL. It runs detection, and it needs `target`.
 
-## Container
+## Container and client
 
-The published image is a multi-stage `python:3.12-slim` build. The builder runs `python -m build --wheel` and installs that wheel with `pip install --prefix=/opt/autort`. The runtime stage copies the prefix, sets `AUTORT_CAPABILITY_PROFILE=safe`, runs as `appuser`, and starts `autoredteam-mcp`. The healthcheck imports `mcp_stdio_server`. `.dockerignore` drops the same experimental trees the wheel excludes, plus payload and wordlist material. The image does not install nmap. The OCI description uses the same sentence as the package: a local MCP/AI attack-surface audit and evidence gate for authorized testing.
+```mermaid
+flowchart LR
+  src["Source"]
+  wheel["Build the install package"]
+  image["python 3.12 slim<br/>user appuser<br/>level safe"]
+  cmd["Start autoredteam-mcp"]
+  src --> wheel --> image --> cmd
+```
 
-## MCP client
+The image does not install nmap. The same experimental trees are dropped, plus payload and wordlist material. The health check imports the server module. The image description is the package sentence: "Local MCP/AI attack-surface audit and evidence gate for authorized testing."
 
 The server speaks stdio.
 
@@ -517,23 +428,174 @@ python -m mcp_stdio_server --stdio
 }
 ```
 
-Leave the profile unset and the server stays on `safe`. The same JSON is a valid input to `scan-mcp-config`. A general command name and a secret-like env name will be reported, which is the scanner doing the job the section above describes. Point the command at a wrapper if you want a clean config finding.
+Leave the level unset and the server stays on `safe`. This JSON is a valid input to the config reader. The command name `autoredteam-mcp` is not a general interpreter, so that part is quiet. The environment name `AUTOREDTEAM_API_KEY` contains `key`, so the reader reports it. Point the command at a wrapper, and use a name that does not look like a secret, when you want a clean config result.
 
-## What this tree leaves undone
+## Names in the code
 
-A few absences are choices.
+The pictures above are the design. This section is the index: file names, counts, and the rules a change has to keep.
 
-The scanner does not open an MCP session. A live `initialize` / `tools/list` client would see tools the server actually registered, which the manifest already enumerates, and it would require running the server. The static join is the check that can run in CI on a checkout.
+<details>
+<summary>Allowed list, registration, and the 22 groups</summary>
 
-There is no runtime proxy in front of other MCP servers. The audit reads config and source, then stops.
+The row type is `Capability` in `core/capability_manifest.py`. The index key is `(kind, name)`.
+
+| Field | Plain meaning |
+|---|---|
+| `kind` | `tool`, `prompt`, or `resource` |
+| `name` | Public name. Decorator `name=`, or the function name |
+| `handler` | Which group owns it. The wrong file is refused |
+| `minimum_profile` | Lowest level that may register or call it |
+| `risk` | `low`, `moderate`, `high`, `critical`. A label, not a measurement |
+| `maturity` | `preview`, `beta`, `experimental`, `restricted-experimental`, `internal`. A label. It does not change registration |
+| `auth_required` / `approval_required` | Whether the card mentions a key and a separate approval |
+| `executor` | `in-process` (80), `isolated-required` (56), or `external-process` (6) |
+| `effects` | Labels joined into the card. Empty renders as `none` |
+| `locator` | Resource URI, for a resource |
+
+Current risk mix: moderate 59, critical 46, high 19, low 18. Current maturity mix: restricted-experimental 46, preview 41, beta 38, experimental 11, internal 6.
+
+`require_surface` raises `ProfileDenied` when the level is too low. The command line turns that into exit 2. SDK methods call it before they import the engine, and before the broad `except Exception` that turns an engine failure into `{"success": False, "error": ...}`. A refused level is its own failure.
+
+`handler_enabled` is true when that group owns at least one row allowed at this level. `register_all_handlers` runs once per server object, stored as `_autort_capability_profile`.
+
+| Order | Module | Group key | Rows |
+|---:|---|---|---:|
+| 1 | `recon_handlers` | `recon` | 9 |
+| 2 | `detector_factory` | `detector` | 28 |
+| 3 | `evidence_handlers` | `evidence` | 1 |
+| 4 | `cve_handlers` | `cve` | 8 |
+| 5 | `api_security_handlers` | `api_security` | 7 |
+| 6 | `cloud_security_handlers` | `cloud_security` | 3 |
+| 7 | `supply_chain_handlers` | `supply_chain` | 3 |
+| 8 | `redteam_handlers` | `redteam` | 14 |
+| 9 | `orchestration_handlers` | `orchestration` | 11 |
+| 10 | `lateral_handlers` | `lateral` | 9 |
+| 11 | `persistence_handlers` | `persistence` | 3 |
+| 12 | `ad_handlers` | `ad` | 3 |
+| 13 | `session_handlers` | `session` | 4 |
+| 14 | `report_handlers` | `report` | 2 |
+| 15 | `ai_handlers` | `ai` | 11 |
+| 16 | `misc_handlers` | `misc` | 3 |
+| 17 | `external_tools_handlers` | `external_tools` | 8 |
+| 18 | `parallel_handlers` | `parallel` | 1 |
+| 19 | `knowledge_handlers` | `knowledge` | 3 |
+| 20 | `mcts_handlers` | `mcts` | 1 |
+| 21 | `prompt_handlers` | `prompts` | 6 |
+| 22 | `resource_handlers` | `resources` | 4 |
+
+The comment at the top of `handlers/__init__.py` is older. It still says 8 recon tools and 26 detector tools. This table is the live list. Registration refuses a name the list does not have.
+
+`ImportError`, `AttributeError`, and `TypeError` from one group are logged and the loop continues. `CapabilityManifestError` is re-raised. MCP 2.3 stores the description argument and returns it from `list_*`. Tests check that every listed description equals the card, for all four levels.
+
+</details>
+
+<details>
+<summary>Reader rules, issues, and the comparison with the list</summary>
+
+`scan_handler_surface` walks Python files and uses `ast`. A syntax error, an unreadable file, or a bad encoding becomes a warning. Findings sort by risk, then path, then line.
+
+Skipped directories: `.git`, `.hg`, `.svn`, `.venv`, `venv`, `node_modules`, `__pycache__`, `.mypy_cache`, `.pytest_cache`, `.tox`, `build`, `dist`, `wordlists`, and symlinks. Tests are skipped unless you ask: `tests/`, `test_*.py`, `*_test.py`, and `conftest.py`.
+
+Issues a `@tool` function can get:
+
+| Issue | When |
+|---|---|
+| `high_risk_tool_without_dangerous_auth` | High or above, and the auth decorator is below dangerous |
+| `critical_tool_without_critical_auth` | Critical, and the auth decorator is not critical |
+| `target_input_without_handler_validator` | A target-shaped argument has no `validate_inputs` decorator |
+| `payload_generation_without_auth_gate` | The text matched `payload` and there is no auth decorator |
+
+Prompts and resources skip that list. Their permission lives on the row.
+
+SARIF rule ids are grouped by class, not one rule per tool: `mcp_tool.auth-critical`, `mcp_tool.auth-missing`, `mcp_tool.target-input`, `mcp_tool.factory`, `mcp_tool.lowlevel`, `mcp_prompt`, `mcp_resource`, `mcp_config`, `skill_instruction`, `surface_inventory_diff`.
+
+The comparison (`reconcile_capability_manifest`) joins on `(kind, name)` when you scan the repo root or a directory named `handlers`.
+
+| Bucket | Meaning |
+|---|---|
+| `statically_observed` | A finding matches a row, and it is not a detector config |
+| `factory_accounted` | The match came from `DetectorConfig` |
+| `invisible` | A row had no finding. Reason: `factory-generated`, `prompt`, `resource`, or `unseen` |
+| `unlisted` | A finding name is not on the list. Registration would reject it |
+
+JSON stores this at `summary.static_coverage`. SARIF stores it at `runs[].properties.static_coverage`.
+
+Diff issues are `surface_added`, `surface_removed`, `surface_description_changed`, and `surface_parameters_changed`. The join key is `(kind or "tool", tool_name)`. A description change quotes the first 200 characters of the saved text. Rule id is `surface_inventory_diff`.
+
+`core/tooling/contract.py` is `autort tools lint`. It reuses the parse and adds duplicate names, missing annotations, a missing `Args:` section, and whether a high-risk tool looks able to return evidence.
+
+</details>
+
+<details>
+<summary>Session, config, recon, and the phase machine</summary>
+
+A target string becomes a `Target` with `value`, `type` (`url`, `ip`, `domain`, `cidr`, `host_port`), `status`, `scheme`, `host`, `port`, and `path`. There is no `url` attribute. Callers build a URL from those parts. Session storage is where a later command resumes.
+
+Config priority is `AUTORT_` environment variables, then YAML, then field defaults. `AUTORT_CONFIG` points at a file. Otherwise the loader looks for `config/config.yaml`, `config/config.yml`, `config.yaml`, and `config.yml`. Missing PyYAML keeps the defaults.
+
+`export_findings` is `safe`. `generate_report` is `scan`. JSON and SARIF are the beta export path. HTML is still hardening. SARIF levels: critical and high are `error`, medium is `warning`, low and info are `note`.
+
+`StandardReconEngine` is the `--full` scan. The order is init, DNS, ports, fingerprint, technology, WAF, subdomains, directories, sensitive-file notes, then a summary. The pieces are pure Python. `core/engine_router.py` was removed. Nothing called it.
+
+`DetectorFactory` is the registry. Detectors subclass `BaseDetector` and implement `detect`. Groups on disk are `access`, `auth`, `file`, `injection`, `misc`, and `request`. A detector that marks itself verified still has to pass the outside-check rule before a report treats the finding as confirmed.
+
+CVE search on `safe` reads `core/cve`. Sync and PoC execution are higher levels. `cve_auto_exploit` is `active-lab`.
+
+`AutoPentestOrchestrator` walks recon, vuln scan, PoC execution, exploit, privilege escalation, lateral movement, exfiltrate, then report. `resume(session_id)` rebuilds it from the last checkpoint. The runtime fields on its config are notes the pipeline reads. They do not create a container.
+
+| Call | Row on the list | Level |
+|---|---|---|
+| `scan` without `--full` | `port_scan` | `scan` |
+| `scan --full` | `full_recon` | `scan` |
+| `detect` | `vuln_scan` | `scan` |
+| `nuclei` | `nuclei_scan` | `scan` |
+| `report` | `generate_report` | `scan` |
+| `cve-search` | `cve_search` | `safe` |
+| `exploit --cve` | `cve_auto_exploit` | `active-lab` |
+| `exploit --auto` | `exploit_orchestrate` | `active-lab` |
+| `Exploiter.exploit()` | `exploit_vulnerability` | `active-lab` |
+| `pentest` | `auto_pentest` | `full` |
+| `pentest --resume` | `pentest_resume` | `full` |
+| `AutoPentest.status` | `session_status` | `safe` |
+
+Package exclude globs:
+
+```text
+core.c2*  core.lateral*  core.persistence*  core.post_exploit*
+core.privilege_escalation*  core.exfiltration*  core.evasion*
+core.credential*  core.ad*  core.exploit*
+```
+
+`_version` and `mcp_stdio_server` are listed as root modules. They are not packages, and `packages.find` would miss them. The console script would then fail on import.
+
+Coverage in CI measures this same install. The ten engine globs are omitted from both the run and the report, and the workflow fails under 50%. Omitting them only while collecting is not enough: a report will still show files already stored in a `.coverage` file. The floor is "the published install stays measured." It is not a claim that the detectors are fully covered.
+
+`core/agent_runtime` is the state of a planned run: tasks, actions, a trace, and an approval marker. `enforce_sandbox_policy` returns a decision. `execute_action_in_docker_sandbox` stays a decision unless the caller passes `allow_execute=True`. `autort sandbox docker-smoke` runs a local container with the network off. A missing Docker daemon is a skip.
+
+`autort runtime-api serve` reads `/api/runs` on the host and port you pass. The usual local pair is `127.0.0.1` and `8765`. It does not call tools.
+
+`AIRedTeamRunner` plans from a written scenario. Active mode raises `PermissionError` unless the caller passed `allow_active=True`. `core/code_agent` maps Python calls with `ast` and does not run the program.
+
+The knowledge graph (`kg_store`, `kg_query`, `kg_attack_paths`) and `plan_attack_path` are `full`, high risk, maturity `experimental`. They are catalog entries. This repository does not treat them as measured planning results.
+
+</details>
+
+<details>
+<summary>What this tree leaves undone</summary>
+
+The reader does not open an MCP session. A live `initialize` / `tools/list` client would see the tools the server registered, which the allowed list already names, and it would have to start the server. The static comparison is the check CI can run on a checkout.
+
+There is no proxy in front of other MCP servers.
 
 Detector algorithms, speed, and thresholds stay where they are until an authorized benchmark exists.
 
-The read-only downgrade helper stays on its current substring rule while `labels.json` pins it.
+The older `poc` plus `list` shortcut stays while `labels.json` pins it.
 
-Tag `v3.1` stays where it is. Callers who want the `self-audit` default set `mode` or track `main`.
+Tag `v3.1` stays where it is. Callers who want the `self-audit` default set `mode`, or they track `main`.
 
-MCTS and the knowledge graph stay experimental catalog entries.
+Effect labels are not yet checked against parameter names.
+
+</details>
 
 ## License
 
