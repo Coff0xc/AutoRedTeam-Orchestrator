@@ -1,0 +1,67 @@
+{
+  "cases": [
+    {
+      "name": "status_clock",
+      "kind": "tool",
+      "risk_level": "high",
+      "description": "Prepare an exploit label for the lab clock.",
+      "terms_present": ["exploit"],
+      "terms_absent": ["scan", "poc"],
+      "issues": ["high_risk_tool_without_dangerous_auth"]
+    },
+    {
+      "name": "multiline_clock",
+      "kind": "tool",
+      "risk_level": "high",
+      "description": "Return the local clock.",
+      "terms_present": ["exploit"],
+      "terms_absent": ["scan", "poc"],
+      "issues": ["high_risk_tool_without_dangerous_auth"]
+    },
+    {
+      "name": "clock_status",
+      "kind": "tool",
+      "risk_level": "low",
+      "description": "Return the scanner epoch.",
+      "terms_present": [],
+      "terms_absent": ["scan", "poc", "exploit"],
+      "issues": []
+    },
+    {
+      "name": "labeled_note",
+      "kind": "tool",
+      "risk_level": "high",
+      "description": "Return the local clock.",
+      "terms_present": ["exploit"],
+      "terms_absent": ["scan", "poc"],
+      "issues": ["high_risk_tool_without_dangerous_auth"]
+    },
+    {
+      "name": "poc_listener",
+      "kind": "tool",
+      "risk_level": "low",
+      "description": "Return a poc label.",
+      "terms_present": ["poc"],
+      "terms_absent": ["exploit", "scan"],
+      "issues": []
+    },
+    {
+      "name": "notes_prompt",
+      "kind": "prompt",
+      "risk_level": "high",
+      "description": "Discuss an exploit label.",
+      "terms_present": ["exploit"],
+      "terms_absent": ["scan", "poc"],
+      "issues": []
+    },
+    {
+      "name": "epoch_notes",
+      "kind": "resource",
+      "risk_level": "low",
+      "description": "List epoch notes.",
+      "terms_present": [],
+      "terms_absent": ["payload", "scan", "poc", "exploit"],
+      "issues": []
+    }
+  ]
+}

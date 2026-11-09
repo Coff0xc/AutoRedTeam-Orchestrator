@@ -171,6 +171,28 @@ def test_registration_is_one_shot(first_profile, second_profile):
     assert counter.total == original_total
 
 
+@pytest.mark.asyncio
+async def test_real_mcp_server_stores_description_keyword():
+    mcp = MCPServer("description-probe")
+    expected = "Stored from the description keyword."
+
+    @mcp.tool(description=expected)
+    def status_clock() -> dict:
+        """Docstring that must not replace the keyword."""
+        return {}
+
+    @mcp.prompt(description=expected)
+    def notes_prompt() -> list:
+        """Docstring that must not replace the keyword."""
+        return []
+
+    tools = await mcp.list_tools()
+    prompts = await mcp.list_prompts()
+
+    assert [(item.name, item.description) for item in tools] == [("status_clock", expected)]
+    assert [(item.name, item.description) for item in prompts] == [("notes_prompt", expected)]
+
+
 @pytest.mark.parametrize("profile", PROFILE_ORDER)
 @pytest.mark.asyncio
 async def test_real_fastmcp_registration_matches_manifest(profile):
@@ -192,6 +214,13 @@ async def test_real_fastmcp_registration_matches_manifest(profile):
 
     assert actual == expected
     assert counter.total == len(expected)
+
+    listed = {("tool", item.name): item.description for item in tools}
+    listed.update({("prompt", item.name): item.description for item in prompts})
+    listed.update({("resource", item.name): item.description for item in resources})
+    listed.update({("resource", item.name): item.description for item in templates})
+    for kind, name in expected:
+        assert listed[(kind, name)] == get_capability(kind, name).public_description()
 
 
 def test_legacy_registration_default_remains_full():

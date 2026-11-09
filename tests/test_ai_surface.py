@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from core.ai_surface import (
@@ -321,6 +322,35 @@ def test_factory_config_and_manifest_coverage():
     assert coverage["factory_accounted"] == 26
     assert coverage["unlisted_count"] == 0
     assert "sqli_scan" in {finding.tool_name for finding in factory}
+
+
+def test_labeled_fixtures_pin_description_false_positives_and_false_negatives():
+    root = Path("tests/fixtures/ai_surface")
+    labels = json.loads((root / "labels.json").read_text(encoding="utf-8"))
+    result = scan_handler_surface(root, exclude_tests=False, reconcile=False)
+    by_name = {finding.tool_name: finding for finding in result.findings}
+
+    assert set(by_name) == {case["name"] for case in labels["cases"]}
+    for case in labels["cases"]:
+        finding = by_name[case["name"]]
+        assert finding.kind == case["kind"]
+        assert finding.risk_level == SurfaceRiskLevel(case["risk_level"])
+        assert finding.description == case["description"]
+        assert finding.issues == case["issues"]
+        for term in case["terms_present"]:
+            assert term in finding.risk_terms
+        for term in case["terms_absent"]:
+            assert term not in finding.risk_terms
+
+
+def test_action_v3_1_still_runs_ai_surface_scan():
+    action = Path("action.yml").read_text(encoding="utf-8")
+    example = Path(".github/workflows/self-audit.example.yml").read_text(encoding="utf-8")
+    readme = Path("README.md").read_text(encoding="utf-8")
+
+    assert "python -m cli.main ai-surface scan" in action
+    assert "uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1" in example
+    assert "uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1" in readme
 
 
 def test_risk_terms_match_tokens_not_substrings(tmp_path: Path):

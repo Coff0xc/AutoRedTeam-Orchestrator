@@ -352,9 +352,18 @@ class _HandlerToolVisitor(ast.NodeVisitor):
         annotations = _parameter_annotations(node)
         called_names = sorted(_risk_relevant_called_names(_called_names(node)))
         doc = ast.get_docstring(node) or ""
-        description = doc.strip().splitlines()[0] if doc.strip() else ""
+        docstring = doc.strip().splitlines()[0] if doc.strip() else ""
+        # Source registration can publish description= without putting that text
+        # in the docstring. The haystack keeps both so a keyword cannot hide a term.
+        declared_description = _decorator_keyword(
+            node.decorator_list, kind, "description", self.string_bindings
+        )
+        shown = declared_description.strip() or docstring
+        description = shown.splitlines()[0] if shown else ""
         auth_level, auth_risk = _auth_level(decorators, self.auth_catalog)
-        risk_terms, term_risk = _risk_terms([node.name, description, " ".join(called_names)])
+        risk_terms, term_risk = _risk_terms(
+            [node.name, declared_description, docstring, " ".join(called_names)]
+        )
         target_params = _target_params_needing_validation(parameters, annotations)
 
         risk_level = max_risk(auth_risk, term_risk)
