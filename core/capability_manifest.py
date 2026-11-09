@@ -189,8 +189,19 @@ def _build_capabilities() -> tuple[Capability, ...]:
 
     add(
         _surface_group(
+            ("recon_run", "full_recon"),
+            handler="recon",
+            category="recon",
+            minimum_profile="scan",
+            risk="moderate",
+            maturity="beta",
+            auth_required=True,
+            effects=("network-probe",),
+        )
+    )
+    add(
+        _surface_group(
             (
-                "full_recon",
                 "port_scan",
                 "fingerprint",
                 "subdomain_enum",
@@ -207,6 +218,7 @@ def _build_capabilities() -> tuple[Capability, ...]:
             maturity="beta",
             auth_required=True,
             effects=("network-probe",),
+            resident=False,
         )
     )
     add(
@@ -920,6 +932,14 @@ def _invoke_card(capability: Capability) -> dict[str, Any]:
         except ValueError:
             detector_class = capability.name
         return {"tool": "detect_run", "classes": [detector_class]}
+    if capability.handler == "recon":
+        from core.recon.names import canonical_recon_module
+
+        try:
+            module = canonical_recon_module(capability.name)
+        except ValueError:
+            module = capability.name
+        return {"tool": "recon_run", "modules": [module]}
     return {"tool": capability.name}
 
 

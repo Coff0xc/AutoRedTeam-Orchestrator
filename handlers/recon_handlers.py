@@ -1,10 +1,13 @@
 """
 侦察工具处理器
-包含: full_recon, port_scan, fingerprint, subdomain_enum,
-      dir_scan, dns_lookup, tech_detect, waf_detect
+包含: recon_run, full_recon, port_scan, fingerprint, subdomain_enum,
+      dir_scan, dns_lookup, tech_detect, waf_detect, passive_subdomain_enum
 """
 
-from typing import Any, Dict, List, Optional
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Sequence, Union
+from urllib.parse import urlparse
 
 from .error_handling import (
     ErrorCategory,
@@ -42,6 +45,234 @@ def _fail_recon_runtime(gate: Dict[str, Any], exc: Exception) -> None:
     )
 
 
+def _as_url(target: str) -> str:
+    text = str(target).strip()
+    if text.startswith(("http://", "https://")):
+        return text
+    return f"https://{text}"
+
+
+def _as_host(target: str) -> str:
+    text = str(target).strip()
+    if text.startswith(("http://", "https://")):
+        host = urlparse(text).hostname
+        if not host:
+            raise ValueError("invalid target URL: %s" % target)
+        return host
+    return text.split("/")[0]
+
+
+def _normalize_recon_modules(
+    modules: Optional[Union[str, Sequence[str]]],
+) -> Optional[List[str]]:
+    """Accept a list or a comma-separated string. None means full_recon."""
+    if modules is None:
+        return None
+    if isinstance(modules, str):
+        parts = [part.strip() for part in modules.replace(";", ",").split(",")]
+        names = [part for part in parts if part]
+    else:
+        names = [str(item).strip() for item in modules if str(item).strip()]
+    if not names:
+        raise ValueError("modules is empty; omit it to run full_recon, or pass recon module names")
+    return names
+
+
+async def _exec_full_recon(target: str, quick_mode: bool) -> Dict[str, Any]:
+    from core.recon import ReconConfig, StandardReconEngine
+
+    config = ReconConfig(quick_mode=quick_mode)
+    engine = StandardReconEngine(target, config)
+    result = await engine.async_run()
+    return {"success": True, "target": target, "data": result.to_dict()}
+
+
+async def _exec_port_scan(target: str, ports: str, timeout: float) -> Dict[str, Any]:
+    from core.recon import async_scan_ports
+
+    results = await async_scan_ports(target, ports, timeout=timeout)
+    open_ports = [
+        {"port": r.port, "state": r.state, "service": r.service, "version": r.version}
+        for r in results
+        if r.state == "open"
+    ]
+    return {
+        "success": True,
+        "target": target,
+        "open_ports": open_ports,
+        "total_scanned": len(results),
+        "total_open": len(open_ports),
+    }
+
+
+async def _exec_fingerprint(url: str) -> Dict[str, Any]:
+    import asyncio
+
+    from core.recon import identify_fingerprints
+
+    results = await asyncio.to_thread(identify_fingerprints, url)
+    return {
+        "success": True,
+        "url": url,
+        "fingerprints": [
+            {
+                "name": f.name,
+                "category": (f.category.value if hasattr(f.category, "value") else str(f.category)),
+                "version": f.version,
+                "confidence": f.confidence,
+            }
+            for f in results
+        ],
+        "count": len(results),
+    }
+
+
+async def _exec_subdomain_enum(
+    domain: str, methods: Optional[List[str]], limit: int
+) -> Dict[str, Any]:
+    from core.recon import async_enumerate_subdomains
+
+    results = await async_enumerate_subdomains(domain, methods=methods)
+    subdomains = [
+        {"subdomain": r.subdomain, "ip": r.ip, "source": r.source} for r in results[:limit]
+    ]
+    return {
+        "success": True,
+        "domain": domain,
+        "subdomains": subdomains,
+        "count": len(subdomains),
+    }
+
+
+async def _exec_dir_scan(
+    url: str, wordlist: str, extensions: Optional[List[str]]
+) -> Dict[str, Any]:
+    from core.recon import async_scan_directories
+
+    results = await async_scan_directories(
+        url,
+        wordlist=wordlist,
+        extensions=extensions,
+    )
+    directories = [
+        {
+            "path": r.path,
+            "status_code": r.status_code,
+            "content_length": r.content_length,
+            "redirect": r.redirect_url,
+        }
+        for r in results
+        if r.status_code in [200, 301, 302, 403]
+    ]
+    return {
+        "success": True,
+        "url": url,
+        "directories": directories,
+        "count": len(directories),
+    }
+
+
+async def _exec_dns_lookup(domain: str, record_types: Optional[List[str]]) -> Dict[str, Any]:
+    import asyncio
+
+    from core.recon import get_dns_records
+
+    results = await asyncio.to_thread(get_dns_records, domain, record_types=record_types)
+    return {
+        "success": True,
+        "domain": domain,
+        "records": results.to_dict() if hasattr(results, "to_dict") else results,
+    }
+
+
+async def _exec_tech_detect(url: str) -> Dict[str, Any]:
+    import asyncio
+
+    from core.recon import detect_technologies
+
+    results = await asyncio.to_thread(detect_technologies, url)
+    return {
+        "success": True,
+        "url": url,
+        "technologies": [
+            {
+                "name": t.name,
+                "category": t.category,
+                "version": t.version,
+                "confidence": t.confidence,
+            }
+            for t in results
+        ],
+    }
+
+
+async def _exec_waf_detect(url: str) -> Dict[str, Any]:
+    import asyncio
+
+    from core.recon import detect_waf
+
+    result = await asyncio.to_thread(detect_waf, url)
+    return {
+        "success": True,
+        "url": url,
+        "waf_detected": result.detected if hasattr(result, "detected") else bool(result),
+        "waf_name": result.name if hasattr(result, "name") else None,
+        "confidence": result.confidence if hasattr(result, "confidence") else None,
+    }
+
+
+async def _exec_passive_subdomain_enum(domain: str, timeout: int) -> Dict[str, Any]:
+    from core.recon.passive_recon import PassiveRecon
+
+    recon = PassiveRecon(timeout=timeout)
+    by_source = await recon.discover_subdomains_with_sources(domain)
+    all_subs = set()
+    for subs in by_source.values():
+        all_subs.update(subs)
+    return {
+        "success": True,
+        "domain": domain,
+        "subdomains": sorted(all_subs),
+        "count": len(all_subs),
+        "by_source": {k: {"subdomains": v, "count": len(v)} for k, v in by_source.items()},
+    }
+
+
+async def _dispatch_recon_module(
+    name: str,
+    target: str,
+    *,
+    ports: str,
+    timeout: float,
+    wordlist: str,
+    extensions: Optional[List[str]],
+    methods: Optional[List[str]],
+    record_types: Optional[List[str]],
+    limit: int,
+    quick_mode: bool,
+    source_timeout: int,
+) -> Dict[str, Any]:
+    if name == "full_recon":
+        return await _exec_full_recon(target, quick_mode)
+    if name == "port_scan":
+        return await _exec_port_scan(_as_host(target), ports, timeout)
+    if name == "fingerprint":
+        return await _exec_fingerprint(_as_url(target))
+    if name == "subdomain_enum":
+        return await _exec_subdomain_enum(_as_host(target), methods, limit)
+    if name == "dir_scan":
+        return await _exec_dir_scan(_as_url(target), wordlist, extensions)
+    if name == "dns_lookup":
+        return await _exec_dns_lookup(_as_host(target), record_types)
+    if name == "tech_detect":
+        return await _exec_tech_detect(_as_url(target))
+    if name == "waf_detect":
+        return await _exec_waf_detect(_as_url(target))
+    if name == "passive_subdomain_enum":
+        return await _exec_passive_subdomain_enum(_as_host(target), source_timeout)
+    raise ValueError("unknown recon module %r" % name)
+
+
 def register_recon_tools(mcp, counter, logger):
     """注册侦察相关工具
 
@@ -50,6 +281,88 @@ def register_recon_tools(mcp, counter, logger):
         counter: ToolCounter实例
         logger: Logger实例
     """
+
+    @tool(mcp)
+    @validate_inputs(target="target")
+    @handle_errors(logger, ErrorCategory.RECON, extract_target)
+    async def recon_run(
+        target: str,
+        modules: Optional[Union[str, List[str]]] = None,
+        ports: str = "1-1000",
+        timeout: float = 2.0,
+        wordlist: str = "common",
+        extensions: Optional[List[str]] = None,
+        methods: Optional[List[str]] = None,
+        record_types: Optional[List[str]] = None,
+        limit: int = 100,
+        quick_mode: bool = False,
+        source_timeout: int = 10,
+    ) -> Dict[str, Any]:
+        """Run one or more reconnaissance modules against a target.
+
+        Args:
+            target: Target URL, host, or domain
+            modules: Module names (port_scan, fingerprint) or aliases (port, waf).
+                Omit to run full_recon.
+            ports: Port range for port_scan
+            timeout: Per-port timeout in seconds
+            wordlist: Directory wordlist name
+            extensions: Directory extensions
+            methods: Subdomain enumeration methods
+            record_types: DNS record types
+            limit: Maximum subdomain rows
+            quick_mode: Skip slow full_recon phases
+            source_timeout: Per-source timeout for passive subdomain enum
+        """
+        from core.recon.names import canonical_recon_module
+
+        selected = _normalize_recon_modules(modules)
+        runtime_gate = _gate_recon_runtime(
+            "recon_run",
+            {
+                "target": target,
+                "modules": selected or ["full_recon"],
+                "quick_mode": quick_mode,
+            },
+        )
+        if not runtime_gate["allowed"]:
+            return blocked_handler_runtime_response(runtime_gate)
+
+        try:
+            if selected is None:
+                resolved = ["full_recon"]
+            else:
+                resolved = [canonical_recon_module(name) for name in selected]
+            results = {}
+            for name in resolved:
+                results[name] = await _dispatch_recon_module(
+                    name,
+                    target,
+                    ports=ports,
+                    timeout=timeout,
+                    wordlist=wordlist,
+                    extensions=extensions,
+                    methods=methods,
+                    record_types=record_types,
+                    limit=limit,
+                    quick_mode=quick_mode,
+                    source_timeout=source_timeout,
+                )
+        except Exception as exc:
+            _fail_recon_runtime(runtime_gate, exc)
+            raise
+
+        payload = {
+            "success": True,
+            "target": target,
+            "modules": resolved,
+            "results": results,
+        }
+        return complete_handler_runtime_payload(
+            runtime_gate,
+            payload,
+            summary_keys=["target", "modules"],
+        )
 
     @tool(mcp)
     @validate_inputs(target="target")
@@ -66,8 +379,6 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             包含所有侦察结果的字典
         """
-        from core.recon import ReconConfig, StandardReconEngine
-
         runtime_gate = _gate_recon_runtime(
             "full_recon",
             {"target": target, "quick_mode": quick_mode},
@@ -76,14 +387,11 @@ def register_recon_tools(mcp, counter, logger):
             return blocked_handler_runtime_response(runtime_gate)
 
         try:
-            config = ReconConfig(quick_mode=quick_mode)
-            engine = StandardReconEngine(target, config)
-            result = await engine.async_run()
+            payload = await _exec_full_recon(target, quick_mode)
         except Exception as exc:
             _fail_recon_runtime(runtime_gate, exc)
             raise
 
-        payload = {"success": True, "target": target, "data": result.to_dict()}
         return complete_handler_runtime_payload(runtime_gate, payload, summary_keys=["target"])
 
     @tool(mcp)
@@ -100,8 +408,6 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             开放端口列表和服务信息
         """
-        from core.recon import async_scan_ports
-
         runtime_gate = _gate_recon_runtime(
             "port_scan",
             {"target": target, "ports": ports, "timeout": timeout},
@@ -110,24 +416,11 @@ def register_recon_tools(mcp, counter, logger):
             return blocked_handler_runtime_response(runtime_gate)
 
         try:
-            results = await async_scan_ports(target, ports, timeout=timeout)
+            payload = await _exec_port_scan(target, ports, timeout)
         except Exception as exc:
             _fail_recon_runtime(runtime_gate, exc)
             raise
 
-        open_ports = [
-            {"port": r.port, "state": r.state, "service": r.service, "version": r.version}
-            for r in results
-            if r.state == "open"
-        ]
-
-        payload = {
-            "success": True,
-            "target": target,
-            "open_ports": open_ports,
-            "total_scanned": len(results),
-            "total_open": len(open_ports),
-        }
         return complete_handler_runtime_payload(
             runtime_gate,
             payload,
@@ -148,36 +441,16 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             指纹信息列表
         """
-        import asyncio
-
-        from core.recon import identify_fingerprints
-
         runtime_gate = _gate_recon_runtime("fingerprint", {"url": url})
         if not runtime_gate["allowed"]:
             return blocked_handler_runtime_response(runtime_gate)
 
         try:
-            results = await asyncio.to_thread(identify_fingerprints, url)
+            payload = await _exec_fingerprint(url)
         except Exception as exc:
             _fail_recon_runtime(runtime_gate, exc)
             raise
 
-        payload = {
-            "success": True,
-            "url": url,
-            "fingerprints": [
-                {
-                    "name": f.name,
-                    "category": (
-                        f.category.value if hasattr(f.category, "value") else str(f.category)
-                    ),
-                    "version": f.version,
-                    "confidence": f.confidence,
-                }
-                for f in results
-            ],
-            "count": len(results),
-        }
         return complete_handler_runtime_payload(
             runtime_gate,
             payload,
@@ -202,8 +475,6 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             子域名列表
         """
-        from core.recon import async_enumerate_subdomains
-
         runtime_gate = _gate_recon_runtime(
             "subdomain_enum",
             {"domain": domain, "methods": methods or [], "limit": limit},
@@ -212,21 +483,11 @@ def register_recon_tools(mcp, counter, logger):
             return blocked_handler_runtime_response(runtime_gate)
 
         try:
-            results = await async_enumerate_subdomains(domain, methods=methods)
+            payload = await _exec_subdomain_enum(domain, methods, limit)
         except Exception as exc:
             _fail_recon_runtime(runtime_gate, exc)
             raise
 
-        subdomains = [
-            {"subdomain": r.subdomain, "ip": r.ip, "source": r.source} for r in results[:limit]
-        ]
-
-        payload = {
-            "success": True,
-            "domain": domain,
-            "subdomains": subdomains,
-            "count": len(subdomains),
-        }
         return complete_handler_runtime_payload(
             runtime_gate,
             payload,
@@ -249,8 +510,6 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             发现的路径列表
         """
-        from core.recon import async_scan_directories
-
         runtime_gate = _gate_recon_runtime(
             "dir_scan",
             {"url": url, "wordlist": wordlist, "extensions": extensions or []},
@@ -259,32 +518,11 @@ def register_recon_tools(mcp, counter, logger):
             return blocked_handler_runtime_response(runtime_gate)
 
         try:
-            results = await async_scan_directories(
-                url,
-                wordlist=wordlist,
-                extensions=extensions,
-            )
+            payload = await _exec_dir_scan(url, wordlist, extensions)
         except Exception as exc:
             _fail_recon_runtime(runtime_gate, exc)
             raise
 
-        directories = [
-            {
-                "path": r.path,
-                "status_code": r.status_code,
-                "content_length": r.content_length,
-                "redirect": r.redirect_url,
-            }
-            for r in results
-            if r.status_code in [200, 301, 302, 403]
-        ]
-
-        payload = {
-            "success": True,
-            "url": url,
-            "directories": directories,
-            "count": len(directories),
-        }
         return complete_handler_runtime_payload(
             runtime_gate,
             payload,
@@ -304,10 +542,6 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             DNS记录信息
         """
-        import asyncio
-
-        from core.recon import get_dns_records
-
         runtime_gate = _gate_recon_runtime(
             "dns_lookup",
             {"domain": domain, "record_types": record_types or []},
@@ -316,16 +550,11 @@ def register_recon_tools(mcp, counter, logger):
             return blocked_handler_runtime_response(runtime_gate)
 
         try:
-            results = await asyncio.to_thread(get_dns_records, domain, record_types=record_types)
+            payload = await _exec_dns_lookup(domain, record_types)
         except Exception as exc:
             _fail_recon_runtime(runtime_gate, exc)
             raise
 
-        payload = {
-            "success": True,
-            "domain": domain,
-            "records": results.to_dict() if hasattr(results, "to_dict") else results,
-        }
         return complete_handler_runtime_payload(
             runtime_gate,
             payload,
@@ -344,33 +573,16 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             检测到的技术列表
         """
-        import asyncio
-
-        from core.recon import detect_technologies
-
         runtime_gate = _gate_recon_runtime("tech_detect", {"url": url})
         if not runtime_gate["allowed"]:
             return blocked_handler_runtime_response(runtime_gate)
 
         try:
-            results = await asyncio.to_thread(detect_technologies, url)
+            payload = await _exec_tech_detect(url)
         except Exception as exc:
             _fail_recon_runtime(runtime_gate, exc)
             raise
 
-        payload = {
-            "success": True,
-            "url": url,
-            "technologies": [
-                {
-                    "name": t.name,
-                    "category": t.category,
-                    "version": t.version,
-                    "confidence": t.confidence,
-                }
-                for t in results
-            ],
-        }
         return complete_handler_runtime_payload(
             runtime_gate,
             payload,
@@ -389,27 +601,16 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             WAF检测结果
         """
-        import asyncio
-
-        from core.recon import detect_waf
-
         runtime_gate = _gate_recon_runtime("waf_detect", {"url": url})
         if not runtime_gate["allowed"]:
             return blocked_handler_runtime_response(runtime_gate)
 
         try:
-            result = await asyncio.to_thread(detect_waf, url)
+            payload = await _exec_waf_detect(url)
         except Exception as exc:
             _fail_recon_runtime(runtime_gate, exc)
             raise
 
-        payload = {
-            "success": True,
-            "url": url,
-            "waf_detected": result.detected if hasattr(result, "detected") else bool(result),
-            "waf_name": result.name if hasattr(result, "name") else None,
-            "confidence": result.confidence if hasattr(result, "confidence") else None,
-        }
         return complete_handler_runtime_payload(
             runtime_gate,
             payload,
@@ -432,8 +633,6 @@ def register_recon_tools(mcp, counter, logger):
         Returns:
             子域名列表及各数据源的发现结果
         """
-        from core.recon.passive_recon import PassiveRecon
-
         runtime_gate = _gate_recon_runtime(
             "passive_subdomain_enum",
             {"domain": domain, "timeout": timeout},
@@ -442,28 +641,16 @@ def register_recon_tools(mcp, counter, logger):
             return blocked_handler_runtime_response(runtime_gate)
 
         try:
-            recon = PassiveRecon(timeout=timeout)
-            by_source = await recon.discover_subdomains_with_sources(domain)
+            payload = await _exec_passive_subdomain_enum(domain, timeout)
         except Exception as exc:
             _fail_recon_runtime(runtime_gate, exc)
             raise
 
-        all_subs = set()
-        for subs in by_source.values():
-            all_subs.update(subs)
-
-        payload = {
-            "success": True,
-            "domain": domain,
-            "subdomains": sorted(all_subs),
-            "count": len(all_subs),
-            "by_source": {k: {"subdomains": v, "count": len(v)} for k, v in by_source.items()},
-        }
         return complete_handler_runtime_payload(
             runtime_gate,
             payload,
             summary_keys=["domain", "count"],
         )
 
-    counter.add("recon", 9)
-    logger.info("[Recon] 已注册 9 个侦察工具 (含被动侦察)")
+    counter.add("recon", 10)
+    logger.info("[Recon] 已注册 10 个侦察工具 (含 recon_run 与被动侦察)")

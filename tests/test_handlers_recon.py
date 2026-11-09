@@ -24,15 +24,12 @@ class TestReconHandlersRegistration:
         # 执行注册
         register_recon_tools(mock_mcp, mock_counter, mock_logger)
 
-        # 验证 counter.add 被调用 (8 原有 + 1 passive_subdomain_enum = 9)
-        mock_counter.add.assert_called_once_with("recon", 9)
+        mock_counter.add.assert_called_once_with("recon", 10)
 
-        # 验证 logger.info 被调用
         mock_logger.info.assert_called_once()
-        assert "9 个侦察工具" in str(mock_logger.info.call_args)
+        assert "10 个侦察工具" in str(mock_logger.info.call_args)
 
-        # 验证 @mcp.tool() 装饰器被调用了 9 次
-        assert mock_mcp.tool.call_count == 9
+        assert mock_mcp.tool.call_count == 10
 
 
 class TestFullReconTool:
@@ -453,3 +450,80 @@ class TestWAFDetectTool:
             assert result["success"] is True
             assert result["data"]["waf_detected"] is False
             assert result["data"]["waf_name"] is None
+
+
+def _register_recon_tools():
+    from handlers.recon_handlers import register_recon_tools
+
+    mock_mcp = MagicMock()
+    mock_counter = MagicMock()
+    mock_logger = MagicMock()
+    registered_tools = {}
+
+    def capture_tool(**_kwargs):
+        def decorator(func):
+            registered_tools[func.__name__] = func
+            return func
+
+        return decorator
+
+    mock_mcp.tool = capture_tool
+    register_recon_tools(mock_mcp, mock_counter, mock_logger)
+    return registered_tools
+
+
+class TestReconRunTool:
+    """Resident recon_run entry point."""
+
+    @pytest.mark.asyncio
+    async def test_recon_run_omitted_modules_runs_full_recon(self):
+        registered_tools = _register_recon_tools()
+        mock_result = MagicMock()
+        mock_result.to_dict.return_value = {"dns": True}
+        mock_engine = MagicMock()
+        mock_engine.async_run = AsyncMock(return_value=mock_result)
+
+        with patch("core.recon.StandardReconEngine", return_value=mock_engine):
+            result = await registered_tools["recon_run"](
+                target="https://example.com", quick_mode=True
+            )
+
+        assert result["success"] is True
+        assert result["data"]["modules"] == ["full_recon"]
+        assert result["data"]["results"]["full_recon"]["data"] == {"dns": True}
+
+    @pytest.mark.asyncio
+    async def test_recon_run_selected_modules_and_aliases(self):
+        registered_tools = _register_recon_tools()
+        mock_port = MagicMock()
+        mock_port.port = 443
+        mock_port.state = "open"
+        mock_port.service = "https"
+        mock_port.version = ""
+        mock_waf = MagicMock()
+        mock_waf.detected = True
+        mock_waf.name = "cloudflare"
+        mock_waf.confidence = 0.9
+
+        with (
+            patch("core.recon.async_scan_ports", new=AsyncMock(return_value=[mock_port])),
+            patch("core.recon.detect_waf", return_value=mock_waf),
+        ):
+            result = await registered_tools["recon_run"](
+                target="https://example.com",
+                modules="port, waf",
+            )
+
+        assert result["success"] is True
+        assert result["data"]["modules"] == ["port_scan", "waf_detect"]
+        assert result["data"]["results"]["port_scan"]["total_open"] == 1
+        assert result["data"]["results"]["waf_detect"]["waf_name"] == "cloudflare"
+
+    @pytest.mark.asyncio
+    async def test_recon_run_unknown_module(self):
+        registered_tools = _register_recon_tools()
+        result = await registered_tools["recon_run"](
+            target="https://example.com", modules=["not_a_module"]
+        )
+        assert result["success"] is False
+        assert "unknown recon module" in result["error"]

@@ -54,6 +54,10 @@ def test_detect_run_and_tool_search_profile_gates(monkeypatch):
         require_surface("detect_run")
     assert require_surface("detect_run", profile="scan") == "scan"
     assert require_surface("sqli_scan", profile="scan") == "scan"
+    with pytest.raises(ProfileDenied):
+        require_surface("recon_run")
+    assert require_surface("recon_run", profile="scan") == "scan"
+    assert require_surface("port_scan", profile="scan") == "scan"
 
 
 @pytest.mark.asyncio

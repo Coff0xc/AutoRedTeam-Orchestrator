@@ -40,8 +40,8 @@ def test_manifest_has_unique_complete_surface_totals():
     keys = {(capability.kind, capability.name) for capability in CAPABILITIES}
     summary = capability_manifest()["summary"]
 
-    assert len(keys) == len(CAPABILITIES) == 144
-    assert summary["by_kind"] == {"prompt": 6, "resource": 4, "tool": 134}
+    assert len(keys) == len(CAPABILITIES) == 145
+    assert summary["by_kind"] == {"prompt": 6, "resource": 4, "tool": 135}
 
 
 def test_profiles_are_monotonic_and_have_stable_counts():
@@ -49,9 +49,9 @@ def test_profiles_are_monotonic_and_have_stable_counts():
     counts = {profile["name"]: profile["surface_count"] for profile in profiles}
 
     assert tuple(counts) == PROFILE_ORDER
-    assert counts == {"safe": 24, "scan": 88, "active-lab": 108, "full": 144}
+    assert counts == {"safe": 24, "scan": 89, "active-lab": 109, "full": 145}
     registered = {profile["name"]: profile["registered_count"] for profile in profiles}
-    assert registered == {"safe": 24, "scan": 62, "active-lab": 82, "full": 118}
+    assert registered == {"safe": 24, "scan": 55, "active-lab": 75, "full": 111}
 
     previous: set[tuple[str, str]] = set()
     for profile in PROFILE_ORDER:
@@ -242,7 +242,7 @@ def test_legacy_registration_default_remains_full():
 
     register_all_handlers(mcp, counter, MagicMock())
 
-    assert counter.total == 118
+    assert counter.total == 111
 
 
 def test_server_default_profile_is_safe(monkeypatch):
@@ -283,7 +283,7 @@ def test_production_counter_uses_manifest_categories():
 
     register_all_handlers(mcp, counter, MagicMock(), profile="full")
 
-    assert counter.total == 118
+    assert counter.total == 111
     assert counter.counts["knowledge"] == 3
     assert counter.counts["mcts"] == 1
     assert "MCP surface" in counter.summary()
@@ -302,6 +302,9 @@ def test_factory_detector_tools_are_catalog_only():
     assert tool_search.minimum_profile == "safe"
     assert get_capability("tool", "vuln_scan").resident is True
     assert get_capability("tool", "nuclei_scan").resident is True
+    assert get_capability("tool", "recon_run").resident is True
+    assert get_capability("tool", "full_recon").resident is True
+    assert get_capability("tool", "port_scan").resident is False
 
 
 @pytest.mark.asyncio
@@ -311,10 +314,14 @@ async def test_scan_profile_list_tools_hides_factory_detectors():
     names = {item.name for item in await mcp.list_tools()}
 
     assert "detect_run" in names
+    assert "recon_run" in names
+    assert "full_recon" in names
     assert "tool_search" in names
     assert "vuln_scan" in names
     assert "sqli_scan" not in names
     assert "xss_scan" not in names
+    assert "port_scan" not in names
+    assert "waf_detect" not in names
 
 
 def test_search_surfaces_empty_query_lists_resident_only():
@@ -336,6 +343,25 @@ def test_search_surfaces_finds_catalog_detector_and_points_at_detect_run():
     card = by_name["sqli_scan"]
     assert card["resident"] is False
     assert card["invoke"] == {"tool": "detect_run", "classes": ["sqli"]}
+
+
+def test_search_surfaces_finds_catalog_recon_and_points_at_recon_run():
+    result = search_surfaces("port_scan", profile="scan", kind="tool", limit=12)
+    by_name = {item["name"]: item for item in result["matches"]}
+
+    assert "port_scan" in by_name
+    card = by_name["port_scan"]
+    assert card["resident"] is False
+    assert card["invoke"] == {"tool": "recon_run", "modules": ["port_scan"]}
+
+
+def test_canonical_recon_module_aliases():
+    from core.recon.names import canonical_recon_module, known_recon_modules
+
+    assert canonical_recon_module("port") == "port_scan"
+    assert canonical_recon_module("waf") == "waf_detect"
+    assert canonical_recon_module("passive") == "passive_subdomain_enum"
+    assert "full_recon" in known_recon_modules()
 
 
 def test_canonical_detector_class_aliases():
