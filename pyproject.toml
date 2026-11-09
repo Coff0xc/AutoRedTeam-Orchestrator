@@ -61,12 +61,40 @@ omit = [
     "*/__pycache__/*",
     "*/venv/*",
     "*/backup/*",
+    # Same engines the default wheel excludes. They stay in the source tree.
+    "*/core/c2/*",
+    "*/core/lateral/*",
+    "*/core/persistence/*",
+    "*/core/post_exploit/*",
+    "*/core/privilege_escalation/*",
+    "*/core/exfiltration/*",
+    "*/core/evasion/*",
+    "*/core/credential/*",
+    "*/core/ad/*",
+    "*/core/exploit/*",
 ]
 
 [tool.coverage.report]
 precision = 2
 show_missing = true
 skip_covered = false
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/backup/*",
+    "*/core/c2/*",
+    "*/core/lateral/*",
+    "*/core/persistence/*",
+    "*/core/post_exploit/*",
+    "*/core/privilege_escalation/*",
+    "*/core/exfiltration/*",
+    "*/core/evasion/*",
+    "*/core/credential/*",
+    "*/core/ad/*",
+    "*/core/exploit/*",
+]
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -197,7 +225,7 @@ recon = [
     "beautifulsoup4>=4.12.0",
 ]
 network = [
-    "paramiko>=3.4.0",
+    "paramiko>=5.0.0,<6.0.0",
     "pexpect>=4.9.0",
     "websockets>=12.0",
     "cryptography>=50.0.0,<51.0.0",

@@ -38,7 +38,6 @@ try:
     import paramiko
     from paramiko import (
         AuthenticationException,
-        DSSKey,
         ECDSAKey,
         Ed25519Key,
         RSAKey,
@@ -46,8 +45,11 @@ try:
         SSHException,
     )
 
+    # Paramiko 5 removes DSSKey. Older installs may still provide it.
+    DSSKey = getattr(paramiko, "DSSKey", None)
     HAS_PARAMIKO = True
 except ImportError:
+    DSSKey = None
     HAS_PARAMIKO = False
     logger.debug("paramiko 未安装，SSH 功能受限")
 
@@ -225,7 +227,7 @@ class SSHLateral(BaseLateralModule):
         if not HAS_PARAMIKO:
             return None
 
-        key_classes = [RSAKey, DSSKey, ECDSAKey, Ed25519Key]
+        key_classes = [cls for cls in (RSAKey, DSSKey, ECDSAKey, Ed25519Key) if cls is not None]
         passphrase = self.credentials.ssh_passphrase
 
         # 从文件加载

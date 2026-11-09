@@ -22,7 +22,7 @@ shodan>=1.31.0,<2.0.0
 censys>=2.2.0,<3.0.0
 dnspython>=2.5.0,<3.0.0
 whois>=0.9.27,<1.0.0
-paramiko>=3.4.0,<4.0.0
+paramiko>=5.0.0,<6.0.0
 
 # Red Team Advanced Features (核心功能)
 # Required for SMB/WMI Pass-the-Hash, lateral movement
