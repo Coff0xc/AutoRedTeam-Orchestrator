@@ -154,7 +154,7 @@ vulns = await scanner.detect_vulns(categories=["sqli", "xss", "ssrf"])
 nuclei = await scanner.nuclei_scan(tags=["cve"], severity=["high", "critical"])
 ```
 
-Ключевые методы: `full_recon()`, `port_scan(ports="1-1000", top=None)`, `detect_vulns(categories=None, config=None)`, `fingerprint()`, `waf_detect()`, `subdomain_enum(domain=None)`, `passive_recon(domain=None)`, `nuclei_scan(tags=None, severity=None, template_dir=None, concurrency=10, limit=None)`.
+Ключевые методы: `full_recon()`, `port_scan(ports="1-1000", top=None)`, `detect_vulns(categories=None, config=None)`, `fingerprint()`, `waf_detect()`, `subdomain_enum(domain=None)`, `passive_recon(domain=None)`, `nuclei_scan(tags=None, severity=None, template_dir=None, concurrency=10, limit=None)`. Они соответствуют поверхностям профиля `scan`. Профиль `safe` по умолчанию отклоняет их до импорта движка разведки или обнаружения. Чтобы продолжить, задайте `AUTORT_CAPABILITY_PROFILE=scan` или выше.
 
 ### Exploiter — эксплуатация и CVE-разведка
 
@@ -177,7 +177,7 @@ pentest = AutoPentest("http://127.0.0.1:8000", config={"timeout": 3600})
 result = await pentest.run(phases=["recon", "vuln_scan"])   # без phases — полный цикл
 ```
 
-`run(phases=None)` запускает конвейер `RECON → VULN_SCAN → POC_EXEC → EXPLOIT → PRIV_ESC → LATERAL → EXFIL → REPORT`. `resume(session_id)` продолжает прерванную сессию; `status(session_id)` читает живое состояние. Это возможность профиля `full`, работает только на изолированных авторизованных стендах.
+`run(phases=None)` запускает конвейер `RECON → VULN_SCAN → POC_EXEC → EXPLOIT → PRIV_ESC → LATERAL → EXFIL → REPORT` и соответствует `auto_pentest`. `resume(session_id)` соответствует `pentest_resume`. Оба требуют профиль `full` и работают только на изолированных авторизованных стендах. `status(session_id)` читает локальную сессию, соответствует `session_status` и доступен в `safe`.
 
 ### RedTeam — пост-эксплуатация (ограничено)
 
@@ -306,7 +306,7 @@ python -m cli.main ai-surface scan-skills --path ./skills         # маркер
 
 ## Безопасность и границы
 
-- Профили возможностей MCP (`safe`/`scan`/`active-lab`/`full`) фильтруют инструменты при регистрации, но не заменяют аутентификацию, область целей, независимое одобрение или изолированный исполнитель.
+- Одни и те же профили (`safe`/`scan`/`active-lab`/`full`) ограничивают регистрацию MCP и вызовы CLI и SDK, которые соответствуют поверхности манифеста. Они не заменяют аутентификацию, область целей, независимое одобрение или изолированный исполнитель. Прямые импорты `core` вне этих точек входа не проходят через эту проверку.
 - Высокорисковые возможности по умолчанию работают в режиме dry-run и должны включаться только в одноразовых изолированных средах.
 - Аутентификация подключается через отдельные декораторы инструментов и пока не является единой границей для всей зарегистрированной поверхности.
 

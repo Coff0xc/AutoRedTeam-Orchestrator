@@ -154,7 +154,7 @@ vulns = await scanner.detect_vulns(categories=["sqli", "xss", "ssrf"])
 nuclei = await scanner.nuclei_scan(tags=["cve"], severity=["high", "critical"])
 ```
 
-关键方法：`full_recon()`、`port_scan(ports="1-1000", top=None)`、`detect_vulns(categories=None, config=None)`、`fingerprint()`、`waf_detect()`、`subdomain_enum(domain=None)`、`passive_recon(domain=None)`、`nuclei_scan(tags=None, severity=None, template_dir=None, concurrency=10, limit=None)`。
+关键方法：`full_recon()`、`port_scan(ports="1-1000", top=None)`、`detect_vulns(categories=None, config=None)`、`fingerprint()`、`waf_detect()`、`subdomain_enum(domain=None)`、`passive_recon(domain=None)`、`nuclei_scan(tags=None, severity=None, template_dir=None, concurrency=10, limit=None)`。这些方法对应 manifest 的 `scan` surface。默认 `safe` 会在导入侦察或检测引擎之前拒绝；设置 `AUTORT_CAPABILITY_PROFILE=scan` 或更高档案后才会继续。
 
 ### Exploiter — 利用与 CVE 情报
 
@@ -177,7 +177,7 @@ pentest = AutoPentest("http://127.0.0.1:8000", config={"timeout": 3600})
 result = await pentest.run(phases=["recon", "vuln_scan"])   # 省略 phases 则跑完整流程
 ```
 
-`run(phases=None)` 驱动 `RECON → VULN_SCAN → POC_EXEC → EXPLOIT → PRIV_ESC → LATERAL → EXFIL → REPORT` 流水线。`resume(session_id)` 续跑中断的会话；`status(session_id)` 读取实时状态。这是 `full` 档案能力，仅在隔离、授权的靶场运行。
+`run(phases=None)` 驱动 `RECON → VULN_SCAN → POC_EXEC → EXPLOIT → PRIV_ESC → LATERAL → EXFIL → REPORT` 流水线，对应 `auto_pentest`。`resume(session_id)` 对应 `pentest_resume`。两者都需要 `full`，仅在隔离、授权的靶场运行。`status(session_id)` 只读本地会话，对应 `session_status`，`safe` 可用。
 
 ### RedTeam — 后渗透（受限）
 
@@ -306,7 +306,7 @@ python -m cli.main ai-surface scan-skills --path ./skills         # 高危指令
 
 ## 安全与边界
 
-- MCP capability profile（`safe`/`scan`/`active-lab`/`full`）在注册阶段过滤工具，但不替代认证、目标范围、独立审批或隔离执行器。
+- 同一套 capability profile（`safe`/`scan`/`active-lab`/`full`）同时约束 MCP 注册，以及映射到 manifest surface 的 CLI 和 SDK 调用。它不替代认证、目标范围、独立审批或隔离执行器。入口之外直接导入 `core` 模块不受这道门控制。
 - 高风险能力默认 dry-run，仅应在一次性隔离环境中启用。
 - 认证由单个工具装饰器接入，尚未构成覆盖全部注册面的统一边界。
 

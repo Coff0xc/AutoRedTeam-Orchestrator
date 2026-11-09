@@ -154,7 +154,7 @@ vulns = await scanner.detect_vulns(categories=["sqli", "xss", "ssrf"])
 nuclei = await scanner.nuclei_scan(tags=["cve"], severity=["high", "critical"])
 ```
 
-Key methods: `full_recon()`, `port_scan(ports="1-1000", top=None)`, `detect_vulns(categories=None, config=None)`, `fingerprint()`, `waf_detect()`, `subdomain_enum(domain=None)`, `passive_recon(domain=None)`, `nuclei_scan(tags=None, severity=None, template_dir=None, concurrency=10, limit=None)`.
+Key methods: `full_recon()`, `port_scan(ports="1-1000", top=None)`, `detect_vulns(categories=None, config=None)`, `fingerprint()`, `waf_detect()`, `subdomain_enum(domain=None)`, `passive_recon(domain=None)`, `nuclei_scan(tags=None, severity=None, template_dir=None, concurrency=10, limit=None)`. These map to `scan` surfaces. The default `safe` profile refuses them before the recon or detector engine is imported. Set `AUTORT_CAPABILITY_PROFILE=scan` or higher to continue.
 
 ### Exploiter — exploit and CVE intelligence
 
@@ -177,7 +177,7 @@ pentest = AutoPentest("http://127.0.0.1:8000", config={"timeout": 3600})
 result = await pentest.run(phases=["recon", "vuln_scan"])   # omit phases for the full flow
 ```
 
-`run(phases=None)` drives the pipeline `RECON → VULN_SCAN → POC_EXEC → EXPLOIT → PRIV_ESC → LATERAL → EXFIL → REPORT`. `resume(session_id)` continues an interrupted session; `status(session_id)` reads live state. This is a `full`-profile capability and runs only against isolated, authorized labs.
+`run(phases=None)` drives the pipeline `RECON → VULN_SCAN → POC_EXEC → EXPLOIT → PRIV_ESC → LATERAL → EXFIL → REPORT` and maps to `auto_pentest`. `resume(session_id)` maps to `pentest_resume`. Both require `full` and run only against isolated, authorized labs. `status(session_id)` reads local session state, maps to `session_status`, and stays available on `safe`.
 
 ### RedTeam — post-exploitation (restricted)
 
@@ -306,7 +306,7 @@ Add `--auth-mode lenient` to drop project-specific authorization findings when a
 
 ## Security and scope
 
-- MCP capability profiles (`safe`/`scan`/`active-lab`/`full`) filter tools at registration but do not replace authentication, target scope, independent approval, or an isolated executor.
+- The same capability profiles (`safe`/`scan`/`active-lab`/`full`) gate MCP registration and the CLI and SDK calls that map to a manifest surface. They do not replace authentication, target scope, independent approval, or an isolated executor. Direct `core` imports outside those entry points stay ungated.
 - High-risk capabilities default to dry-run and should be enabled only in disposable, isolated environments.
 - Authentication is attached per tool decorator and is not yet a uniform boundary across every registered surface.
 

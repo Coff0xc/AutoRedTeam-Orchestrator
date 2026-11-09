@@ -75,10 +75,12 @@ or an isolated executor.
 
 - The recommended installation path is currently a source checkout; wheel and container release
   artifacts are not yet release-certified.
-- The machine-readable capability manifest controls MCP registration only; CLI and SDK call paths
-  do not yet share the same profile gate.
-- Profiles filter surfaces after handler modules are imported and do not provide dependency or
-  import-side-effect isolation.
+- CLI, SDK, and MCP share `resolve_profile` and each surface's minimum profile. Under `safe`,
+  those entry points refuse higher surfaces before importing the mapped engine. The gate is not
+  authentication, target scope, approval, or process isolation, and direct `core` imports outside
+  those entry points stay ungated.
+- MCP profiles still filter surfaces after a handler module is imported and do not provide
+  dependency or import-side-effect isolation for mixed-profile modules.
 - MCP authentication is applied by individual decorators rather than a uniform registration-layer
   boundary.
 - MCP key provisioning does not yet have a stable operator CLI contract.

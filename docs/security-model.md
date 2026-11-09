@@ -25,15 +25,17 @@ platform.
 - Profile filtering operates on each public MCP surface rather than on whole handler modules.
 - Authentication is currently attached to individual tools; it is not a uniform registration-layer
   boundary for every tool, resource, and prompt.
-- A capability profile controls schema exposure only. It is not authentication, target
-  authorization, approval, or process isolation.
+- The same capability profile gates MCP registration and the CLI and SDK calls that map to a
+  manifest surface. It is not authentication, target authorization, approval, or process isolation.
+  Direct imports of core modules outside those entry points are not gated.
 - API keys are process-level environment configuration, which is appropriate only for a trusted
   local client model.
 - Do not expose the MCP server through an untrusted or shared transport.
 
 ### Capability profiles
 
-The MCP registration profiles are cumulative:
+The capability profiles are cumulative. MCP registration, the CLI, and the SDK all resolve
+`AUTORT_CAPABILITY_PROFILE` the same way:
 
 | Profile | Registration boundary |
 |---|---|

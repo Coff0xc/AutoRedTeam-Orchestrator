@@ -13,6 +13,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional
 
+from core.capability_manifest import require_surface
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,6 +47,7 @@ class Reporter:
         Returns:
             报告文件路径或内容字符串
         """
+        require_surface("generate_report")
         try:
             from utils.report_generator import ReportGenerator
 
@@ -69,6 +72,7 @@ class Reporter:
         Returns:
             导出结果字典
         """
+        require_surface("export_findings")
         try:
             from utils.report_generator import ReportGenerator
 

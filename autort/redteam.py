@@ -13,7 +13,21 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
+from core.capability_manifest import require_surface
+
 logger = logging.getLogger(__name__)
+
+_LATERAL_SURFACES = {
+    "ssh": "lateral_ssh",
+    "smb": "lateral_smb",
+    "wmi": "lateral_wmi",
+    "winrm": "lateral_winrm",
+    "psexec": "lateral_psexec",
+}
+_PERSIST_SURFACES = {
+    "linux": "persistence_linux",
+    "windows": "persistence_windows",
+}
 
 
 class RedTeam:
@@ -52,6 +66,7 @@ class RedTeam:
         Returns:
             执行结果字典
         """
+        require_surface(_LATERAL_SURFACES.get(method, "lateral_auto"))
         try:
             module = self._get_lateral_module(method)
 
@@ -111,6 +126,7 @@ class RedTeam:
         Returns:
             Beacon 信息字典
         """
+        require_surface("c2_beacon_start")
         try:
             from core.c2.beacon import Beacon, BeaconConfig
 
@@ -158,6 +174,7 @@ class RedTeam:
         Returns:
             持久化结果字典
         """
+        require_surface(_PERSIST_SURFACES.get(platform, "persistence_linux"))
         try:
             if platform == "linux":
                 from core.persistence.linux_persistence import LinuxPersistence
@@ -204,6 +221,7 @@ class RedTeam:
         Returns:
             提权结果字典
         """
+        require_surface("privilege_escalate")
         try:
             from core.privilege_escalation.base import EscalationConfig
 
@@ -261,6 +279,7 @@ class RedTeam:
         Returns:
             搜索结果字典
         """
+        require_surface("credential_find")
         try:
             from core.credential.password_finder import PasswordFinder
 
@@ -293,6 +312,7 @@ class RedTeam:
         if method not in method_map:
             raise ValueError(f"不支持的横向移动方法: {method}，可用: {list(method_map.keys())}")
 
+        require_surface(_LATERAL_SURFACES[method])
         module_path, class_name = method_map[method]
         import importlib
 

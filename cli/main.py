@@ -110,6 +110,17 @@ def _show_disclaimer() -> None:
         typer.echo("⚠️ For AUTHORIZED penetration testing only.", err=True)
 
 
+def _require_surface(name: str) -> None:
+    """Refuse a command when the shared capability profile does not allow its surface."""
+    from core.capability_manifest import CapabilityManifestError, require_surface
+
+    try:
+        require_surface(name)
+    except CapabilityManifestError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(2) from exc
+
+
 # 注册启动回调
 @app.callback(invoke_without_command=True)
 def main_callback(ctx: typer.Context) -> None:
@@ -133,6 +144,7 @@ def scan(
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
     """扫描目标 — 端口扫描 / 完整侦察"""
+    _require_surface("full_recon" if full or recon_only else "port_scan")
     from autort import Scanner
 
     config = {}
@@ -169,6 +181,7 @@ def detect(
     exit_code: bool = typer.Option(False, "--exit-code", help="发现漏洞时返回非零退出码"),
 ):
     """漏洞检测 — 扫描目标漏洞"""
+    _require_surface("vuln_scan")
     from autort import Scanner
 
     categories = [c.strip() for c in category.split(",")] if category else None
@@ -215,17 +228,23 @@ def exploit(
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
     """漏洞利用 — CVE利用 / 自动利用"""
+    if cve:
+        surface = "cve_auto_exploit"
+    elif auto:
+        surface = "exploit_orchestrate"
+    else:
+        typer.echo("请指定 --cve <CVE-ID> 或 --auto", err=True)
+        raise typer.Exit(1)
+
+    _require_surface(surface)
     from autort import Exploiter
 
     exploiter = Exploiter(target)
 
     if cve:
         result = asyncio.run(exploiter.cve_exploit(cve))
-    elif auto:
-        result = asyncio.run(exploiter.auto_exploit(top_n=top_n))
     else:
-        typer.echo("请指定 --cve <CVE-ID> 或 --auto", err=True)
-        raise typer.Exit(1)
+        result = asyncio.run(exploiter.auto_exploit(top_n=top_n))
 
     _output(result, output)
 
@@ -242,6 +261,7 @@ def cve_search(
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
     """CVE 搜索"""
+    _require_surface("cve_search")
     from autort import Exploiter
 
     exploiter = Exploiter("")
@@ -266,6 +286,7 @@ def pentest(
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
     """一键渗透测试"""
+    _require_surface("pentest_resume" if resume else "auto_pentest")
     from autort import AutoPentest
 
     config = {"timeout": timeout}
@@ -295,6 +316,7 @@ def report(
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
     """生成渗透报告"""
+    _require_surface("generate_report")
     from autort import Reporter
 
     reporter = Reporter(session_id)
@@ -320,6 +342,7 @@ def nuclei(
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
     """Nuclei 模板扫描 — 纯Python引擎，无需nuclei二进制"""
+    _require_surface("nuclei_scan")
     from autort import Scanner
 
     tag_list = [t.strip() for t in tags.split(",")] if tags else None
@@ -344,6 +367,7 @@ def nuclei(
 @app.command()
 def tools():
     """查看外部工具状态（nmap/nuclei/sqlmap/...）"""
+    _require_surface("ext_tools_status")
     from core.tools.tool_manager import ToolManager
 
     manager = ToolManager()

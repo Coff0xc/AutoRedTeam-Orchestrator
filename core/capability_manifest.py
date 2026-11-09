@@ -16,6 +16,21 @@ class CapabilityManifestError(ValueError):
     """Raised when a profile or surface is missing from the manifest."""
 
 
+class ProfileDenied(CapabilityManifestError):
+    """Raised when the resolved profile does not allow a classified surface."""
+
+    def __init__(self, *, name: str, kind: str, profile: str, required_profile: str) -> None:
+        self.name = name
+        self.kind = kind
+        self.profile = profile
+        self.required_profile = required_profile
+        super().__init__(
+            f"{name} requires capability profile {required_profile!r}; "
+            f"current profile is {profile!r}. "
+            f"Set {CAPABILITY_PROFILE_ENV} to {required_profile!r} or a higher profile."
+        )
+
+
 @dataclass(frozen=True)
 class CapabilityProfile:
     """An ordered MCP exposure profile."""
@@ -767,6 +782,32 @@ def surface_allowed(profile: str, kind: str, name: str) -> bool:
     return get_capability(kind, name).allowed_in(normalized)
 
 
+def require_surface(
+    name: str,
+    *,
+    kind: str = "tool",
+    profile: Optional[str] = None,
+    environ: Optional[Mapping[str, str]] = None,
+) -> str:
+    """Allow one manifest surface for the resolved profile, or raise ProfileDenied.
+
+    CLI commands and SDK methods call this before importing the mapped engine.
+    MCP registration uses the same resolver. The check is not authentication,
+    target scope, approval, or process isolation.
+    """
+
+    resolved = resolve_profile(profile, default=DEFAULT_MCP_PROFILE, environ=environ)
+    capability = get_capability(kind, name)
+    if not capability.allowed_in(resolved):
+        raise ProfileDenied(
+            name=capability.name,
+            kind=capability.kind,
+            profile=resolved,
+            required_profile=capability.minimum_profile,
+        )
+    return resolved
+
+
 def handler_enabled(profile: str, handler: str) -> bool:
     """Return whether a handler contains at least one surface for a profile."""
 
@@ -818,8 +859,9 @@ def capability_profiles() -> dict[str, Any]:
             for profile in PROFILES
         ],
         "security_note": (
-            "Required controls are declarative. Profiles enforce MCP schema exposure only; "
-            "they do not replace authentication, target scope, independent approval, "
-            "or an isolated executor."
+            "Required controls are declarative. Profiles gate MCP registration and the "
+            "CLI and SDK calls that map to a manifest surface; they do not replace "
+            "authentication, target scope, independent approval, or an isolated executor. "
+            "Direct imports outside those entry points stay ungated."
         ),
     }

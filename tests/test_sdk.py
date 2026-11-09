@@ -10,6 +10,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+
+@pytest.fixture(autouse=True)
+def _existing_sdk_calls_use_full_profile(monkeypatch):
+    """Behavior tests predate the shared gate and opt into the full profile."""
+    monkeypatch.setenv("AUTORT_CAPABILITY_PROFILE", "full")
+
+
 # ==================== SDK: Scanner 测试 ====================
 
 

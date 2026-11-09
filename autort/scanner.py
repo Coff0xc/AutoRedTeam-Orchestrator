@@ -19,6 +19,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
 
+from core.capability_manifest import require_surface
+
 logger = logging.getLogger(__name__)
 
 
@@ -103,6 +105,7 @@ class Scanner:
         Returns:
             ReconResult.to_dict() — 完整侦察结果
         """
+        require_surface("full_recon")
         try:
             from core.recon.base import ReconConfig
             from core.recon.engine import StandardReconEngine
@@ -131,6 +134,7 @@ class Scanner:
         Returns:
             端口信息列表 [{"port": 80, "state": "open", "service": "http", ...}]
         """
+        require_surface("port_scan")
         try:
             from core.recon.port_scanner import PortScanner
 
@@ -169,6 +173,7 @@ class Scanner:
         Returns:
             检测结果列表
         """
+        require_surface("vuln_scan")
         try:
             from core.detectors.factory import DetectorFactory
 
@@ -236,6 +241,7 @@ class Scanner:
         Returns:
             指纹识别结果 {"fingerprints": [...]}
         """
+        require_surface("fingerprint")
         try:
             from core.recon.fingerprint import FingerprintEngine
 
@@ -258,6 +264,7 @@ class Scanner:
         Returns:
             WAF 检测结果 {"detected": bool, "waf": {...} | None}
         """
+        require_surface("waf_detect")
         try:
             from core.recon.waf_detect import WAFDetector
 
@@ -282,6 +289,7 @@ class Scanner:
         Returns:
             子域名信息列表
         """
+        require_surface("subdomain_enum")
         try:
             from core.recon.subdomain import SubdomainEnumerator
 
@@ -314,6 +322,7 @@ class Scanner:
         Returns:
             被动侦察结果 {"subdomains": [...], "by_source": {...}}
         """
+        require_surface("passive_subdomain_enum")
         try:
             from core.recon.passive_recon import PassiveRecon
 
@@ -366,6 +375,7 @@ class Scanner:
         Returns:
             扫描结果字典
         """
+        require_surface("nuclei_scan")
         try:
             from core.detectors.nuclei_engine import NucleiEngine
 
