@@ -99,6 +99,22 @@ tools_app = typer.Typer(
 )
 app.add_typer(tools_app, name="tools")
 
+llm_app = typer.Typer(
+    name="llm",
+    help="OrcaRouter Cyber Inference — API key or OAuth 2.0 + PKCE login",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(llm_app, name="llm")
+
+llm_key_app = typer.Typer(
+    name="key",
+    help="Paste or clear an OrcaRouter API key (sk-orca-…)",
+    no_args_is_help=True,
+    add_completion=False,
+)
+llm_app.add_typer(llm_key_app, name="key")
+
 
 def _show_disclaimer() -> None:
     """启动时显示法律声明"""
@@ -768,6 +784,319 @@ def _ci_summary(findings, threshold: str):
         )
     else:
         typer.echo(f"[CI] No findings meet threshold ({threshold})", err=True)
+
+
+# ──────────────────────────── llm (OrcaRouter) ────────────────────────────
+
+
+def _orca_credential_or_exit():
+    """Resolve the OrcaRouter credential or exit with actionable guidance."""
+    from core.llm.orcarouter import resolve_credential
+
+    credential = resolve_credential()
+    if credential is None:
+        typer.echo(
+            "No OrcaRouter credential found. Run `autort llm connect` for an "
+            "OAuth 2.0 + PKCE login, `autort llm key set` to paste an sk-orca-… "
+            "key, or export ORCAROUTER_API_KEY.",
+            err=True,
+        )
+        raise typer.Exit(2)
+    return credential
+
+
+@llm_app.command("status")
+def llm_status(as_json: bool = typer.Option(False, "--json", help="Emit JSON")):
+    """Show provider, origins, credential source (masked) and model selection"""
+    from core.llm.orcarouter import (
+        CredentialStore,
+        catalog,
+        model_is_compatible,
+        provider_status,
+        resolve_credential,
+    )
+
+    store = CredentialStore()
+    status = provider_status(store=store)
+    stored = status.get("stored") or {}
+    selected_model = str(stored.get("model") or "")
+
+    if selected_model:
+        credential = resolve_credential(store=store)
+        if credential is not None:
+            result = catalog.load_catalog(credential.api_key, capability="chat", timeout=5.0)
+            if not model_is_compatible(result.models, selected_model, capability="chat"):
+                store.update_model("")
+                status["model_notice"] = (
+                    f"Stored model {selected_model} is not in the current catalog; "
+                    "selection cleared."
+                )
+                selected_model = ""
+
+    status["selected_model"] = selected_model or status["default_model"]
+    status["credential_source"] = (status.get("credential") or {}).get("source") or "none"
+
+    if as_json:
+        _output(status, None)
+        return
+
+    credential_info = status.get("credential")
+    if credential_info:
+        key_line = (
+            f"{credential_info['key']} (source: {credential_info['source']}, "
+            f"scope: {credential_info['scope']})"
+        )
+    else:
+        key_line = "<none — run `autort llm connect` or `autort llm key set`>"
+
+    typer.echo(f"Provider   : {status['label']} ({status['provider']})")
+    typer.echo(f"Auth base  : {status['auth_base']}")
+    typer.echo(f"API base   : {status['api_base']}")
+    typer.echo(f"Credential : {key_line}")
+    typer.echo(f"Model      : {status['selected_model']}")
+    if status.get("model_notice"):
+        typer.echo(f"Notice     : {status['model_notice']}")
+    typer.echo(f"Cyber docs : {status['provider_page']}")
+    typer.echo(f"Cyber models: {status['cyber_catalog']}")
+
+
+@llm_app.command("connect")
+def llm_connect(
+    flow: str = typer.Option(
+        "loopback",
+        "--flow",
+        help="loopback (browser callback) or oob (consent screen shows a code)",
+    ),
+    timeout: float = typer.Option(180.0, "--timeout", help="Seconds to wait for approval"),
+    open_browser: bool = typer.Option(
+        True, "--open/--no-open", help="Open the consent page automatically"
+    ),
+    force: bool = typer.Option(False, "--force", help="Authorize even if a key is stored"),
+):
+    """Sign in with OAuth 2.0 + PKCE (S256); stores a durable OrcaRouter key"""
+    from core.llm.orcarouter import (
+        AUTHORIZED_APPS_URL,
+        KEY_DASHBOARD_URL,
+        OrcaAuthError,
+        OrcaCredentialError,
+        PkceCredentialSource,
+        default_browser_opener,
+    )
+
+    if flow not in ("loopback", "oob"):
+        typer.echo("--flow must be 'loopback' or 'oob'", err=True)
+        raise typer.Exit(2)
+
+    def show_url(url: str) -> None:
+        typer.echo("Open this URL to authorize AutoRedTeam with OrcaRouter:")
+        typer.echo(f"  {url}")
+
+    def read_code(url: str) -> str:
+        return typer.prompt("Authorization code shown by OrcaRouter")
+
+    source = PkceCredentialSource()
+    try:
+        credential = source.acquire(
+            flow=flow,
+            open_browser=default_browser_opener if open_browser else None,
+            on_authorize_url=show_url,
+            code_prompt=read_code,
+            timeout=timeout,
+            reuse_stored=not force,
+        )
+    except (OrcaAuthError, OrcaCredentialError) as exc:
+        typer.echo(f"OrcaRouter login failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    typer.echo(
+        f"Credential {credential.masked()} is stored (source: {credential.source}, "
+        f"scope: {credential.scope})."
+    )
+    typer.echo(f"Keys: {KEY_DASHBOARD_URL}")
+    typer.echo(f"Revoke this app: {AUTHORIZED_APPS_URL}")
+
+
+@llm_app.command("logout")
+def llm_logout():
+    """Remove the stored OrcaRouter credential"""
+    from core.llm.orcarouter import CredentialStore
+
+    removed = CredentialStore().clear()
+    typer.echo("Stored OrcaRouter credential removed." if removed else "No stored credential.")
+
+
+@llm_key_app.command("set")
+def llm_key_set(
+    key: Optional[str] = typer.Option(
+        None, "--key", help="Key value; omit to be prompted without echo"
+    ),
+):
+    """Store an existing OrcaRouter API key (sk-orca-…)"""
+    from core.llm.orcarouter import ApiKeyCredentialSource, OrcaCredentialError
+
+    value = (key or typer.prompt("OrcaRouter API key", hide_input=True)).strip()
+    try:
+        credential = ApiKeyCredentialSource().save(value)
+    except OrcaCredentialError as exc:
+        typer.echo(f"Could not store the key: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Stored credential {credential.masked()} (source: api_key).")
+
+
+@llm_key_app.command("clear")
+def llm_key_clear():
+    """Remove the stored API key"""
+    from core.llm.orcarouter import CredentialStore
+
+    removed = CredentialStore().clear()
+    typer.echo("Stored credential removed." if removed else "No stored credential.")
+
+
+@llm_app.command("models")
+def llm_models(
+    capability: str = typer.Option(
+        "chat", "--capability", help="chat/embedding/image/video/rerank"
+    ),
+    require_input: str = typer.Option(
+        "", "--require-input", help="Required input modalities, comma separated (e.g. image)"
+    ),
+    refresh: bool = typer.Option(False, "--refresh", help="Bypass the in-process cache"),
+    select: bool = typer.Option(False, "--select", help="Choose a model and remember it"),
+    as_json: bool = typer.Option(False, "--json", help="Emit JSON"),
+):
+    """List models from the live OrcaRouter catalog, filtered by capability"""
+    from core.llm.orcarouter import (
+        SUPPORTED_CAPABILITIES,
+        CredentialStore,
+        catalog,
+        model_is_compatible,
+    )
+
+    if capability not in SUPPORTED_CAPABILITIES:
+        typer.echo(f"--capability must be one of: {', '.join(SUPPORTED_CAPABILITIES)}", err=True)
+        raise typer.Exit(2)
+
+    credential = _orca_credential_or_exit()
+    required_inputs = tuple(
+        item.strip().lower() for item in require_input.split(",") if item.strip()
+    )
+
+    result = catalog.load_catalog(
+        credential.api_key,
+        capability=capability,
+        required_inputs=required_inputs,
+        use_cache=not refresh,
+    )
+    if as_json:
+        _output(result.to_dict(), None)
+        return
+
+    if result.degraded:
+        typer.echo(
+            f"[degraded] Live catalog unavailable ({result.error}); showing the "
+            "verified fallback list. Use --refresh to retry.",
+            err=True,
+        )
+    if not result.models:
+        typer.echo(
+            f"No {capability}-compatible models are available for this workspace.",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    typer.echo(f"{len(result.models)} {capability} model(s) — source: {result.source}")
+    for index, model in enumerate(result.models, start=1):
+        details = [",".join(model.input_modalities)]
+        if model.context_length:
+            details.append(f"{model.context_length} ctx")
+        if model.reasoning_efforts:
+            details.append("reasoning: " + "/".join(model.reasoning_efforts))
+        typer.echo(f"{index:>3}. {model.id}  [{' | '.join(details)}]")
+
+    if not select:
+        return
+
+    answer = typer.prompt("Select a model number or id").strip()
+    chosen = ""
+    if answer.isdigit() and 1 <= int(answer) <= len(result.models):
+        chosen = result.models[int(answer) - 1].id
+    elif model_is_compatible(
+        result.models, answer, capability=capability, required_inputs=required_inputs
+    ):
+        chosen = answer
+    if not chosen:
+        typer.echo("That model is not in the filtered list; selection unchanged.", err=True)
+        raise typer.Exit(2)
+
+    store = CredentialStore()
+    if store.update_model(chosen):
+        typer.echo(f"Selected {chosen}.")
+    else:
+        typer.echo(
+            f"Selected {chosen} for this session only. Export AUTORT_LLM_MODEL="
+            f"{chosen} to make it persistent (no stored credential file)."
+        )
+
+
+@llm_app.command("use")
+def llm_use(model: str = typer.Argument(..., help="Model id from `autort llm models`")):
+    """Validate a model against the live catalog and remember it"""
+    from core.llm.orcarouter import (
+        CredentialStore,
+        OrcaCatalogError,
+        catalog,
+        model_is_compatible,
+    )
+
+    credential = _orca_credential_or_exit()
+    try:
+        result = catalog.load_catalog(credential.api_key, capability="chat")
+    except OrcaCatalogError as exc:  # pragma: no cover - load_catalog falls back
+        typer.echo(f"Catalog unavailable: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    if not model_is_compatible(result.models, model, capability="chat"):
+        typer.echo(
+            f"{model} is not a chat-compatible model in the current catalog. "
+            "Run `autort llm models` to pick one.",
+            err=True,
+        )
+        raise typer.Exit(2)
+
+    store = CredentialStore()
+    if store.update_model(model):
+        typer.echo(f"Selected {model}.")
+    else:
+        typer.echo(
+            f"{model} is compatible. Export AUTORT_LLM_MODEL={model} to persist it "
+            "(no stored credential file)."
+        )
+
+
+@llm_app.command("ping")
+def llm_ping(
+    prompt: str = typer.Option(
+        "Reply with the single word: ready", "--prompt", help="Prompt for the test call"
+    ),
+    model: Optional[str] = typer.Option(None, "--model", help="Override the model id"),
+):
+    """Send one real request through the OrcaRouter provider code path"""
+    from core.llm.provider import LLMProvider
+
+    llm = LLMProvider(provider="orcarouter", model=model)
+    if not llm.available:
+        typer.echo(
+            "OrcaRouter provider is not ready: no credential or no OpenAI-compatible "
+            "client. Run `autort llm connect`.",
+            err=True,
+        )
+        raise typer.Exit(2)
+
+    response = llm.complete(prompt, max_tokens=32)
+    if response is None:
+        typer.echo("The OrcaRouter request failed; see the log for details.", err=True)
+        raise typer.Exit(1)
+    typer.echo(f"[{llm.model}] {response.strip()}")
 
 
 def _run_state_from_dict(data: dict):

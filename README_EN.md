@@ -130,6 +130,37 @@ The profile is resolved in this order: explicit argument → `AUTORT_CAPABILITY_
 | `AUTOREDTEAM_AUTH_MODE` | `strict` \| `permissive` \| `disabled` | `strict` | Authorization gate for protected tools |
 | `AUTOREDTEAM_API_KEY` | any string | *(unset)* | API key checked in `strict` mode; `MCP_API_KEY` is accepted as an alias |
 
+### OrcaRouter Cyber Inference provider
+
+`orcarouter` is a first-class provider entry for authorized red-team and blue-team work.
+It sends scoped security reasoning to OrcaRouter's cyber models through one
+OpenAI-compatible endpoint (`https://api.orcarouter.ai/v1`), rather than through a
+generic custom-URL option.
+
+| Role | Model |
+| --- | --- |
+| Default | `orcarouter/auto` |
+| Recommended for verified security teams | `orca/orcacyber-ultra-1.0`, `orca/orcacyber-zero-1.5` |
+| General fallback | `orcarouter/fusion` |
+
+Two authentication choices produce the same `sk-orca-…` key, stored in the project's
+user credential file (`~/.config/autoredt/orcarouter.json`, mode `0600`):
+
+```bash
+autort llm connect          # OAuth 2.0 + PKCE, loopback redirect (S256)
+autort llm connect --flow oob   # consent screen shows a code, for SSH/headless hosts
+autort llm key set          # paste an existing key instead
+autort llm models           # live GET /v1/models?capability=chat, filtered by capability
+autort llm status           # masked credential + origins + selected model
+autort llm ping             # one real request through the provider path
+```
+
+`AUTORT_LLM_PROVIDER=orcarouter` enables the provider for orchestrator AI enhancement;
+`ai.provider: orcarouter` does the same for MCP `smart_analyze`. See
+[docs/orcarouter.md](docs/orcarouter.md) for endpoints, overrides and the credential
+lifecycle. Provider page: <https://www.orcarouter.ai/cyber>; cyber catalog:
+<https://www.orcarouter.ai/models?tier=cyber>.
+
 ## Python SDK
 
 The SDK is a thin async wrapper over the `core/` engines, importable from a source checkout:
@@ -224,6 +255,7 @@ CI-friendly flags on `detect` (and the `ai-*` scanners): `--ci` prints a terse s
 | `sandbox` | `docker-smoke` | Local Docker sandbox smoke test |
 | `capabilities` | `matrix`, `readiness`, `manifest`, `profiles` | Capability manifest and coverage |
 | `tools` | `lint` | MCP tool contract check (static) |
+| `llm` | `connect`, `key set`, `key clear`, `logout`, `models`, `use`, `status`, `ping` | OrcaRouter Cyber Inference provider (API key or OAuth 2.0 + PKCE) |
 
 Read-only, no-network commands to start:
 
