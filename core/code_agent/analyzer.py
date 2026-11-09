@@ -10,7 +10,7 @@ from __future__ import annotations
 import ast
 from collections import defaultdict, deque
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from core.code_agent.models import CallEdge, CodeContextResult, CodeFunction, ConfidenceScore
 

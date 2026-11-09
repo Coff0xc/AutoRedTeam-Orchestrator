@@ -15,14 +15,6 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-# 统一 HTTP 客户端工厂
-try:
-    from core.http import get_sync_client
-
-    HAS_HTTP_FACTORY = True
-except ImportError:
-    HAS_HTTP_FACTORY = False
-
 
 class VulnSeverity(Enum):
     """漏洞严重性"""

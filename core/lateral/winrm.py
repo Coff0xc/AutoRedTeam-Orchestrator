@@ -10,7 +10,10 @@ import base64
 import logging
 import socket
 import time
-from typing import Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+
+if TYPE_CHECKING:
+    from winrm import Protocol
 
 from .base import (
     AuthMethod,

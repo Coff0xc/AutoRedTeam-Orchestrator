@@ -15,7 +15,10 @@ import struct
 import threading
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+
+if TYPE_CHECKING:
+    from paramiko import Channel, SFTPClient, Transport
 
 from .base import (
     AuthMethod,

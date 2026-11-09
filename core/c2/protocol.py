@@ -601,8 +601,9 @@ class HTTPProtocolAdapter:
         """
         if isinstance(body, str):
             body = json.loads(body)
+        if not isinstance(body, dict):
+            raise TypeError("request body must be an object")
 
-        assert isinstance(body, dict)
         encoded = body.get("data") or body.get("d", "")
         return self.encoder.base64_decode(encoded)
 
@@ -635,8 +636,9 @@ class HTTPProtocolAdapter:
         """
         if isinstance(body, str):
             body = json.loads(body)
+        if not isinstance(body, dict):
+            raise TypeError("response body must be an object")
 
-        assert isinstance(body, dict)
         encoded = body.get("data", "")
         if not encoded:
             return b""

@@ -1,5 +1,5 @@
-# mypy: disable-error-code="attr-defined"
 #!/usr/bin/env python3
+# mypy: disable-error-code="attr-defined"
 """
 SSRF (Server-Side Request Forgery) 验证模块
 
