@@ -71,12 +71,15 @@ pip install -r requirements.txt
 python -m cli.main --help
 ```
 
-Read-only, no-network commands to start:
+Read-only, no-network commands. These two commands do not contact a target and do not import the AI engine. The minimum dependency is `typer`:
 
 ```bash
+pip install typer
 python -m cli.main ai-surface scan --path handlers --format sarif -o surface.sarif
 python -m cli.main capabilities manifest --profile safe
 ```
+
+`ai-surface scan` skips test files by default. A scan of the repo root or `handlers/` reconciles findings with the capability manifest. Coverage is reported in JSON `summary.static_coverage` and in SARIF `runs[].properties.static_coverage`.
 
 ## MCP server integration
 

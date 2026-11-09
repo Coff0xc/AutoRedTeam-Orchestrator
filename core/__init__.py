@@ -4,14 +4,12 @@ AI Red Team MCP - Core Module
 核心模块提供统一的工具返回值格式和基础组件。
 
 导入约定:
-- 轻量组件 (ToolResult, AIDecisionEngine) 直接导入
-- 重量组件 (session, http) 通过 __getattr__ 懒加载
+- 轻量组件 (ToolResult) 直接导入
+- AI 决策引擎与 session/http 通过 __getattr__ 懒加载，避免只读命令拉起 pydantic
 - handlers/modules 中的导入应使用延迟导入模式
 """
 
-# AI决策引擎 (轻量 - 仅使用标准库+可选第三方)
 from _version import __version__
-from core.ai_engine import AIDecisionEngine, AttackVector, RiskLevel
 
 # 统一的工具返回值 Schema (轻量，无重依赖)
 from core.result import ResultStatus, ToolResult, ToolResultType, ensure_tool_result
@@ -46,6 +44,13 @@ __all__ = [
     "SessionStorage",
 ]
 
+# 懒加载: AI 引擎依赖 pydantic，只读 CLI 不应在 import core 时拉起它
+_AI_ATTRS = {
+    "AIDecisionEngine",
+    "AttackVector",
+    "RiskLevel",
+}
+
 # 懒加载: session 相关组件（拉入 core.http.client ~400ms）
 _SESSION_ATTRS = {
     "AuthContext",
@@ -69,6 +74,12 @@ _SESSION_ATTRS = {
 
 
 def __getattr__(name: str):
+    if name in _AI_ATTRS:
+        from core import ai_engine as _ai_engine
+
+        for attr in _AI_ATTRS:
+            globals()[attr] = getattr(_ai_engine, attr)
+        return globals()[name]
     if name in _SESSION_ATTRS:
         from core import session as _session
 

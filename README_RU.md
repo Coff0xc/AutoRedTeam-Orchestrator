@@ -71,12 +71,15 @@ pip install -r requirements.txt
 python -m cli.main --help
 ```
 
-Команды для начала — только чтение, без сети:
+Команды только для чтения, без сети. Они не обращаются к цели и не импортируют AI-движок. Минимальная зависимость — `typer`:
 
 ```bash
+pip install typer
 python -m cli.main ai-surface scan --path handlers --format sarif -o surface.sarif
 python -m cli.main capabilities manifest --profile safe
 ```
+
+`ai-surface scan` по умолчанию пропускает тестовые файлы. Сканирование корня репозитория или `handlers/` сверяется с capability manifest. Покрытие попадает в JSON `summary.static_coverage` и в SARIF `runs[].properties.static_coverage`.
 
 ## Подключение MCP-сервера
 

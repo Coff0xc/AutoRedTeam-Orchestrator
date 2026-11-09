@@ -71,12 +71,15 @@ pip install -r requirements.txt
 python -m cli.main --help
 ```
 
-只读、无网络的起步命令：
+只读、无网络的起步命令。这两条命令不访问目标，也不导入 AI 引擎。最小依赖是 `typer`：
 
 ```bash
+pip install typer
 python -m cli.main ai-surface scan --path handlers --format sarif -o surface.sarif
 python -m cli.main capabilities manifest --profile safe
 ```
+
+`ai-surface scan` 默认跳过测试文件。扫描仓库根或 `handlers/` 时会与 capability manifest 对账，JSON 的 `summary.static_coverage` 和 SARIF 的 `runs[].properties.static_coverage` 给出覆盖率。
 
 ## MCP Server 接入
 
