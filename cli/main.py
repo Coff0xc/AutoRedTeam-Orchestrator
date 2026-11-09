@@ -554,7 +554,7 @@ def ai_surface_scan(
 
 @ai_surface_app.command("scan-mcp-config")
 def ai_surface_scan_mcp_config(
-    path: str = typer.Option(..., "--path", "-p", help="MCP JSON 配置文件路径 (mcpServers)"),
+    path: str = typer.Option(..., "--path", "-p", help="MCP JSON 配置文件或目录"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
     format: str = typer.Option("json", "--format", "-f", help="输出格式: json/sarif"),
     severity_threshold: str = typer.Option(

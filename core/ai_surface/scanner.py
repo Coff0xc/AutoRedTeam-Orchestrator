@@ -2,6 +2,7 @@
 
 The scanner is read-only. It parses Python handler files with ``ast`` and never
 imports handler modules, registers tools, calls targets, or executes payloads.
+MCP config scanning normalizes the common client shapes and does not connect.
 """
 
 from __future__ import annotations
@@ -103,6 +104,27 @@ SAFE_RUNTIME_HELPER_CALLS = {
     "gate_handler_runtime_action",
     "sanitize_runtime_inputs",
 }
+
+_SKIP_DIR_NAMES = frozenset(
+    {
+        ".git",
+        ".hg",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".svn",
+        ".tox",
+        ".venv",
+        "__pycache__",
+        "build",
+        "dist",
+        "node_modules",
+        "venv",
+        "wordlists",
+    }
+)
+_GENERAL_COMMANDS = frozenset({"powershell", "pwsh", "cmd", "bash", "sh", "python", "node"})
+_SECRET_ENV_TERMS = ("key", "token", "secret", "password")
+_MCP_CONFIG_NAMES = frozenset({".mcp.json", "mcp.json", "claude_desktop_config.json"})
 
 
 def scan_handler_surface(
@@ -210,57 +232,35 @@ def scan_skill_surface(path: str | Path) -> SurfaceScanResult:
 
 
 def scan_mcp_config(path: str | Path) -> SurfaceScanResult:
-    """Scan MCP JSON config for broad command exposure and env secrets."""
+    """Scan MCP JSON config for broad command exposure and env secrets.
+
+    A directory is searched for known client filenames. ``mcpServers``,
+    ``mcp.servers``, and a top-level ``servers`` object are the same inventory.
+    The scan does not connect to a declared endpoint or read env values.
+    """
     root = Path(path)
     if not root.exists():
         raise FileNotFoundError(f"MCP config path does not exist: {root}")
-    result = SurfaceScanResult(root_path=str(root), scanned_files=1)
-    try:
-        data = json.loads(root.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        result.warnings.append(f"{root}: {type(exc).__name__}: {exc}")
+    result = SurfaceScanResult(root_path=str(root))
+    files = _mcp_config_files(root)
+    if not files:
+        result.warnings.append("No MCP config file found")
         return result
 
-    servers = data.get("mcpServers") if isinstance(data, dict) else None
-    if not isinstance(servers, dict):
-        result.warnings.append("No mcpServers object found")
-        return result
-
-    for name, server in servers.items():
-        if not isinstance(server, dict):
+    for file_path in files:
+        result.scanned_files += 1
+        try:
+            data = json.loads(file_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            result.warnings.append(f"{file_path}: {type(exc).__name__}: {exc}")
             continue
-        command = str(server.get("command", ""))
-        args = [str(item) for item in server.get("args", []) if item is not None]
-        env = server.get("env", {})
-        risk_terms, risk_level = _risk_terms([command, " ".join(args)])
-        issues = []
-        if command.lower() in {"powershell", "pwsh", "cmd", "bash", "sh", "python", "node"}:
-            risk_level = max_risk(risk_level, SurfaceRiskLevel.HIGH)
-            issues.append("mcp_server_uses_general_command_runtime")
-        if isinstance(env, dict):
-            secret_keys = [
-                key
-                for key in env
-                if any(token in key.lower() for token in ("key", "token", "secret", "password"))
-            ]
-            if secret_keys:
-                risk_level = max_risk(risk_level, SurfaceRiskLevel.MODERATE)
-                issues.append("mcp_server_env_contains_secret_like_keys")
-        result.findings.append(
-            SurfaceFinding(
-                tool_name=str(name),
-                file_path=str(root),
-                line=1,
-                risk_level=(
-                    risk_level if risk_level != SurfaceRiskLevel.INFO else SurfaceRiskLevel.LOW
-                ),
-                risk_terms=risk_terms,
-                issues=issues,
-                recommendations=_mcp_config_recommendations(issues),
-                description=f"MCP server command: {command}",
-                finding_type="mcp_config",
-            )
-        )
+        servers = _mcp_server_map(data)
+        if servers is None:
+            result.warnings.append(f"{file_path}: No MCP server object found")
+            continue
+        for name, server in servers.items():
+            if isinstance(server, dict):
+                result.findings.append(_mcp_server_finding(file_path, str(name), server))
     result.findings.sort(
         key=lambda item: (-RISK_ORDER[item.risk_level], item.file_path, item.tool_name)
     )
@@ -269,15 +269,15 @@ def scan_mcp_config(path: str | Path) -> SurfaceScanResult:
 
 def _iter_python_files(root: Path, *, exclude_tests: bool = False) -> List[Path]:
     if root.is_file():
-        if root.suffix != ".py":
+        if root.suffix.lower() != ".py":
             return []
         if exclude_tests and _is_test_path(root):
             return []
         return [root]
     files = [
         path
-        for path in root.rglob("*.py")
-        if "__pycache__" not in path.parts and path.name != "__init__.py"
+        for path in _walk_files(root)
+        if path.suffix.lower() == ".py" and path.name != "__init__.py"
     ]
     if exclude_tests:
         files = [path for path in files if not _is_test_path(path)]
@@ -305,11 +305,84 @@ def _iter_text_files(root: Path) -> List[Path]:
     suffixes = {".md", ".txt", ".yaml", ".yml", ".json", ".toml"}
     if root.is_file():
         return [root] if root.suffix.lower() in suffixes else []
-    return sorted(
-        path
-        for path in root.rglob("*")
-        if path.is_file() and path.suffix.lower() in suffixes and "__pycache__" not in path.parts
+    return sorted(path for path in _walk_files(root) if path.suffix.lower() in suffixes)
+
+
+def _walk_files(root: Path) -> Iterable[Path]:
+    """Yield files without descending into dependency, VCS, or wordlist directories."""
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        try:
+            children = list(current.iterdir())
+        except OSError:
+            continue
+        for child in children:
+            if child.is_symlink():
+                continue
+            if child.is_dir():
+                if child.name not in _SKIP_DIR_NAMES:
+                    stack.append(child)
+                continue
+            if child.is_file():
+                yield child
+
+
+def _mcp_config_files(root: Path) -> List[Path]:
+    if root.is_file():
+        return [root]
+    return sorted(path for path in _walk_files(root) if path.name in _MCP_CONFIG_NAMES)
+
+
+def _mcp_server_map(data: object) -> Optional[dict]:
+    if not isinstance(data, dict):
+        return None
+    for value in (data.get("mcpServers"), data.get("servers")):
+        if isinstance(value, dict):
+            return value
+    mcp = data.get("mcp")
+    if isinstance(mcp, dict) and isinstance(mcp.get("servers"), dict):
+        return mcp["servers"]
+    return None
+
+
+def _mcp_server_finding(file_path: Path, name: str, server: dict) -> SurfaceFinding:
+    command = str(server.get("command", ""))
+    args = [str(item) for item in server.get("args", []) if item is not None]
+    env = server.get("env", {})
+    remote = any(server.get(field) for field in ("url", "serverUrl", "baseUrl"))
+    risk_terms, risk_level = _risk_terms([command, " ".join(args)])
+    issues: List[str] = []
+    if command.lower() in _GENERAL_COMMANDS:
+        risk_level = max_risk(risk_level, SurfaceRiskLevel.HIGH)
+        issues.append("mcp_server_uses_general_command_runtime")
+    if remote:
+        risk_level = max_risk(risk_level, SurfaceRiskLevel.MODERATE)
+        issues.append("mcp_server_declares_remote_endpoint")
+    if isinstance(env, dict) and any(_env_key_is_secret(str(key)) for key in env):
+        risk_level = max_risk(risk_level, SurfaceRiskLevel.MODERATE)
+        issues.append("mcp_server_env_contains_secret_like_keys")
+    if risk_level == SurfaceRiskLevel.INFO:
+        risk_level = SurfaceRiskLevel.LOW
+    description = (
+        f"MCP server command: {command}" if command else "MCP server declares a remote endpoint"
     )
+    return SurfaceFinding(
+        tool_name=name,
+        file_path=str(file_path),
+        line=1,
+        risk_level=risk_level,
+        risk_terms=risk_terms,
+        issues=issues,
+        recommendations=_mcp_config_recommendations(issues),
+        description=description,
+        finding_type="mcp_config",
+    )
+
+
+def _env_key_is_secret(key: str) -> bool:
+    haystack = key.lower().replace("-", "_")
+    return any(_contains_term(haystack, term) for term in _SECRET_ENV_TERMS)
 
 
 class _HandlerToolVisitor(ast.NodeVisitor):
@@ -721,6 +794,10 @@ def _mcp_config_recommendations(issues: List[str]) -> List[str]:
         recommendations.append("Prefer a narrow wrapper command with fixed arguments.")
     if "mcp_server_env_contains_secret_like_keys" in issues:
         recommendations.append("Use secret manager references and redact env from logs.")
+    if "mcp_server_declares_remote_endpoint" in issues:
+        recommendations.append(
+            "Review the remote endpoint and its authentication before enabling it."
+        )
     if not recommendations:
         recommendations.append("Review server command and env before enabling.")
     return recommendations

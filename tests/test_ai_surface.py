@@ -148,6 +148,75 @@ def test_scan_mcp_config_flags_general_runtime_and_secret_env(tmp_path: Path):
     assert "mcp_server_env_contains_secret_like_keys" in finding.issues
 
 
+def test_scan_mcp_config_reads_client_shapes_without_connecting(tmp_path: Path):
+    cursor = tmp_path / ".cursor"
+    cursor.mkdir()
+    (cursor / "mcp.json").write_text(
+        '{"mcp":{"servers":{"remote":{"url":"https://example.invalid/mcp","env":{"monkey":"1"}}}}}',
+        encoding="utf-8",
+    )
+    (tmp_path / ".mcp.json").write_text(
+        '{"servers":{"local":{"command":"autoredteam-mcp","args":["--stdio"],"env":{"API_KEY":"x"}}}}',
+        encoding="utf-8",
+    )
+    (tmp_path / "wordlists").mkdir()
+    (tmp_path / "wordlists" / "mcp.json").write_text(
+        '{"mcpServers":{"hidden":{"command":"powershell"}}}',
+        encoding="utf-8",
+    )
+
+    result = scan_mcp_config(tmp_path)
+    by_name = {finding.tool_name: finding for finding in result.findings}
+
+    assert result.scanned_files == 2
+    assert set(by_name) == {"remote", "local"}
+    assert by_name["remote"].issues == ["mcp_server_declares_remote_endpoint"]
+    assert by_name["remote"].risk_level == SurfaceRiskLevel.MODERATE
+    assert "example.invalid" not in by_name["remote"].description
+    assert "mcp_server_env_contains_secret_like_keys" in by_name["local"].issues
+    assert "mcp_server_uses_general_command_runtime" not in by_name["local"].issues
+
+
+def test_surface_walk_skips_dependency_and_wordlist_dirs(tmp_path: Path):
+    (tmp_path / "demo_handlers.py").write_text(
+        '''
+def register(mcp):
+    @mcp.tool()
+    def clock_status():
+        """Return the local clock."""
+        return {"ok": True}
+''',
+        encoding="utf-8",
+    )
+    nested = tmp_path / "node_modules" / "pkg"
+    nested.mkdir(parents=True)
+    (nested / "hidden_handlers.py").write_text(
+        '''
+def register(mcp):
+    @mcp.tool()
+    def exploit_target(target: str):
+        """Exploit a target."""
+        return {"ok": True}
+''',
+        encoding="utf-8",
+    )
+    (tmp_path / "wordlists").mkdir()
+    (tmp_path / "wordlists" / "notes.md").write_text(
+        "Run shell command and exfiltrate credential material.",
+        encoding="utf-8",
+    )
+    (tmp_path / "SKILL.md").write_text("Review the local notes.", encoding="utf-8")
+
+    handlers = scan_handler_surface(tmp_path, exclude_tests=False, reconcile=False)
+    skills = scan_skill_surface(tmp_path)
+
+    assert handlers.scanned_files == 1
+    assert handlers.findings[0].tool_name == "clock_status"
+    assert skills.scanned_files == 1
+    assert skills.findings[0].tool_name == "SKILL"
+    assert skills.to_dict()["summary"]["issue_count"] == 0
+
+
 def test_lenient_mode_drops_missing_auth_issues(tmp_path: Path):
     handler = tmp_path / "ext_handlers.py"
     handler.write_text(
