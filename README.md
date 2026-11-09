@@ -1,6 +1,6 @@
 # AutoRedTeam-Orchestrator
 
-**面向授权测试与 AI/MCP 攻击面审计的 local-first、MCP-native 安全自动化工作台。**
+**本地的 MCP/AI 攻击面审计与证据门禁。** 默认只注册 `safe` 档案：静态分析、dry-run 和本地元数据。仅属于更高档案的后渗透模块不会在这个档案下被导入。
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -29,9 +29,9 @@
 
 ## 概述
 
-AutoRedTeam-Orchestrator 在单一代码库中提供可组合的安全能力，并通过三个入口暴露：**MCP Server**、**Python SDK** 与 **Typer CLI**。产品主线是 **AI 辅助的安全自动化**——让 AI 编辑器与 Agent 通过 MCP 使用受控的安全能力，并对 AI/MCP 系统自身的攻击面做静态审计。
+AutoRedTeam-Orchestrator 的默认产品是本地 MCP/AI 攻击面审计和证据门禁，通过 **MCP Server**、**Python SDK** 和 **Typer CLI** 使用。模型负责判断，进程负责档案、证据和审计记录。
 
-适用于授权实验、安全自动化研发、AI/MCP 安全审计、CTF 与教学。**不是**开箱即用的企业平台、自主攻击 Agent 或生产级 C2。
+侦察、检测和后渗透代码仍在仓库中，但只在显式选择 `scan`、`active-lab` 或 `full` 时注册。默认 `safe` 不导入仅供这些档案使用的模块。适用于授权实验、AI/MCP 安全审计和教学。它不是开箱即用的企业平台、自主攻击 Agent 或生产级 C2。
 
 ## 能力
 

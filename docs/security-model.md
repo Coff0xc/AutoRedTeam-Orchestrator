@@ -49,8 +49,10 @@ them at request time.
 
 `safe` means no registered target-network or host-command capability; it does not mean filesystem
 isolation. Caller-selected paths can read any file available to the trusted local server process.
-Profile filtering also happens after handler modules are imported, so it does not reduce the
-import-time dependency set.
+A handler module is imported only when the selected profile enables at least one of its
+surfaces. `safe` therefore does not import modules that exist only for `scan`, `active-lab`,
+or `full`. A module that mixes profiles is still imported as a unit; higher-profile functions
+in that module are not registered.
 
 ### Runtime policy and approval
 

@@ -29,6 +29,8 @@ AutoRedTeam MCP Handlers
 
 from __future__ import annotations
 
+import importlib
+import sys
 from typing import Any, Callable, cast
 
 from core.capability_manifest import (
@@ -38,28 +40,31 @@ from core.capability_manifest import (
     normalize_profile,
 )
 
-from .ad_handlers import register_ad_tools
-from .ai_handlers import register_ai_tools
-from .api_security_handlers import register_api_security_tools
-from .cloud_security_handlers import register_cloud_security_tools
-from .cve_handlers import register_cve_tools
-from .detector_factory import register_detector_tools
-from .evidence_handlers import register_evidence_tools
-from .external_tools_handlers import register_external_tools
-from .knowledge_handlers import register_knowledge_tools
-from .lateral_handlers import register_lateral_tools
-from .mcts_handlers import register_mcts_tools
-from .misc_handlers import register_misc_tools
-from .orchestration_handlers import register_orchestration_tools
-from .parallel_handlers import register_parallel_tools
-from .persistence_handlers import register_persistence_tools
-from .prompt_handlers import register_prompt_handlers
-from .recon_handlers import register_recon_tools
-from .redteam_handlers import register_redteam_tools
-from .report_handlers import register_report_tools
-from .resource_handlers import register_resource_handlers
-from .session_handlers import register_session_tools
-from .supply_chain_handlers import register_supply_chain_tools
+# 注册函数按名懒加载。safe 档案不会导入只含更高档案 surface 的模块。
+_REGISTER_LOADERS = {
+    "register_recon_tools": "recon_handlers",
+    "register_detector_tools": "detector_factory",
+    "register_evidence_tools": "evidence_handlers",
+    "register_cve_tools": "cve_handlers",
+    "register_api_security_tools": "api_security_handlers",
+    "register_cloud_security_tools": "cloud_security_handlers",
+    "register_supply_chain_tools": "supply_chain_handlers",
+    "register_redteam_tools": "redteam_handlers",
+    "register_orchestration_tools": "orchestration_handlers",
+    "register_lateral_tools": "lateral_handlers",
+    "register_persistence_tools": "persistence_handlers",
+    "register_ad_tools": "ad_handlers",
+    "register_session_tools": "session_handlers",
+    "register_report_tools": "report_handlers",
+    "register_ai_tools": "ai_handlers",
+    "register_misc_tools": "misc_handlers",
+    "register_external_tools": "external_tools_handlers",
+    "register_parallel_tools": "parallel_handlers",
+    "register_knowledge_tools": "knowledge_handlers",
+    "register_mcts_tools": "mcts_handlers",
+    "register_prompt_handlers": "prompt_handlers",
+    "register_resource_handlers": "resource_handlers",
+}
 
 __all__ = [
     "register_recon_tools",
@@ -170,30 +175,41 @@ class _ProfiledMCP:
         return self._decorator("resource", self._mcp.resource, *args, **kwargs)
 
 
+def __getattr__(name: str) -> Any:
+    """按需加载注册函数，避免 import handlers 时拉起全部能力模块。"""
+    module_name = _REGISTER_LOADERS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module = importlib.import_module(f".{module_name}", __name__)
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
+
+
 def _handler_specs():
     return [
-        ("侦察工具", "recon", register_recon_tools),
-        ("漏洞检测工具", "detector", register_detector_tools),
-        ("证据验证工具", "evidence", register_evidence_tools),
-        ("CVE工具", "cve", register_cve_tools),
-        ("API安全工具", "api_security", register_api_security_tools),
-        ("云安全工具", "cloud_security", register_cloud_security_tools),
-        ("供应链安全工具", "supply_chain", register_supply_chain_tools),
-        ("红队工具", "redteam", register_redteam_tools),
-        ("自动化渗透编排工具", "orchestration", register_orchestration_tools),
-        ("横向移动工具", "lateral", register_lateral_tools),
-        ("持久化工具", "persistence", register_persistence_tools),
-        ("AD攻击工具", "ad", register_ad_tools),
-        ("会话管理工具", "session", register_session_tools),
-        ("报告工具", "report", register_report_tools),
-        ("AI辅助工具", "ai", register_ai_tools),
-        ("杂项工具", "misc", register_misc_tools),
-        ("外部工具集成", "external_tools", register_external_tools),
-        ("并发扫描", "parallel", register_parallel_tools),
-        ("知识图谱", "knowledge", register_knowledge_tools),
-        ("MCTS攻击规划", "mcts", register_mcts_tools),
-        ("MCP提示模板", "prompts", register_prompt_handlers),
-        ("MCP资源端点", "resources", register_resource_handlers),
+        ("侦察工具", "recon", "register_recon_tools"),
+        ("漏洞检测工具", "detector", "register_detector_tools"),
+        ("证据验证工具", "evidence", "register_evidence_tools"),
+        ("CVE工具", "cve", "register_cve_tools"),
+        ("API安全工具", "api_security", "register_api_security_tools"),
+        ("云安全工具", "cloud_security", "register_cloud_security_tools"),
+        ("供应链安全工具", "supply_chain", "register_supply_chain_tools"),
+        ("红队工具", "redteam", "register_redteam_tools"),
+        ("自动化渗透编排工具", "orchestration", "register_orchestration_tools"),
+        ("横向移动工具", "lateral", "register_lateral_tools"),
+        ("持久化工具", "persistence", "register_persistence_tools"),
+        ("AD攻击工具", "ad", "register_ad_tools"),
+        ("会话管理工具", "session", "register_session_tools"),
+        ("报告工具", "report", "register_report_tools"),
+        ("AI辅助工具", "ai", "register_ai_tools"),
+        ("杂项工具", "misc", "register_misc_tools"),
+        ("外部工具集成", "external_tools", "register_external_tools"),
+        ("并发扫描", "parallel", "register_parallel_tools"),
+        ("知识图谱", "knowledge", "register_knowledge_tools"),
+        ("MCTS攻击规划", "mcts", "register_mcts_tools"),
+        ("MCP提示模板", "prompts", "register_prompt_handlers"),
+        ("MCP资源端点", "resources", "register_resource_handlers"),
     ]
 
 
@@ -219,11 +235,12 @@ def register_all_handlers(mcp, counter, logger, *, profile: str = "full"):
     counter_view = _CounterView(counter)
     handler_logger = logger if selected_profile == "full" else _ProfileLoggerView(logger)
 
-    for name, handler, register_func in _handler_specs():
+    for name, handler, register_name in _handler_specs():
         if not handler_enabled(selected_profile, handler):
             continue
         profiled_mcp = _ProfiledMCP(mcp, counter, selected_profile, handler)
         try:
+            register_func = getattr(sys.modules[__name__], register_name)
             register_func(profiled_mcp, counter_view, handler_logger)
         except CapabilityManifestError:
             raise

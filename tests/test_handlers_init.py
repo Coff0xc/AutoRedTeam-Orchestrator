@@ -4,6 +4,7 @@ Handlers 模块初始化单元测试
 测试 handlers/__init__.py 中的注册入口和异常处理
 """
 
+import sys
 from contextlib import ExitStack
 from unittest.mock import MagicMock, patch
 
@@ -82,6 +83,34 @@ class TestHandlersInit:
         assert callable(register_ai_tools)
         assert callable(register_misc_tools)
         assert callable(register_external_tools)
+
+
+# 这些模块的 surface 全部高于 safe，默认档案不应导入它们。
+_POST_EXPLOIT_MODULES = (
+    "handlers.redteam_handlers",
+    "handlers.lateral_handlers",
+    "handlers.persistence_handlers",
+    "handlers.ad_handlers",
+    "handlers.knowledge_handlers",
+    "handlers.mcts_handlers",
+    "handlers.orchestration_handlers",
+)
+
+
+def test_safe_profile_does_not_import_higher_profile_modules():
+    import handlers
+    from handlers import register_all_handlers
+
+    for module_name in _POST_EXPLOIT_MODULES:
+        sys.modules.pop(module_name, None)
+    for register_name, module_name in handlers._REGISTER_LOADERS.items():
+        if f"handlers.{module_name}" in _POST_EXPLOIT_MODULES:
+            handlers.__dict__.pop(register_name, None)
+
+    register_all_handlers(MagicMock(), MagicMock(), MagicMock(), profile="safe")
+
+    for module_name in _POST_EXPLOIT_MODULES:
+        assert module_name not in sys.modules
 
 
 class TestRegisterAllHandlers:

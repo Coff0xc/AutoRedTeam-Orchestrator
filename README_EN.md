@@ -1,6 +1,6 @@
 # AutoRedTeam-Orchestrator
 
-**A local-first, MCP-native security automation workbench for authorized testing and AI/MCP attack-surface review.**
+**A local MCP/AI attack-surface audit and evidence gate.** The default registration profile is `safe`: static analysis, dry-run, and local metadata. Post-exploitation modules that belong only to a higher profile are not imported in that profile.
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -29,9 +29,9 @@
 
 ## Overview
 
-AutoRedTeam-Orchestrator provides composable security capabilities in a single codebase, exposed through three entry points: an **MCP server**, a **Python SDK**, and a **Typer CLI**. The primary line is **AI-assisted security automation** — letting AI editors and agents use controlled security capabilities over MCP, and statically auditing the attack surface of AI/MCP systems themselves.
+The default product is a local MCP/AI attack-surface audit and evidence gate, used through an **MCP server**, a **Python SDK**, and a **Typer CLI**. The model decides; the process enforces the profile, the evidence gate, and the audit record.
 
-It fits authorized labs, security-automation development, AI/MCP security review, CTFs, and teaching. It is **not** a turnkey enterprise platform, an autonomous attacker, or a production C2.
+Recon, detection, and post-exploitation code remains in the repository and is registered only when `scan`, `active-lab`, or `full` is selected explicitly. The default `safe` profile does not import modules that exist only for those profiles. It fits authorized labs, AI/MCP security review, and teaching. It is not a turnkey enterprise platform, an autonomous attacker, or a production C2.
 
 ## Capabilities
 
