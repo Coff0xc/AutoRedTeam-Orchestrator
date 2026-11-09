@@ -54,6 +54,14 @@ surfaces. `safe` therefore does not import modules that exist only for `scan`, `
 or `full`. A module that mixes profiles is still imported as a unit; higher-profile functions
 in that module are not registered.
 
+The published wheel omits `core.c2`, `core.lateral`, `core.persistence`, `core.post_exploit`,
+`core.privilege_escalation`, `core.exfiltration`, `core.evasion`, `core.credential`, `core.ad`,
+and `core.exploit`. Those packages stay in a source checkout. A handler that needs one of them
+fails with `ImportError` when the package is absent.
+
+Registered MCP descriptions come from the capability manifest. They state the profile, risk,
+effects, and controls. They do not copy handler docstrings or procedures into the tool schema.
+
 ### Runtime policy and approval
 
 - `ActionPolicy`, middleware decisions, run state, and traces are governance records.

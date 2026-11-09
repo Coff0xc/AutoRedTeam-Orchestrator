@@ -89,6 +89,23 @@ class Capability:
     def allowed_in(self, profile: str) -> bool:
         return profile in self.profiles
 
+    def public_description(self) -> str:
+        """Model-facing text: constraints and declared effects, without procedures."""
+        effects = ", ".join(self.effects) if self.effects else "none"
+        controls = ["profile-registration"]
+        if self.auth_required:
+            controls.append("authentication")
+        if self.approval_required:
+            controls.append("independent-approval")
+        controls.append(self.executor)
+        return (
+            f"{self.name} is a {self.kind} in the {self.minimum_profile} profile. "
+            f"Risk: {self.risk}. Effects: {effects}. "
+            f"Controls: {', '.join(controls)}. "
+            "Use only the declared parameters. "
+            "This description does not authorize a target or an action."
+        )
+
     def to_dict(self) -> dict[str, Any]:
         payload = {
             "kind": self.kind,

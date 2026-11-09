@@ -97,6 +97,36 @@ _POST_EXPLOIT_MODULES = (
 )
 
 
+def test_registered_description_comes_from_manifest():
+    from core.capability_manifest import get_capability
+    from handlers import _ProfiledMCP
+
+    captured: dict[str, str] = {}
+    mcp = MagicMock()
+
+    def tool(*_args, **kwargs):
+        def apply(func):
+            captured["doc"] = func.__doc__ or ""
+            captured["description"] = kwargs.get("description", "")
+            return func
+
+        return apply
+
+    mcp.tool.side_effect = tool
+    profiled = _ProfiledMCP(mcp, MagicMock(), "safe", "ai")
+
+    @profiled.tool()
+    async def ai_surface_scan_handlers(path: str = "handlers"):
+        """original handler text that must stay out of the model-facing description"""
+        return {}
+
+    expected = get_capability("tool", "ai_surface_scan_handlers").public_description()
+    assert captured["description"] == expected
+    assert captured["doc"] == expected
+    assert "original handler text" not in captured["description"]
+    assert "does not authorize" in captured["description"]
+
+
 def test_safe_profile_does_not_import_higher_profile_modules():
     import handlers
     from handlers import register_all_handlers

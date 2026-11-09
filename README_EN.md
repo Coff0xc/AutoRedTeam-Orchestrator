@@ -31,7 +31,7 @@
 
 The default product is a local MCP/AI attack-surface audit and evidence gate, used through an **MCP server**, a **Python SDK**, and a **Typer CLI**. The model decides; the process enforces the profile, the evidence gate, and the audit record.
 
-Recon, detection, and post-exploitation code remains in the repository and is registered only when `scan`, `active-lab`, or `full` is selected explicitly. The default `safe` profile does not import modules that exist only for those profiles. It fits authorized labs, AI/MCP security review, and teaching. It is not a turnkey enterprise platform, an autonomous attacker, or a production C2.
+Recon, detection, and post-exploitation code remains in the source tree and is registered only when `scan`, `active-lab`, or `full` is selected explicitly. The default `safe` profile does not import modules that exist only for those profiles. The published wheel omits those experimental engines. Descriptions shown to a model contain the profile, risk, effects, and controls. It fits authorized labs, AI/MCP security review, and teaching. It is not a turnkey enterprise platform, an autonomous attacker, or a production C2.
 
 ## Capabilities
 

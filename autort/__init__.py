@@ -1,24 +1,32 @@
-"""AutoRedTeam SDK — 企业级渗透测试 Python API
+"""AutoRedTeam SDK.
 
-提供简洁的异步接口封装 core/ 引擎，支持:
-- 扫描与侦察 (Scanner)
-- 漏洞利用 (Exploiter)
-- 一键渗透 (AutoPentest)
-- 红队操作 (RedTeam)
-- 报告生成 (Reporter)
-
-Usage:
-    from autort import Scanner, Exploiter, AutoPentest
-
-    scanner = Scanner("http://target.com")
-    results = await scanner.full_recon()
+Scanner and Reporter import directly. Exploiter, AutoPentest, and RedTeam load
+on first use so a default import does not pull experimental engines.
 """
 
+from __future__ import annotations
+
+import importlib
+from typing import Any
+
 from _version import __version__
-from autort.exploiter import Exploiter
-from autort.pentest import AutoPentest
-from autort.redteam import RedTeam
 from autort.report import Reporter
 from autort.scanner import Scanner
 
-__all__ = ["Scanner", "Exploiter", "AutoPentest", "RedTeam", "Reporter"]
+__all__ = ["Scanner", "Exploiter", "AutoPentest", "RedTeam", "Reporter", "__version__"]
+
+_LAZY_EXPORTS = {
+    "Exploiter": "autort.exploiter",
+    "AutoPentest": "autort.pentest",
+    "RedTeam": "autort.redteam",
+}
+
+
+def __getattr__(name: str) -> Any:
+    module_name = _LAZY_EXPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module = importlib.import_module(module_name)
+    value = getattr(module, name)
+    globals()[name] = value
+    return value

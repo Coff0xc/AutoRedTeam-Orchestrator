@@ -159,7 +159,11 @@ class _ProfiledMCP:
             if not capability.allowed_in(self._profile):
                 return func
 
-            registered = factory(*args, **kwargs)(func)
+            description = capability.public_description()
+            func.__doc__ = description
+            call_kwargs = dict(kwargs)
+            call_kwargs["description"] = description
+            registered = factory(*args, **call_kwargs)(func)
             self._counter.add(capability.category, 1)
             return cast(Callable[..., Any], registered)
 
