@@ -1,7 +1,7 @@
 """
 统一 Pydantic 配置模型
 
-将 core/defaults.py, utils/config.py, core/http/config.py, config/config.yaml
+将 utils/config.py, core/http/config.py, config/config.yaml
 中的分散配置合并为单一 Pydantic 模型树。
 
 优先级（高 → 低）:
@@ -29,7 +29,7 @@ from core.sandbox.config import SandboxConfig  # noqa: E402 — 沙箱配置
 
 
 class ScanConfig(BaseModel):
-    """扫描相关配置 (对应 core.defaults.ScanDefaults)"""
+    """扫描相关配置"""
 
     timeout: float = 30.0
     port_timeout: float = 3.0
@@ -42,7 +42,7 @@ class ScanConfig(BaseModel):
 
 
 class HTTPConfig(BaseModel):
-    """HTTP 客户端配置 (对应 core.defaults.HTTPDefaults + core.http.config.HTTPConfig)"""
+    """HTTP 客户端配置"""
 
     timeout: float = 30.0
     connect_timeout: float = 10.0
@@ -73,7 +73,7 @@ class HTTPConfig(BaseModel):
 
 
 class C2Config(BaseModel):
-    """C2 通信配置 (对应 core.defaults.C2Defaults)"""
+    """C2 通信配置"""
 
     shell_timeout: int = 60
     max_output_size: int = 10000
@@ -83,7 +83,7 @@ class C2Config(BaseModel):
 
 
 class LateralConfig(BaseModel):
-    """横向移动配置 (对应 core.defaults.LateralDefaults)"""
+    """横向移动配置"""
 
     max_workers: int = 10
     command_timeout: int = 30
@@ -96,7 +96,7 @@ class LateralConfig(BaseModel):
 
 
 class DetectorConfig(BaseModel):
-    """检测器配置 (对应 core.defaults.DetectorDefaults)"""
+    """检测器配置"""
 
     timeout: float = 30.0
     max_payloads: int = 50
@@ -105,7 +105,7 @@ class DetectorConfig(BaseModel):
 
 
 class CVEConfig(BaseModel):
-    """CVE 操作配置 (对应 core.defaults.CVEDefaults)"""
+    """CVE 操作配置"""
 
     search_limit: int = 20
     cache_days: int = 7
@@ -114,21 +114,21 @@ class CVEConfig(BaseModel):
 
 
 class CredentialConfig(BaseModel):
-    """凭证操作配置 (对应 core.defaults.CredentialDefaults)"""
+    """凭证操作配置"""
 
     dump_timeout: int = 60
     search_timeout: int = 30
 
 
 class DNSConfig(BaseModel):
-    """DNS 操作配置 (对应 core.defaults.DNSDefaults)"""
+    """DNS 操作配置"""
 
     timeout: float = 5.0
     max_retries: int = 3
 
 
 class PerformanceConfig(BaseModel):
-    """性能相关配置 (对应 core.defaults.PerformanceDefaults)"""
+    """性能相关配置"""
 
     max_threads: int = 16
     max_async_tasks: int = 100
@@ -137,7 +137,7 @@ class PerformanceConfig(BaseModel):
 
 
 class AIConfig(BaseModel):
-    """AI 引擎配置 (对应 core.defaults.AIDefaults + config.yaml ai 段)"""
+    """AI 引擎配置 (对应 config.yaml ai 段)"""
 
     provider: str = "openai"
     model: str = "gpt-4"
@@ -164,7 +164,7 @@ class LLMConfig(BaseModel):
 
 
 class ToolManagerConfig(BaseModel):
-    """外部工具管理器配置 (对应 core.defaults.ToolManagerDefaults)"""
+    """外部工具管理器配置"""
 
     subprocess_timeout: float = 30.0
     default_chunk_size: int = 1024
@@ -174,7 +174,7 @@ class ToolManagerConfig(BaseModel):
 
 
 class GitConfig(BaseModel):
-    """Git 操作配置 (对应 core.defaults.GitDefaults)"""
+    """Git 操作配置"""
 
     max_commits: int = 100
 

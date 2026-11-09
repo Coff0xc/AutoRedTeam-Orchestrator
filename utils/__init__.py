@@ -181,26 +181,6 @@ _LAZY_IMPORTS: dict[str, tuple[str, str | None]] = {
     "cache_result": ("utils.decorators", None),
     # Report
     "ReportGenerator": ("utils.report_generator", None),
-    # Terminal
-    "terminal": ("utils.terminal_output", None),
-    "TerminalLogger": ("utils.terminal_output", None),
-    "run_with_realtime_output": ("utils.terminal_output", None),
-    # Scan Monitor
-    "scan_monitor": ("utils.scan_monitor", None),
-    "run_monitored_scan": ("utils.scan_monitor", None),
-    "get_scan_status": ("utils.scan_monitor", None),
-    "cancel_scan": ("utils.scan_monitor", None),
-    "list_running_scans": ("utils.scan_monitor", None),
-    "ScanStatus": ("utils.scan_monitor", None),
-    "ScanTask": ("utils.scan_monitor", None),
-    # Responses
-    "resp_success": ("utils.responses", "success"),
-    "resp_error": ("utils.responses", "error"),
-    "resp_tool_not_found": ("utils.responses", "tool_not_found"),
-    "resp_validation_error": ("utils.responses", "validation_error"),
-    "resp_import_error": ("utils.responses", "import_error"),
-    # Tool Checker
-    "ToolChecker": ("utils.tool_checker", None),
 }
 
 __all__ = list(_LAZY_IMPORTS.keys())

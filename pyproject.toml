@@ -24,7 +24,7 @@ extend-exclude = '''
 profile = "black"
 line_length = 100
 skip_gitignore = true
-known_first_party = ["core", "modules", "handlers", "tools", "utils", "_version"]
+known_first_party = ["core", "modules", "handlers", "utils", "_version"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -54,7 +54,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["core", "handlers", "tools", "utils"]
+source = ["core", "handlers", "utils"]
 omit = [
     "*/tests/*",
     "*/test_*.py",
@@ -240,7 +240,7 @@ version = {attr = "_version.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core*", "handlers*", "tools*", "utils*", "autort*", "cli*"]
+include = ["core*", "handlers*", "utils*", "autort*", "cli*"]
 # 后渗透与利用引擎留在源码树，不进入默认 wheel。full 档案在源码检出中仍可导入。
 exclude = [
     "tests*",

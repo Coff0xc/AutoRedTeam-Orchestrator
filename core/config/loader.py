@@ -4,7 +4,7 @@
 加载优先级（高 → 低）:
     1. 环境变量 (AUTORT_ 前缀)
     2. config/config.yaml
-    3. Pydantic 模型默认值 (= 原 core/defaults.py 的值)
+    3. Pydantic 模型默认值
 
 使用:
     from core.config import get_config
@@ -98,7 +98,7 @@ def _apply_env_overrides(data: Dict[str, Any]) -> Dict[str, Any]:
     """
     将 AUTORT_ 前缀的环境变量映射到配置字典。
 
-    映射规则（与 core/defaults.py 的 env key 保持一致）:
+    映射规则:
         AUTORT_SCAN_TIMEOUT       → data["scan"]["timeout"]
         AUTORT_HTTP_TIMEOUT       → data["http"]["timeout"]
         AUTORT_C2_SHELL_TIMEOUT   → data["c2"]["shell_timeout"]

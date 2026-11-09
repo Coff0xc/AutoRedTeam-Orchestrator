@@ -14,7 +14,6 @@ Payload 统一模块 - 整合的 Payload 生成、选择、变异引擎
 - SmartPayloadSelector: 智能 Payload 选择器
 - PayloadMutator: Payload 变异器
 - TargetProfile: 目标特征分析
-- load_all_payloads: YAML payload 加载器
 
 使用示例:
     from core.payload import (
@@ -22,17 +21,10 @@ Payload 统一模块 - 整合的 Payload 生成、选择、变异引擎
         smart_select_payloads,
         mutate_payload,
         TargetProfile,
-        load_all_payloads,
     )
 
-    # 1. 智能选择 Payload
     payloads = smart_select_payloads("sqli", waf="cloudflare", top_n=10)
-
-    # 2. 变异 Payload
     variants = mutate_payload("' OR '1'='1", waf="modsecurity")
-
-    # 3. 从 YAML 加载原始 payloads
-    all_payloads = load_all_payloads()
 """
 
 # 主引擎
@@ -42,16 +34,6 @@ from .engine import (
     get_waf_bypass_payloads,
     record_payload_result,
     smart_select_payloads,
-)
-
-# YAML Payload 加载器 + JSON Payload DB (延迟加载)
-from .loader import (
-    PayloadDB,
-    get_payload_db,
-    get_payload_list,
-    load_all_payloads,
-    load_payloads,
-    reload_payloads,
 )
 
 # 变异器
@@ -131,14 +113,6 @@ __all__ = [
     "smart_select_payloads",
     "get_waf_bypass_payloads",
     "record_payload_result",
-    # YAML 加载器
-    "load_all_payloads",
-    "load_payloads",
-    "get_payload_list",
-    "reload_payloads",
-    # JSON Payload DB
-    "PayloadDB",
-    "get_payload_db",
 ]
 
 __version__ = "2.0.0"

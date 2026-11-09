@@ -80,7 +80,7 @@ data/admin_key.txt
 .claude-audit*
 .claude-security*
 
-# Auto-downloaded tools (managed by tools/downloader.py)
+# Leftover local tool downloads
 tools/sqlmap/
 tools/nuclei-templates/
 tools/bin/

@@ -41,22 +41,11 @@ AutoRedTeamError (基类)
 │   ├── InsufficientPrivilege
 │   ├── UACBypassFailed
 │   └── TokenManipulationError
-├── ExfiltrationError (数据外泄错误)
-│   ├── ChannelBlocked
-│   ├── DataTooLarge
-│   ├── ChannelConnectionError
-│   └── EncryptionRequired
-├── CVEError (CVE相关错误)
-│   ├── CVENotFound
-│   ├── PoCError
-│   └── SyncError
-├── TaskError (任务错误)
-│   ├── TaskNotFound
-│   ├── TaskCancelled
-│   └── QueueFull
-└── ReportError (报告错误)
-    ├── TemplateError
-    └── ExportError
+└── ExfiltrationError (数据外泄错误)
+    ├── ChannelBlocked
+    ├── DataTooLarge
+    ├── ChannelConnectionError
+    └── EncryptionRequired
 
 使用示例:
     from core.exceptions import (
@@ -94,9 +83,6 @@ from .auth import AuthError, InvalidCredentials, PermissionDenied, TokenExpired
 
 # 基础异常
 from .base import AutoRedTeamError, ConfigError
-
-# CVE 错误
-from .cve import CVEError, CVENotFound, PoCError, SyncError
 
 # 漏洞利用、C2、横向移动错误
 from .exploit import (
@@ -150,17 +136,6 @@ from .scan import (
     ScanTimeout,
     TargetUnreachable,
     ValidationError,
-)
-
-# 任务和报告错误
-from .task import (
-    ExportError,
-    QueueFull,
-    ReportError,
-    TaskCancelled,
-    TaskError,
-    TaskNotFound,
-    TemplateError,
 )
 
 # 辅助函数
@@ -222,20 +197,6 @@ __all__ = [
     "DataTooLarge",
     "ChannelConnectionError",
     "EncryptionRequired",
-    # CVE错误
-    "CVEError",
-    "CVENotFound",
-    "PoCError",
-    "SyncError",
-    # 任务错误
-    "TaskError",
-    "TaskNotFound",
-    "TaskCancelled",
-    "QueueFull",
-    # 报告错误
-    "ReportError",
-    "TemplateError",
-    "ExportError",
     # 辅助函数
     "wrap_exception",
     "handle_exceptions",
