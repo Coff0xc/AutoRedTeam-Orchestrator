@@ -41,8 +41,8 @@ def test_manifest_has_unique_complete_surface_totals():
     keys = {(capability.kind, capability.name) for capability in CAPABILITIES}
     summary = capability_manifest()["summary"]
 
-    assert len(keys) == len(CAPABILITIES) == 147
-    assert summary["by_kind"] == {"prompt": 6, "resource": 4, "tool": 137}
+    assert len(keys) == len(CAPABILITIES) == 149
+    assert summary["by_kind"] == {"prompt": 6, "resource": 4, "tool": 139}
 
 
 def test_profiles_are_monotonic_and_have_stable_counts():
@@ -50,9 +50,9 @@ def test_profiles_are_monotonic_and_have_stable_counts():
     counts = {profile["name"]: profile["surface_count"] for profile in profiles}
 
     assert tuple(counts) == PROFILE_ORDER
-    assert counts == {"safe": 25, "scan": 90, "active-lab": 111, "full": 147}
+    assert counts == {"safe": 27, "scan": 92, "active-lab": 113, "full": 149}
     registered = {profile["name"]: profile["registered_count"] for profile in profiles}
-    assert registered == {"safe": 18, "scan": 22, "active-lab": 23, "full": 23}
+    assert registered == {"safe": 20, "scan": 24, "active-lab": 25, "full": 25}
     assert RESIDENT_SURFACES <= {(item.kind, item.name) for item in CAPABILITIES}
 
     previous: set[tuple[str, str]] = set()
@@ -244,7 +244,7 @@ def test_legacy_registration_default_remains_full():
 
     register_all_handlers(mcp, counter, MagicMock())
 
-    assert counter.total == 23
+    assert counter.total == 25
 
 
 def test_server_default_profile_is_safe(monkeypatch):
@@ -285,7 +285,7 @@ def test_production_counter_uses_manifest_categories():
 
     register_all_handlers(mcp, counter, MagicMock(), profile="full")
 
-    assert counter.total == 23
+    assert counter.total == 25
     assert counter.counts.get("knowledge", 0) == 0
     assert counter.counts.get("mcts", 0) == 0
     assert "MCP surface" in counter.summary()
@@ -310,6 +310,8 @@ def test_factory_detector_tools_are_catalog_only():
     assert get_capability("tool", "exploit_run").resident is True
     assert get_capability("tool", "exploit_run").minimum_profile == "active-lab"
     assert get_capability("tool", "tool_enable").resident is True
+    assert get_capability("tool", "skill_catalog").resident is True
+    assert get_capability("tool", "skill_read").resident is True
     assert get_capability("tool", "lateral_ssh").resident is False
 
 
@@ -325,6 +327,8 @@ async def test_scan_profile_list_tools_hides_factory_detectors():
     assert "tool_enable" in names
     assert "nuclei_scan" in names
     assert "verify_finding" in names
+    assert "skill_catalog" in names
+    assert "skill_read" in names
     assert "full_recon" not in names
     assert "vuln_scan" not in names
     assert "sqli_scan" not in names

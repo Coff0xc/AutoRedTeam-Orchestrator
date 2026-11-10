@@ -26,8 +26,24 @@ def _register_ai_tools():
 def test_register_ai_tools_count():
     _, mock_counter, mock_logger = _register_ai_tools()
 
-    mock_counter.add.assert_called_once_with("ai", 11)
-    assert any("11 个AI辅助工具" in str(call) for call in mock_logger.info.call_args_list)
+    mock_counter.add.assert_called_once_with("ai", 13)
+    assert any("13 个AI辅助工具" in str(call) for call in mock_logger.info.call_args_list)
+
+
+@pytest.mark.asyncio
+async def test_skill_catalog_lists_pins():
+    registered_tools, _, _ = _register_ai_tools()
+
+    result = await registered_tools["skill_catalog"]()
+    payload = result["data"]
+
+    assert "skill_read" in registered_tools
+    assert result["success"] is True
+    assert payload["execute_scripts"] is False
+    assert {item["id"] for item in payload["packs"]} == {
+        "pale-knight-redteam-skill",
+        "transilienceai-communitytools",
+    }
 
 
 @pytest.mark.asyncio

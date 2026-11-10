@@ -1,0 +1,23 @@
+# Pinned third-party SKILL.md packs. Bodies are not vendored.
+# sha must be a full git object id. Floating names are rejected at load.
+packs:
+  - id: pale-knight-redteam-skill
+    url: https://github.com/pale-knight/redteam-skill.git
+    sha: e7e4d81ca0df6f3c17c451ae0f2a8b2657bcee46
+    license: MIT
+    modules_root: skills
+    bind:
+      recon: recon_run
+      detect: detect_run
+      verify: verify_finding
+      exploit: exploit_run
+  - id: transilienceai-communitytools
+    url: https://github.com/transilienceai/communitytools.git
+    sha: 95fdc128af4ca1ae16b3226f9430f1bad97b0656
+    license: MIT
+    modules_root: skills
+    bind:
+      recon: recon_run
+      detect: detect_run
+      verify: verify_finding
+      exploit: exploit_run

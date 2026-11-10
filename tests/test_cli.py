@@ -78,6 +78,14 @@ class TestCLIHelp:
         assert result.exit_code == 0
         assert "run" in result.output.lower()
 
+    def test_skills_help(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["skills", "--help"])
+        assert result.exit_code == 0
+        assert "catalog" in result.output.lower()
+        assert "read" in result.output.lower()
+
     def test_ai_redteam_convert_help(self):
         """ai-redteam convert --help 应返回成功"""
         from cli.main import app
@@ -266,7 +274,7 @@ class TestCLICapabilities:
 
         assert result.exit_code == 0
         assert payload["profile"] == "safe"
-        assert payload["summary"]["total"] == 25
+        assert payload["summary"]["total"] == 27
         assert all("safe" in item["profiles"] for item in payload["capabilities"])
 
     def test_capabilities_profiles_outputs_boundaries(self):
@@ -277,8 +285,8 @@ class TestCLICapabilities:
 
         assert result.exit_code == 0
         assert payload["default_mcp_profile"] == "safe"
-        assert [item["surface_count"] for item in payload["profiles"]] == [25, 90, 111, 147]
-        assert [item["registered_count"] for item in payload["profiles"]] == [18, 22, 23, 23]
+        assert [item["surface_count"] for item in payload["profiles"]] == [27, 92, 113, 149]
+        assert [item["registered_count"] for item in payload["profiles"]] == [20, 24, 25, 25]
         assert "do not replace authentication" in payload["security_note"]
 
     def test_capabilities_manifest_rejects_unknown_profile(self):
@@ -288,6 +296,36 @@ class TestCLICapabilities:
 
         assert result.exit_code != 0
         assert "Unknown capability profile" in result.output
+
+
+class TestCLISkills:
+    def test_skills_catalog_lists_pinned_packs(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["skills", "catalog"])
+        payload = json.loads(result.output[result.output.index("{") :])
+
+        assert result.exit_code == 0
+        assert payload["execute_scripts"] is False
+        assert payload["bodies_vendored"] is False
+        assert {item["id"] for item in payload["packs"]} == {
+            "pale-knight-redteam-skill",
+            "transilienceai-communitytools",
+        }
+
+    def test_skills_read_returns_local_body(self, tmp_path):
+        from cli.main import app
+
+        module = tmp_path / "recon"
+        module.mkdir()
+        (module / "SKILL.md").write_text("Map the local notes.\n", encoding="utf-8")
+
+        result = runner.invoke(app, ["skills", "read", "--path", str(module)])
+        payload = json.loads(result.output[result.output.index("{") :])
+
+        assert result.exit_code == 0
+        assert payload["success"] is True
+        assert "Map the local notes" in payload["body"]
 
 
 class TestCLIAIRedTeamConvert:

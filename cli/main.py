@@ -99,6 +99,14 @@ tools_app = typer.Typer(
 )
 app.add_typer(tools_app, name="tools")
 
+skills_app = typer.Typer(
+    name="skills",
+    help="Pinned SKILL.md packs (read-only; no clone, no script execution)",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(skills_app, name="skills")
+
 
 def _show_disclaimer() -> None:
     """启动时显示法律声明"""
@@ -800,6 +808,40 @@ def capabilities_profiles(
     from core.capability_manifest import capability_profiles as build_profiles
 
     _output(build_profiles(), output)
+
+
+# ──────────────────────────── skills ────────────────────────────
+
+
+@skills_app.command("catalog")
+def skills_catalog(
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """List pinned SKILL.md packs. Metadata only; no clone and no script execution."""
+    from core.skills import SkillAdapterError, list_skill_packs
+
+    _require_surface("skill_catalog")
+    try:
+        _output(list_skill_packs(), output)
+    except SkillAdapterError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+
+@skills_app.command("read")
+def skills_read(
+    path: str = typer.Option(..., "--path", "-p", help="本地 skill 模块、包根、或 SKILL.md"),
+    pin_id: Optional[str] = typer.Option(None, "--pin-id", help="skill_catalog 中的 pin id"),
+    reference: Optional[str] = typer.Option(None, "--reference", help="references/*.md 文件名"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """Scan a local SKILL.md checkout, then print the body if it is not critical."""
+    from core.skills import SkillAdapterError, read_skill
+
+    _require_surface("skill_read")
+    try:
+        _output(read_skill(path, pin_id=pin_id, reference=reference), output)
+    except (SkillAdapterError, FileNotFoundError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
 
 # ──────────────────────────── helpers ────────────────────────────

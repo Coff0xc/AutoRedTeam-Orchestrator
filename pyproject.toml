@@ -265,6 +265,9 @@ py-modules = ["_version", "mcp_stdio_server"]
 [tool.setuptools.dynamic]
 version = {attr = "_version.__version__"}
 
+[tool.setuptools.package-data]
+"core.skills" = ["pins.yaml"]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["core*", "handlers*", "utils*", "autort*", "cli*"]

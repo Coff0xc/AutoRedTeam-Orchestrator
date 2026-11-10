@@ -2,7 +2,7 @@
 AI辅助工具处理器
 包含: smart_analyze, attack_chain_plan, smart_payload, ai_redteam_run_scenario,
      ai_surface_scan_handlers, code_agent_expand_context, ai_redteam_eval_run_state,
-     ai_prompt_convert, ai_capability_matrix
+     ai_prompt_convert, ai_capability_matrix, skill_catalog, skill_read
 """
 
 from typing import Any, Dict, Optional
@@ -261,5 +261,35 @@ def register_ai_tools(mcp, counter, logger):
 
         return capability_matrix()
 
-    counter.add("ai", 11)
-    logger.info("[AI] 已注册 11 个AI辅助工具")
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    async def skill_catalog() -> Dict[str, Any]:
+        """List pinned SKILL.md packs. Metadata only; no clone, no script execution.
+
+        Returns:
+            Pin table: git URL, full sha, license, and Autort tool binds
+        """
+        from core.skills import list_skill_packs
+
+        return list_skill_packs()
+
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    async def skill_read(
+        path: str,
+        pin_id: Optional[str] = None,
+        reference: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Scan a local SKILL.md checkout, then return the body if it is not critical.
+
+        Args:
+            path: Local skill module, pack root, SKILL.md, or references/*.md
+            pin_id: Optional pin id from skill_catalog
+            reference: Optional references/*.md filename inside the module
+        """
+        from core.skills import read_skill
+
+        return read_skill(path, pin_id=pin_id, reference=reference)
+
+    counter.add("ai", 13)
+    logger.info("[AI] 已注册 13 个AI辅助工具")
