@@ -30,7 +30,7 @@ flowchart LR
   files --> reader --> report
 ```
 
-The counts in this page come from the allowed list in this tree: **145 entries** (135 tools, 6 prompts, 4 resources). `tools/list` registers resident surfaces only (`registered_count`). Catalog-only detector and recon tools are found with `tool_search` and run through `detect_run` / `recon_run`. `autort capabilities profiles` is the live count after a later change.
+The counts in this page come from the allowed list in this tree: **147 entries** (137 tools, 6 prompts, 4 resources). `tools/list` registers resident surfaces only (`registered_count`: safe 18, scan 22, active-lab 23, full 23). Catalog-only tools are found with `tool_search` and run through `detect_run` / `recon_run` / `exploit_run`, or unlocked with `tool_enable`. `autort capabilities profiles` is the live count after a later change.
 
 ## Contents
 
@@ -116,14 +116,14 @@ The level is an argument, or the environment variable `AUTORT_CAPABILITY_PROFILE
 
 ```mermaid
 flowchart BT
-  safe["safe · 24 entries<br/>read your own project"]
-  scan["scan · 89 entries<br/>a system you are allowed to test"]
-  lab["active-lab · 109 entries<br/>a disposable lab"]
-  full["full · 145 entries<br/>you turned the rest on"]
+  safe["safe · 25 entries<br/>read your own project"]
+  scan["scan · 90 entries<br/>a system you are allowed to test"]
+  lab["active-lab · 111 entries<br/>a disposable lab"]
+  full["full · 147 entries<br/>you turned the rest on"]
   safe --> scan --> lab --> full
 ```
 
-The numbers are totals, including the levels below. New tools at each step: 24, then 65, then 20, then 36. `scan` registers 55 resident surfaces; 26 factory detector tools and 8 recon modules stay in the catalog.
+The numbers are totals, including the levels below. New catalog entries at each step: 25, then 65, then 21, then 36. `tools/list` stays small: 18 / 22 / 23 / 23 resident surfaces. Factory detectors, recon modules, exploit modes, and the rest of the catalog stay searchable.
 
 | Level | Use it for | What it adds |
 |---|---|---|
@@ -448,11 +448,11 @@ The row type is `Capability` in `core/capability_manifest.py`. The index key is 
 | `risk` | `low`, `moderate`, `high`, `critical`. A label, not a measurement |
 | `maturity` | `preview`, `beta`, `experimental`, `restricted-experimental`, `internal`. A label. It does not change registration |
 | `auth_required` / `approval_required` | Whether the card mentions a key and a separate approval |
-| `executor` | `in-process` (80), `isolated-required` (56), or `external-process` (6) |
+| `executor` | `in-process` (84), `isolated-required` (57), or `external-process` (6) |
 | `effects` | Labels joined into the card. Empty renders as `none` |
 | `locator` | Resource URI, for a resource |
 
-Current risk mix: moderate 59, critical 46, high 19, low 18. Current maturity mix: restricted-experimental 46, preview 41, beta 38, experimental 11, internal 6.
+Current risk mix: moderate 61, critical 47, high 19, low 20. Current maturity mix: restricted-experimental 47, preview 43, beta 40, experimental 11, internal 6.
 
 `require_surface` raises `ProfileDenied` when the level is too low. The command line turns that into exit 2. SDK methods call it before they import the engine, and before the broad `except Exception` that turns an engine failure into `{"success": False, "error": ...}`. A refused level is its own failure.
 
@@ -460,22 +460,22 @@ Current risk mix: moderate 59, critical 46, high 19, low 18. Current maturity mi
 
 | Order | Module | Group key | Rows |
 |---:|---|---|---:|
-| 1 | `recon_handlers` | `recon` | 9 |
-| 2 | `detector_factory` | `detector` | 28 |
+| 1 | `recon_handlers` | `recon` | 10 |
+| 2 | `detector_factory` | `detector` | 29 |
 | 3 | `evidence_handlers` | `evidence` | 1 |
 | 4 | `cve_handlers` | `cve` | 8 |
 | 5 | `api_security_handlers` | `api_security` | 7 |
 | 6 | `cloud_security_handlers` | `cloud_security` | 3 |
 | 7 | `supply_chain_handlers` | `supply_chain` | 3 |
 | 8 | `redteam_handlers` | `redteam` | 14 |
-| 9 | `orchestration_handlers` | `orchestration` | 11 |
+| 9 | `orchestration_handlers` | `orchestration` | 12 |
 | 10 | `lateral_handlers` | `lateral` | 9 |
 | 11 | `persistence_handlers` | `persistence` | 3 |
 | 12 | `ad_handlers` | `ad` | 3 |
 | 13 | `session_handlers` | `session` | 4 |
 | 14 | `report_handlers` | `report` | 2 |
 | 15 | `ai_handlers` | `ai` | 11 |
-| 16 | `misc_handlers` | `misc` | 3 |
+| 16 | `misc_handlers` | `misc` | 5 |
 | 17 | `external_tools_handlers` | `external_tools` | 8 |
 | 18 | `parallel_handlers` | `parallel` | 1 |
 | 19 | `knowledge_handlers` | `knowledge` | 3 |
