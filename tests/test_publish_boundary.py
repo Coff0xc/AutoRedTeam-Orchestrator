@@ -102,3 +102,12 @@ def test_image_context_matches_wheel_excludes():
     assert "administration:" not in workflow
     assert "run: pyproject-build" in ci
     assert "run: python -m build" not in ci
+
+
+def test_env_example_documents_live_gates():
+    text = (ROOT / ".env.example").read_text(encoding="utf-8")
+
+    assert "AUTORT_CAPABILITY_PROFILE=safe" in text
+    assert "AUTOREDTEAM_AUTH_MODE=strict" in text
+    assert "AUTORT_LLM_PROVIDER=none" in text
+    assert "OPENAI_API_KEY=your_openai_api_key_here" not in text
