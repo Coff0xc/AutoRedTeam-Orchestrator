@@ -81,7 +81,7 @@ L1 工具层     106 个 tool + finding 级证据契约（沿用 verified / veri
 | 2.1 | 证据条目复用领域已有的 `VerificationResult`，不新造格式 | `core/evidence/models.py` 的 `EvidenceItem` + 单测 | 完成 |
 | 2.2 | 把 `batch_verify` / `OOBIntegratedVerifier` / 统计验证从死代码接成 MCP 工具 `verify_finding` | 验证器全部 mock 的单测；**真实靶机验证未做**（无授权靶机） | 完成（靶机验收待办） |
 | 2.3 | 无证据 finding 由代码降级并标记，且区分“探测器自述”与“独立验证” | 集成测试：探测器风格 finding 被降级；经 `verify_finding` 后不被降级 | 完成 |
-| 2.4 | 验证器暴露为 MCP tool，走完 manifest 注册与 profile 门禁 | manifest 142 项（tool 132）；profile 计数 safe 23 / scan 86 / active-lab 106 / full 142 | 完成 |
+| 2.4 | 验证器暴露为 MCP tool，走完 manifest 注册与 profile 门禁 | 当时 manifest 142 项（tool 132）；profile 计数 safe 23 / scan 86 / active-lab 106 / full 142。现行计数见 README | 完成 |
 
 ## P3：harness
 

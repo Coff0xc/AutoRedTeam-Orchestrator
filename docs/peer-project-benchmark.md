@@ -27,7 +27,7 @@ AutoRedTeam-Orchestrator 当前定位是**研究预览（research preview）**�
 
 - CLI：`autort`，覆盖 scan、detect、exploit、cve-search、pentest、report、nuclei。
 - SDK：`Scanner`、`Exploiter`、`AutoPentest`、`RedTeam`、`Reporter`。
-- MCP：本地注册共 142 项能力，其中 132 tools、6 prompts、4 resources。
+- MCP：本地注册共 142 项能力，其中 132 tools、6 prompts、4 resources（2026-05-19 基线；现行计数见 README）。
 
 当前优势：
 
