@@ -52,7 +52,7 @@ def test_profiles_are_monotonic_and_have_stable_counts():
     assert tuple(counts) == PROFILE_ORDER
     assert counts == {"safe": 27, "scan": 92, "active-lab": 113, "full": 149}
     registered = {profile["name"]: profile["registered_count"] for profile in profiles}
-    assert registered == {"safe": 20, "scan": 24, "active-lab": 25, "full": 25}
+    assert registered == {"safe": 18, "scan": 22, "active-lab": 23, "full": 23}
     assert RESIDENT_SURFACES <= {(item.kind, item.name) for item in CAPABILITIES}
 
     previous: set[tuple[str, str]] = set()
@@ -244,7 +244,7 @@ def test_legacy_registration_default_remains_full():
 
     register_all_handlers(mcp, counter, MagicMock())
 
-    assert counter.total == 25
+    assert counter.total == 23
 
 
 def test_server_default_profile_is_safe(monkeypatch):
@@ -285,7 +285,7 @@ def test_production_counter_uses_manifest_categories():
 
     register_all_handlers(mcp, counter, MagicMock(), profile="full")
 
-    assert counter.total == 25
+    assert counter.total == 23
     assert counter.counts.get("knowledge", 0) == 0
     assert counter.counts.get("mcts", 0) == 0
     assert "MCP surface" in counter.summary()
@@ -312,6 +312,10 @@ def test_factory_detector_tools_are_catalog_only():
     assert get_capability("tool", "tool_enable").resident is True
     assert get_capability("tool", "skill_catalog").resident is True
     assert get_capability("tool", "skill_read").resident is True
+    assert get_capability("tool", "session_create").resident is True
+    assert get_capability("tool", "session_status").resident is True
+    assert get_capability("tool", "session_list").resident is False
+    assert get_capability("tool", "session_complete").resident is False
     assert get_capability("tool", "lateral_ssh").resident is False
 
 
@@ -329,6 +333,10 @@ async def test_scan_profile_list_tools_hides_factory_detectors():
     assert "verify_finding" in names
     assert "skill_catalog" in names
     assert "skill_read" in names
+    assert "session_create" in names
+    assert "session_status" in names
+    assert "session_list" not in names
+    assert "session_complete" not in names
     assert "full_recon" not in names
     assert "vuln_scan" not in names
     assert "sqli_scan" not in names
@@ -433,6 +441,11 @@ def test_search_surfaces_points_long_tail_at_tool_enable():
 
     assert by_name["jwt_scan"]["invoke"] == {"tool": "tool_enable", "name": "jwt_scan"}
 
+    sessions = search_surfaces("session_list", profile="safe", kind="tool", limit=12)
+    session_card = {item["name"]: item for item in sessions["matches"]}["session_list"]
+    assert session_card["resident"] is False
+    assert session_card["invoke"] == {"tool": "tool_enable", "name": "session_list"}
+
 
 def test_search_surfaces_points_vuln_scan_at_detect_run():
     result = search_surfaces("vuln_scan", profile="scan", kind="tool", limit=12)
@@ -456,6 +469,26 @@ async def test_tool_enable_registers_catalog_detector():
 
     names = {item.name for item in await mcp.list_tools()}
     assert "sqli_scan" in names
+
+
+@pytest.mark.asyncio
+async def test_tool_enable_registers_session_list():
+    mcp = MCPServer("enable-session")
+    register_all_handlers(mcp, Counter(), logging.getLogger(__name__), profile="safe")
+    names = {item.name for item in await mcp.list_tools()}
+    assert "session_list" not in names
+    assert "session_complete" not in names
+    assert "session_create" in names
+
+    result = await mcp.call_tool("tool_enable", {"name": "session_list"})
+    payload = result.structured_content or {}
+    inner = payload.get("result", payload)
+    data = inner.get("data", inner) if isinstance(inner, dict) else {}
+    assert inner.get("success") is True or data.get("enabled") is True
+
+    names = {item.name for item in await mcp.list_tools()}
+    assert "session_list" in names
+    assert "session_complete" not in names
 
 
 @pytest.mark.asyncio

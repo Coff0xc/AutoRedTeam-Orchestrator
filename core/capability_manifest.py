@@ -95,8 +95,6 @@ RESIDENT_SURFACES = frozenset(
         ("tool", "cve_search"),
         ("tool", "session_create"),
         ("tool", "session_status"),
-        ("tool", "session_list"),
-        ("tool", "session_complete"),
         ("tool", "export_findings"),
         ("tool", "recon_run"),
         ("tool", "detect_run"),
