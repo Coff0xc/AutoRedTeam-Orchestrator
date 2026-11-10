@@ -30,7 +30,7 @@ flowchart LR
   files --> reader --> report
 ```
 
-The counts in this page come from the allowed list in this tree: **147 entries** (137 tools, 6 prompts, 4 resources). `tools/list` registers resident surfaces only (`registered_count`: safe 18, scan 22, active-lab 23, full 23). Catalog-only tools are found with `tool_search` and run through `detect_run` / `recon_run` / `exploit_run`, or unlocked with `tool_enable`. `autort capabilities profiles` is the live count after a later change.
+The counts in this page come from the allowed list in this tree: **149 entries** (139 tools, 6 prompts, 4 resources). `tools/list` registers resident surfaces only (`registered_count`: safe 20, scan 24, active-lab 25, full 25). Catalog-only tools are found with `tool_search` and run through `detect_run` / `recon_run` / `exploit_run`, or unlocked with `tool_enable`. Pinned SKILL.md packs are metadata only: `skill_catalog` / `skill_read` scan a local checkout and never clone or execute third-party scripts. `autort capabilities profiles` is the live count after a later change.
 
 ## Contents
 
@@ -116,14 +116,14 @@ The level is an argument, or the environment variable `AUTORT_CAPABILITY_PROFILE
 
 ```mermaid
 flowchart BT
-  safe["safe · 25 entries<br/>read your own project"]
-  scan["scan · 90 entries<br/>a system you are allowed to test"]
-  lab["active-lab · 111 entries<br/>a disposable lab"]
-  full["full · 147 entries<br/>you turned the rest on"]
+  safe["safe · 27 entries<br/>read your own project"]
+  scan["scan · 92 entries<br/>a system you are allowed to test"]
+  lab["active-lab · 113 entries<br/>a disposable lab"]
+  full["full · 149 entries<br/>you turned the rest on"]
   safe --> scan --> lab --> full
 ```
 
-The numbers are totals, including the levels below. New catalog entries at each step: 25, then 65, then 21, then 36. `tools/list` stays small: 18 / 22 / 23 / 23 resident surfaces. Factory detectors, recon modules, exploit modes, and the rest of the catalog stay searchable.
+The numbers are totals, including the levels below. New catalog entries at each step: 27, then 65, then 21, then 36. `tools/list` stays small: 20 / 24 / 25 / 25 resident surfaces. Factory detectors, recon modules, exploit modes, and the rest of the catalog stay searchable.
 
 | Level | Use it for | What it adds |
 |---|---|---|
@@ -328,6 +328,8 @@ These do not contact a target. CVE search reads the local notes.
 | `capabilities manifest` | One level, as data | `autort capabilities manifest --profile safe` |
 | `tools lint` | A contract check of the same parse | `autort tools lint --path handlers` |
 | `cve-search` | Local CVE search | `autort cve-search "Log4j" --severity critical --has-poc -n 20` |
+| `skills catalog` | Pinned SKILL.md packs (URL, sha, license) | `autort skills catalog` |
+| `skills read` | Scan a local checkout, then print SKILL.md if it is not critical | `autort skills read --path ./skills/recon` |
 | `version` | The version string | `autort version` |
 
 `autort tools` is the lint group. A function of the same name still exists and is limited to the `scan` level, but the group occupies the command, so that function is not what `autort tools` runs.
@@ -337,6 +339,7 @@ These do not contact a target. CVE search reads the local notes.
 | `ai-surface` | `scan`, `scan-mcp-config`, `scan-skills`, `diff` | The reader |
 | `capabilities` | `matrix`, `readiness`, `manifest`, `profiles` | The allowed list |
 | `tools` | `lint` | Contract check |
+| `skills` | `catalog`, `read` | Pinned SKILL.md packs. Read-only |
 | `code-agent` | `expand` | Who calls whom, from the source |
 | `runtime-api` | `serve` | A local read-only view of a saved run |
 | `sandbox` | `docker-smoke` | A local Docker smoke test, network off |
@@ -448,11 +451,11 @@ The row type is `Capability` in `core/capability_manifest.py`. The index key is 
 | `risk` | `low`, `moderate`, `high`, `critical`. A label, not a measurement |
 | `maturity` | `preview`, `beta`, `experimental`, `restricted-experimental`, `internal`. A label. It does not change registration |
 | `auth_required` / `approval_required` | Whether the card mentions a key and a separate approval |
-| `executor` | `in-process` (84), `isolated-required` (57), or `external-process` (6) |
+| `executor` | `in-process` (86), `isolated-required` (57), or `external-process` (6) |
 | `effects` | Labels joined into the card. Empty renders as `none` |
 | `locator` | Resource URI, for a resource |
 
-Current risk mix: moderate 61, critical 47, high 19, low 20. Current maturity mix: restricted-experimental 47, preview 43, beta 40, experimental 11, internal 6.
+Current risk mix: moderate 61, critical 47, high 19, low 22. Current maturity mix: restricted-experimental 47, preview 45, beta 40, experimental 11, internal 6.
 
 `require_surface` raises `ProfileDenied` when the level is too low. The command line turns that into exit 2. SDK methods call it before they import the engine, and before the broad `except Exception` that turns an engine failure into `{"success": False, "error": ...}`. A refused level is its own failure.
 
@@ -474,7 +477,7 @@ Current risk mix: moderate 61, critical 47, high 19, low 20. Current maturity mi
 | 12 | `ad_handlers` | `ad` | 3 |
 | 13 | `session_handlers` | `session` | 4 |
 | 14 | `report_handlers` | `report` | 2 |
-| 15 | `ai_handlers` | `ai` | 11 |
+| 15 | `ai_handlers` | `ai` | 13 |
 | 16 | `misc_handlers` | `misc` | 5 |
 | 17 | `external_tools_handlers` | `external_tools` | 8 |
 | 18 | `parallel_handlers` | `parallel` | 1 |
@@ -483,7 +486,7 @@ Current risk mix: moderate 61, critical 47, high 19, low 20. Current maturity mi
 | 21 | `prompt_handlers` | `prompts` | 6 |
 | 22 | `resource_handlers` | `resources` | 4 |
 
-The comment at the top of `handlers/__init__.py` is older. It still says 8 recon tools and 26 detector tools. This table is the live list. Registration refuses a name the list does not have.
+The comment at the top of `handlers/__init__.py` matches this table. Registration refuses a name the list does not have.
 
 `ImportError`, `AttributeError`, and `TypeError` from one group are logged and the loop continues. `CapabilityManifestError` is re-raised. MCP 2.3 stores the description argument and returns it from `list_*`. Tests check that every listed description equals the card, for all four levels.
 

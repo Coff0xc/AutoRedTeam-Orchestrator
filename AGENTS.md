@@ -43,6 +43,8 @@ autort ai-redteam eval-run run.json
 autort runtime-api serve --run-state run.json --host 127.0.0.1 --port 8765
 autort sandbox docker-smoke
 autort capabilities matrix
+autort skills catalog
+autort skills read --path ./skills/recon
 ```
 
 SDK smoke：
@@ -82,7 +84,7 @@ Black/isort 行宽为 100。`.pre-commit-config.yaml` 还包含 trailing whitesp
 ### 入口层
 
 - `mcp_stdio_server.py` 创建 `FastMCP("AutoRedTeam")`，调用 `handlers.register_all_handlers()` 注册 MCP tools/resources/prompts，并在启动时配置日志、显示法律声明和 auth 模式。
-- `cli/main.py` 是 Typer CLI，命令封装 SDK 和 core 功能；主要命令包括 `scan`、`detect`、`exploit`、`cve-search`、`pentest`、`report`、`nuclei`，以及 `ai-redteam`、`ai-surface`、`code-agent`、`runtime-api`、`sandbox`、`capabilities` 子命令。
+- `cli/main.py` 是 Typer CLI，命令封装 SDK 和 core 功能；主要命令包括 `scan`、`detect`、`exploit`、`cve-search`、`pentest`、`report`、`nuclei`，以及 `ai-redteam`、`ai-surface`、`code-agent`、`runtime-api`、`sandbox`、`capabilities`、`skills` 子命令。
 - `autort/` 是异步 Python SDK 门面：`Scanner`、`Exploiter`、`AutoPentest`、`RedTeam`、`Reporter`。它们尽量保持薄封装，将实际工作委托给 `core/`。
 
 ### MCP handler 层
@@ -99,6 +101,7 @@ Black/isort 行宽为 100。`.pre-commit-config.yaml` 还包含 trailing whitesp
 - 外部工具（nmap/sqlmap/nuclei/ffuf）目前**没有**后端选择层：handler 与 SDK 直接调用 `core.recon` / `core.detectors` / `core.exploit` 的纯 Python 引擎。曾被当作路由层的 `core/engine_router.py` 已删除（零调用者，且其外部工具分支在干净 checkout 中不可达）。引入后端选择时必须带真实消费者，见 `docs/agent-refactor-plan.md`。
 - `core/config/` 使用 Pydantic 模型加载配置，优先级为环境变量（`AUTORT_` 等）→ `config/config.yaml`/`config.yml` → 默认值。
 - `core/session/` 管理目标、HTTP session、上下文和持久化，用于扫描/编排结果和 resume。
+- `core/skills/` 是只读 SKILL.md 适配器：钉住 git URL+完整 SHA+license，扫描后再返回正文，不克隆、不把 skill 正文打进 wheel、不执行第三方脚本。
 
 ### 配置与依赖分层
 
