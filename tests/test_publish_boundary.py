@@ -85,8 +85,11 @@ def test_image_context_matches_wheel_excludes():
     dockerignore = (ROOT / ".dockerignore").read_text(encoding="utf-8")
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     workflow = (ROOT / ".github" / "workflows" / "docker-publish.yml").read_text(encoding="utf-8")
+    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
-    assert "python -m build --wheel" in dockerfile
+    assert "pyproject-build --wheel" in dockerfile
+    assert "RUN python -m build" not in dockerfile
+    assert "WORKDIR /src" in dockerfile
     assert "AUTORT_CAPABILITY_PROFILE=safe" in dockerfile
     assert "nmap" not in dockerfile.lower()
     assert "COPY payloads" not in dockerfile
@@ -97,3 +100,5 @@ def test_image_context_matches_wheel_excludes():
         assert f'"{dotted}*"' in pyproject
     assert "platforms: linux/amd64,linux/arm64" in workflow
     assert "administration:" not in workflow
+    assert "run: pyproject-build" in ci
+    assert "run: python -m build" not in ci

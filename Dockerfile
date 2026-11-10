@@ -2,7 +2,7 @@
 # in a source checkout and are omitted here by the same setuptools excludes.
 FROM python:3.12-slim AS builder
 
-WORKDIR /build
+WORKDIR /src
 
 RUN pip install --no-cache-dir build
 
@@ -13,7 +13,7 @@ COPY utils ./utils
 COPY autort ./autort
 COPY cli ./cli
 
-RUN python -m build --wheel --outdir /tmp/dist \
+RUN pyproject-build --wheel --outdir /tmp/dist \
     && pip install --no-cache-dir --prefix=/opt/autort /tmp/dist/*.whl
 
 FROM python:3.12-slim

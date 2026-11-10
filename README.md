@@ -300,7 +300,7 @@ flowchart LR
 
 Left out of the package: command-and-control, moving between machines, staying on a machine, post-access work, raising privilege, taking data out, hiding, credentials, Active Directory, and exploit code. They remain in git so an explicit `full` checkout can still import them. Deleting them would break that checkout. A second repository would split the allowed list from the code it describes.
 
-The CI build job installs the package into a clean virtual environment. Those ten packages are not importable there. The `safe` list still prints. A scan of the installed `handlers` folder still reports zero issues. Importing `Scanner` still does not load the three lazy engines. Tests that run inside the checkout do not prove this. Those tests can still import the engines from the working tree.
+The CI build job installs the package into a clean virtual environment. Those ten packages are not importable there. The `safe` list still prints. A scan of the installed `handlers` folder still reports zero issues. Importing `Scanner` still does not load the three lazy engines. Tests that run inside the checkout do not prove this. Those tests can still import the engines from the working tree. Package the wheel with `pyproject-build`. A leftover setuptools `build/` directory hides `python -m build`.
 
 A published install can still serve the `safe` reader when a handler fails to import a missing engine. That failure is logged. The other groups still register.
 

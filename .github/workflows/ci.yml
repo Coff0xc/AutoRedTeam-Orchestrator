@@ -174,7 +174,9 @@ jobs:
           pip install build wheel
 
       - name: Build package
-        run: python -m build
+        # Console script, not `python -m build`: a leftover setuptools `build/`
+        # directory would otherwise hide the PyPA build module.
+        run: pyproject-build
 
       - name: Check the installed wheel boundary
         run: |
