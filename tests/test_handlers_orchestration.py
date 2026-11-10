@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 自动化渗透编排工具处理器单元测试
-测试 handlers/orchestration_handlers.py 中的 11 个工具注册和执行
+测试 handlers/orchestration_handlers.py 中的工具注册和执行
 仅测 handler 层，所有 core 调用均 mock
 """
 
@@ -63,12 +63,12 @@ class TestOrchestrationHandlersRegistration:
     """测试编排工具注册"""
 
     def test_register_orchestration_tools(self):
-        """测试注册函数是否正确注册 11 个工具"""
+        """测试注册函数是否正确注册 12 个工具"""
         registered_tools, mock_counter, mock_logger = _make_mcp_and_register()
 
-        mock_counter.add.assert_called_once_with("orchestration", 11)
+        mock_counter.add.assert_called_once_with("orchestration", 12)
         mock_logger.info.assert_called_once()
-        assert "11 个" in str(mock_logger.info.call_args)
+        assert "12 个" in str(mock_logger.info.call_args)
 
     def test_all_tools_registered(self):
         """验证所有预期工具均已注册"""
@@ -86,6 +86,7 @@ class TestOrchestrationHandlersRegistration:
             "exploit_with_retry",
             "verify_and_exploit",
             "analyze_exploit_failure",
+            "exploit_run",
         ]
         for tool_name in expected_tools:
             assert tool_name in registered_tools, f"工具 {tool_name} 未注册"
@@ -899,3 +900,59 @@ class TestAnalyzeExploitFailureTool:
 
             assert result["success"] is False
             assert "error" in result
+
+
+class TestExploitRunTool:
+    """Resident exploit_run dispatcher."""
+
+    @pytest.mark.asyncio
+    async def test_exploit_run_dispatches_vulnerability_mode(self):
+        registered_tools, _, _ = _make_mcp_and_register()
+        mock_result = MagicMock()
+        mock_result.success = True
+        mock_result.status = MagicMock(value="success")
+        mock_result.exploit_type = MagicMock(value="sqli_union")
+        mock_result.vuln_type = "sqli"
+        mock_result.url = "https://example.com/login"
+        mock_result.evidence = "SQL error"
+        mock_result.payload_used = "1' OR '1'='1"
+        mock_result.data = {}
+        mock_result.shell = None
+        mock_result.files = None
+        mock_result.execution_time_ms = 500
+        mock_result.error = None
+        detection = {
+            "vulnerable": True,
+            "vuln_type": "sqli",
+            "url": "https://example.com/login",
+            "param": "id",
+            "payload": "1' OR '1'='1",
+        }
+
+        with patch("core.exploit.ExploitEngine") as MockEngine:
+            engine = MagicMock()
+            engine.async_exploit = AsyncMock(return_value=mock_result)
+            MockEngine.return_value = engine
+            result = await registered_tools["exploit_run"](
+                mode="vuln",
+                detection_result=detection,
+            )
+
+        assert result["success"] is True
+        assert result["vuln_type"] == "sqli"
+        assert result["evidence"] == "SQL error"
+        assert result["verified"] is True
+
+    @pytest.mark.asyncio
+    async def test_exploit_run_unknown_mode(self):
+        registered_tools, _, _ = _make_mcp_and_register()
+        result = await registered_tools["exploit_run"](mode="not_a_mode")
+        assert result["success"] is False
+        assert "unknown exploit mode" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_exploit_run_requires_detection_result(self):
+        registered_tools, _, _ = _make_mcp_and_register()
+        result = await registered_tools["exploit_run"](mode="exploit_vulnerability")
+        assert result["success"] is False
+        assert "detection_result" in result["error"]

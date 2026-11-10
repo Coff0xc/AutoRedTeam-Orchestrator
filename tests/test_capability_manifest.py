@@ -12,6 +12,7 @@ from core.capability_manifest import (
     CAPABILITIES,
     CAPABILITY_PROFILE_ENV,
     PROFILE_ORDER,
+    RESIDENT_SURFACES,
     CapabilityManifestError,
     capability_manifest,
     capability_profiles,
@@ -40,8 +41,8 @@ def test_manifest_has_unique_complete_surface_totals():
     keys = {(capability.kind, capability.name) for capability in CAPABILITIES}
     summary = capability_manifest()["summary"]
 
-    assert len(keys) == len(CAPABILITIES) == 145
-    assert summary["by_kind"] == {"prompt": 6, "resource": 4, "tool": 135}
+    assert len(keys) == len(CAPABILITIES) == 147
+    assert summary["by_kind"] == {"prompt": 6, "resource": 4, "tool": 137}
 
 
 def test_profiles_are_monotonic_and_have_stable_counts():
@@ -49,9 +50,10 @@ def test_profiles_are_monotonic_and_have_stable_counts():
     counts = {profile["name"]: profile["surface_count"] for profile in profiles}
 
     assert tuple(counts) == PROFILE_ORDER
-    assert counts == {"safe": 24, "scan": 89, "active-lab": 109, "full": 145}
+    assert counts == {"safe": 25, "scan": 90, "active-lab": 111, "full": 147}
     registered = {profile["name"]: profile["registered_count"] for profile in profiles}
-    assert registered == {"safe": 24, "scan": 55, "active-lab": 75, "full": 111}
+    assert registered == {"safe": 18, "scan": 22, "active-lab": 23, "full": 23}
+    assert RESIDENT_SURFACES <= {(item.kind, item.name) for item in CAPABILITIES}
 
     previous: set[tuple[str, str]] = set()
     for profile in PROFILE_ORDER:
@@ -242,7 +244,7 @@ def test_legacy_registration_default_remains_full():
 
     register_all_handlers(mcp, counter, MagicMock())
 
-    assert counter.total == 111
+    assert counter.total == 23
 
 
 def test_server_default_profile_is_safe(monkeypatch):
@@ -283,9 +285,9 @@ def test_production_counter_uses_manifest_categories():
 
     register_all_handlers(mcp, counter, MagicMock(), profile="full")
 
-    assert counter.total == 111
-    assert counter.counts["knowledge"] == 3
-    assert counter.counts["mcts"] == 1
+    assert counter.total == 23
+    assert counter.counts.get("knowledge", 0) == 0
+    assert counter.counts.get("mcts", 0) == 0
     assert "MCP surface" in counter.summary()
 
 
@@ -300,11 +302,15 @@ def test_factory_detector_tools_are_catalog_only():
     assert detect_run.minimum_profile == "scan"
     assert tool_search.resident is True
     assert tool_search.minimum_profile == "safe"
-    assert get_capability("tool", "vuln_scan").resident is True
+    assert get_capability("tool", "vuln_scan").resident is False
     assert get_capability("tool", "nuclei_scan").resident is True
     assert get_capability("tool", "recon_run").resident is True
-    assert get_capability("tool", "full_recon").resident is True
+    assert get_capability("tool", "full_recon").resident is False
     assert get_capability("tool", "port_scan").resident is False
+    assert get_capability("tool", "exploit_run").resident is True
+    assert get_capability("tool", "exploit_run").minimum_profile == "active-lab"
+    assert get_capability("tool", "tool_enable").resident is True
+    assert get_capability("tool", "lateral_ssh").resident is False
 
 
 @pytest.mark.asyncio
@@ -315,13 +321,18 @@ async def test_scan_profile_list_tools_hides_factory_detectors():
 
     assert "detect_run" in names
     assert "recon_run" in names
-    assert "full_recon" in names
     assert "tool_search" in names
-    assert "vuln_scan" in names
+    assert "tool_enable" in names
+    assert "nuclei_scan" in names
+    assert "verify_finding" in names
+    assert "full_recon" not in names
+    assert "vuln_scan" not in names
     assert "sqli_scan" not in names
     assert "xss_scan" not in names
     assert "port_scan" not in names
     assert "waf_detect" not in names
+    assert "exploit_run" not in names
+    assert "jwt_scan" not in names
 
 
 def test_search_surfaces_empty_query_lists_resident_only():
@@ -383,3 +394,74 @@ def test_search_surfaces_safe_profile_omits_scan_detectors():
     assert "tool_search" in {
         item["name"] for item in search_surfaces("tool_search", profile="safe")["matches"]
     }
+
+
+def test_canonical_exploit_mode_aliases():
+    from core.exploit.names import canonical_exploit_mode, known_exploit_modes
+
+    assert canonical_exploit_mode("cve") == "exploit_by_cve"
+    assert canonical_exploit_mode("poc_execute") == "poc_execute"
+    assert canonical_exploit_mode("retry") == "exploit_with_retry"
+    assert "verify_and_exploit" in known_exploit_modes()
+
+
+def test_search_surfaces_points_catalog_exploit_at_exploit_run():
+    result = search_surfaces("exploit_vulnerability", profile="active-lab", kind="tool", limit=12)
+    by_name = {item["name"]: item for item in result["matches"]}
+
+    assert "exploit_vulnerability" in by_name
+    card = by_name["exploit_vulnerability"]
+    assert card["resident"] is False
+    assert card["invoke"] == {"tool": "exploit_run", "mode": "exploit_vulnerability"}
+
+    poc = search_surfaces("poc_execute", profile="active-lab", kind="tool", limit=12)
+    poc_card = {item["name"]: item for item in poc["matches"]}["poc_execute"]
+    assert poc_card["invoke"] == {"tool": "exploit_run", "mode": "poc_execute"}
+
+    pentest = search_surfaces("auto_pentest", profile="full", kind="tool", limit=12)
+    pentest_card = {item["name"]: item for item in pentest["matches"]}["auto_pentest"]
+    assert pentest_card["invoke"] == {"tool": "tool_enable", "name": "auto_pentest"}
+
+
+def test_search_surfaces_points_long_tail_at_tool_enable():
+    result = search_surfaces("jwt_scan", profile="scan", kind="tool", limit=12)
+    by_name = {item["name"]: item for item in result["matches"]}
+
+    assert by_name["jwt_scan"]["invoke"] == {"tool": "tool_enable", "name": "jwt_scan"}
+
+
+def test_search_surfaces_points_vuln_scan_at_detect_run():
+    result = search_surfaces("vuln_scan", profile="scan", kind="tool", limit=12)
+    by_name = {item["name"]: item for item in result["matches"]}
+
+    assert by_name["vuln_scan"]["invoke"] == {"tool": "detect_run"}
+
+
+@pytest.mark.asyncio
+async def test_tool_enable_registers_catalog_detector():
+    mcp = MCPServer("enable-scan")
+    register_all_handlers(mcp, Counter(), logging.getLogger(__name__), profile="scan")
+    names = {item.name for item in await mcp.list_tools()}
+    assert "sqli_scan" not in names
+
+    result = await mcp.call_tool("tool_enable", {"name": "sqli_scan"})
+    payload = result.structured_content or {}
+    inner = payload.get("result", payload)
+    data = inner.get("data", inner) if isinstance(inner, dict) else {}
+    assert inner.get("success") is True or data.get("enabled") is True
+
+    names = {item.name for item in await mcp.list_tools()}
+    assert "sqli_scan" in names
+
+
+@pytest.mark.asyncio
+async def test_tool_enable_rejects_higher_profile_surface():
+    mcp = MCPServer("enable-safe")
+    register_all_handlers(mcp, Counter(), logging.getLogger(__name__), profile="safe")
+
+    result = await mcp.call_tool("tool_enable", {"name": "sqli_scan"})
+    text = str(result.structured_content or result.content)
+    assert "sqli_scan" in text
+    assert "scan" in text
+    names = {item.name for item in await mcp.list_tools()}
+    assert "sqli_scan" not in names

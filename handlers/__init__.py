@@ -3,22 +3,22 @@ AutoRedTeam MCP Handlers
 模块化的MCP工具处理器
 
 此模块将原 mcp_stdio_server.py 中的工具按功能拆分为独立模块:
-- recon_handlers: 侦察工具 (8个)
-- detector_factory: 漏洞检测工具 (26个, 工厂模式生成)
+- recon_handlers: 侦察工具 (10个)
+- detector_factory: 漏洞检测工具 (29个, 工厂模式生成)
 - evidence_handlers: 证据验证工具 (1个)
 - cve_handlers: CVE相关工具 (8个)
 - api_security_handlers: API安全工具 (7个)
 - cloud_security_handlers: 云安全工具 (3个)
 - supply_chain_handlers: 供应链安全工具 (3个)
 - redteam_handlers: 红队工具 (14个)
-- orchestration_handlers: 自动化渗透编排工具 (11个)
+- orchestration_handlers: 自动化渗透编排工具 (12个)
 - lateral_handlers: 横向移动工具 (9个)
 - persistence_handlers: 持久化工具 (3个)
 - ad_handlers: AD攻击工具 (3个)
 - session_handlers: 会话管理工具 (4个)
 - report_handlers: 报告工具 (2个)
 - ai_handlers: AI辅助工具 (11个)
-- misc_handlers: 杂项工具 (3个)
+- misc_handlers: 杂项工具 (5个)
 - external_tools_handlers: 外部工具集成 (8个)
 - parallel_handlers: 并发扫描工具 (1个)
 - knowledge_handlers: 知识图谱工具 (3个)
@@ -160,11 +160,19 @@ class _ProfiledMCP:
                     f"MCP surface {kind}:{public_name} is assigned to handler "
                     f"{capability.handler!r}, not {self._handler!r}"
                 )
-            if not capability.allowed_in(self._profile) or not capability.resident:
+            if not capability.allowed_in(self._profile):
                 return func
 
             description = capability.public_description()
             func.__doc__ = description
+            if not capability.resident:
+                catalog = getattr(self._mcp, "_autort_catalog", None)
+                if catalog is None:
+                    catalog = {}
+                    setattr(self._mcp, "_autort_catalog", catalog)
+                catalog[(kind, public_name)] = func
+                return func
+
             call_kwargs = dict(kwargs)
             call_kwargs["description"] = description
             registered = factory(*args, **call_kwargs)(func)

@@ -412,9 +412,9 @@ def test_factory_config_and_manifest_coverage():
     assert len(prompts) == 6
     assert len(resources) == 4
     assert len(factory) == 26
-    assert coverage["manifest_total"] == 145
-    assert coverage["accounted"] == 145
-    assert coverage["ratio"] == "145/145"
+    assert coverage["manifest_total"] == 147
+    assert coverage["accounted"] == 147
+    assert coverage["ratio"] == "147/147"
     assert coverage["invisible_count"] == 0
     assert coverage["factory_accounted"] == 26
     assert coverage["unlisted_count"] == 0

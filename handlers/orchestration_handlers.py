@@ -1,7 +1,7 @@
 """
 自动化渗透编排工具处理器
 包含: auto_pentest, pentest_resume, pentest_status, pentest_phase,
-      exploit_vulnerability, exploit_by_cve, get_attack_paths
+      exploit_run, exploit_vulnerability, exploit_by_cve, get_attack_paths
 
 授权级别:
 - CRITICAL: auto_pentest, pentest_resume, pentest_phase, exploit_*, verify_and_exploit
@@ -119,6 +119,92 @@ def _complete_handler_runtime_action(
         output=output,
         error=error,
     )
+
+
+async def _exec_poc_execute(
+    target: str,
+    template_id: str,
+    variables: Optional[Dict[str, str]],
+) -> Dict[str, Any]:
+    from core.cve.poc_engine import get_poc_engine
+
+    gate = _gate_handler_runtime_action(
+        "poc_execute",
+        inputs={"target": target, "template_id": template_id},
+    )
+    if not gate["allowed"]:
+        return {
+            "success": False,
+            "error": gate["reason"],
+            "runtime": _complete_handler_runtime_action(gate, False),
+        }
+    engine = get_poc_engine()
+    template = engine.get_template(template_id)
+    if not template:
+        return {
+            "success": False,
+            "error": f"模板不存在: {template_id}",
+            "available_templates": engine.list_templates()[:10],
+            "runtime": _complete_handler_runtime_action(gate, False),
+        }
+    result = engine.execute(target, template, variables)
+    payload = {
+        "success": result.success,
+        "vulnerable": result.vulnerable,
+        "template_id": template_id,
+        "target": target,
+        "evidence": result.evidence,
+        "extracted": result.extracted,
+        "execution_time_ms": result.execution_time_ms,
+    }
+    payload["runtime"] = _complete_handler_runtime_action(
+        gate,
+        bool(result.success),
+        output={"success": bool(result.success), "template_id": template_id},
+    )
+    return payload
+
+
+async def _exec_cve_auto_exploit(
+    target: str,
+    cve_id: str,
+    custom_vars: Optional[Dict[str, str]],
+) -> Dict[str, Any]:
+    from core.cve.auto_exploit import auto_exploit_cve
+
+    gate = _gate_handler_runtime_action(
+        "cve_auto_exploit",
+        inputs={"target": target, "cve_id": cve_id},
+    )
+    if not gate["allowed"]:
+        return {
+            "success": False,
+            "error": gate["reason"],
+            "runtime": _complete_handler_runtime_action(gate, False),
+        }
+    result = await auto_exploit_cve(target, cve_id, custom_vars)
+    payload = {
+        "success": result.success,
+        "status": result.status.value,
+        "cve_id": cve_id,
+        "target": target,
+        "vulnerable": result.vulnerable,
+        "vuln_type": result.vuln_type,
+        "evidence": result.evidence,
+        "poc_yaml": result.poc_yaml[:2000] if result.poc_yaml else None,
+        "poc_template_path": result.poc_template_path,
+        "exploit_data": result.exploit_data,
+        "execution_time_ms": result.execution_time_ms,
+        "steps": result.steps,
+        "error": result.error,
+    }
+    payload["runtime"] = _complete_handler_runtime_action(
+        gate,
+        bool(result.success),
+        output={"success": bool(result.success), "cve_id": cve_id},
+        error=result.error,
+    )
+    return payload
 
 
 def register_orchestration_tools(mcp, counter, logger):
@@ -884,5 +970,86 @@ def register_orchestration_tools(mcp, counter, logger):
             "suggestions": analysis.suggestions,
         }
 
-    counter.add("orchestration", 11)
-    logger.info("[Orchestration] 已注册 11 个自动化渗透编排工具")
+    @tool(mcp)
+    @require_critical_auth
+    @validate_inputs(target="target")
+    @handle_errors(logger, category=ErrorCategory.REDTEAM)
+    async def exploit_run(
+        mode: str,
+        detection_result: Optional[Dict[str, Any]] = None,
+        detections: Optional[List[Dict[str, Any]]] = None,
+        target: Optional[str] = None,
+        cve_id: Optional[str] = None,
+        template_id: Optional[str] = None,
+        targets: Optional[Dict[str, Any]] = None,
+        variables: Optional[Dict[str, str]] = None,
+        custom_vars: Optional[Dict[str, str]] = None,
+        use_feedback: bool = False,
+        max_retries: int = 3,
+        top_n: int = 3,
+        verify_first: bool = True,
+        parallel: bool = True,
+        verification_method: str = "auto",
+    ) -> Dict[str, Any]:
+        """Run one exploit mode. Catalog exploit_* tools dispatch here.
+
+        Args:
+            mode: exploit_vulnerability, exploit_by_cve, exploit_orchestrate,
+                exploit_with_retry, verify_and_exploit, poc_execute, cve_auto_exploit
+            detection_result: Single detection for vulnerability / retry / verify modes
+            detections: Detection list for exploit_orchestrate
+            target: Target URL for CVE / PoC modes
+            cve_id: CVE id for exploit_by_cve and cve_auto_exploit
+            template_id: PoC template id for poc_execute
+        """
+        from core.exploit.names import canonical_exploit_mode
+
+        resolved = canonical_exploit_mode(mode)
+        if resolved == "exploit_vulnerability":
+            if not detection_result:
+                raise ValueError("detection_result is required for exploit_vulnerability")
+            payload = await exploit_vulnerability(
+                detection_result,
+                targets=targets,
+                use_feedback=use_feedback,
+                max_retries=max_retries,
+            )
+        elif resolved == "exploit_by_cve":
+            if not target or not cve_id:
+                raise ValueError("target and cve_id are required for exploit_by_cve")
+            payload = await exploit_by_cve(target, cve_id, variables=variables)
+        elif resolved == "exploit_orchestrate":
+            if not detections:
+                raise ValueError("detections is required for exploit_orchestrate")
+            payload = await exploit_orchestrate(
+                detections, top_n=top_n, verify_first=verify_first, parallel=parallel
+            )
+        elif resolved == "exploit_with_retry":
+            if not detection_result:
+                raise ValueError("detection_result is required for exploit_with_retry")
+            payload = await exploit_with_retry(
+                detection_result, max_retries=max_retries, targets=targets
+            )
+        elif resolved == "verify_and_exploit":
+            if not detection_result:
+                raise ValueError("detection_result is required for verify_and_exploit")
+            payload = await verify_and_exploit(
+                detection_result,
+                verification_method=verification_method,
+                targets=targets,
+            )
+        elif resolved == "poc_execute":
+            if not target or not template_id:
+                raise ValueError("target and template_id are required for poc_execute")
+            payload = await _exec_poc_execute(target, template_id, variables)
+        else:
+            if not target or not cve_id:
+                raise ValueError("target and cve_id are required for cve_auto_exploit")
+            payload = await _exec_cve_auto_exploit(target, cve_id, custom_vars)
+        if isinstance(payload, dict):
+            payload.setdefault("evidence", [])
+            payload.setdefault("verified", bool(payload.get("success")))
+        return payload
+
+    counter.add("orchestration", 12)
+    logger.info("[Orchestration] 已注册 12 个自动化渗透编排工具")

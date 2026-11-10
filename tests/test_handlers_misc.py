@@ -68,3 +68,13 @@ async def test_tool_search_lists_resident_and_finds_catalog_detector():
     by_name = {item["name"]: item for item in found["data"]["matches"]}
     assert "sqli_scan" in by_name
     assert by_name["sqli_scan"]["invoke"] == {"tool": "detect_run", "classes": ["sqli"]}
+
+
+@pytest.mark.asyncio
+async def test_tool_enable_resident_surface_is_already_listed():
+    tools = _register("safe")
+    result = await tools["tool_enable"](name="health_check")
+    data = result["data"]
+    assert result["success"] is True
+    assert data["resident"] is True
+    assert data["invoke"] == {"tool": "health_check"}

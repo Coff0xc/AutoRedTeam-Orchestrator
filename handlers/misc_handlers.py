@@ -1,6 +1,6 @@
 """
 杂项工具处理器
-包含: registry_stats, health_check, tool_search, js_analyze
+包含: registry_stats, health_check, tool_search, tool_enable, js_analyze
 """
 
 import platform
@@ -59,6 +59,69 @@ def register_misc_tools(mcp, counter, logger):
         return payload
 
     @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.MISC)
+    async def tool_enable(name: str, kind: str = "tool") -> Dict[str, Any]:
+        """Enable a catalog-only surface on this server for the current profile.
+
+        Args:
+            name: Catalog surface name
+            kind: tool, prompt, or resource
+        """
+        from core.capability_manifest import ProfileDenied, get_capability, resolve_profile
+
+        profile = getattr(mcp, "capability_profile", None)
+        if not isinstance(profile, str) or not profile:
+            profile = resolve_profile()
+        capability = get_capability(kind, name)
+        if capability.kind != "tool":
+            return {
+                "success": False,
+                "error": "tool_enable only enables tools",
+            }
+        if not capability.allowed_in(profile):
+            raise ProfileDenied(
+                name=capability.name,
+                kind=capability.kind,
+                profile=profile,
+                required_profile=capability.minimum_profile,
+            )
+        invoke = {"tool": capability.name}
+        if capability.resident:
+            return {
+                "success": True,
+                "enabled": True,
+                "resident": True,
+                "invoke": invoke,
+            }
+
+        inner = getattr(mcp, "_mcp", mcp)
+        catalog = getattr(inner, "_autort_catalog", {})
+        key = (capability.kind, capability.name)
+        func = catalog.get(key)
+        if func is None:
+            return {
+                "success": False,
+                "error": f"{capability.name} is not loaded in this process",
+                "invoke": {"tool": "tool_enable", "name": capability.name},
+            }
+        enabled = getattr(inner, "_autort_enabled", None)
+        if enabled is None:
+            enabled = set()
+            setattr(inner, "_autort_enabled", enabled)
+        if key not in enabled:
+            inner.tool(
+                name=capability.name,
+                description=capability.public_description(),
+            )(func)
+            enabled.add(key)
+        return {
+            "success": True,
+            "enabled": True,
+            "resident": False,
+            "invoke": invoke,
+        }
+
+    @tool(mcp)
     async def health_check() -> Dict[str, Any]:
         """健康检查 - 检查MCP服务器状态
 
@@ -95,5 +158,5 @@ def register_misc_tools(mcp, counter, logger):
 
         return {"success": True, "url": url, "findings": results}
 
-    counter.add("misc", 4)
-    logger.info("[Misc] 已注册 4 个杂项工具")
+    counter.add("misc", 5)
+    logger.info("[Misc] 已注册 5 个杂项工具")

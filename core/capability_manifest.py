@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Iterable, Mapping, Optional, Sequence
 
 CAPABILITY_PROFILE_ENV = "AUTORT_CAPABILITY_PROFILE"
@@ -77,6 +77,36 @@ PROFILES = (
             "Explicit opt-in for isolated, authorized, disposable environments only."
         ),
     ),
+)
+
+# tools/list whitelist. Everything else stays in the catalog and is reached
+# through recon_run / detect_run / exploit_run or tool_enable.
+RESIDENT_SURFACES = frozenset(
+    {
+        ("tool", "health_check"),
+        ("tool", "tool_search"),
+        ("tool", "tool_enable"),
+        ("tool", "ai_capability_matrix"),
+        ("tool", "ai_surface_scan_handlers"),
+        ("tool", "ai_surface_scan_skills"),
+        ("tool", "ai_surface_scan_mcp_config"),
+        ("tool", "cve_search"),
+        ("tool", "session_create"),
+        ("tool", "session_status"),
+        ("tool", "session_list"),
+        ("tool", "session_complete"),
+        ("tool", "export_findings"),
+        ("tool", "recon_run"),
+        ("tool", "detect_run"),
+        ("tool", "verify_finding"),
+        ("tool", "nuclei_scan"),
+        ("tool", "exploit_run"),
+        ("prompt", "analyze_findings"),
+        ("prompt", "write_report"),
+        ("prompt", "explain_vulnerability"),
+        ("resource", "registered_tools"),
+        ("resource", "security_config"),
+    }
 )
 
 
@@ -310,7 +340,7 @@ def _build_capabilities() -> tuple[Capability, ...]:
     )
     add(
         _surface_group(
-            ("poc_execute", "cve_auto_exploit", "cve_exploit_with_desc", "cve_generate_poc"),
+            ("cve_exploit_with_desc", "cve_generate_poc"),
             handler="cve",
             category="cve",
             minimum_profile="active-lab",
@@ -320,6 +350,21 @@ def _build_capabilities() -> tuple[Capability, ...]:
             approval_required=True,
             executor="isolated-required",
             effects=("network-active", "target-write", "offensive-content"),
+        )
+    )
+    add(
+        _surface_group(
+            ("poc_execute", "cve_auto_exploit"),
+            handler="cve",
+            category="cve",
+            minimum_profile="active-lab",
+            risk="critical",
+            maturity="restricted-experimental",
+            auth_required=True,
+            approval_required=True,
+            executor="isolated-required",
+            effects=("network-active", "target-write", "offensive-content"),
+            resident=False,
         )
     )
     add(
@@ -398,13 +443,9 @@ def _build_capabilities() -> tuple[Capability, ...]:
     add(
         _surface_group(
             (
+                "exploit_run",
                 "pentest_status",
-                "exploit_vulnerability",
-                "exploit_by_cve",
                 "get_attack_paths",
-                "exploit_orchestrate",
-                "exploit_with_retry",
-                "verify_and_exploit",
                 "analyze_exploit_failure",
             ),
             handler="orchestration",
@@ -416,6 +457,27 @@ def _build_capabilities() -> tuple[Capability, ...]:
             approval_required=True,
             executor="isolated-required",
             effects=("network-active", "target-write", "offensive-content"),
+        )
+    )
+    add(
+        _surface_group(
+            (
+                "exploit_vulnerability",
+                "exploit_by_cve",
+                "exploit_orchestrate",
+                "exploit_with_retry",
+                "verify_and_exploit",
+            ),
+            handler="orchestration",
+            category="orchestration",
+            minimum_profile="active-lab",
+            risk="critical",
+            maturity="restricted-experimental",
+            auth_required=True,
+            approval_required=True,
+            executor="isolated-required",
+            effects=("network-active", "target-write", "offensive-content"),
+            resident=False,
         )
     )
     add(
@@ -578,7 +640,7 @@ def _build_capabilities() -> tuple[Capability, ...]:
     )
     add(
         _surface_group(
-            ("registry_stats", "health_check", "tool_search"),
+            ("registry_stats", "health_check", "tool_search", "tool_enable"),
             handler="misc",
             category="misc",
             minimum_profile="safe",
@@ -750,7 +812,22 @@ def _build_capabilities() -> tuple[Capability, ...]:
         )
     )
 
-    return tuple(capabilities)
+    return _apply_resident(capabilities)
+
+
+def _apply_resident(capabilities: Sequence[Capability]) -> tuple[Capability, ...]:
+    """tools/list membership comes only from RESIDENT_SURFACES."""
+    materialized = tuple(
+        replace(item, resident=(item.kind, item.name) in RESIDENT_SURFACES) for item in capabilities
+    )
+    present = {(item.kind, item.name) for item in materialized}
+    missing = RESIDENT_SURFACES - present
+    if missing:
+        raise CapabilityManifestError(
+            "RESIDENT_SURFACES names missing from manifest: "
+            + ", ".join(f"{kind}:{name}" for kind, name in sorted(missing))
+        )
+    return materialized
 
 
 CAPABILITIES = _build_capabilities()
@@ -915,7 +992,7 @@ def capability_profiles() -> dict[str, Any]:
             "authentication, target scope, independent approval, or an isolated executor. "
             "Direct imports outside those entry points stay ungated. "
             "tools/list registers resident surfaces only; catalog-only surfaces are "
-            "found with tool_search."
+            "found with tool_search and unlocked with tool_enable."
         ),
     }
 
@@ -925,12 +1002,14 @@ def _invoke_card(capability: Capability) -> dict[str, Any]:
     if capability.resident:
         return {"tool": capability.name}
     if capability.handler == "detector":
+        if capability.name == "vuln_scan":
+            return {"tool": "detect_run"}
         from core.detectors.names import canonical_detector_class
 
         try:
             detector_class = canonical_detector_class(capability.name)
         except ValueError:
-            detector_class = capability.name
+            return {"tool": "tool_enable", "name": capability.name}
         return {"tool": "detect_run", "classes": [detector_class]}
     if capability.handler == "recon":
         from core.recon.names import canonical_recon_module
@@ -938,9 +1017,17 @@ def _invoke_card(capability: Capability) -> dict[str, Any]:
         try:
             module = canonical_recon_module(capability.name)
         except ValueError:
-            module = capability.name
+            return {"tool": "tool_enable", "name": capability.name}
         return {"tool": "recon_run", "modules": [module]}
-    return {"tool": capability.name}
+    if capability.handler in {"orchestration", "cve"}:
+        from core.exploit.names import canonical_exploit_mode
+
+        try:
+            mode = canonical_exploit_mode(capability.name)
+        except ValueError:
+            return {"tool": "tool_enable", "name": capability.name}
+        return {"tool": "exploit_run", "mode": mode}
+    return {"tool": "tool_enable", "name": capability.name}
 
 
 def _search_score(capability: Capability, query: str) -> int:
