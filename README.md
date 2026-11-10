@@ -30,7 +30,7 @@ flowchart LR
   files --> reader --> report
 ```
 
-The counts in this page come from the allowed list in this tree: **149 entries** (139 tools, 6 prompts, 4 resources). `tools/list` registers resident surfaces only (`registered_count`: safe 20, scan 24, active-lab 25, full 25). Catalog-only tools are found with `tool_search` and run through `detect_run` / `recon_run` / `exploit_run`, or unlocked with `tool_enable`. Pinned SKILL.md packs are metadata only: `skill_catalog` / `skill_read` scan a local checkout and never clone or execute third-party scripts. `autort capabilities profiles` is the live count after a later change.
+The counts in this page come from the allowed list in this tree: **149 entries** (139 tools, 6 prompts, 4 resources). `tools/list` registers resident surfaces only (`registered_count`: safe 18, scan 22, active-lab 23, full 23). Catalog-only tools are found with `tool_search` and run through `detect_run` / `recon_run` / `exploit_run`, or unlocked with `tool_enable`. Pinned SKILL.md packs are metadata only: `skill_catalog` / `skill_read` scan a local checkout and never clone or execute third-party scripts. `autort capabilities profiles` is the live count after a later change.
 
 ## Contents
 
@@ -123,7 +123,7 @@ flowchart BT
   safe --> scan --> lab --> full
 ```
 
-The numbers are totals, including the levels below. New catalog entries at each step: 27, then 65, then 21, then 36. `tools/list` stays small: 20 / 24 / 25 / 25 resident surfaces. Factory detectors, recon modules, exploit modes, and the rest of the catalog stay searchable.
+The numbers are totals, including the levels below. New catalog entries at each step: 27, then 65, then 21, then 36. `tools/list` stays small: 18 / 22 / 23 / 23 resident surfaces. Factory detectors, recon modules, exploit modes, and the rest of the catalog stay searchable.
 
 | Level | Use it for | What it adds |
 |---|---|---|
