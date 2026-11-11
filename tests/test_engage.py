@@ -174,6 +174,49 @@ def test_cli_dry_run(tmp_path: Path, monkeypatch):
     assert payload["dry_run"] is True
 
 
+def test_cli_dry_run_ci_exits_zero_on_pass(tmp_path: Path, monkeypatch):
+    from cli.main import app
+
+    monkeypatch.chdir(tmp_path)
+    path = tmp_path / "engage.yaml"
+    runner.invoke(
+        app,
+        ["engage", "init", "http://127.0.0.1:9", "--path", str(path), "--profile", "scan"],
+    )
+    result = runner.invoke(app, ["engage", "run", "--path", str(path), "--dry-run", "--ci"])
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_ci_exits_2_on_doom_loop(tmp_path: Path, monkeypatch):
+    from cli.main import app
+
+    monkeypatch.chdir(tmp_path)
+    path = tmp_path / "engage.yaml"
+    runner.invoke(
+        app,
+        [
+            "engage",
+            "init",
+            "http://127.0.0.1:9",
+            "--path",
+            str(path),
+            "--profile",
+            "scan",
+            "--phases",
+            "recon",
+        ],
+    )
+
+    async def _stuck(name, inputs, state, dry_run=False):
+        return {"success": True, "dry_run": True, "step": name}
+
+    monkeypatch.setattr("core.engage.runner.dispatch_engage_step", _stuck)
+    result = runner.invoke(
+        app, ["engage", "run", "--path", str(path), "--dry-run", "--ci", "--max-steps", "8"]
+    )
+    assert result.exit_code == 2, result.output
+
+
 def test_engage_steps_are_listed():
     assert "engage.recon" in ENGAGE_STEPS
     assert engagement_next.__name__ == "engagement_next"

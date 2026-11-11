@@ -1040,6 +1040,7 @@ def engage_run_cmd(
         False, "--dry-run", help="Plan steps without contacting the target"
     ),
     max_steps: Optional[int] = typer.Option(None, "--max-steps", help="Planner iteration cap"),
+    ci: bool = typer.Option(False, "--ci", help="CI 模式: 循环未通过时返回非零退出码"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
     """Run recon → detect → verify → export against the engagement target."""
@@ -1053,6 +1054,8 @@ def engage_run_cmd(
         typer.echo(str(exc), err=True)
         raise typer.Exit(2) from exc
     _output(result, output)
+    if ci and not result.get("passed"):
+        raise typer.Exit(2)
 
 
 @engage_app.command("resume")
@@ -1061,7 +1064,7 @@ def engage_resume_cmd(
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
     """Continue a saved engagement from .autort/state.json."""
-    engage_run_cmd(path=path, dry_run=False, max_steps=None, output=output)
+    engage_run_cmd(path=path, dry_run=False, max_steps=None, ci=False, output=output)
 
 
 # ──────────────────────────── helpers ────────────────────────────

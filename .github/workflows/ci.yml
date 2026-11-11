@@ -72,6 +72,7 @@ jobs:
           python -m cli.main capabilities manifest --profile safe
           python -m cli.main ai-redteam eval-run config/ai_redteam.eval.example.yaml --ci
           python -m cli.main runtime-api run config/runtime.local.example.yaml --local --ci
+          python -m cli.main engage run --path config/engage.lab.example.yaml --dry-run --ci
 
       - name: Run unit tests
         shell: bash
@@ -143,6 +144,7 @@ jobs:
         run: |
           python -m cli.main ai-redteam eval-run config/ai_redteam.eval.example.yaml --ci
           python -m cli.main runtime-api run config/runtime.local.example.yaml --local --ci
+          python -m cli.main engage run --path config/engage.lab.example.yaml --dry-run --ci
       - name: Run unit tests (fast)
         run: |
           set +e

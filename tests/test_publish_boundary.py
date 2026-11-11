@@ -106,6 +106,7 @@ def test_image_context_matches_wheel_excludes():
     assert "run: python -m build" not in ci
     assert "ai-redteam eval-run config/ai_redteam.eval.example.yaml --ci" in ci
     assert "runtime-api run config/runtime.local.example.yaml --local --ci" in ci
+    assert "engage run --path config/engage.lab.example.yaml --dry-run --ci" in ci
     windows_job = ci.split("test-windows:", 1)[1].split("security:", 1)[0]
     assert "python-version: ['3.10', '3.12']" in windows_job
     assert "--maxfail" not in windows_job
