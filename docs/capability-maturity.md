@@ -107,7 +107,9 @@ executor.
   recovers original finding text. `to_dict()` stays unescaped for programmatic consumers.
 - Checkpoint/resume, the universal external engine router, and bundled template/package-data flows
   require further integration testing.
-- Windows is an intended platform, but CI does not yet provide a complete Windows matrix.
+- Windows CI runs the fast suite on Python 3.10 and 3.12 (`windows-latest`, no
+  `--maxfail`). Slow, integration, and network tests stay out of that job. Ubuntu
+  still covers 3.10/3.11/3.12.
 
 ## Promotion criteria
 
