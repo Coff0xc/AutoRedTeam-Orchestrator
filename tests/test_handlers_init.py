@@ -241,6 +241,85 @@ def test_safe_profile_skips_mixed_profile_exploit_tool_definitions():
     assert "smart_analyze" not in registered
 
 
+def _capture_mixed_surfaces(
+    profile: str,
+) -> tuple[dict[str, object], dict[str, object], dict[str, object]]:
+    from handlers.misc_handlers import register_misc_tools
+    from handlers.prompt_handlers import register_prompt_handlers
+    from handlers.report_handlers import register_report_tools
+    from handlers.resource_handlers import register_resource_handlers
+
+    tools: dict[str, object] = {}
+    prompts: dict[str, object] = {}
+    resources: dict[str, object] = {}
+
+    def capture_tool(*_args, **_kwargs):
+        def decorator(func):
+            tools[func.__name__] = func
+            return func
+
+        return decorator
+
+    def capture_prompt(*_args, **kwargs):
+        def decorator(func):
+            prompts[kwargs.get("name") or func.__name__] = func
+            return func
+
+        return decorator
+
+    def capture_resource(*_args, **kwargs):
+        def decorator(func):
+            resources[kwargs.get("name") or func.__name__] = func
+            return func
+
+        return decorator
+
+    mcp = MagicMock()
+    mcp.capability_profile = profile
+    mcp.tool = capture_tool
+    mcp.prompt = capture_prompt
+    mcp.resource = capture_resource
+    counter = MagicMock()
+    logger = MagicMock()
+    register_misc_tools(mcp, counter, logger)
+    register_prompt_handlers(mcp, counter, logger)
+    register_report_tools(mcp, counter, logger)
+    register_resource_handlers(mcp, counter, logger)
+    return tools, prompts, resources
+
+
+def test_safe_profile_skips_remaining_mixed_profile_surface_definitions():
+    tools, prompts, resources = _capture_mixed_surfaces("safe")
+
+    assert "health_check" in tools
+    assert "tool_enable" in tools
+    assert "js_analyze" not in tools
+    assert "export_findings" in tools
+    assert "generate_report" not in tools
+    assert "analyze_findings" in prompts
+    assert "write_report" in prompts
+    assert "explain_vulnerability" in prompts
+    assert "plan_pentest" not in prompts
+    assert "plan_attack_chain" not in prompts
+    assert "suggest_next_phase" not in prompts
+    assert "registered_tools" in resources
+    assert "security_config" in resources
+    assert "active_sessions" not in resources
+    assert "payload_library" not in resources
+
+
+def test_scan_profile_defines_scan_mixed_surfaces_not_active_lab():
+    tools, prompts, resources = _capture_mixed_surfaces("scan")
+
+    assert "js_analyze" in tools
+    assert "generate_report" in tools
+    assert "active_sessions" in resources
+    assert "plan_pentest" not in prompts
+    assert "plan_attack_chain" not in prompts
+    assert "suggest_next_phase" not in prompts
+    assert "payload_library" not in resources
+
+
 class TestRegisterAllHandlers:
     """测试 register_all_handlers 函数"""
 

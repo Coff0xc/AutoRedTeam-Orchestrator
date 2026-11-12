@@ -7,7 +7,7 @@ same manifest text.
 
 from __future__ import annotations
 
-from core.capability_manifest import render_prompt_body
+from core.capability_manifest import render_prompt_body, surface_enabled_for_mcp
 
 _PROMPT_DESCRIPTION = "Returns the manifest constraint and the declared parameters."
 
@@ -20,55 +20,62 @@ def _messages(name: str, parameters: dict[str, str]) -> list:
 def register_prompt_handlers(mcp, counter, logger):
     """Register the six manifest prompts."""
 
-    @mcp.prompt(name="plan_pentest", description=_PROMPT_DESCRIPTION)
-    def plan_pentest(target: str, scope: str = "full") -> list:
-        """Return the manifest constraint and the declared parameters."""
-        return _messages("plan_pentest", {"target": target, "scope": scope})
+    registered = 0
+    if surface_enabled_for_mcp(mcp, "prompt", "plan_pentest"):
 
-    counter.add("misc", 1)
+        @mcp.prompt(name="plan_pentest", description=_PROMPT_DESCRIPTION)
+        def plan_pentest(target: str, scope: str = "full") -> list:
+            """Return the manifest constraint and the declared parameters."""
+            return _messages("plan_pentest", {"target": target, "scope": scope})
+
+        registered += 1
 
     @mcp.prompt(name="analyze_findings", description=_PROMPT_DESCRIPTION)
     def analyze_findings(findings_json: str) -> list:
         """Return the manifest constraint and the declared parameters."""
         return _messages("analyze_findings", {"findings_json": findings_json})
 
-    counter.add("misc", 1)
+    registered += 1
 
-    @mcp.prompt(name="plan_attack_chain", description=_PROMPT_DESCRIPTION)
-    def plan_attack_chain(
-        target: str,
-        vulnerabilities: str,
-        access_level: str = "none",
-    ) -> list:
-        """Return the manifest constraint and the declared parameters."""
-        return _messages(
-            "plan_attack_chain",
-            {
-                "target": target,
-                "vulnerabilities": vulnerabilities,
-                "access_level": access_level,
-            },
-        )
+    if surface_enabled_for_mcp(mcp, "prompt", "plan_attack_chain"):
 
-    counter.add("misc", 1)
+        @mcp.prompt(name="plan_attack_chain", description=_PROMPT_DESCRIPTION)
+        def plan_attack_chain(
+            target: str,
+            vulnerabilities: str,
+            access_level: str = "none",
+        ) -> list:
+            """Return the manifest constraint and the declared parameters."""
+            return _messages(
+                "plan_attack_chain",
+                {
+                    "target": target,
+                    "vulnerabilities": vulnerabilities,
+                    "access_level": access_level,
+                },
+            )
 
-    @mcp.prompt(name="suggest_next_phase", description=_PROMPT_DESCRIPTION)
-    def suggest_next_phase(
-        current_phase: str,
-        findings_summary: str,
-        access_level: str = "none",
-    ) -> list:
-        """Return the manifest constraint and the declared parameters."""
-        return _messages(
-            "suggest_next_phase",
-            {
-                "current_phase": current_phase,
-                "findings_summary": findings_summary,
-                "access_level": access_level,
-            },
-        )
+        registered += 1
 
-    counter.add("misc", 1)
+    if surface_enabled_for_mcp(mcp, "prompt", "suggest_next_phase"):
+
+        @mcp.prompt(name="suggest_next_phase", description=_PROMPT_DESCRIPTION)
+        def suggest_next_phase(
+            current_phase: str,
+            findings_summary: str,
+            access_level: str = "none",
+        ) -> list:
+            """Return the manifest constraint and the declared parameters."""
+            return _messages(
+                "suggest_next_phase",
+                {
+                    "current_phase": current_phase,
+                    "findings_summary": findings_summary,
+                    "access_level": access_level,
+                },
+            )
+
+        registered += 1
 
     @mcp.prompt(name="write_report", description=_PROMPT_DESCRIPTION)
     def write_report(
@@ -86,7 +93,7 @@ def register_prompt_handlers(mcp, counter, logger):
             },
         )
 
-    counter.add("misc", 1)
+    registered += 1
 
     @mcp.prompt(name="explain_vulnerability", description=_PROMPT_DESCRIPTION)
     def explain_vulnerability(vuln_type: str, context: str = "") -> list:
@@ -96,6 +103,6 @@ def register_prompt_handlers(mcp, counter, logger):
             {"vuln_type": vuln_type, "context": context},
         )
 
-    counter.add("misc", 1)
-
-    logger.info("MCP prompts registered: 6 constraint templates")
+    registered += 1
+    counter.add("misc", registered)
+    logger.info("MCP prompts registered: %s constraint templates", registered)
