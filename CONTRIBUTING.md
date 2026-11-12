@@ -40,7 +40,7 @@ Packaging uses `pyproject-build`. A leftover setuptools `build/` directory hides
 
 - Black and isort line width is 100. Prefer `pathlib` over hardcoded Unix paths; pre-commit runs `scripts/check_paths.py`.
 - New MCP tools belong in the matching `handlers/` module and must be listed in `core/capability_manifest.py`. Unlisted names fail closed.
-- `tools/list` only shows `RESIDENT_SURFACES`. Catalog tools run through `recon_run` / `detect_run` / `exploit_run` or `tool_enable`.
+- `tools/list` only shows `RESIDENT_SURFACES`. Catalog tools run through `recon_run` / `detect_run` / `exploit_run` or `tool_enable`. Catalog prompts and resources unlock with `tool_enable` (`kind=prompt` or `kind=resource`).
 - Default profile is `safe`. Do not change detector or exploit heuristics without an authorized fixture benchmark.
 - Do not vendor SKILL.md bodies or execute third-party scripts. Pin packs in `core/skills/pins.yaml` with a full git sha and a MIT/Apache/BSD license.
 - Experimental engines stay in git and stay out of the default wheel.

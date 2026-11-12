@@ -87,6 +87,8 @@ executor.
 - MCP authentication is enforced at the registration wrapper from the capability manifest
   (`auth_required`) plus decorator rank, for tools, prompts, and resources. HITL stays on
   tools. A prompt denial returns `AUTH_REQUIRED` and does not echo caller parameters.
+  Catalog-only prompts and resources stay off the MCP lists until `tool_enable` registers
+  the already-wrapped catalog callable; enabling a surface does not skip `AUTH_REQUIRED`.
 - MCP API keys are issued with `autort capabilities auth-key`. The secret is printed once;
   the store keeps only the hash.
 - Runtime policy and sandbox metadata do not automatically move execution into a container.

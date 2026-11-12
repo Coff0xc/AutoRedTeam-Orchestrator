@@ -25,6 +25,8 @@ platform.
 - Profile filtering operates on each public MCP surface rather than on whole handler modules.
 - Authentication is enforced at registration-layer wrappers for tools, prompts, and resources
   from the capability manifest (`auth_required`) plus decorator rank. HITL wraps tools only.
+  Catalog-only prompts and resources stay off `prompts/list` and `resources/list` until
+  `tool_enable` registers the already-wrapped catalog callable.
 - The same capability profile gates MCP registration and the CLI and SDK calls that map to a
   manifest surface. It is not authentication, target authorization, approval, or process isolation.
   Direct imports of core modules outside those entry points are not gated.
