@@ -81,9 +81,12 @@ executor.
   authentication, target scope, approval, or process isolation, and direct `core` imports outside
   those entry points stay ungated.
 - Mixed-profile handler modules (cve, ai, report, resources, prompts, misc) are still imported
-  when they contain a safe surface. Higher-profile tools in those modules are not defined under
-  `safe`, `core.cve` exports load on access, and `runtime_helpers` does not import `agent_runtime`
-  until a tool runs. Direct `core` imports outside MCP/CLI/SDK entry points stay ungated.
+  when they contain a safe surface. Higher-profile surfaces in those modules are not defined
+  under `safe` or `scan`: `cve_auto_exploit`, `smart_analyze` / `attack_chain_plan`,
+  `generate_report`, `js_analyze`, `plan_pentest` / `plan_attack_chain` / `suggest_next_phase`,
+  `active_sessions`, and `payload_library`. `core.cve` exports load on access, and
+  `runtime_helpers` does not import `agent_runtime` until a tool runs. Direct `core` imports
+  outside MCP/CLI/SDK entry points stay ungated.
 - MCP authentication is enforced at the registration wrapper from the capability manifest
   (`auth_required`) plus decorator rank, for tools, prompts, and resources. HITL stays on
   tools. A prompt denial returns `AUTH_REQUIRED` and does not echo caller parameters.

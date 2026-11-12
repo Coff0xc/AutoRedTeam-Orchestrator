@@ -55,9 +55,10 @@ them at request time.
 isolation. Caller-selected paths can read any file available to the trusted local server process.
 A handler module is imported only when the selected profile enables at least one of its
 surfaces. `safe` therefore does not import modules that exist only for `scan`, `active-lab`,
-or `full`. A mixed-profile module is still imported as a unit, but higher-profile tools in
-that module are not defined, and their engines are not imported. `core.cve` package exports
-load on first access, so local CVE search does not import auto-exploit.
+or `full`. A mixed-profile module is still imported as a unit, but higher-profile tools, prompts, and
+resources in that module are not defined, and their engines are not imported. Under `safe`,
+`generate_report`, `js_analyze`, `active_sessions`, and the active-lab prompts stay undefined.
+`core.cve` package exports load on first access, so local CVE search does not import auto-exploit.
 
 The published wheel and the GHCR image omit `core.c2`, `core.lateral`, `core.persistence`,
 `core.post_exploit`, `core.privilege_escalation`, `core.exfiltration`, `core.evasion`,
