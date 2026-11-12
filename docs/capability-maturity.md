@@ -26,7 +26,7 @@ only because an implementation exists in the repository.
 | Local static AI/MCP surface scan | Preview | Read-only AST analysis of FastMCP `@tool` / `@prompt` / `@resource`, low-level `Tool(...)`, and `DetectorConfig` factory names. Factory tools have no inline function body, so they are accounted for by config name. `--exclude-tests` is the default. `--reconcile` (automatic for the repo root and `handlers/`) reports manifest coverage. SARIF findings carry `properties.tool_name` and risk-class `ruleId`s. The scan does not execute handlers. |
 | Reconnaissance and vulnerability detectors | Beta | Authorized targets only; accuracy is not yet backed by a public benchmark. |
 | JSON and SARIF export primitives | Beta | Finding and artifact schemas still need consolidation. |
-| HTML reporting | Preview | Jinja2 HTML and executive templates render with `autoescape=True`. Markdown and JSON still carry raw finding text. |
+| HTML reporting | Preview | Jinja2 HTML, executive, and Markdown templates render with `autoescape=True`. JSON report files encode `<>&` as Unicode escapes; `json.loads` recovers original finding text. |
 | Session storage | Preview | Basic persistence exists; orchestrator checkpoint/resume remains Experimental. |
 | MCP stdio integration | Preview | Defaults to a fail-closed `safe` registration profile; treat as trusted-local only because authentication is not yet a uniform global boundary. |
 | AI-system red-team scenario runner | Preview | Plan-only dry-run plus a local eval suite (`autort.eval/v1`: text, surface, skill, run-state). It does not call a model, shell, or remote target. |
@@ -93,8 +93,9 @@ executor.
   `eval.document`). Unknown steps, shells, and model calls fail closed.
 - The CLI `capabilities matrix` reports source-structure comparisons and must not be interpreted as
   this product maturity matrix.
-- HTML and executive reports escape finding strings. Markdown and JSON reports still carry raw
-  finding text.
+- HTML, executive, and Markdown reports escape finding strings. JSON report files encode `<>&`
+  as Unicode escapes so a raw payload cannot execute if the file is viewed as HTML; `json.loads`
+  recovers original finding text. `to_dict()` stays unescaped for programmatic consumers.
 - Checkpoint/resume, the universal external engine router, and bundled template/package-data flows
   require further integration testing.
 - Windows is an intended platform, but CI does not yet provide a complete Windows matrix.
