@@ -3,6 +3,7 @@
 复用 ``core.ai_surface`` 的 AST 扫描结果，追加契约规则：
 
 - 授权/输入校验/payload 门禁（继承 ai_surface 的 issue 判定）
+- 声明的 local/dry-run effects 与 url/host/target 参数对账
 - 工具名重复（会让模型无法区分同名工具）
 - 面向模型的 schema 质量：参数类型注解、docstring 的 ``Args:`` 段落
 - 证据契约：高风险工具是否有能力返回 evidence / verified
@@ -18,7 +19,9 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from core.ai_surface import SurfaceFinding, SurfaceRiskLevel, scan_handler_surface
+from core.ai_surface.coverage import apply_effect_parameter_mismatches
 from core.ai_surface.models import RISK_ORDER
+from core.capability_manifest import CAPABILITIES
 
 # 继承自 ai_surface 的 issue → 契约错误
 INHERITED_ISSUES: Dict[str, Tuple[str, str]] = {
@@ -26,6 +29,10 @@ INHERITED_ISSUES: Dict[str, Tuple[str, str]] = {
     "critical_tool_without_critical_auth": ("error", "critical 级工具缺少 critical 级授权门禁"),
     "target_input_without_handler_validator": ("error", "存在 target/url 参数但没有输入校验"),
     "payload_generation_without_auth_gate": ("error", "payload 生成工具没有授权门禁"),
+    "declared_effects_omit_target_contact": (
+        "warning",
+        "声明的 effects 仅限本地/dry-run，但参数含 url/host/target",
+    ),
 }
 
 # 输出中能表达“我给了证据”的键名（领域既有约定）
@@ -303,6 +310,7 @@ def lint_tool_contracts(
         flag_missing_auth=flag_missing_auth,
         reconcile=False,
     )
+    apply_effect_parameter_mismatches(surface, CAPABILITIES)
     # 契约检查只覆盖手写的 tool 函数。prompt/resource 的授权在 manifest，
     # detector factory 的装饰器在 create_detector_tool 里动态套上。
     findings = [

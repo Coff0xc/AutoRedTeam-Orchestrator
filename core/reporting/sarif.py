@@ -28,6 +28,10 @@ _SEVERITY_TO_LEVEL: Dict[str, str] = {
 SURFACE_RULE_TEXT: Dict[str, str] = {
     "mcp_tool.auth-critical": "Critical MCP tool is missing a critical authorization gate",
     "mcp_tool.auth-missing": "High-risk MCP tool is missing a dangerous-or-higher authorization gate",
+    "mcp_tool.effect-mismatch": (
+        "MCP surface declares local-read or dry-run effects "
+        "but accepts a target-shaped parameter"
+    ),
     "mcp_tool.target-input": "MCP tool accepts a target-like parameter without a handler validator",
     "mcp_tool.high-risk": "High-risk MCP tool exposure",
     "mcp_tool.network": "MCP tool can reach a network target",

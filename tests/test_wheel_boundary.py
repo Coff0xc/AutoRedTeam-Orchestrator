@@ -100,8 +100,15 @@ scan = run_cli(["ai-surface", "scan", "--path", str(handlers_dir), "--format", "
 summary = scan["summary"]
 if summary["scanned_files"] < 1:
     fail("installed handlers scan read no files")
-if summary["issue_count"] != 0:
-    fail(f"installed handlers scan issue_count={summary['issue_count']}")
+flagged = {
+    (item.get("tool_name"), issue)
+    for item in scan.get("findings") or []
+    for issue in item.get("issues") or []
+}
+allowed = {("session_create", "declared_effects_omit_target_contact")}
+unexpected = sorted(flagged - allowed)
+if unexpected:
+    fail(f"installed handlers scan unexpected issues: {unexpected}")
 if "static_coverage" not in summary:
     fail("installed handlers scan did not reconcile the manifest")
 """

@@ -298,6 +298,15 @@ class TestSurfaceFindingsToSarif:
         assert "authorization gate" in rules["mcp_tool.auth-critical"]["shortDescription"]["text"]
         assert sarif["runs"][0]["properties"]["static_coverage"]["ratio"] == "1/1"
 
+    def test_effect_mismatch_rule_text(self, surface_findings):
+        surface_findings[0]["rule_id"] = "mcp_tool.effect-mismatch"
+        sarif = findings_to_sarif(surface_findings)
+        rules = {rule["id"]: rule for rule in sarif["runs"][0]["tool"]["driver"]["rules"]}
+
+        assert rules["mcp_tool.effect-mismatch"]["shortDescription"]["text"].startswith(
+            "MCP surface declares local-read or dry-run effects"
+        )
+
     def test_rule_id_falls_back_to_finding_type(self, surface_findings):
         """无 type 字段时用 finding_type 作 ruleId"""
         sarif = findings_to_sarif(surface_findings)

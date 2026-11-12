@@ -657,6 +657,8 @@ def _surface_rule_id(finding: SurfaceFinding) -> str:
         "payload_generation_without_auth_gate" in issues
     ):
         return "mcp_tool.auth-missing"
+    if "declared_effects_omit_target_contact" in issues:
+        return "mcp_tool.effect-mismatch"
     if "target_input_without_handler_validator" in issues:
         return "mcp_tool.target-input"
     if finding.kind == "prompt":

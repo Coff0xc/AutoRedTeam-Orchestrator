@@ -316,6 +316,33 @@ def test_repo_handlers_have_no_contract_errors():
     assert summary["errors"] == 0, summary["tools_with_errors"]
 
 
+def test_lint_flags_local_effects_with_target_parameter(tmp_path: Path):
+    _write(
+        tmp_path,
+        '''
+from handlers.tooling import tool, validate_inputs
+
+
+def register_demo(mcp):
+    @tool(mcp)
+    @validate_inputs(target="target")
+    async def session_create(target: str) -> dict:
+        """Create a local session.
+
+        Args:
+            target: stored scope label
+        """
+        return {"success": True, "target": target}
+''',
+    )
+
+    result = lint_tool_contracts(tmp_path)
+    rules = {issue.rule for tool in result.tools for issue in tool.issues}
+
+    assert "declared_effects_omit_target_contact" in rules
+    assert result.summary()["errors"] == 0
+
+
 def test_repo_has_no_evidence_gaps():
     """高风险工具要么回传 evidence/verified，要么显式声明 no_target_contact。
 

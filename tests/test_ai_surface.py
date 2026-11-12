@@ -114,8 +114,19 @@ def register_demo(mcp):
 
 def test_scan_repo_handlers_has_no_surface_issues():
     result = scan_handler_surface("handlers")
+    mismatch = {
+        finding.tool_name
+        for finding in result.findings
+        if "declared_effects_omit_target_contact" in finding.issues
+    }
+    other = [
+        (finding.tool_name, finding.issues)
+        for finding in result.findings
+        if any(issue != "declared_effects_omit_target_contact" for issue in finding.issues)
+    ]
 
-    assert result.to_dict()["summary"]["issue_count"] == 0
+    assert other == []
+    assert mismatch == {"session_create"}
 
 
 def test_scan_skill_surface_finds_dangerous_instruction(tmp_path: Path):
@@ -562,6 +573,88 @@ def register_demo(mcp):
     assert by_name["scanner_status"].risk_level == SurfaceRiskLevel.LOW
     assert "scan" in by_name["port_scan"].risk_terms
     assert by_name["port_scan"].risk_level == SurfaceRiskLevel.MODERATE
+
+
+def test_local_effects_with_target_params_are_flagged():
+    from types import SimpleNamespace
+
+    from core.ai_surface.coverage import (
+        EFFECT_PARAMETER_MISMATCH,
+        apply_effect_parameter_mismatches,
+        reconcile_capability_manifest,
+    )
+    from core.ai_surface.models import SurfaceFinding, SurfaceScanResult
+
+    local_url = SurfaceFinding(
+        tool_name="notes_read",
+        file_path="handlers/demo.py",
+        line=4,
+        risk_level=SurfaceRiskLevel.LOW,
+        parameters=["url", "limit"],
+        kind="tool",
+    )
+    local_path = SurfaceFinding(
+        tool_name="notes_path",
+        file_path="handlers/demo.py",
+        line=12,
+        risk_level=SurfaceRiskLevel.LOW,
+        parameters=["path"],
+        kind="tool",
+    )
+    probe = SurfaceFinding(
+        tool_name="port_scan",
+        file_path="handlers/demo.py",
+        line=20,
+        risk_level=SurfaceRiskLevel.MODERATE,
+        parameters=["target"],
+        kind="tool",
+    )
+    dry_host = SurfaceFinding(
+        tool_name="plan_only",
+        file_path="handlers/demo.py",
+        line=28,
+        risk_level=SurfaceRiskLevel.LOW,
+        parameters=["host"],
+        kind="tool",
+    )
+    unlisted = SurfaceFinding(
+        tool_name="outside",
+        file_path="handlers/demo.py",
+        line=36,
+        risk_level=SurfaceRiskLevel.LOW,
+        parameters=["url"],
+        kind="tool",
+    )
+    result = SurfaceScanResult(
+        root_path="handlers",
+        findings=[local_url, local_path, probe, dry_host, unlisted],
+    )
+    capabilities = (
+        SimpleNamespace(kind="tool", name="notes_read", handler="demo", effects=("local-read",)),
+        SimpleNamespace(
+            kind="tool", name="notes_path", handler="demo", effects=("local-read", "dry-run")
+        ),
+        SimpleNamespace(kind="tool", name="port_scan", handler="demo", effects=("network-probe",)),
+        SimpleNamespace(
+            kind="tool", name="plan_only", handler="demo", effects=("dry-run", "local-read")
+        ),
+        SimpleNamespace(kind="tool", name="empty", handler="demo", effects=()),
+    )
+
+    reconcile_capability_manifest(result, capabilities)
+    by_name = {finding.tool_name: finding for finding in result.findings}
+
+    assert by_name["notes_read"].issues == [EFFECT_PARAMETER_MISMATCH]
+    assert by_name["notes_read"].risk_level == SurfaceRiskLevel.MODERATE
+    assert by_name["notes_read"].rule_id == "mcp_tool.effect-mismatch"
+    assert "url" in by_name["notes_read"].recommendations[0]
+    assert by_name["notes_path"].issues == []
+    assert by_name["port_scan"].issues == []
+    assert by_name["plan_only"].issues == [EFFECT_PARAMETER_MISMATCH]
+    assert by_name["outside"].issues == []
+
+    apply_effect_parameter_mismatches(result, capabilities)
+    assert by_name["notes_read"].issues == [EFFECT_PARAMETER_MISMATCH]
 
 
 def test_reconcile_counts_a_one_shot_capability_iterator():
