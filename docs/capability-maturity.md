@@ -84,8 +84,9 @@ executor.
   when they contain a safe surface. Higher-profile tools in those modules are not defined under
   `safe`, `core.cve` exports load on access, and `runtime_helpers` does not import `agent_runtime`
   until a tool runs. Direct `core` imports outside MCP/CLI/SDK entry points stay ungated.
-- MCP authentication is enforced at the tool wrapper from the capability manifest
-  (`auth_required`) plus decorator rank. Prompts and resources stay outside that wrapper.
+- MCP authentication is enforced at the registration wrapper from the capability manifest
+  (`auth_required`) plus decorator rank, for tools, prompts, and resources. HITL stays on
+  tools. A prompt denial returns `AUTH_REQUIRED` and does not echo caller parameters.
 - MCP API keys are issued with `autort capabilities auth-key`. The secret is printed once;
   the store keeps only the hash.
 - Runtime policy and sandbox metadata do not automatically move execution into a container.

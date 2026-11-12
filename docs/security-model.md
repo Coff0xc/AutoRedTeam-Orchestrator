@@ -23,8 +23,8 @@ platform.
 - The server defaults to the fail-closed `safe` capability profile. Unknown profiles are rejected
   before any tool, resource, or prompt is registered.
 - Profile filtering operates on each public MCP surface rather than on whole handler modules.
-- Authentication is currently attached to individual tools; it is not a uniform registration-layer
-  boundary for every tool, resource, and prompt.
+- Authentication is enforced at registration-layer wrappers for tools, prompts, and resources
+  from the capability manifest (`auth_required`) plus decorator rank. HITL wraps tools only.
 - The same capability profile gates MCP registration and the CLI and SDK calls that map to a
   manifest surface. It is not authentication, target authorization, approval, or process isolation.
   Direct imports of core modules outside those entry points are not gated.
