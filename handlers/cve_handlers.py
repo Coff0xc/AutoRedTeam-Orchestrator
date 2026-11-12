@@ -5,29 +5,10 @@ CVE工具处理器
 
 from typing import Any, Dict, List, Optional
 
-from core.security import require_critical_auth, require_dangerous_auth
+from core.capability_manifest import surface_enabled_for_mcp
 
 from .error_handling import ErrorCategory, extract_target, handle_errors, validate_inputs
-from .runtime_helpers import (
-    blocked_handler_runtime_response,
-    complete_handler_runtime_payload,
-    gate_handler_runtime_action,
-)
 from .tooling import no_target_contact, tool
-
-
-def _gate_cve_runtime(tool_name: str, inputs: Dict[str, Any]) -> Dict[str, Any]:
-    return gate_handler_runtime_action(
-        tool_name,
-        inputs=inputs,
-        risk_level="critical",
-        source="cve_handler",
-        requires_auth=True,
-        human_approved=True,
-        network_policy="controlled",
-        artifact_policy="metadata-only",
-        cleanup_policy="handler-owned",
-    )
 
 
 def register_cve_tools(mcp, counter, logger):
@@ -121,6 +102,61 @@ def register_cve_tools(mcp, counter, logger):
         return {"success": True, "stats": stats}
 
     @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.CVE)
+    async def poc_list(keyword: Optional[str] = None, limit: int = 50) -> Dict[str, Any]:
+        """列出PoC模板 - 查看已加载的PoC模板
+
+        Args:
+            keyword: 过滤关键词
+            limit: 最大返回数量
+
+        Returns:
+            PoC模板列表
+        """
+        from core.cve.poc_engine import get_poc_engine
+
+        engine = get_poc_engine()
+        templates = engine.list_templates()
+
+        if keyword:
+            templates = [t for t in templates if keyword.lower() in t.lower()]
+
+        return {"success": True, "templates": templates[:limit], "count": len(templates[:limit])}
+
+    registered = 4
+    if surface_enabled_for_mcp(mcp, "tool", "cve_auto_exploit"):
+        registered += _register_cve_exploit_tools(mcp, logger)
+
+    counter.add("cve", registered)
+    if registered == 8:
+        logger.info("[CVE] 已注册 8 个CVE工具 (含3个自动利用工具)")
+    else:
+        logger.info("[CVE] 已注册 %s 个CVE工具", registered)
+
+
+def _register_cve_exploit_tools(mcp, logger) -> int:
+    from core.security import require_critical_auth, require_dangerous_auth
+
+    from .runtime_helpers import (
+        blocked_handler_runtime_response,
+        complete_handler_runtime_payload,
+        gate_handler_runtime_action,
+    )
+
+    def _gate_cve_runtime(tool_name: str, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        return gate_handler_runtime_action(
+            tool_name,
+            inputs=inputs,
+            risk_level="critical",
+            source="cve_handler",
+            requires_auth=True,
+            human_approved=True,
+            network_policy="controlled",
+            artifact_policy="metadata-only",
+            cleanup_policy="handler-owned",
+        )
+
+    @tool(mcp)
     @require_critical_auth
     @validate_inputs(target="target")
     @handle_errors(logger, category=ErrorCategory.CVE, context_extractor=extract_target)
@@ -175,30 +211,6 @@ def register_cve_tools(mcp, counter, logger):
             },
             summary_keys=("template_id", "target", "vulnerable"),
         )
-
-    @tool(mcp)
-    @handle_errors(logger, category=ErrorCategory.CVE)
-    async def poc_list(keyword: Optional[str] = None, limit: int = 50) -> Dict[str, Any]:
-        """列出PoC模板 - 查看已加载的PoC模板
-
-        Args:
-            keyword: 过滤关键词
-            limit: 最大返回数量
-
-        Returns:
-            PoC模板列表
-        """
-        from core.cve.poc_engine import get_poc_engine
-
-        engine = get_poc_engine()
-        templates = engine.list_templates()
-
-        if keyword:
-            templates = [t for t in templates if keyword.lower() in t.lower()]
-
-        return {"success": True, "templates": templates[:limit], "count": len(templates[:limit])}
-
-    # ==================== CVE 自动利用工具 ====================
 
     @tool(mcp)
     @require_critical_auth
@@ -344,5 +356,4 @@ def register_cve_tools(mcp, counter, logger):
             "poc_length": len(poc_yaml),
         }
 
-    counter.add("cve", 8)  # 原有5个 + 新增3个
-    logger.info("[CVE] 已注册 8 个CVE工具 (含3个自动利用工具)")
+    return 4

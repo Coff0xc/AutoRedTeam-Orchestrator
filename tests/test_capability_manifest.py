@@ -17,9 +17,11 @@ from core.capability_manifest import (
     capability_manifest,
     capability_profiles,
     get_capability,
+    mcp_registration_profile,
     normalize_profile,
     resolve_profile,
     search_surfaces,
+    surface_enabled_for_mcp,
 )
 from handlers import register_all_handlers
 
@@ -53,6 +55,15 @@ def test_profiles_are_monotonic_and_have_stable_counts():
     assert counts == {"safe": 27, "scan": 92, "active-lab": 113, "full": 149}
     registered = {profile["name"]: profile["registered_count"] for profile in profiles}
     assert registered == {"safe": 18, "scan": 22, "active-lab": 23, "full": 23}
+
+
+def test_mcp_registration_profile_defaults_full_and_reads_wrapper():
+    assert mcp_registration_profile(MagicMock()) == "full"
+    wrapper = MagicMock()
+    wrapper.capability_profile = "safe"
+    assert mcp_registration_profile(wrapper) == "safe"
+    assert surface_enabled_for_mcp(wrapper, "tool", "cve_search") is True
+    assert surface_enabled_for_mcp(wrapper, "tool", "cve_auto_exploit") is False
     assert RESIDENT_SURFACES <= {(item.kind, item.name) for item in CAPABILITIES}
 
     previous: set[tuple[str, str]] = set()

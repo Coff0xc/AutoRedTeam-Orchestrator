@@ -4,7 +4,22 @@ core.cve 模块单元测试
 测试 CVE 情报模块的核心功能
 """
 
+import sys
+
 import pytest
+
+
+def test_cve_package_models_do_not_import_auto_exploit():
+    for name in list(sys.modules):
+        if name == "core.cve" or name.startswith("core.cve."):
+            sys.modules.pop(name, None)
+
+    from core.cve import CVEEntry, Severity
+
+    assert CVEEntry is not None
+    assert Severity is not None
+    assert "core.cve.auto_exploit" not in sys.modules
+    assert "core.cve.ai_poc_generator" not in sys.modules
 
 
 class TestCVEEntry:

@@ -948,6 +948,26 @@ def handler_enabled(profile: str, handler: str) -> bool:
     )
 
 
+def mcp_registration_profile(mcp: Any, *, default: str = "full") -> str:
+    """Return the profile an MCP registrar should use when defining mixed-profile tools.
+
+    ``register_all_handlers`` stamps ``capability_profile`` on the profiled MCP
+    wrapper. Direct ``register_*_tools`` tests pass a mock without that attribute
+    and keep the historical full-registration behavior.
+    """
+
+    profile = getattr(mcp, "capability_profile", None)
+    if not isinstance(profile, str) or not profile.strip():
+        return default
+    return normalize_profile(profile)
+
+
+def surface_enabled_for_mcp(mcp: Any, kind: str, name: str) -> bool:
+    """Return whether a mixed-profile registrar should define this surface."""
+
+    return get_capability(kind, name).allowed_in(mcp_registration_profile(mcp))
+
+
 def _summary(capabilities: Iterable[Capability]) -> dict[str, Any]:
     selected = tuple(capabilities)
     return {

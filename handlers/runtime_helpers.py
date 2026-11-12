@@ -5,22 +5,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional
 
-from core.agent_runtime import (
-    Action,
-    ActionKind,
-    ActionPolicy,
-    ActionStatus,
-    AgentRunState,
-    Flow,
-    PolicyMiddleware,
-    RiskLevel,
-    RunMode,
-    RuntimePipeline,
-    SandboxMiddleware,
-    SandboxPolicy,
-    Task,
-    register_runtime_run,
-)
+
+def _runtime():
+    """Load agent_runtime on first gate/complete call, not at handler import."""
+    from core import agent_runtime
+
+    return agent_runtime
+
 
 _SENSITIVE_KEYS = {
     "api_key",
@@ -91,9 +82,10 @@ def gate_handler_runtime_action(
     cleanup_policy: str = "handler-owned",
 ) -> Dict[str, Any]:
     """Create, gate, and register a handler action in the runtime store."""
-    risk = RiskLevel(risk_level)
-    run_state = AgentRunState(
-        flow=Flow(
+    ar = _runtime()
+    risk = ar.RiskLevel(risk_level)
+    run_state = ar.AgentRunState(
+        flow=ar.Flow(
             name=f"handler:{tool_name}",
             metadata={
                 "component": "handler_runtime",
@@ -101,7 +93,7 @@ def gate_handler_runtime_action(
                 "tool": tool_name,
             },
         ),
-        mode=RunMode.ACTIVE,
+        mode=ar.RunMode.ACTIVE,
         metadata={
             "component": "handler_runtime",
             "source": source,
@@ -109,18 +101,18 @@ def gate_handler_runtime_action(
         },
     )
     task = run_state.flow.add_task(
-        Task(
+        ar.Task(
             name=f"handler:{tool_name}",
             description="MCP handler action gated by runtime middleware.",
             metadata={"tool": tool_name, "source": source},
         )
     )
     action = task.add_action(
-        Action(
+        ar.Action(
             name=f"handler.{tool_name}",
-            kind=ActionKind.TOOL_CALL,
+            kind=ar.ActionKind.TOOL_CALL,
             inputs=sanitize_runtime_inputs(inputs),
-            policy=ActionPolicy(
+            policy=ar.ActionPolicy(
                 risk_level=risk,
                 requires_auth=requires_auth,
                 requires_human_gate=(
@@ -133,11 +125,11 @@ def gate_handler_runtime_action(
             ),
         )
     )
-    pipeline = RuntimePipeline(
+    pipeline = ar.RuntimePipeline(
         [
-            PolicyMiddleware(human_approved=human_approved),
-            SandboxMiddleware(
-                SandboxPolicy(
+            ar.PolicyMiddleware(human_approved=human_approved),
+            ar.SandboxMiddleware(
+                ar.SandboxPolicy(
                     enabled=True,
                     provider=sandbox_provider,
                     network_policy=network_policy,
@@ -151,7 +143,7 @@ def gate_handler_runtime_action(
     if blocked:
         action.mark_blocked(blocked.reason)
         run_state.require_gate(action, blocked.reason)
-        register_runtime_run(run_state)
+        ar.register_runtime_run(run_state)
         return {
             "allowed": False,
             "reason": blocked.reason,
@@ -160,7 +152,7 @@ def gate_handler_runtime_action(
             "decisions": decisions,
         }
 
-    action.status = ActionStatus.RUNNING
+    action.status = ar.ActionStatus.RUNNING
     action.updated_at = datetime.now().isoformat()
     run_state.add_trace(
         "handler_action_started",
@@ -169,7 +161,7 @@ def gate_handler_runtime_action(
         tool=tool_name,
         source=source,
     )
-    register_runtime_run(run_state)
+    ar.register_runtime_run(run_state)
     return {
         "allowed": True,
         "action": action,
@@ -185,16 +177,17 @@ def complete_handler_runtime_action(
     error: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Complete a handler runtime action and keep the registry in sync."""
+    ar = _runtime()
     action = gate.get("action")
     run_state = gate.get("run_state")
     if action:
         if success:
             action.mark_completed(output or {"success": True})
-        elif action.status == ActionStatus.BLOCKED:
+        elif action.status == ar.ActionStatus.BLOCKED:
             action.output = output or {"success": False}
             action.updated_at = datetime.now().isoformat()
         else:
-            action.status = ActionStatus.FAILED
+            action.status = ar.ActionStatus.FAILED
             action.error = error or gate.get("reason") or "runtime action failed"
             action.output = output or {"success": False}
             action.updated_at = datetime.now().isoformat()
@@ -206,7 +199,7 @@ def complete_handler_runtime_action(
             success=success,
             error=error,
         )
-        register_runtime_run(run_state)
+        ar.register_runtime_run(run_state)
         return run_state.to_dict()
     return {}
 

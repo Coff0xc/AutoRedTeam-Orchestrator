@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from core.capability_manifest import surface_enabled_for_mcp
+
 from .runtime_helpers import (
     complete_handler_runtime_action,
     complete_handler_runtime_payload,
@@ -181,6 +183,9 @@ def register_resource_handlers(mcp, counter, logger):
         )
 
     counter.add("misc", 1)
+
+    if not surface_enabled_for_mcp(mcp, "resource", "payload_library"):
+        return
 
     @mcp.resource(
         uri="redteam://payloads/{category}",

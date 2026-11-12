@@ -143,6 +143,104 @@ def test_safe_profile_does_not_import_higher_profile_modules():
         assert module_name not in sys.modules
 
 
+_MIXED_PROFILE_ENGINES = (
+    "core.cve.auto_exploit",
+    "core.cve.ai_poc_generator",
+    "core.exploit",
+    "core.exploit.engine",
+    "core.attack_chain",
+    "core.payload",
+    "core.redteam",
+    "core.lateral",
+    "core.persistence",
+    "core.post_exploit",
+    "core.detectors.payloads",
+    "core.agent_runtime.loop",
+    "core.agent_runtime.sandbox",
+    "core.agent_runtime.api",
+    "core.agent_runtime.benchmark",
+)
+
+
+def _drop_modules(names: tuple[str, ...]) -> None:
+    for name in names:
+        sys.modules.pop(name, None)
+    for loaded in list(sys.modules):
+        if any(loaded.startswith(name + ".") for name in names):
+            sys.modules.pop(loaded, None)
+
+
+def test_safe_profile_does_not_import_mixed_profile_engines():
+    from handlers import register_all_handlers
+
+    _drop_modules(_MIXED_PROFILE_ENGINES)
+    register_all_handlers(MagicMock(), MagicMock(), MagicMock(), profile="safe")
+
+    for module_name in _MIXED_PROFILE_ENGINES:
+        assert module_name not in sys.modules, module_name
+
+
+def test_safe_cve_search_import_does_not_load_auto_exploit():
+    _drop_modules(
+        (
+            "core.cve",
+            "core.cve.auto_exploit",
+            "core.cve.ai_poc_generator",
+            "core.cve.update_manager",
+            "core.exploit",
+        )
+    )
+    from core.cve.update_manager import CVEUpdateManager
+
+    assert CVEUpdateManager is not None
+    assert "core.cve.auto_exploit" not in sys.modules
+    assert "core.cve.ai_poc_generator" not in sys.modules
+    assert "core.exploit" not in sys.modules
+
+
+def test_safe_cve_package_export_does_not_load_auto_exploit():
+    _drop_modules(
+        ("core.cve", "core.cve.auto_exploit", "core.cve.ai_poc_generator", "core.cve.models")
+    )
+    from core.cve import CVEEntry, Severity
+
+    assert CVEEntry is not None
+    assert Severity is not None
+    assert "core.cve.auto_exploit" not in sys.modules
+    assert "core.cve.ai_poc_generator" not in sys.modules
+
+
+def test_safe_profile_skips_mixed_profile_exploit_tool_definitions():
+    from handlers.ai_handlers import register_ai_tools
+    from handlers.cve_handlers import register_cve_tools
+
+    registered: dict[str, object] = {}
+
+    def capture_tool(*_args, **_kwargs):
+        def decorator(func):
+            registered[func.__name__] = func
+            return func
+
+        return decorator
+
+    mcp = MagicMock()
+    mcp.capability_profile = "safe"
+    mcp.tool = capture_tool
+
+    register_cve_tools(mcp, MagicMock(), MagicMock())
+    register_ai_tools(mcp, MagicMock(), MagicMock())
+
+    assert "cve_search" in registered
+    assert "poc_list" in registered
+    assert "cve_auto_exploit" not in registered
+    assert "poc_execute" not in registered
+    assert "cve_generate_poc" not in registered
+    assert "skill_catalog" in registered
+    assert "attack_chain_plan" not in registered
+    assert "smart_payload" not in registered
+    assert "smart_analyze" not in registered
+
+
 class TestRegisterAllHandlers:
     """测试 register_all_handlers 函数"""
 
