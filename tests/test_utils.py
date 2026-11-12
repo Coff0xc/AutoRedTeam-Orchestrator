@@ -140,12 +140,8 @@ class TestReportGenerator:
                 generator.generate_json(data, filepath)
                 assert os.path.exists(filepath)
 
-    def test_html_reports_escape_untrusted_findings(self):
-        """测试 HTML 报告转义不可信发现内容"""
-        from utils.report_generator import ReportGenerator
-
-        payload = "<script>alert('xss')</script>"
-        source = SimpleNamespace(
+    def _untrusted_finding_source(self, payload: str):
+        return SimpleNamespace(
             session_id="session-1",
             target="https://example.com",
             metadata={
@@ -163,11 +159,50 @@ class TestReportGenerator:
             started_at=None,
             total_requests=1,
         )
+
+    def test_html_reports_escape_untrusted_findings(self):
+        """测试 HTML 报告转义不可信发现内容"""
+        from utils.report_generator import ReportGenerator
+
+        payload = "<script>alert('xss')</script>"
+        source = self._untrusted_finding_source(payload)
         generator = ReportGenerator()
 
         for report in (generator.to_html(source), generator.to_executive(source)):
             assert payload not in report
             assert "&lt;script&gt;" in report
+
+    def test_markdown_and_json_reports_escape_untrusted_findings(self):
+        """测试 Markdown/JSON 报告转义不可信发现内容"""
+        import json
+
+        from utils.report_generator import ReportGenerator
+
+        payload = "<script>alert('xss')</script>"
+        source = self._untrusted_finding_source(payload)
+        generator = ReportGenerator()
+
+        markdown = generator.to_markdown(source)
+        assert payload not in markdown
+        assert "&lt;script&gt;" in markdown
+
+        data = generator.to_dict(source)
+        assert payload in data["findings"][0]["title"]
+
+        json_report = generator.to_json(source)
+        assert payload not in json_report
+        assert "\\u003c" in json_report
+        loaded = json.loads(json_report)
+        assert payload in loaded["findings"][0]["title"]
+        assert loaded["findings"][0]["title"] == data["findings"][0]["title"]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            generator.reports_dir = tmpdir
+            path = generator._generate_json(data, "session-1")
+            with open(path, encoding="utf-8") as handle:
+                written = handle.read()
+            assert payload not in written
+            assert written == json_report
 
     def test_generate_markdown_report(self):
         """测试生成 Markdown 报告"""

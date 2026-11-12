@@ -20,6 +20,24 @@ logger = logging.getLogger(__name__)
 # 证据门禁的三种判定状态，用于报告汇总计数。
 _EVIDENCE_STATUSES = ("verified", "unverified", "contradicted")
 
+# JSON 报告文件若被当 HTML 打开，原始 <> & 会变成标签。序列化后再替换，
+# json.loads 仍还原 finding 原文；to_dict() 保持未转义给程序消费。
+_JSON_HTML_TRANS = str.maketrans(
+    {
+        "&": "\\u0026",
+        "<": "\\u003c",
+        ">": "\\u003e",
+        "\u2028": "\\u2028",
+        "\u2029": "\\u2029",
+    }
+)
+
+
+def dumps_report_json(data: Any) -> str:
+    """Serialize a report so HTML metacharacters cannot execute if viewed as HTML."""
+    serialized = json.dumps(data, ensure_ascii=False, indent=2, default=str)
+    return serialized.translate(_JSON_HTML_TRANS)
+
 
 class ReportGenerator:
     """报告生成器
@@ -186,6 +204,11 @@ class ReportGenerator:
         """将会话或结果对象渲染为Markdown字符串"""
         data = self._prepare_report_data(source)
         return self._render_markdown(data)
+
+    def to_json(self, source) -> str:
+        """将会话或结果对象渲染为 HTML-safe JSON 字符串"""
+        data = self._prepare_report_data(source)
+        return dumps_report_json(data)
 
     def to_executive(self, source) -> str:
         """将会话或结果对象渲染为执行摘要HTML字符串"""
@@ -662,7 +685,7 @@ class ReportGenerator:
         filepath = os.path.join(self.reports_dir, filename)
 
         with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            f.write(dumps_report_json(data))
 
         return filepath
 
@@ -679,8 +702,8 @@ class ReportGenerator:
         return filepath
 
     def _render_markdown(self, data: Dict) -> str:
-        """渲染Markdown报告内容"""
-        template = Template(self._get_markdown_template())
+        """渲染Markdown报告内容。Finding 文本经 Jinja2 autoescape，避免原始 HTML 进入 .md。"""
+        template = Template(self._get_markdown_template(), autoescape=True)
         return template.render(**data)
 
     def _get_html_template(self) -> str:

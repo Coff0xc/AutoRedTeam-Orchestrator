@@ -65,7 +65,7 @@ def register_report_tools(mcp, counter, logger):
         Returns:
             报告内容或路径
         """
-        from utils.report_generator import ReportGenerator
+        from utils.report_generator import ReportGenerator, dumps_report_json
 
         runtime_gate = _gate_report_runtime(
             "generate_report",
@@ -130,9 +130,7 @@ def register_report_tools(mcp, counter, logger):
 
                 with open(resolved, "w", encoding="utf-8") as f:
                     if isinstance(report, dict):
-                        import json
-
-                        json.dump(report, f, indent=2, ensure_ascii=False)
+                        f.write(dumps_report_json(report))
                     else:
                         f.write(report)
             except Exception as exc:
