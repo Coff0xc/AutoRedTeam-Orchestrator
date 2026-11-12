@@ -341,7 +341,7 @@ These do not contact a target. CVE search reads the local notes.
 | `tools` | `lint` | Contract check |
 | `skills` | `catalog`, `read` | Pinned SKILL.md packs. Read-only |
 | `code-agent` | `expand` | Who calls whom, from the source |
-| `runtime-api` | `serve` | A local read-only view of a saved run |
+| `runtime-api` | `run`, `serve` | A local loop over planned actions, or a read-only view of a saved run |
 | `sandbox` | `docker-smoke` | A local Docker smoke test, network off |
 | `ai-redteam` | `run`, `catalog`, `convert`, `eval-run` | A written scenario or local eval suite. Dry-run unless you go further |
 
@@ -576,7 +576,7 @@ Coverage in CI measures this same install. The ten engine globs are omitted from
 
 `core/agent_runtime` is the state of a planned run: tasks, actions, a trace, and an approval marker. `enforce_sandbox_policy` returns a decision. `execute_action_in_docker_sandbox` stays a decision unless the caller passes `allow_execute=True`. `autort sandbox docker-smoke` runs a local container with the network off. A missing Docker daemon is a skip.
 
-`autort runtime-api serve` reads `/api/runs` on the host and port you pass. The usual local pair is `127.0.0.1` and `8765`. It does not call tools.
+`autort runtime-api run` walks a local plan through policy and sandbox, then either skips the steps or runs the allowlisted scanners. `autort runtime-api serve` reads `/api/runs` on the host and port you pass. The usual local pair is `127.0.0.1` and `8765`. Neither command calls a model or a remote target.
 
 `AIRedTeamRunner` plans from a written scenario. Active mode raises `PermissionError` unless the caller passed `allow_active=True`. `core/code_agent` maps Python calls with `ast` and does not run the program.
 

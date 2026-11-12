@@ -41,6 +41,8 @@ autort ai-surface scan-mcp-config --path .mcp.json --format sarif
 autort ai-redteam run scenario.yaml -o run.json
 autort ai-redteam eval-run run.json
 autort ai-redteam eval-run config/ai_redteam.eval.example.yaml --format sarif --ci
+autort runtime-api run config/runtime.local.example.yaml --dry-run
+autort runtime-api run config/runtime.local.example.yaml --local
 autort runtime-api serve --run-state run.json --host 127.0.0.1 --port 8765
 autort sandbox docker-smoke
 autort capabilities matrix
@@ -98,7 +100,7 @@ Black/isort 行宽为 100。`.pre-commit-config.yaml` 还包含 trailing whitesp
 - `core/detectors/` 是漏洞检测体系。`DetectorFactory` 管理 detector 注册、创建、按类型/严重级别筛选；具体检测器按 access/auth/file/injection/misc/request 分组，结果模型在 `core/detectors/result.py`。
 - `core/exploit/` 提供 exploit engine、具体 exploiter、纯 Python SQLi/扫描能力和 exploit orchestrator。
 - `core/orchestrator/` 实现一键渗透阶段编排：RECON → VULN_SCAN → POC_EXEC → EXPLOIT → PRIV_ESC → LATERAL → EXFILTRATE → REPORT。`AutoPentestOrchestrator` 支持 checkpoint/resume、阶段状态和 runtime policy/sandbox gate。
-- `core/agent_runtime/` 提供受控 AI red-team runtime primitives：run state、action policy、risk level、middleware、sandbox enforcement、observability、benchmark、只读 runtime API view 和进程内 registry。
+- `core/agent_runtime/` 提供受控 AI red-team runtime primitives：run state、action policy、risk level、middleware、sandbox enforcement、observability、benchmark、薄本地循环、只读 runtime API view 和进程内 registry。循环只跑 allowlist 本地步骤，不调模型、不接 P3 harness。
 - 外部工具（nmap/sqlmap/nuclei/ffuf）目前**没有**后端选择层：handler 与 SDK 直接调用 `core.recon` / `core.detectors` / `core.exploit` 的纯 Python 引擎。曾被当作路由层的 `core/engine_router.py` 已删除（零调用者，且其外部工具分支在干净 checkout 中不可达）。引入后端选择时必须带真实消费者，见 `docs/agent-refactor-plan.md`。
 - `core/config/` 使用 Pydantic 模型加载配置，优先级为环境变量（`AUTORT_` 等）→ `config/config.yaml`/`config.yml` → 默认值。
 - `core/session/` 管理目标、HTTP session、上下文和持久化，用于扫描/编排结果和 resume。

@@ -92,7 +92,7 @@ L1 工具层     106 个 tool + finding 级证据契约（沿用 verified / veri
 | P2.1 | fail-closed 能力档 + finding 级证据门禁 | profiles + evidence gate 测试 | 完成 |
 | P2.2 | HITL + DNS-aware target allowlist + 本机 XSS `verify_finding` lab | `test_hitl` / `test_target_scope` / `test_verify_finding_fixture` | 完成 |
 | P2.3 | 本地 eval 合同 `autort.eval/v1`（text / surface / skill / run_state），不调模型 | `autort ai-redteam eval-run config/ai_redteam.eval.example.yaml` 全绿 | 完成 |
-| P2.4 | 薄 `agent_runtime` 循环（最后） | 未做 | 未做 |
+| P2.4 | 薄 `agent_runtime` 循环：pending actions → policy/sandbox → 本地 allowlist → eval | `autort runtime-api run config/runtime.local.example.yaml`；未知步骤失败关闭 | 完成 |
 
 ## P3：harness
 

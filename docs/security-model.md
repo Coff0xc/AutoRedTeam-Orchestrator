@@ -132,6 +132,7 @@ target:
 python -m cli.main ai-surface scan --path handlers -o surface.json
 python -m cli.main ai-redteam run config/ai_redteam.example.yaml -o run.json
 python -m cli.main ai-redteam eval-run config/ai_redteam.eval.example.yaml
+python -m cli.main runtime-api run config/runtime.local.example.yaml --dry-run
 python -m cli.main ai-redteam catalog
 python -m cli.main capabilities manifest --profile safe
 ```
