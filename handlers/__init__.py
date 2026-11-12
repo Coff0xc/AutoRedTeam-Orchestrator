@@ -165,6 +165,10 @@ class _ProfiledMCP:
 
             description = capability.public_description()
             func.__doc__ = description
+            if kind in ("prompt", "resource"):
+                from core.security.mcp_auth_middleware import wrap_surface_auth
+
+                func = wrap_surface_auth(func, kind=kind, name=public_name)
             if not capability.resident:
                 catalog = getattr(self._mcp, "_autort_catalog", None)
                 if catalog is None:

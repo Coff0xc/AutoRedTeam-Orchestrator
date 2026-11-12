@@ -708,3 +708,124 @@ class TestRegistrationLayerAuth:
         assert mod.resolve_wrapper_auth_rank("recon_run", recon_run) == "moderate"
         assert mod.resolve_wrapper_auth_rank("health_check", health_check) == "none"
         assert mod.resolve_wrapper_auth_rank("not_a_surface", unknown_tool) == "none"
+        assert (
+            mod.resolve_wrapper_auth_rank("plan_pentest", unknown_tool, kind="prompt")
+            == "dangerous"
+        )
+        assert (
+            mod.resolve_wrapper_auth_rank("analyze_findings", unknown_tool, kind="prompt") == "none"
+        )
+        assert (
+            mod.resolve_wrapper_auth_rank("active_sessions", unknown_tool, kind="resource")
+            == "moderate"
+        )
+        assert (
+            mod.resolve_wrapper_auth_rank("registered_tools", unknown_tool, kind="resource")
+            == "none"
+        )
+
+    def test_prompt_and_resource_auth_required_without_key(self, monkeypatch):
+        import core.security.mcp_auth_middleware as mod
+
+        mod._auth_config["mode"] = mod.AuthMode.STRICT
+        monkeypatch.delenv("AUTOREDTEAM_API_KEY", raising=False)
+        monkeypatch.delenv("MCP_API_KEY", raising=False)
+
+        def plan_pentest(target: str, scope: str = "full"):
+            return [{"role": "user", "content": {"type": "text", "text": target}}]
+
+        def analyze_findings(findings_json: str):
+            return [{"role": "user", "content": {"type": "text", "text": findings_json}}]
+
+        def list_sessions():
+            return {"sessions": ["secret-session"]}
+
+        def list_registered_tools():
+            return {"total": 1}
+
+        denied_prompt = mod.wrap_surface_auth(plan_pentest, kind="prompt", name="plan_pentest")(
+            target="http://example.com", scope="full"
+        )
+        text = denied_prompt[0]["content"]["text"]
+        assert "AUTH_REQUIRED" in text
+        assert "http://example.com" not in text
+
+        allowed_prompt = mod.wrap_surface_auth(
+            analyze_findings, kind="prompt", name="analyze_findings"
+        )(findings_json="[]")
+        assert allowed_prompt[0]["content"]["text"] == "[]"
+
+        denied_resource = mod.wrap_surface_auth(
+            list_sessions, kind="resource", name="active_sessions"
+        )()
+        assert denied_resource["success"] is False
+        assert denied_resource["code"] == "AUTH_REQUIRED"
+        assert "secret-session" not in str(denied_resource)
+
+        allowed_resource = mod.wrap_surface_auth(
+            list_registered_tools, kind="resource", name="registered_tools"
+        )()
+        assert allowed_resource["total"] == 1
+
+    def test_prompt_auth_required_allows_valid_key(self, mock_auth_manager, monkeypatch):
+        import core.security.mcp_auth_middleware as mod
+
+        mod._auth_config["mode"] = mod.AuthMode.STRICT
+        mod._auth_config["manager"] = mock_auth_manager
+        monkeypatch.setenv("AUTOREDTEAM_API_KEY", "valid-key")
+
+        def plan_pentest(target: str, scope: str = "full"):
+            return [{"role": "user", "content": {"type": "text", "text": target}}]
+
+        result = mod.wrap_surface_auth(plan_pentest, kind="prompt", name="plan_pentest")(
+            target="http://example.com"
+        )
+        assert result[0]["content"]["text"] == "http://example.com"
+
+    def test_profiled_prompt_and_resource_use_public_names(self, monkeypatch):
+        import core.security.mcp_auth_middleware as mod
+        from handlers import _ProfiledMCP
+        from handlers.prompt_handlers import register_prompt_handlers
+        from handlers.resource_handlers import register_resource_handlers
+
+        mod._auth_config["mode"] = mod.AuthMode.STRICT
+        monkeypatch.delenv("AUTOREDTEAM_API_KEY", raising=False)
+        monkeypatch.delenv("MCP_API_KEY", raising=False)
+
+        prompts: dict[str, object] = {}
+        resources: dict[str, object] = {}
+
+        class RecordingMCP:
+            def prompt(self, *args, **kwargs):
+                def apply(func):
+                    prompts[kwargs.get("name") or func.__name__] = func
+                    return func
+
+                return apply
+
+            def resource(self, *args, **kwargs):
+                def apply(func):
+                    resources[kwargs.get("name") or func.__name__] = func
+                    return func
+
+                return apply
+
+        mcp = RecordingMCP()
+        counter = MagicMock()
+        logger = MagicMock()
+        register_prompt_handlers(_ProfiledMCP(mcp, counter, "full", "prompts"), counter, logger)
+        register_resource_handlers(_ProfiledMCP(mcp, counter, "full", "resources"), counter, logger)
+
+        catalog = mcp._autort_catalog
+        denied = catalog[("prompt", "plan_pentest")](target="http://example.com", scope="full")
+        assert "AUTH_REQUIRED" in denied[0]["content"]["text"]
+        assert "http://example.com" not in denied[0]["content"]["text"]
+
+        allowed = prompts["analyze_findings"](findings_json="[]")
+        assert "Declared parameters" in allowed[0]["content"]["text"]
+
+        denied_sessions = catalog[("resource", "active_sessions")]()
+        assert denied_sessions["code"] == "AUTH_REQUIRED"
+
+        allowed_tools = resources["registered_tools"]()
+        assert "runtime" in allowed_tools or "total" in allowed_tools

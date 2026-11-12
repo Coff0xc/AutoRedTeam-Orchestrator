@@ -107,7 +107,7 @@ def _tool_level_from_rank(rank: str) -> Any:
     return mapping.get(rank)
 
 
-def resolve_wrapper_auth_rank(tool_name: str, func: Any) -> str:
+def resolve_wrapper_auth_rank(tool_name: str, func: Any, *, kind: str = "tool") -> str:
     """Highest of the decorator mark and the manifest ``auth_required`` risk."""
     from core.security.hitl import auth_level_of
 
@@ -115,7 +115,7 @@ def resolve_wrapper_auth_rank(tool_name: str, func: Any) -> str:
     try:
         from core.capability_manifest import get_capability
 
-        cap = get_capability("tool", tool_name)
+        cap = get_capability(kind, tool_name)
     except Exception:
         return best if best in _AUTH_RANK else "none"
     if cap.auth_required:
@@ -226,15 +226,50 @@ def evaluate_wrapper_auth(
     tool_name: str,
     func: Any,
     params: Optional[Dict[str, Any]] = None,
+    *,
+    kind: str = "tool",
 ) -> Optional[Dict[str, Any]]:
-    """Registration-layer check. Skip tools with no decorator mark and no manifest auth."""
-    rank = resolve_wrapper_auth_rank(tool_name, func)
+    """Registration-layer check. Skip surfaces with no decorator mark and no manifest auth."""
+    rank = resolve_wrapper_auth_rank(tool_name, func, kind=kind)
     if rank in ("none", ""):
         return None
     decision = evaluate_auth(tool_name, level=_tool_level_from_rank(rank), params=params)
     if decision.allowed:
         return None
     return decision.denial
+
+
+def _surface_auth_denial(kind: str, denial: Dict[str, Any]) -> Any:
+    """Fail closed without echoing caller parameters into a prompt body."""
+    if kind == "prompt":
+        code = str(denial.get("code") or "AUTH_REQUIRED")
+        error = str(denial.get("error") or "Authorization required")
+        return [{"role": "user", "content": {"type": "text", "text": f"{code}: {error}"}}]
+    return denial
+
+
+def wrap_surface_auth(func: Callable[..., Any], *, kind: str, name: str) -> Callable[..., Any]:
+    """Wrap a prompt or resource so manifest ``auth_required`` is enforced at call time."""
+
+    @functools.wraps(func)
+    async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        denial = evaluate_wrapper_auth(name, func, kwargs, kind=kind)
+        if denial:
+            return _surface_auth_denial(kind, denial)
+        return await func(*args, **kwargs)
+
+    @functools.wraps(func)
+    def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+        denial = evaluate_wrapper_auth(name, func, kwargs, kind=kind)
+        if denial:
+            return _surface_auth_denial(kind, denial)
+        return func(*args, **kwargs)
+
+    import asyncio
+
+    if asyncio.iscoroutinefunction(func):
+        return async_wrapper
+    return sync_wrapper
 
 
 def require_auth(
