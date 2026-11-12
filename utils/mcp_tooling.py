@@ -109,6 +109,13 @@ def _wrap_tool_func(func: Callable[..., Any]) -> Callable[..., Any]:
             hitl_meta: dict[str, Any] | None = None
             call_kwargs = kwargs
             try:
+                from core.security.mcp_auth_middleware import evaluate_wrapper_auth
+
+                auth_denial = evaluate_wrapper_auth(tool_name, func, kwargs)
+                if auth_denial:
+                    success = False
+                    error_msg = str(auth_denial.get("error") or auth_denial.get("code"))
+                    return ensure_tool_result(auth_denial).to_dict()
                 auth_level = auth_level_of(func)
                 decision = await gate_tool(tool_name, kwargs, auth_level)
                 if requires_hitl(current_mode(), auth_level):
@@ -158,6 +165,13 @@ def _wrap_tool_func(func: Callable[..., Any]) -> Callable[..., Any]:
             error_msg = None
             hitl_meta: dict[str, Any] | None = None
             try:
+                from core.security.mcp_auth_middleware import evaluate_wrapper_auth
+
+                auth_denial = evaluate_wrapper_auth(tool_name, func, kwargs)
+                if auth_denial:
+                    success = False
+                    error_msg = str(auth_denial.get("error") or auth_denial.get("code"))
+                    return ensure_tool_result(auth_denial).to_dict()
                 # Sync tools cannot await an approver; required HITL is deny.
                 mode = current_mode()
                 level = auth_level_of(func)

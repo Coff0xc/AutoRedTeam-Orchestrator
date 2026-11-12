@@ -31,10 +31,14 @@ from core.security.mcp_auth_middleware import (
 
 @pytest.fixture(autouse=True)
 def reset_auth_config():
-    """每个测试前后重置 auth 配置"""
-    original = _auth_config.copy()
+    """每个测试前后重置 auth 配置。Reload 后必须打到当前模块的 ``_auth_config``。"""
+    import core.security.mcp_auth_middleware as mod
+
+    original = mod._auth_config.copy()
     yield
-    _auth_config.update(original)
+    import core.security.mcp_auth_middleware as live
+
+    live._auth_config.update(original)
 
 
 @pytest.fixture
@@ -631,3 +635,76 @@ class TestToolNameParam:
 
             result = await my_func_name()
             assert "my_func_name" in result["error"]
+
+
+class TestRegistrationLayerAuth:
+    """MCP tool wrapper enforces manifest auth_required without a decorator."""
+
+    async def test_unmarked_auth_required_tool_is_denied_without_key(self, monkeypatch):
+        import core.security.mcp_auth_middleware as mod
+        import utils.mcp_tooling as tooling
+        from utils.mcp_tooling import _wrap_tool_func
+
+        mod._auth_config["mode"] = mod.AuthMode.STRICT
+        monkeypatch.setattr(tooling, "_AUDIT_ENABLED", False)
+        monkeypatch.delenv("AUTOREDTEAM_API_KEY", raising=False)
+        monkeypatch.delenv("MCP_API_KEY", raising=False)
+
+        async def recon_run(target: str = "https://example.com"):
+            return {"success": True, "target": target}
+
+        result = await _wrap_tool_func(recon_run)()
+        assert result["success"] is False
+        assert result["data"]["code"] == "AUTH_REQUIRED"
+
+    async def test_unmarked_safe_tool_runs_without_key(self, monkeypatch):
+        import core.security.mcp_auth_middleware as mod
+        import utils.mcp_tooling as tooling
+        from utils.mcp_tooling import _wrap_tool_func
+
+        mod._auth_config["mode"] = mod.AuthMode.STRICT
+        monkeypatch.setattr(tooling, "_AUDIT_ENABLED", False)
+        monkeypatch.delenv("AUTOREDTEAM_API_KEY", raising=False)
+        monkeypatch.delenv("MCP_API_KEY", raising=False)
+
+        async def health_check():
+            return {"success": True, "status": "ok"}
+
+        result = await _wrap_tool_func(health_check)()
+        assert result["success"] is True
+        assert result["data"]["status"] == "ok"
+
+    async def test_unmarked_auth_required_tool_allows_valid_key(
+        self, mock_auth_manager, monkeypatch
+    ):
+        import core.security.mcp_auth_middleware as mod
+        import utils.mcp_tooling as tooling
+        from utils.mcp_tooling import _wrap_tool_func
+
+        mod._auth_config["mode"] = mod.AuthMode.STRICT
+        mod._auth_config["manager"] = mock_auth_manager
+        monkeypatch.setattr(tooling, "_AUDIT_ENABLED", False)
+        monkeypatch.setenv("AUTOREDTEAM_API_KEY", "valid-key")
+
+        async def recon_run(target: str = "https://example.com"):
+            return {"success": True, "target": target}
+
+        result = await _wrap_tool_func(recon_run)()
+        assert result["success"] is True
+        assert result["data"]["target"] == "https://example.com"
+
+    def test_resolve_wrapper_auth_rank_uses_manifest(self):
+        import core.security.mcp_auth_middleware as mod
+
+        async def recon_run():
+            return {}
+
+        async def health_check():
+            return {}
+
+        async def unknown_tool():
+            return {}
+
+        assert mod.resolve_wrapper_auth_rank("recon_run", recon_run) == "moderate"
+        assert mod.resolve_wrapper_auth_rank("health_check", health_check) == "none"
+        assert mod.resolve_wrapper_auth_rank("not_a_surface", unknown_tool) == "none"

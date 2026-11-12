@@ -168,7 +168,11 @@ class Capability:
                 "independent_approval": self.approval_required,
                 "executor": self.executor,
             },
-            "manifest_enforces": ["profile-registration"],
+            "manifest_enforces": (
+                ["profile-registration", "authentication"]
+                if self.auth_required
+                else ["profile-registration"]
+            ),
             "effects": list(self.effects),
             "resident": self.resident,
         }

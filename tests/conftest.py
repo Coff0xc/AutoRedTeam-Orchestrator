@@ -20,22 +20,26 @@ import platform
 
 import pytest
 
-from core.security.mcp_auth_middleware import AuthMode, _auth_config
-
 # ==================== 全局 Auth 禁用 ====================
 
 
 @pytest.fixture(autouse=True)
 def disable_auth_for_tests(request):
-    """默认禁用 auth，auth 专项测试保留真实默认模式。"""
+    """默认禁用 auth，auth 专项测试保留真实默认模式。
+
+    Re-import the module each time: TestEnvInit reloads it and replaces
+    ``_auth_config``, so a conftest-level name would go stale.
+    """
+    import core.security.mcp_auth_middleware as auth_mod
+
     if request.node.path.name == "test_mcp_auth_middleware.py":
         yield
         return
 
-    original_mode = _auth_config["mode"]
-    _auth_config["mode"] = AuthMode.DISABLED
+    original_mode = auth_mod._auth_config["mode"]
+    auth_mod._auth_config["mode"] = auth_mod.AuthMode.DISABLED
     yield
-    _auth_config["mode"] = original_mode
+    auth_mod._auth_config["mode"] = original_mode
 
 
 @pytest.fixture(autouse=True)

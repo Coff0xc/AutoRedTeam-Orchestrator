@@ -9,6 +9,7 @@ MCP 授权中间件 - MCP Tools Authorization Middleware
 import functools
 import logging
 import os
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, cast
 
@@ -75,6 +76,167 @@ def get_api_key_from_env() -> Optional[str]:
     return os.getenv("AUTOREDTEAM_API_KEY") or os.getenv("MCP_API_KEY")
 
 
+_AUTH_RANK = {"none": 0, "safe": 1, "moderate": 2, "dangerous": 3, "critical": 4}
+_RISK_TO_RANK = {
+    "low": "safe",
+    "moderate": "moderate",
+    "high": "dangerous",
+    "critical": "critical",
+}
+
+
+@dataclass
+class AuthDecision:
+    """Result of one MCP auth check. ``denial`` is set when ``allowed`` is False."""
+
+    allowed: bool
+    denial: Optional[Dict[str, Any]] = None
+    api_key: Any = None
+    manager: Any = None
+
+
+def _tool_level_from_rank(rank: str) -> Any:
+    if not HAS_AUTH_MANAGER or not rank or rank == "none":
+        return rank if rank not in (None, "", "none") else None
+    mapping = {
+        "safe": ToolLevel.SAFE,
+        "moderate": ToolLevel.MODERATE,
+        "dangerous": ToolLevel.DANGEROUS,
+        "critical": ToolLevel.CRITICAL,
+    }
+    return mapping.get(rank)
+
+
+def resolve_wrapper_auth_rank(tool_name: str, func: Any) -> str:
+    """Highest of the decorator mark and the manifest ``auth_required`` risk."""
+    from core.security.hitl import auth_level_of
+
+    best = auth_level_of(func) or "none"
+    try:
+        from core.capability_manifest import get_capability
+
+        cap = get_capability("tool", tool_name)
+    except Exception:
+        return best if best in _AUTH_RANK else "none"
+    if cap.auth_required:
+        cap_rank = _RISK_TO_RANK.get(str(cap.risk).lower(), "moderate")
+        if _AUTH_RANK.get(cap_rank, 0) > _AUTH_RANK.get(best, 0):
+            best = cap_rank
+    return best if best in _AUTH_RANK else "none"
+
+
+def evaluate_auth(
+    tool_name: str,
+    *,
+    level: Any = None,
+    params: Optional[Dict[str, Any]] = None,
+) -> AuthDecision:
+    """Return whether an MCP tool call may proceed. None-level still checks STRICT."""
+    params = params or {}
+    if _auth_config["mode"] == AuthMode.DISABLED:
+        return AuthDecision(allowed=True)
+
+    api_key_str = get_api_key_from_env()
+    if not api_key_str:
+        is_high_level = False
+        if HAS_AUTH_MANAGER and level is not None:
+            is_high_level = level in (ToolLevel.CRITICAL, ToolLevel.DANGEROUS)
+        elif not HAS_AUTH_MANAGER and level is not None:
+            is_high_level = True
+
+        if is_high_level:
+            logger.warning(
+                "CRITICAL/DANGEROUS 工具 %s 需要授权，但未提供API Key",
+                tool_name,
+            )
+            return AuthDecision(
+                allowed=False,
+                denial={
+                    "success": False,
+                    "error": (
+                        "Authorization required for CRITICAL/DANGEROUS tools. "
+                        "Set AUTOREDTEAM_API_KEY environment variable."
+                    ),
+                    "code": "AUTH_REQUIRED",
+                },
+            )
+
+        if _auth_config["mode"] == AuthMode.STRICT:
+            logger.warning("工具 %s 需要授权，但未提供API Key", tool_name)
+            return AuthDecision(
+                allowed=False,
+                denial={
+                    "success": False,
+                    "error": (
+                        "Authorization required. Set AUTOREDTEAM_API_KEY environment variable."
+                    ),
+                    "code": "AUTH_REQUIRED",
+                },
+            )
+        logger.warning("工具 %s 未授权访问（宽松模式）", tool_name)
+        return AuthDecision(allowed=True)
+
+    auth_mgr = get_auth_manager()
+    if not auth_mgr:
+        logger.error("AuthManager不可用")
+        if _auth_config["mode"] == AuthMode.STRICT:
+            return AuthDecision(
+                allowed=False,
+                denial={
+                    "success": False,
+                    "error": "Authorization system unavailable",
+                    "code": "AUTH_UNAVAILABLE",
+                },
+            )
+        return AuthDecision(allowed=True)
+
+    api_key = auth_mgr.verify_key(api_key_str)
+    if not api_key:
+        return AuthDecision(
+            allowed=False,
+            denial={
+                "success": False,
+                "error": "Invalid or expired API key",
+                "code": "INVALID_KEY",
+            },
+        )
+
+    if not auth_mgr.check_permission(api_key, tool_name):
+        if _auth_config["audit_enabled"]:
+            auth_mgr.audit(
+                api_key.key_id,
+                tool_name,
+                _sanitize_params(params),
+                success=False,
+                error="Permission denied",
+            )
+        return AuthDecision(
+            allowed=False,
+            denial={
+                "success": False,
+                "error": f"Insufficient permissions for tool: {tool_name}",
+                "code": "PERMISSION_DENIED",
+            },
+        )
+
+    return AuthDecision(allowed=True, api_key=api_key, manager=auth_mgr)
+
+
+def evaluate_wrapper_auth(
+    tool_name: str,
+    func: Any,
+    params: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    """Registration-layer check. Skip tools with no decorator mark and no manifest auth."""
+    rank = resolve_wrapper_auth_rank(tool_name, func)
+    if rank in ("none", ""):
+        return None
+    decision = evaluate_auth(tool_name, level=_tool_level_from_rank(rank), params=params)
+    if decision.allowed:
+        return None
+    return decision.denial
+
+
 def require_auth(
     tool_name: Optional[str] = None,
     level: Optional["ToolLevel"] = None,
@@ -98,187 +260,49 @@ def require_auth(
     """
 
     def decorator(func: Callable):
+        def _audit(
+            decision: AuthDecision,
+            actual_tool_name: str,
+            kwargs: Dict[str, Any],
+            success: bool,
+            error: Optional[str] = None,
+        ) -> None:
+            if (
+                not _auth_config["audit_enabled"]
+                or decision.manager is None
+                or decision.api_key is None
+            ):
+                return
+            decision.manager.audit(
+                decision.api_key.key_id,
+                actual_tool_name,
+                _sanitize_params(kwargs),
+                success=success,
+                error=error,
+            )
+
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs) -> Dict[str, Any]:
             actual_tool_name = tool_name or func.__name__
-
-            # 检查授权模式
-            if _auth_config["mode"] == AuthMode.DISABLED:
-                return cast(Dict[str, Any], await func(*args, **kwargs))
-
-            # 获取API Key
-            api_key_str = get_api_key_from_env()
-
-            # 无Key情况处理
-            if not api_key_str:
-                # CRITICAL/DANGEROUS 级工具无论何种非DISABLED模式都必须认证
-                _is_high_level = False
-                if HAS_AUTH_MANAGER and level is not None:
-                    _is_high_level = level in (ToolLevel.CRITICAL, ToolLevel.DANGEROUS)
-                elif not HAS_AUTH_MANAGER and level is not None:
-                    # AuthManager不可用但指定了level，安全起见视为高危
-                    _is_high_level = True
-
-                if _is_high_level:
-                    logger.warning(
-                        "CRITICAL/DANGEROUS 工具 %s 需要授权，但未提供API Key",
-                        actual_tool_name,
-                    )
-                    return {
-                        "success": False,
-                        "error": (
-                            "Authorization required for CRITICAL/DANGEROUS tools. "
-                            "Set AUTOREDTEAM_API_KEY environment variable."
-                        ),
-                        "code": "AUTH_REQUIRED",
-                    }
-
-                if _auth_config["mode"] == AuthMode.STRICT:
-                    logger.warning("工具 %s 需要授权，但未提供API Key", actual_tool_name)
-                    return {
-                        "success": False,
-                        "error": (
-                            "Authorization required. "
-                            "Set AUTOREDTEAM_API_KEY environment variable."
-                        ),
-                        "code": "AUTH_REQUIRED",
-                    }
-                else:
-                    # 宽松模式：SAFE/MODERATE 工具允许但记录警告
-                    logger.warning("工具 %s 未授权访问（宽松模式）", actual_tool_name)
-                    return cast(Dict[str, Any], await func(*args, **kwargs))
-
-            # 验证API Key
-            auth_mgr = get_auth_manager()
-            if not auth_mgr:
-                logger.error("AuthManager不可用")
-                if _auth_config["mode"] == AuthMode.STRICT:
-                    return {
-                        "success": False,
-                        "error": "Authorization system unavailable",
-                        "code": "AUTH_UNAVAILABLE",
-                    }
-                return cast(Dict[str, Any], await func(*args, **kwargs))
-
-            # 验证Key
-            api_key = auth_mgr.verify_key(api_key_str)
-            if not api_key:
-                return {
-                    "success": False,
-                    "error": "Invalid or expired API key",
-                    "code": "INVALID_KEY",
-                }
-
-            # 检查权限
-            if not auth_mgr.check_permission(api_key, actual_tool_name):
-                # 记录审计日志
-                if _auth_config["audit_enabled"]:
-                    auth_mgr.audit(
-                        api_key.key_id,
-                        actual_tool_name,
-                        _sanitize_params(kwargs),
-                        success=False,
-                        error="Permission denied",
-                    )
-                return {
-                    "success": False,
-                    "error": f"Insufficient permissions for tool: {actual_tool_name}",
-                    "code": "PERMISSION_DENIED",
-                }
-
-            # 执行工具
+            decision = evaluate_auth(actual_tool_name, level=level, params=kwargs)
+            if not decision.allowed:
+                return cast(Dict[str, Any], decision.denial)
             try:
                 result = await func(*args, **kwargs)
-
-                # 记录成功审计
-                if _auth_config["audit_enabled"]:
-                    auth_mgr.audit(
-                        api_key.key_id, actual_tool_name, _sanitize_params(kwargs), success=True
-                    )
-
+                _audit(decision, actual_tool_name, kwargs, True)
                 return cast(Dict[str, Any], result)
-            except Exception as e:
-                # 记录失败审计
-                if _auth_config["audit_enabled"]:
-                    auth_mgr.audit(
-                        api_key.key_id,
-                        actual_tool_name,
-                        _sanitize_params(kwargs),
-                        success=False,
-                        error=str(e),
-                    )
+            except Exception as exc:
+                _audit(decision, actual_tool_name, kwargs, False, str(exc))
                 raise
 
         @functools.wraps(func)
         def sync_wrapper(*args, **kwargs) -> Dict[str, Any]:
             actual_tool_name = tool_name or func.__name__
-
-            # 检查授权模式
-            if _auth_config["mode"] == AuthMode.DISABLED:
-                return cast(Dict[str, Any], func(*args, **kwargs))
-
-            # 获取API Key
-            api_key_str = get_api_key_from_env()
-
-            if not api_key_str:
-                # CRITICAL/DANGEROUS 级工具无论何种非DISABLED模式都必须认证
-                _is_high_level = False
-                if HAS_AUTH_MANAGER and level is not None:
-                    _is_high_level = level in (ToolLevel.CRITICAL, ToolLevel.DANGEROUS)
-                elif not HAS_AUTH_MANAGER and level is not None:
-                    _is_high_level = True
-
-                if _is_high_level:
-                    logger.warning(
-                        "CRITICAL/DANGEROUS 工具 %s 需要授权，但未提供API Key",
-                        actual_tool_name,
-                    )
-                    return {
-                        "success": False,
-                        "error": (
-                            "Authorization required for CRITICAL/DANGEROUS tools. "
-                            "Set AUTOREDTEAM_API_KEY environment variable."
-                        ),
-                        "code": "AUTH_REQUIRED",
-                    }
-
-                if _auth_config["mode"] == AuthMode.STRICT:
-                    return {
-                        "success": False,
-                        "error": "Authorization required",
-                        "code": "AUTH_REQUIRED",
-                    }
-                # 宽松模式：SAFE/MODERATE 工具允许
-                return cast(Dict[str, Any], func(*args, **kwargs))
-
-            auth_mgr = get_auth_manager()
-            if not auth_mgr:
-                if _auth_config["mode"] == AuthMode.STRICT:
-                    return {
-                        "success": False,
-                        "error": "Authorization system unavailable",
-                        "code": "AUTH_UNAVAILABLE",
-                    }
-                return cast(Dict[str, Any], func(*args, **kwargs))
-
-            api_key = auth_mgr.verify_key(api_key_str)
-            if not api_key:
-                return {
-                    "success": False,
-                    "error": "Invalid or expired API key",
-                    "code": "INVALID_KEY",
-                }
-
-            if not auth_mgr.check_permission(api_key, actual_tool_name):
-                return {
-                    "success": False,
-                    "error": f"Insufficient permissions for tool: {actual_tool_name}",
-                    "code": "PERMISSION_DENIED",
-                }
-
+            decision = evaluate_auth(actual_tool_name, level=level, params=kwargs)
+            if not decision.allowed:
+                return cast(Dict[str, Any], decision.denial)
             return cast(Dict[str, Any], func(*args, **kwargs))
 
-        # 根据函数类型返回对应的wrapper
         import asyncio
 
         if asyncio.iscoroutinefunction(func):

@@ -274,7 +274,7 @@ def test_manifest_distinguishes_required_from_enforced_controls():
 
     assert "auth_required" not in payload
     assert payload["required_controls"]["authentication"] is True
-    assert payload["manifest_enforces"] == ["profile-registration"]
+    assert payload["manifest_enforces"] == ["profile-registration", "authentication"]
 
 
 def test_production_counter_uses_manifest_categories():
