@@ -72,6 +72,10 @@ copy procedures into the tool schema or the prompt body.
 - A policy or sandbox decision does not itself create an operating-system or container boundary.
 - An approval flag supplied by the same caller that requests an action is not independent human
   approval.
+- `AUTORT_HITL_MODE` (`off` | `approval` | `review_edit`) wraps MCP tools after profile
+  registration. The default is `off`. `approval` and `review_edit` ask an independent
+  approver before moderate-or-higher tools; a missing, timed-out, or failing approver
+  denies and the tool body does not run. A same-process env flag is not that approver.
 - Safe active operation requires a separately attached executor and an external authorization
   decision. Current legacy SDK and handler paths do not enforce this universally.
 

@@ -95,12 +95,31 @@ def _wrap_tool_func(func: Callable[..., Any]) -> Callable[..., Any]:
         async def wrapper(*args, **kwargs) -> Any:
             # 延迟导入避免循环依赖
             from core.result import ensure_tool_result
+            from core.security.hitl import (
+                auth_level_of,
+                current_mode,
+                denial_payload,
+                gate_tool,
+                requires_hitl,
+            )
 
             start_ts = time.time()
             success = True
             error_msg = None
+            hitl_meta: dict[str, Any] | None = None
+            call_kwargs = kwargs
             try:
-                result = await func(*args, **kwargs)
+                auth_level = auth_level_of(func)
+                decision = await gate_tool(tool_name, kwargs, auth_level)
+                if requires_hitl(current_mode(), auth_level):
+                    hitl_meta = decision.to_dict()
+                if not decision.allowed:
+                    success = False
+                    error_msg = decision.reason
+                    return ensure_tool_result(denial_payload(decision)).to_dict()
+                if decision.edited_kwargs is not None:
+                    call_kwargs = decision.edited_kwargs
+                result = await func(*args, **call_kwargs)
                 return ensure_tool_result(result).to_dict()
             except Exception as exc:
                 success = False
@@ -109,16 +128,17 @@ def _wrap_tool_func(func: Callable[..., Any]) -> Callable[..., Any]:
             finally:
                 if _AUDIT_ENABLED:
                     elapsed_ms = round((time.time() - start_ts) * 1000, 2)
-                    _write_audit_record(
-                        {
-                            "tool_name": tool_name,
-                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                            "params": _sanitize_params(kwargs),
-                            "success": success,
-                            "error": error_msg,
-                            "execution_time_ms": elapsed_ms,
-                        }
-                    )
+                    record = {
+                        "tool_name": tool_name,
+                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                        "params": _sanitize_params(call_kwargs),
+                        "success": success,
+                        "error": error_msg,
+                        "execution_time_ms": elapsed_ms,
+                    }
+                    if hitl_meta is not None:
+                        record["hitl"] = hitl_meta
+                    _write_audit_record(record)
 
     else:
 
@@ -126,11 +146,29 @@ def _wrap_tool_func(func: Callable[..., Any]) -> Callable[..., Any]:
         def wrapper(*args, **kwargs) -> Any:
             # 延迟导入避免循环依赖
             from core.result import ensure_tool_result
+            from core.security.hitl import (
+                auth_level_of,
+                current_mode,
+                denial_payload,
+                requires_hitl,
+            )
 
             start_ts = time.time()
             success = True
             error_msg = None
+            hitl_meta: dict[str, Any] | None = None
             try:
+                # Sync tools cannot await an approver; required HITL is deny.
+                mode = current_mode()
+                level = auth_level_of(func)
+                if requires_hitl(mode, level):
+                    from core.security.hitl import HitlDecision
+
+                    decision = HitlDecision(allowed=False, reason="approval_required")
+                    hitl_meta = decision.to_dict()
+                    success = False
+                    error_msg = decision.reason
+                    return ensure_tool_result(denial_payload(decision)).to_dict()
                 result = func(*args, **kwargs)
                 return ensure_tool_result(result).to_dict()
             except Exception as exc:
@@ -140,16 +178,17 @@ def _wrap_tool_func(func: Callable[..., Any]) -> Callable[..., Any]:
             finally:
                 if _AUDIT_ENABLED:
                     elapsed_ms = round((time.time() - start_ts) * 1000, 2)
-                    _write_audit_record(
-                        {
-                            "tool_name": tool_name,
-                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                            "params": _sanitize_params(kwargs),
-                            "success": success,
-                            "error": error_msg,
-                            "execution_time_ms": elapsed_ms,
-                        }
-                    )
+                    record = {
+                        "tool_name": tool_name,
+                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                        "params": _sanitize_params(kwargs),
+                        "success": success,
+                        "error": error_msg,
+                        "execution_time_ms": elapsed_ms,
+                    }
+                    if hitl_meta is not None:
+                        record["hitl"] = hitl_meta
+                    _write_audit_record(record)
 
     return wrapper
 

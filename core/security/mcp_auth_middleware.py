@@ -323,24 +323,34 @@ def _sanitize_params(params: Dict) -> Dict:
 
 
 # 便捷装饰器：不同安全级别
+def _mark_auth_level(func: Callable, level: str) -> Callable:
+    """Record the decorator rank so HITL can see it after functools.wraps."""
+    func.__autort_auth_level__ = level  # type: ignore[attr-defined]
+    return func
+
+
 def require_safe_auth(func):
     """安全工具授权（信息收集）"""
-    return require_auth(level=ToolLevel.SAFE if HAS_AUTH_MANAGER else None)(func)
+    wrapped = require_auth(level=ToolLevel.SAFE if HAS_AUTH_MANAGER else None)(func)
+    return _mark_auth_level(wrapped, "safe")
 
 
 def require_moderate_auth(func):
     """中等风险工具授权（漏洞扫描）"""
-    return require_auth(level=ToolLevel.MODERATE if HAS_AUTH_MANAGER else None)(func)
+    wrapped = require_auth(level=ToolLevel.MODERATE if HAS_AUTH_MANAGER else None)(func)
+    return _mark_auth_level(wrapped, "moderate")
 
 
 def require_dangerous_auth(func):
     """高风险工具授权（漏洞利用）"""
-    return require_auth(level=ToolLevel.DANGEROUS if HAS_AUTH_MANAGER else None)(func)
+    wrapped = require_auth(level=ToolLevel.DANGEROUS if HAS_AUTH_MANAGER else None)(func)
+    return _mark_auth_level(wrapped, "dangerous")
 
 
 def require_critical_auth(func):
     """极高风险工具授权（后渗透）"""
-    return require_auth(level=ToolLevel.CRITICAL if HAS_AUTH_MANAGER else None)(func)
+    wrapped = require_auth(level=ToolLevel.CRITICAL if HAS_AUTH_MANAGER else None)(func)
+    return _mark_auth_level(wrapped, "critical")
 
 
 # 初始化时检查环境变量设置的授权模式
