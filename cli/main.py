@@ -872,6 +872,63 @@ def capabilities_profiles(
     _output(build_profiles(), output)
 
 
+@capabilities_app.command("auth-key")
+def capabilities_auth_key(
+    name: str = typer.Option("operator", "--name", "-n", help="Key label"),
+    permissions: str = typer.Option(
+        "read,scan", "--permissions", help="Comma-separated: read, scan, exploit, admin"
+    ),
+    max_level: str = typer.Option(
+        "moderate", "--max-level", help="safe, moderate, dangerous, or critical"
+    ),
+    expires_days: Optional[int] = typer.Option(None, "--expires-days", help="Expiry in days"),
+    storage: Optional[str] = typer.Option(None, "--storage", help="Key store directory"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """Generate an MCP API key. Prints the secret once; store it as AUTOREDTEAM_API_KEY."""
+    from core.security.auth_manager import AuthManager, Permission, ToolLevel
+
+    permission_map = {item.value: item for item in Permission}
+    level_map = {item.name.lower(): item for item in ToolLevel}
+    parsed_permissions = []
+    for raw in permissions.split(","):
+        token = raw.strip().lower()
+        if not token:
+            continue
+        if token not in permission_map:
+            raise typer.BadParameter(
+                f"Unknown permission {raw!r}; expected read, scan, exploit, or admin",
+                param_hint="--permissions",
+            )
+        parsed_permissions.append(permission_map[token])
+    if not parsed_permissions:
+        raise typer.BadParameter("At least one permission is required", param_hint="--permissions")
+    level_token = max_level.strip().lower()
+    if level_token not in level_map:
+        raise typer.BadParameter(
+            f"Unknown max-level {max_level!r}; expected safe, moderate, dangerous, or critical",
+            param_hint="--max-level",
+        )
+    manager = AuthManager(storage_path=storage)
+    issued = manager.generate_key(
+        name=name,
+        permissions=parsed_permissions,
+        max_tool_level=level_map[level_token],
+        expires_days=expires_days,
+    )
+    payload = {
+        "name": name,
+        "key_id": issued["key_id"],
+        "full_key": issued["full_key"],
+        "permissions": [item.value for item in parsed_permissions],
+        "max_tool_level": level_token,
+        "expires_at": issued["expires_at"],
+        "storage": str(manager.storage_path),
+        "env": "AUTOREDTEAM_API_KEY",
+    }
+    _output(payload, output)
+
+
 # ──────────────────────────── skills ────────────────────────────
 
 

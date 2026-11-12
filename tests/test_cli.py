@@ -142,6 +142,13 @@ class TestCLIHelp:
         assert result.exit_code == 0
         assert "profile" in result.output.lower()
 
+    def test_capabilities_auth_key_help(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["capabilities", "auth-key", "--help"])
+        assert result.exit_code == 0
+        assert "AUTOREDTEAM_API_KEY" in result.output
+
     def test_no_args_shows_help(self):
         """无参数调用应显示帮助/用法信息"""
         from cli.main import app
@@ -350,3 +357,44 @@ class TestCLIAIRedTeamConvert:
         assert result.exit_code == 0
         assert payload["result"]["converter"] == "base64"
         assert payload["result"]["metadata"]["modifies_payload"] is True
+
+
+class TestCLIAuthKey:
+    """Operator CLI contract for MCP API key provisioning."""
+
+    def test_auth_key_writes_hashed_store_and_prints_secret_once(self, tmp_path):
+        from cli.main import app
+
+        result = runner.invoke(
+            app,
+            [
+                "capabilities",
+                "auth-key",
+                "--name",
+                "ci",
+                "--permissions",
+                "read,scan",
+                "--max-level",
+                "moderate",
+                "--storage",
+                str(tmp_path),
+            ],
+        )
+        payload = json.loads(result.stdout)
+
+        assert result.exit_code == 0
+        assert payload["name"] == "ci"
+        assert payload["env"] == "AUTOREDTEAM_API_KEY"
+        assert "." in payload["full_key"]
+        store = (tmp_path / "keys.json").read_text(encoding="utf-8")
+        assert payload["full_key"] not in store
+        assert payload["key_id"] in store
+
+    def test_auth_key_rejects_unknown_permission(self, tmp_path):
+        from cli.main import app
+
+        result = runner.invoke(
+            app,
+            ["capabilities", "auth-key", "--permissions", "root", "--storage", str(tmp_path)],
+        )
+        assert result.exit_code != 0
