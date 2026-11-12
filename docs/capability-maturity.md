@@ -58,7 +58,7 @@ executor.
 - Includes the `safe` profile.
 - Reconnaissance and vulnerability detection against an explicit local or owned target.
 - Run from an isolated environment with outbound network controls.
-- Record target authorization outside the tool until scope enforcement is unified.
+- Record written target authorization and set `AUTORT_TARGET_ALLOWLIST` when contacting a host.
 
 ### Active lab
 

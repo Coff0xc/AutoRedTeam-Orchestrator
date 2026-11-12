@@ -281,6 +281,15 @@ def register_evidence_tools(mcp, counter, logger):
                 "finding 的 url 必须是不含路径穿越的 http/https 地址",
                 error_type="InvalidFinding",
             )
+        from core.security.target_scope import check_target
+
+        scope = check_target(url)
+        if not scope.allowed:
+            return ToolResult.fail(
+                f"finding url is outside the authorized allowlist ({scope.reason})",
+                error_type="TargetScopeError",
+                data={"code": scope.reason, "url": url},
+            )
         if not vuln_type:
             return ToolResult.fail(
                 "finding 缺少 vuln_type/type，无法选择验证器",
