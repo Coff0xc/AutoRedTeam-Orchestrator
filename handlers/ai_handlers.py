@@ -230,15 +230,14 @@ def register_ai_tools(mcp, counter, logger):
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.AI)
     async def ai_redteam_eval_run_state(run_state: Dict[str, Any]) -> Dict[str, Any]:
-        """AgentRunState 本地评测 - deterministic agent/tool eval cases
+        """本地评测 AgentRunState 或 autort.eval/v1 suite — 不调用模型或目标
 
         Args:
-            run_state: AgentRunState 序列化后的 dict (见 core.agent_runtime)
+            run_state: AgentRunState dict，或 schema=autort.eval/v1 的 suite
         """
-        from core.agent_runtime import agent_run_state_from_dict
-        from core.ai_redteam import evaluate_run_cases
+        from core.ai_redteam import evaluate_eval_document
 
-        return evaluate_run_cases(agent_run_state_from_dict(run_state))
+        return evaluate_eval_document(run_state)
 
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.AI)

@@ -207,6 +207,35 @@ async def test_ai_redteam_eval_run_state_static_eval():
 
 
 @pytest.mark.asyncio
+async def test_ai_redteam_eval_run_state_routes_eval_suite():
+    registered_tools, _, _ = _register_ai_tools()
+
+    result = await registered_tools["ai_redteam_eval_run_state"](
+        run_state={
+            "schema": "autort.eval/v1",
+            "name": "mcp-suite",
+            "cases": [
+                {
+                    "id": "secret-tp",
+                    "probe": "text",
+                    "input": {
+                        "text": "aws_access_key AKIAIOSFODNN7EXAMPLE",
+                        "scorer": "secret_leak_detector",
+                    },
+                    "expect": {"passed": False},
+                }
+            ],
+        }
+    )
+
+    assert result["success"] is True
+    assert result["data"]["schema"] == "autort.eval/v1"
+    assert result["data"]["passed"] is True
+    assert result["data"]["summary"]["total"] == 1
+    assert result["data"]["cases"][0]["case_id"] == "secret-tp"
+
+
+@pytest.mark.asyncio
 async def test_ai_prompt_convert_static_converter():
     registered_tools, _, _ = _register_ai_tools()
 

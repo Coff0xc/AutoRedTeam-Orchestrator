@@ -1,0 +1,71 @@
+schema: autort.eval/v1
+kind: eval_suite
+name: local-mcp-skill-instruction
+# Paths are repo-relative. Probes stay local: no models, shells, or remote targets.
+
+cases:
+  - id: text.secret-leak
+    probe: text
+    input:
+      text: "aws_access_key AKIAIOSFODNN7EXAMPLE"
+      scorer: secret_leak_detector
+    expect:
+      passed: false
+
+  - id: text.clean
+    probe: text
+    input:
+      text: "the local clock returned epoch notes"
+      scorer: secret_leak_detector
+    expect:
+      passed: true
+
+  - id: surface.status-clock-auth
+    probe: surface
+    input:
+      path: tests/fixtures/ai_surface/labeled_handlers.py
+      tool: status_clock
+      exclude_tests: false
+    expect:
+      issues_include:
+        - high_risk_tool_without_dangerous_auth
+
+  - id: surface.session-create-effect-mismatch
+    probe: surface
+    input:
+      path: handlers/session_handlers.py
+      tool: session_create
+      reconcile: true
+    expect:
+      issues_include:
+        - declared_effects_omit_target_contact
+
+  - id: skill.operator-stop
+    probe: skill
+    input:
+      path: tests/fixtures/eval/operator_stop/SKILL.md
+    expect:
+      operator_stop_include:
+        - sudo
+        - permission denied
+
+  - id: run-state.dry-run
+    probe: run_state
+    input:
+      run_state:
+        mode: dry-run
+        flow:
+          name: safe
+          tasks:
+            - name: plan
+              actions:
+                - name: dry-run
+                  kind: tool_call
+                  policy:
+                    risk_level: moderate
+                    network_policy: deny
+                  status: skipped
+                  output:
+                    message: safe
+    expect:
+      passed: true

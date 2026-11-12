@@ -486,20 +486,33 @@ def ai_redteam_convert(
 
 @ai_redteam_app.command("eval-run")
 def ai_redteam_eval_run(
-    run_state: str = typer.Argument(..., help="AgentRunState JSON 文件路径"),
+    run_state: str = typer.Argument(
+        ..., help="autort.eval suite YAML/JSON 或 AgentRunState JSON 路径"
+    ),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+    format: str = typer.Option("json", "--format", "-f", help="输出格式: json/sarif"),
+    ci: bool = typer.Option(False, "--ci", help="CI 模式: 评测未通过时返回非零退出码"),
 ):
-    """本地评测 AgentRunState — Giskard/Inspect 风格 deterministic eval"""
-    from core.ai_redteam import evaluate_run_cases
+    """本地评测 eval suite 或 AgentRunState；不调用模型或外部目标"""
+    from core.ai_redteam import evaluate_path, suite_to_sarif
 
     try:
-        data = json.loads(Path(run_state).read_text(encoding="utf-8"))
-        result = evaluate_run_cases(_run_state_from_dict(data))
+        result = evaluate_path(run_state)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         typer.echo(f"AI red-team eval failed: {exc}", err=True)
         raise typer.Exit(2) from exc
 
-    _output(result, output)
+    fmt = format.lower()
+    if fmt == "sarif":
+        _output(suite_to_sarif(result), output)
+    elif fmt == "json":
+        _output(result, output)
+    else:
+        typer.echo(f"Unknown format {format!r}; use json or sarif", err=True)
+        raise typer.Exit(2)
+
+    if ci and not result.get("passed"):
+        raise typer.Exit(2)
 
 
 # ──────────────────────────── ai-surface ────────────────────────────

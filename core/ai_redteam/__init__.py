@@ -13,6 +13,15 @@ from core.ai_redteam.eval_cases import (
     default_eval_cases,
     evaluate_run_cases,
 )
+from core.ai_redteam.eval_contract import (
+    EVAL_SCHEMA,
+    evaluate_eval_document,
+    evaluate_path,
+    evaluate_suite,
+    is_eval_suite,
+    load_eval_document,
+    suite_to_sarif,
+)
 from core.ai_redteam.models import (
     AIRedTeamRunResult,
     Attempt,
@@ -60,9 +69,16 @@ __all__ = [
     "convert_prompt",
     "converters_summary",
     "default_eval_cases",
+    "EVAL_SCHEMA",
     "evaluate_all",
+    "evaluate_eval_document",
+    "evaluate_path",
     "evaluate_run_cases",
+    "evaluate_suite",
     "evaluate_text",
+    "is_eval_suite",
+    "load_eval_document",
     "load_scenario",
     "plugin_summary",
+    "suite_to_sarif",
 ]
