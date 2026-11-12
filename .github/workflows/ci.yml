@@ -66,6 +66,8 @@ jobs:
         run: |
           python -c "from autort import Scanner; print(Scanner)"
           python -m cli.main capabilities manifest --profile safe
+          python -m cli.main ai-redteam eval-run config/ai_redteam.eval.example.yaml --ci
+          python -m cli.main runtime-api run config/runtime.local.example.yaml --local --ci
 
       - name: Run unit tests
         shell: bash
@@ -129,6 +131,10 @@ jobs:
           pip install pytest-asyncio pytest-timeout pytest-cov
       - name: Check syntax
         run: python -m py_compile mcp_stdio_server.py
+      - name: Local audit-gate smoke
+        run: |
+          python -m cli.main ai-redteam eval-run config/ai_redteam.eval.example.yaml --ci
+          python -m cli.main runtime-api run config/runtime.local.example.yaml --local --ci
       - name: Run unit tests (fast)
         run: |
           set +e

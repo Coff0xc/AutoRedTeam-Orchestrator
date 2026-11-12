@@ -102,6 +102,8 @@ def test_image_context_matches_wheel_excludes():
     assert "administration:" not in workflow
     assert "run: pyproject-build" in ci
     assert "run: python -m build" not in ci
+    assert "ai-redteam eval-run config/ai_redteam.eval.example.yaml --ci" in ci
+    assert "runtime-api run config/runtime.local.example.yaml --local --ci" in ci
 
 
 def test_env_example_documents_live_gates():
