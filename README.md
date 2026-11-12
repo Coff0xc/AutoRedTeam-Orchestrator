@@ -343,7 +343,7 @@ These do not contact a target. CVE search reads the local notes.
 | `code-agent` | `expand` | Who calls whom, from the source |
 | `runtime-api` | `serve` | A local read-only view of a saved run |
 | `sandbox` | `docker-smoke` | A local Docker smoke test, network off |
-| `ai-redteam` | `run`, `catalog`, `convert`, `eval-run` | A written scenario. Dry-run unless you go further |
+| `ai-redteam` | `run`, `catalog`, `convert`, `eval-run` | A written scenario or local eval suite. Dry-run unless you go further |
 
 ### Higher levels
 

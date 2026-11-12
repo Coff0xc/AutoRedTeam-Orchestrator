@@ -40,6 +40,7 @@ autort ai-surface scan --path handlers --format sarif -o surface.sarif
 autort ai-surface scan-mcp-config --path .mcp.json --format sarif
 autort ai-redteam run scenario.yaml -o run.json
 autort ai-redteam eval-run run.json
+autort ai-redteam eval-run config/ai_redteam.eval.example.yaml --format sarif --ci
 autort runtime-api serve --run-state run.json --host 127.0.0.1 --port 8765
 autort sandbox docker-smoke
 autort capabilities matrix

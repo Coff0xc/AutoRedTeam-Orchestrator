@@ -83,6 +83,17 @@ L1 工具层     106 个 tool + finding 级证据契约（沿用 verified / veri
 | 2.3 | 无证据 finding 由代码降级并标记，且区分“探测器自述”与“独立验证” | 集成测试：探测器风格 finding 被降级；经 `verify_finding` 后不被降级 | 完成 |
 | 2.4 | 验证器暴露为 MCP tool，走完 manifest 注册与 profile 门禁 | 当时 manifest 142 项（tool 132）；profile 计数 safe 23 / scan 86 / active-lab 106 / full 142。现行计数见 README | 完成 |
 
+## 规划 2：audit-gate 产品化
+
+产品方向是本地 MCP/AI 攻击面审计 + 证据门禁，对齐 promptfoo/garak/PyRIT 的评测合同，而不是 PentAGI 式自主渗透平台。P3 harness 仍暂停。
+
+| 项 | 内容 | 验收 | 状态 |
+|---|---|---|---|
+| P2.1 | fail-closed 能力档 + finding 级证据门禁 | profiles + evidence gate 测试 | 完成 |
+| P2.2 | HITL + DNS-aware target allowlist + 本机 XSS `verify_finding` lab | `test_hitl` / `test_target_scope` / `test_verify_finding_fixture` | 完成 |
+| P2.3 | 本地 eval 合同 `autort.eval/v1`（text / surface / skill / run_state），不调模型 | `autort ai-redteam eval-run config/ai_redteam.eval.example.yaml` 全绿 | 完成 |
+| P2.4 | 薄 `agent_runtime` 循环（最后） | 未做 | 未做 |
+
 ## P3：harness
 
 设计见下方「P3 详细设计」；**尚未实施**。

@@ -29,7 +29,7 @@ only because an implementation exists in the repository.
 | HTML reporting | Preview | Untrusted finding content needs escaping hardening before reports are broadly shared. |
 | Session storage | Preview | Basic persistence exists; orchestrator checkpoint/resume remains Experimental. |
 | MCP stdio integration | Preview | Defaults to a fail-closed `safe` registration profile; treat as trusted-local only because authentication is not yet a uniform global boundary. |
-| AI-system red-team scenario runner | Preview | Plan-only dry-run; it does not request a target, model, shell, or tool. |
+| AI-system red-team scenario runner | Preview | Plan-only dry-run plus a local eval suite (`autort.eval/v1`: text, surface, skill, run-state). It does not call a model, shell, or remote target. |
 | Agent runtime models, policy, trace, and local API | Preview | Primarily plan-time governance metadata and read-only views. |
 | Automated pentest orchestrator | Experimental | Defaults to dry-run; checkpoint/resume is not release-certified. |
 | Docker sandbox executor | Experimental | An attached container executor reduces exposure; policy checks alone do not isolate execution. |
@@ -87,7 +87,8 @@ executor.
 - MCP key provisioning does not yet have a stable operator CLI contract.
 - Runtime policy and sandbox metadata do not automatically move execution into a container.
 - The AI red-team runner produces planned attempts and `not_run` scores; it is not an autonomous
-  target executor.
+  target executor. The eval contract scores local scanners and instruction text against labels; it
+  does not probe live models.
 - The CLI `capabilities matrix` reports source-structure comparisons and must not be interpreted as
   this product maturity matrix.
 - HTML reports may contain untrusted finding content and require isolated viewing until escaping is
