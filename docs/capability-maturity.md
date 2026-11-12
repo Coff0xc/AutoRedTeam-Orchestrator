@@ -80,8 +80,10 @@ executor.
   those entry points refuse higher surfaces before importing the mapped engine. The gate is not
   authentication, target scope, approval, or process isolation, and direct `core` imports outside
   those entry points stay ungated.
-- MCP profiles still filter surfaces after a handler module is imported and do not provide
-  dependency or import-side-effect isolation for mixed-profile modules.
+- Mixed-profile handler modules (cve, ai, report, resources, prompts, misc) are still imported
+  when they contain a safe surface. Higher-profile tools in those modules are not defined under
+  `safe`, `core.cve` exports load on access, and `runtime_helpers` does not import `agent_runtime`
+  until a tool runs. Direct `core` imports outside MCP/CLI/SDK entry points stay ungated.
 - MCP authentication is enforced at the tool wrapper from the capability manifest
   (`auth_required`) plus decorator rank. Prompts and resources stay outside that wrapper.
 - MCP API keys are issued with `autort capabilities auth-key`. The secret is printed once;
