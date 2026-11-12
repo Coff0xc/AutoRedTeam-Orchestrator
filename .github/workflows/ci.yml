@@ -46,13 +46,17 @@ jobs:
 
   test-windows:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.12']
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
       - name: Install dependencies
@@ -73,7 +77,11 @@ jobs:
         shell: bash
         run: |
           set +e
-          pytest tests/ -q --tb=line --maxfail=10 --timeout=30 -m "not slow and not integration and not network" --ignore=tests/test_performance_integration.py --ignore=tests/test_modules_jwt.py --junitxml=pytest.xml
+          pytest tests/ -q --tb=line --timeout=30 \
+            -m "not slow and not integration and not network" \
+            --ignore=tests/test_performance_integration.py \
+            --ignore=tests/test_modules_jwt.py \
+            --junitxml=pytest.xml
           status=$?
           set -e
           python scripts/emit_pytest_annotations.py pytest.xml
