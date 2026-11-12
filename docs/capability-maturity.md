@@ -105,8 +105,10 @@ executor.
 - HTML, executive, and Markdown reports escape finding strings. JSON report files encode `<>&`
   as Unicode escapes so a raw payload cannot execute if the file is viewed as HTML; `json.loads`
   recovers original finding text. `to_dict()` stays unescaped for programmatic consumers.
-- Checkpoint/resume, the universal external engine router, and bundled template/package-data flows
-  require further integration testing.
+- The default wheel ships `core/skills/pins.yaml`. `autort skills catalog` on an installed
+  wheel reads that pin table and does not vendor skill bodies or clone. Repo-root
+  `templates/` CVE YAML stays checkout-only. Checkpoint/resume and the universal external
+  engine router still need further integration testing.
 - Windows CI runs the fast suite on Python 3.10 and 3.12 (`windows-latest`, no
   `--maxfail`). Slow, integration, and network tests stay out of that job. Ubuntu
   still covers 3.10/3.11/3.12.
