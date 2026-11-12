@@ -90,10 +90,17 @@ copy procedures into the tool schema or the prompt body.
 
 ### Target scope
 
-- Target strings are not yet checked by one universal authorization and DNS-resolution policy across
-  all legacy handlers, SDK calls, and orchestrator phases.
-- Maintain an explicit external allowlist and network egress policy.
-- Treat redirects, DNS changes, proxies, and metadata endpoints as separate authorization concerns.
+- `AUTORT_TARGET_SCOPE` (`off` | `enforce`) and `AUTORT_TARGET_ALLOWLIST` are one DNS-aware
+  policy used by CLI constructors, SDK constructors, MCP `validate_inputs`, and `secure_tool`.
+- The default is `off` (format and SSRF checks only). A non-empty allowlist turns the gate on
+  even when the mode is `off`. `enforce` with an empty list denies every target. Unknown modes
+  fail closed to `enforce`.
+- Matching covers exact host, `*.suffix` / `.suffix`, IP, CIDR, and URL origin. Hostnames are
+  resolved; private, loopback, link-local, and metadata IPs need an explicit IP or CIDR entry.
+- Empty targets (CVE search) skip the gate. Direct `core` imports outside CLI, SDK, and MCP
+  stay ungated.
+- Treat redirects, DNS changes after the check, proxies, and metadata endpoints as separate
+  authorization concerns. Keep an external network egress policy.
 
 ### Data and artifacts
 
@@ -135,7 +142,7 @@ Before remote, shared, or enterprise deployment, the project requires:
 - one request-time policy that enforces manifest metadata across MCP, CLI, and SDK paths;
 - request-scoped principals instead of process-global identity;
 - consistent RBAC for every tool, resource, and prompt;
-- DNS-aware target scope and redirect enforcement;
+- redirect enforcement after the DNS-aware allowlist check;
 - action-bound, expiring approval tokens;
 - mandatory isolated executors for active operations;
 - immutable artifact provenance and durable audit storage;

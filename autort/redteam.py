@@ -14,6 +14,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from core.capability_manifest import require_surface
+from core.security.target_scope import assert_in_scope
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,7 @@ class RedTeam:
             执行结果字典
         """
         require_surface(_LATERAL_SURFACES.get(method, "lateral_auto"))
+        assert_in_scope(target)
         try:
             module = self._get_lateral_module(method)
 
@@ -127,6 +129,7 @@ class RedTeam:
             Beacon 信息字典
         """
         require_surface("c2_beacon_start")
+        assert_in_scope(server)
         try:
             from core.c2.beacon import Beacon, BeaconConfig
 
@@ -222,6 +225,7 @@ class RedTeam:
             提权结果字典
         """
         require_surface("privilege_escalate")
+        assert_in_scope(target)
         try:
             from core.privilege_escalation.base import EscalationConfig
 

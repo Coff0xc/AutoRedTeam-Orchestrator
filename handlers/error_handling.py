@@ -414,6 +414,23 @@ _VALIDATION_TYPES = {
     "path": "path",
 }
 
+_TARGET_SCOPE_TYPES = {
+    "url",
+    "ip",
+    "ipv4",
+    "ipv6",
+    "domain",
+    "cidr",
+    "target",
+    "validate_url",
+    "validate_ip",
+    "validate_ipv4",
+    "validate_ipv6",
+    "validate_domain",
+    "validate_cidr",
+    "auto",
+}
+
 
 def _get_validator(validation_type: str) -> Callable[[str], bool]:
     """获取验证函数"""
@@ -639,6 +656,17 @@ def _do_validation(
                     "ValidationError",
                     {param_name: value},
                 )
+
+            if validator_name in _TARGET_SCOPE_TYPES or validation_type in _TARGET_SCOPE_TYPES:
+                from core.security.target_scope import check_target
+
+                decision = check_target(item)
+                if not decision.allowed:
+                    return format_error_response(
+                        f"参数 '{param_name}' 不在授权目标范围内: '{item}' ({decision.reason})",
+                        "TargetScopeError",
+                        {param_name: value, "code": decision.reason},
+                    )
 
     return None
 

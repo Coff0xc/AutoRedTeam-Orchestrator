@@ -20,6 +20,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from core.capability_manifest import require_surface
+from core.security.target_scope import assert_in_scope
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ class Scanner:
 
     def __init__(self, target: str, config: Optional[Dict[str, Any]] = None):
         self._validate_target(target)
+        assert_in_scope(target)
         self.target = target
         self._config = config or {}
 

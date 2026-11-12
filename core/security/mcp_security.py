@@ -427,6 +427,47 @@ class InputValidator:
                 return True
         return False
 
+    def resolve_hostname(self, hostname: str) -> ValidationResult:
+        """Resolve a hostname or IP literal. Fail-closed on DNS errors.
+
+        Does not apply private-IP policy. Callers decide whether a resolved
+        address is in scope (SSRF vs allowlist).
+        """
+        if not hostname:
+            return ValidationResult(valid=False, errors=["主机名不能为空"])
+        if re.match(r"^(0x[0-9a-fA-F]+|[0-9]+)$", hostname) or re.match(r"^0\d", hostname):
+            return ValidationResult(
+                valid=False,
+                errors=["主机使用非标准 IP 表示，已拒绝"],
+            )
+        try:
+            ip = ipaddress.ip_address(hostname)
+            return ValidationResult(valid=True, resolved_ips=[str(ip)])
+        except ValueError:
+            pass
+        try:
+            addrinfo = socket.getaddrinfo(hostname, None)
+        except (socket.gaierror, OSError):
+            logger.warning("SSRF 检查: 无法解析域名 %s，拒绝请求", hostname)
+            return ValidationResult(
+                valid=False,
+                errors=[f"无法解析域名 {hostname}，SSRF 安全检查未通过"],
+            )
+        pinned_ips: List[str] = []
+        seen = set()
+        for _family, _, _, _, sockaddr in addrinfo:
+            ip_str = sockaddr[0]
+            if ip_str in seen:
+                continue
+            seen.add(ip_str)
+            pinned_ips.append(ip_str)
+        if not pinned_ips:
+            return ValidationResult(
+                valid=False,
+                errors=[f"无法解析域名 {hostname}，SSRF 安全检查未通过"],
+            )
+        return ValidationResult(valid=True, resolved_ips=pinned_ips)
+
     def _validate_url(self, url: str, allow_private: bool = False) -> ValidationResult:
         """验证 URL（含 SSRF 检查）"""
         parsed = urlparse(url)
@@ -441,48 +482,27 @@ class InputValidator:
                 errors=["URL 缺少主机名"],
             )
 
-        # SSRF 检查：提取主机名检查私有 IP
         if not allow_private:
             hostname = parsed.hostname
             if hostname:
-                # 检测非标准 IP 表示（十六进制 0x7f000001、八进制 0177.0.0.1、纯十进制 2130706433）
-                if re.match(r"^(0x[0-9a-fA-F]+|[0-9]+)$", hostname) or re.match(r"^0\d", hostname):
-                    return ValidationResult(
-                        valid=False,
-                        errors=["URL 主机使用非标准 IP 表示，已拒绝"],
-                    )
-                try:
-                    ip = ipaddress.ip_address(hostname)
-                    if self._is_private_ip(ip):
-                        return ValidationResult(
-                            valid=False,
-                            errors=["URL 主机为私有 IP 地址"],
-                        )
-                    # 主机名本身是 IP 地址，直接记录用于 DNS pinning
-                    return ValidationResult(valid=True, resolved_ips=[str(ip)])
-                except ValueError:
-                    # hostname 是域名，解析 DNS 检查是否指向私有 IP（防止 DNS rebinding）
-                    try:
-                        addrinfo = socket.getaddrinfo(hostname, None)
-                        for family, _, _, _, sockaddr in addrinfo:
-                            resolved_ip = ipaddress.ip_address(sockaddr[0])
-                            if self._is_private_ip(resolved_ip):
-                                return ValidationResult(
-                                    valid=False,
-                                    errors=[
-                                        f"URL 域名 {hostname} 解析到私有 IP 地址 {sockaddr[0]}"
-                                    ],
-                                )
-                        # DNS 解析通过，记录已验证的 IP 用于 DNS pinning（防止 TOCTOU）
-                        pinned_ips = [sockaddr[0] for _, _, _, _, sockaddr in addrinfo]
-                        return ValidationResult(valid=True, resolved_ips=pinned_ips)
-                    except socket.gaierror:
-                        # fail-close: DNS 解析失败时拒绝请求，防止绕过 SSRF 检查
-                        logger.warning("SSRF 检查: 无法解析域名 %s，拒绝请求", hostname)
-                        return ValidationResult(
-                            valid=False,
-                            errors=[f"无法解析域名 {hostname}，SSRF 安全检查未通过"],
-                        )
+                resolution = self.resolve_hostname(hostname)
+                if not resolution.valid:
+                    return resolution
+                for ip_str in resolution.resolved_ips:
+                    resolved_ip = ipaddress.ip_address(ip_str)
+                    if self._is_private_ip(resolved_ip):
+                        try:
+                            ipaddress.ip_address(hostname)
+                            return ValidationResult(
+                                valid=False,
+                                errors=["URL 主机为私有 IP 地址"],
+                            )
+                        except ValueError:
+                            return ValidationResult(
+                                valid=False,
+                                errors=[f"URL 域名 {hostname} 解析到私有 IP 地址 {ip_str}"],
+                            )
+                return ValidationResult(valid=True, resolved_ips=list(resolution.resolved_ips))
 
         return ValidationResult(valid=True)
 
@@ -802,11 +822,21 @@ class MCPSecurityMiddleware:
                     if not result.valid:
                         return {"success": False, "error": f"Invalid target: {result.errors}"}
                     # 替换为清洗后的值
+                    scoped = result.sanitized_value if result.sanitized_value else target_value
+                    from core.security.target_scope import check_target
+
+                    decision = check_target(scoped)
+                    if not decision.allowed:
+                        return {
+                            "success": False,
+                            "error": f"Target out of scope: {decision.reason}",
+                            "code": decision.reason,
+                        }
                     if "target" in kwargs:
-                        kwargs["target"] = result.sanitized_value
+                        kwargs["target"] = scoped
                     elif target_idx is not None and target_idx < len(args):
                         args = list(args)
-                        args[target_idx] = result.sanitized_value
+                        args[target_idx] = scoped
                         args = tuple(args)
 
                 return await func(*args, **kwargs)

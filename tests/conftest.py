@@ -38,6 +38,13 @@ def disable_auth_for_tests(request):
     _auth_config["mode"] = original_mode
 
 
+@pytest.fixture(autouse=True)
+def clear_target_scope_env(monkeypatch):
+    """Keep the shared allowlist off unless a test sets it."""
+    monkeypatch.delenv("AUTORT_TARGET_SCOPE", raising=False)
+    monkeypatch.delenv("AUTORT_TARGET_ALLOWLIST", raising=False)
+
+
 # ==================== Pytest-asyncio 配置 ====================
 pytest_plugins = ("pytest_asyncio",)
 

@@ -129,6 +129,17 @@ def _require_surface(name: str) -> None:
         raise typer.Exit(2) from exc
 
 
+def _require_target(target: str) -> None:
+    """Refuse a command when the shared target allowlist does not include the target."""
+    from core.security.target_scope import TargetScopeError, assert_in_scope
+
+    try:
+        assert_in_scope(target)
+    except TargetScopeError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(2) from exc
+
+
 # 注册启动回调
 @app.callback(invoke_without_command=True)
 def main_callback(ctx: typer.Context) -> None:
@@ -153,6 +164,7 @@ def scan(
 ):
     """扫描目标 — 端口扫描 / 完整侦察"""
     _require_surface("full_recon" if full or recon_only else "port_scan")
+    _require_target(target)
     from autort import Scanner
 
     config = {}
@@ -190,6 +202,7 @@ def detect(
 ):
     """漏洞检测 — 扫描目标漏洞"""
     _require_surface("vuln_scan")
+    _require_target(target)
     from autort import Scanner
 
     categories = [c.strip() for c in category.split(",")] if category else None
@@ -245,6 +258,7 @@ def exploit(
         raise typer.Exit(1)
 
     _require_surface(surface)
+    _require_target(target)
     from autort import Exploiter
 
     exploiter = Exploiter(target)
@@ -295,6 +309,7 @@ def pentest(
 ):
     """一键渗透测试"""
     _require_surface("pentest_resume" if resume else "auto_pentest")
+    _require_target(target)
     from autort import AutoPentest
 
     config = {"timeout": timeout}
@@ -351,6 +366,7 @@ def nuclei(
 ):
     """Nuclei 模板扫描 — 纯Python引擎，无需nuclei二进制"""
     _require_surface("nuclei_scan")
+    _require_target(target)
     from autort import Scanner
 
     tag_list = [t.strip() for t in tags.split(",")] if tags else None
