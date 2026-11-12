@@ -111,6 +111,16 @@ if unexpected:
     fail(f"installed handlers scan unexpected issues: {unexpected}")
 if "static_coverage" not in summary:
     fail("installed handlers scan did not reconcile the manifest")
+
+catalog = run_cli(["skills", "catalog"])
+if catalog.get("execute_scripts") is not False:
+    fail("installed skill catalog execute_scripts is not false")
+if catalog.get("bodies_vendored") is not False:
+    fail("installed skill catalog bodies_vendored is not false")
+ids = {item.get("id") for item in catalog.get("packs") or []}
+expected = {"pale-knight-redteam-skill", "transilienceai-communitytools"}
+if ids != expected:
+    fail(f"installed skill catalog packs {sorted(ids)}")
 """
 
 
@@ -153,6 +163,13 @@ def _assert_wheel_omits_engines(wheel: Path) -> None:
     assert leaked == []
 
 
+def _assert_wheel_package_data(wheel: Path) -> None:
+    with zipfile.ZipFile(wheel) as archive:
+        names = archive.namelist()
+    assert "core/skills/pins.yaml" in names
+    assert not any(name == "templates/" or name.startswith("templates/") for name in names)
+
+
 def _venv_python(venv: Path) -> Path:
     if os.name == "nt":
         return venv / "Scripts" / "python.exe"
@@ -176,6 +193,7 @@ def test_installed_wheel_hides_experimental_engines(tmp_path: Path) -> None:
 
     wheel = _wheel_path(tmp_path)
     _assert_wheel_omits_engines(wheel)
+    _assert_wheel_package_data(wheel)
     python = _install_wheel(tmp_path / "venv", wheel)
     probe = tmp_path / "probe.py"
     probe.write_text(_PROBE, encoding="utf-8")

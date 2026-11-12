@@ -98,6 +98,8 @@ def test_image_context_matches_wheel_excludes():
         assert package in dockerignore
         dotted = package.replace("/", ".")
         assert f'"{dotted}*"' in pyproject
+    assert '"core.skills" = ["pins.yaml"]' in pyproject
+    assert (ROOT / "core" / "skills" / "pins.yaml").is_file()
     assert "platforms: linux/amd64,linux/arm64" in workflow
     assert "administration:" not in workflow
     assert "run: pyproject-build" in ci
