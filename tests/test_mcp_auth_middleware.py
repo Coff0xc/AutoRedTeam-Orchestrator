@@ -829,3 +829,43 @@ class TestRegistrationLayerAuth:
 
         allowed_tools = resources["registered_tools"]()
         assert "runtime" in allowed_tools or "total" in allowed_tools
+
+    @pytest.mark.asyncio
+    async def test_enabled_catalog_prompt_still_requires_auth(self, monkeypatch):
+        import logging
+
+        from mcp.server import MCPServer
+
+        import core.security.mcp_auth_middleware as mod
+        from handlers import register_all_handlers
+
+        mod._auth_config["mode"] = mod.AuthMode.STRICT
+        monkeypatch.delenv("AUTOREDTEAM_API_KEY", raising=False)
+        monkeypatch.delenv("MCP_API_KEY", raising=False)
+
+        class Counter:
+            def __init__(self):
+                self.counts: dict[str, int] = {}
+                self.total = 0
+
+            def add(self, category: str, count: int = 1):
+                self.counts[category] = self.counts.get(category, 0) + count
+                self.total += count
+
+        mcp = MCPServer("enable-auth-prompt")
+        register_all_handlers(mcp, Counter(), logging.getLogger(__name__), profile="full")
+        enabled = await mcp.call_tool("tool_enable", {"name": "plan_pentest", "kind": "prompt"})
+        payload = enabled.structured_content or {}
+        inner = payload.get("result", payload)
+        data = inner.get("data", inner) if isinstance(inner, dict) else {}
+        assert inner.get("success") is True or data.get("enabled") is True
+
+        prompt = await mcp.get_prompt(
+            "plan_pentest",
+            {"target": "http://example.com", "scope": "full"},
+        )
+        text = " ".join(
+            str(getattr(message.content, "text", message.content)) for message in prompt.messages
+        )
+        assert "AUTH_REQUIRED" in text
+        assert "http://example.com" not in text

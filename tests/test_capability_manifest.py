@@ -458,6 +458,31 @@ def test_search_surfaces_points_long_tail_at_tool_enable():
     assert session_card["invoke"] == {"tool": "tool_enable", "name": "session_list"}
 
 
+def test_search_surfaces_points_catalog_prompt_and_resource_at_tool_enable():
+    prompts = search_surfaces("plan_pentest", profile="full", kind="prompt", limit=12)
+    prompt_card = {item["name"]: item for item in prompts["matches"]}["plan_pentest"]
+    assert prompt_card["resident"] is False
+    assert prompt_card["invoke"] == {
+        "tool": "tool_enable",
+        "name": "plan_pentest",
+        "kind": "prompt",
+    }
+
+    sessions = search_surfaces("active_sessions", profile="scan", kind="resource", limit=12)
+    session_card = {item["name"]: item for item in sessions["matches"]}["active_sessions"]
+    assert session_card["resident"] is False
+    assert session_card["invoke"] == {
+        "tool": "tool_enable",
+        "name": "active_sessions",
+        "kind": "resource",
+    }
+
+    resident = search_surfaces("analyze_findings", profile="safe", kind="prompt", limit=12)
+    resident_card = {item["name"]: item for item in resident["matches"]}["analyze_findings"]
+    assert resident_card["resident"] is True
+    assert resident_card["invoke"] == {"prompt": "analyze_findings"}
+
+
 def test_search_surfaces_points_vuln_scan_at_detect_run():
     result = search_surfaces("vuln_scan", profile="scan", kind="tool", limit=12)
     by_name = {item["name"]: item for item in result["matches"]}
@@ -513,3 +538,59 @@ async def test_tool_enable_rejects_higher_profile_surface():
     assert "scan" in text
     names = {item.name for item in await mcp.list_tools()}
     assert "sqli_scan" not in names
+
+
+def _enable_payload(result):
+    payload = result.structured_content or {}
+    inner = payload.get("result", payload)
+    data = inner.get("data", inner) if isinstance(inner, dict) else {}
+    return inner, data
+
+
+@pytest.mark.parametrize(
+    "profile,kind,name,lister",
+    [
+        ("full", "prompt", "plan_pentest", "list_prompts"),
+        ("scan", "resource", "active_sessions", "list_resources"),
+        ("full", "resource", "payload_library", "list_resource_templates"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_tool_enable_registers_catalog_prompt_or_resource(profile, kind, name, lister):
+    mcp = MCPServer(f"enable-{kind}-{name}")
+    register_all_handlers(mcp, Counter(), logging.getLogger(__name__), profile=profile)
+    listed = {item.name for item in await getattr(mcp, lister)()}
+    assert name not in listed
+
+    result = await mcp.call_tool("tool_enable", {"name": name, "kind": kind})
+    inner, data = _enable_payload(result)
+    assert inner.get("success") is True or data.get("enabled") is True
+    invoke = data.get("invoke") or inner.get("invoke")
+    assert invoke[kind] == name
+    if kind == "resource":
+        assert "locator" in invoke
+
+    listed = {item.name for item in await getattr(mcp, lister)()}
+    assert name in listed
+
+
+@pytest.mark.parametrize(
+    "profile,kind,name,required,lister",
+    [
+        ("safe", "prompt", "plan_pentest", "active-lab", "list_prompts"),
+        ("scan", "resource", "payload_library", "active-lab", "list_resource_templates"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_tool_enable_rejects_higher_profile_prompt_or_resource(
+    profile, kind, name, required, lister
+):
+    mcp = MCPServer(f"enable-{kind}-{name}-{profile}")
+    register_all_handlers(mcp, Counter(), logging.getLogger(__name__), profile=profile)
+
+    result = await mcp.call_tool("tool_enable", {"name": name, "kind": kind})
+    text = str(result.structured_content or result.content)
+    assert name in text
+    assert required in text
+    listed = {item.name for item in await getattr(mcp, lister)()}
+    assert name not in listed

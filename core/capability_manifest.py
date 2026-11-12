@@ -1023,10 +1023,18 @@ def capability_profiles() -> dict[str, Any]:
     }
 
 
+def _tool_enable_card(capability: Capability) -> dict[str, Any]:
+    """tool_search / tool_enable hint for a catalog-only surface."""
+    card: dict[str, Any] = {"tool": "tool_enable", "name": capability.name}
+    if capability.kind != "tool":
+        card["kind"] = capability.kind
+    return card
+
+
 def _invoke_card(capability: Capability) -> dict[str, Any]:
     """Compact invocation hint for tool_search cards."""
     if capability.resident:
-        return {"tool": capability.name}
+        return {capability.kind: capability.name}
     if capability.handler == "detector":
         if capability.name == "vuln_scan":
             return {"tool": "detect_run"}
@@ -1035,7 +1043,7 @@ def _invoke_card(capability: Capability) -> dict[str, Any]:
         try:
             detector_class = canonical_detector_class(capability.name)
         except ValueError:
-            return {"tool": "tool_enable", "name": capability.name}
+            return _tool_enable_card(capability)
         return {"tool": "detect_run", "classes": [detector_class]}
     if capability.handler == "recon":
         from core.recon.names import canonical_recon_module
@@ -1043,7 +1051,7 @@ def _invoke_card(capability: Capability) -> dict[str, Any]:
         try:
             module = canonical_recon_module(capability.name)
         except ValueError:
-            return {"tool": "tool_enable", "name": capability.name}
+            return _tool_enable_card(capability)
         return {"tool": "recon_run", "modules": [module]}
     if capability.handler in {"orchestration", "cve"}:
         from core.exploit.names import canonical_exploit_mode
@@ -1051,9 +1059,9 @@ def _invoke_card(capability: Capability) -> dict[str, Any]:
         try:
             mode = canonical_exploit_mode(capability.name)
         except ValueError:
-            return {"tool": "tool_enable", "name": capability.name}
+            return _tool_enable_card(capability)
         return {"tool": "exploit_run", "mode": mode}
-    return {"tool": "tool_enable", "name": capability.name}
+    return _tool_enable_card(capability)
 
 
 def _search_score(capability: Capability, query: str) -> int:

@@ -72,12 +72,13 @@ def register_misc_tools(mcp, counter, logger):
         profile = getattr(mcp, "capability_profile", None)
         if not isinstance(profile, str) or not profile:
             profile = resolve_profile()
-        capability = get_capability(kind, name)
-        if capability.kind != "tool":
+        kind_name = str(kind).strip().lower()
+        if kind_name not in {"tool", "prompt", "resource"}:
             return {
                 "success": False,
-                "error": "tool_enable only enables tools",
+                "error": "kind must be tool, prompt, or resource",
             }
+        capability = get_capability(kind_name, name)
         if not capability.allowed_in(profile):
             raise ProfileDenied(
                 name=capability.name,
@@ -85,7 +86,9 @@ def register_misc_tools(mcp, counter, logger):
                 profile=profile,
                 required_profile=capability.minimum_profile,
             )
-        invoke = {"tool": capability.name}
+        invoke: Dict[str, Any] = {capability.kind: capability.name}
+        if capability.kind == "resource" and capability.locator:
+            invoke["locator"] = capability.locator
         if capability.resident:
             return {
                 "success": True,
@@ -95,24 +98,44 @@ def register_misc_tools(mcp, counter, logger):
             }
 
         inner = getattr(mcp, "_mcp", mcp)
-        catalog = getattr(inner, "_autort_catalog", {})
+        catalog = getattr(inner, "_autort_catalog", None)
+        if not isinstance(catalog, dict):
+            catalog = {}
         key = (capability.kind, capability.name)
         func = catalog.get(key)
+        enable_card: Dict[str, Any] = {"tool": "tool_enable", "name": capability.name}
+        if capability.kind != "tool":
+            enable_card["kind"] = capability.kind
         if func is None:
             return {
                 "success": False,
                 "error": f"{capability.name} is not loaded in this process",
-                "invoke": {"tool": "tool_enable", "name": capability.name},
+                "invoke": enable_card,
             }
         enabled = getattr(inner, "_autort_enabled", None)
         if enabled is None:
             enabled = set()
             setattr(inner, "_autort_enabled", enabled)
         if key not in enabled:
-            inner.tool(
-                name=capability.name,
-                description=capability.public_description(),
-            )(func)
+            description = capability.public_description()
+            if capability.kind == "tool":
+                inner.tool(name=capability.name, description=description)(func)
+            elif capability.kind == "prompt":
+                inner.prompt(name=capability.name, description=description)(func)
+            else:
+                locator = capability.locator
+                if not locator:
+                    return {
+                        "success": False,
+                        "error": f"{capability.name} has no resource locator",
+                        "invoke": enable_card,
+                    }
+                inner.resource(
+                    locator,
+                    name=capability.name,
+                    description=description,
+                    mime_type="application/json",
+                )(func)
             enabled.add(key)
         return {
             "success": True,

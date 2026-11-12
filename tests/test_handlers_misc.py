@@ -78,3 +78,57 @@ async def test_tool_enable_resident_surface_is_already_listed():
     assert result["success"] is True
     assert data["resident"] is True
     assert data["invoke"] == {"tool": "health_check"}
+
+
+@pytest.mark.asyncio
+async def test_tool_enable_resident_prompt_is_already_listed():
+    tools = _register("safe")
+    result = await tools["tool_enable"](name="analyze_findings", kind="prompt")
+    data = result["data"]
+    assert result["success"] is True
+    assert data["resident"] is True
+    assert data["invoke"] == {"prompt": "analyze_findings"}
+
+
+@pytest.mark.asyncio
+async def test_tool_enable_rejects_unknown_kind():
+    tools = _register("safe")
+    result = await tools["tool_enable"](name="plan_pentest", kind="skill")
+    data = result.get("data", result)
+    assert result["success"] is False
+    assert "kind must be tool, prompt, or resource" in str(data.get("error") or data)
+
+
+@pytest.mark.asyncio
+async def test_tool_enable_registers_catalog_prompt_via_inner_factory():
+    from handlers.misc_handlers import register_misc_tools
+
+    registered_tools = {}
+    registered_prompts = {}
+
+    class StubMCP:
+        capability_profile = "full"
+        _autort_catalog = {("prompt", "plan_pentest"): (lambda **kwargs: [])}
+
+        def tool(self, **kwargs):
+            def decorator(func):
+                registered_tools[func.__name__] = func
+                return func
+
+            return decorator
+
+        def prompt(self, **kwargs):
+            def decorator(func):
+                registered_prompts[kwargs.get("name") or func.__name__] = func
+                return func
+
+            return decorator
+
+    register_misc_tools(StubMCP(), MagicMock(), MagicMock())
+
+    result = await registered_tools["tool_enable"](name="plan_pentest", kind="prompt")
+    data = result["data"]
+    assert result["success"] is True
+    assert data["resident"] is False
+    assert data["invoke"] == {"prompt": "plan_pentest"}
+    assert "plan_pentest" in registered_prompts
