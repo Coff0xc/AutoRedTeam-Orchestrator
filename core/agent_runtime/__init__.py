@@ -16,6 +16,16 @@ from core.agent_runtime.benchmark import (
     BenchmarkResult,
     score_run_summary,
 )
+from core.agent_runtime.loop import (
+    LOCAL_STEPS,
+    RUNTIME_SCHEMA,
+    RuntimeLoop,
+    is_runtime_plan,
+    load_runtime_document,
+    plan_to_run_state,
+    run_runtime_document,
+    run_runtime_path,
+)
 from core.agent_runtime.memory import MemoryRecord, RunMemory
 from core.agent_runtime.middleware import (
     MiddlewareDecision,
@@ -80,9 +90,12 @@ __all__ = [
     "RiskLevel",
     "RunMode",
     "RunMemory",
+    "RuntimeLoop",
     "RuntimeMiddleware",
     "RuntimePipeline",
     "RuntimeRunRegistry",
+    "LOCAL_STEPS",
+    "RUNTIME_SCHEMA",
     "SandboxDecision",
     "SandboxMiddleware",
     "SandboxPolicy",
@@ -108,6 +121,11 @@ __all__ = [
     "enforce_sandbox_policy",
     "execute_action_in_docker_sandbox",
     "get_runtime_run",
+    "is_runtime_plan",
+    "load_runtime_document",
+    "plan_to_run_state",
+    "run_runtime_document",
+    "run_runtime_path",
     "smoke_docker_sandbox",
     "get_run_view_response",
     "get_runs_index",

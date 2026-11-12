@@ -69,7 +69,7 @@ app.add_typer(code_agent_app, name="code-agent")
 
 runtime_api_app = typer.Typer(
     name="runtime-api",
-    help="Agent runtime 只读本地 Web/API",
+    help="Agent runtime 本地循环与只读 API",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -735,6 +735,39 @@ def code_agent_expand(
 
 
 # ──────────────────────────── runtime-api ────────────────────────────
+
+
+@runtime_api_app.command("run")
+def runtime_api_run(
+    plan: str = typer.Argument(..., help="autort.runtime plan YAML/JSON 或 AgentRunState JSON"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+    local: bool = typer.Option(False, "--local", help="执行本地 allowlist 步骤"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="只规划，不执行本地步骤"),
+    max_steps: Optional[int] = typer.Option(
+        None, "--max-steps", help="最多处理的 pending action 数"
+    ),
+    ci: bool = typer.Option(False, "--ci", help="CI 模式: 循环未通过时返回非零退出码"),
+):
+    """本地 runtime 循环 — 规划或执行 allowlist 步骤，不调用模型或外部目标"""
+    from core.agent_runtime import run_runtime_path
+
+    allow_local: Optional[bool]
+    if dry_run:
+        allow_local = False
+    elif local:
+        allow_local = True
+    else:
+        allow_local = None
+
+    try:
+        result = run_runtime_path(plan, allow_local=allow_local, max_steps=max_steps)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        typer.echo(f"runtime loop failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    _output(result, output)
+    if ci and not result.get("passed"):
+        raise typer.Exit(2)
 
 
 @runtime_api_app.command("serve")

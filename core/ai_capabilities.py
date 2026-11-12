@@ -184,11 +184,13 @@ CAPABILITIES: List[Capability] = [
         local_modules=[
             "core.agent_runtime.middleware",
             "core.agent_runtime.sandbox",
+            "core.agent_runtime.loop",
             "core.ai_redteam.runner",
             "core.orchestrator.orchestrator",
         ],
         evidence=[
             "RuntimePipeline.apply_action",
+            "RuntimeLoop walks pending actions",
             "AIRedTeamRunner uses runtime_pipeline",
             "AIRedTeamRunner registers run_state in RuntimeRunRegistry",
             "AutoPentestOrchestrator.execute_phase gates legacy phases",
@@ -197,7 +199,7 @@ CAPABILITIES: List[Capability] = [
             "orchestration handlers return runtime decision metadata",
             "recon/report/knowledge/resource handlers register runtime runs",
         ],
-        notes=["RuntimePipeline 是规划期治理层；实际执行仍走旧的 executor 路径。"],
+        notes=["RuntimeLoop 只跑本地 allowlist 步骤；P3 executor harness 仍暂停。"],
     ),
     Capability(
         source="Vulnhuntr",

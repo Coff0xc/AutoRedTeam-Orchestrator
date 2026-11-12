@@ -1,0 +1,20 @@
+schema: autort.runtime/v1
+kind: runtime_plan
+name: local-surface-audit
+mode: local
+max_steps: 8
+# Local allowlist only: ai_surface.scan, ai_surface.scan_skills,
+# ai_surface.scan_mcp_config, skill.read, eval.document.
+# Paths are repo-relative. The loop does not call models or remote targets.
+
+steps:
+  - name: ai_surface.scan
+    inputs:
+      path: tests/fixtures/ai_surface/labeled_handlers.py
+      exclude_tests: false
+  - name: skill.read
+    inputs:
+      path: tests/fixtures/eval/operator_stop/SKILL.md
+  - name: eval.document
+    inputs:
+      path: config/ai_redteam.eval.example.yaml

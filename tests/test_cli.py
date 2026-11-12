@@ -111,6 +111,13 @@ class TestCLIHelp:
         assert result.exit_code == 0
         assert "run-state" in command_help_text(app, "runtime-api", "serve")
 
+    def test_runtime_api_run_help(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["runtime-api", "run", "--help"])
+        assert result.exit_code == 0
+        assert "local" in result.output.lower()
+
     def test_sandbox_docker_smoke_help(self):
         """sandbox docker-smoke --help 应返回成功"""
         from cli.main import app

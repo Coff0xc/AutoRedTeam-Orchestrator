@@ -192,6 +192,12 @@ class Action:
         self.output = output or {}
         self.updated_at = _now()
 
+    def mark_failed(self, reason: str, output: Optional[Dict[str, Any]] = None) -> None:
+        self.status = ActionStatus.FAILED
+        self.error = reason
+        self.output = output or {"success": False, "error": reason}
+        self.updated_at = _now()
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "action_id": self.action_id,
