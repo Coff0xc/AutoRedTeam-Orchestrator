@@ -132,7 +132,7 @@ The numbers are totals, including the levels below. New catalog entries at each 
 | `active-lab` | A machine you can throw away | Lab-only tools. They ask for a separate approval in the record |
 | `full` | The same kind of lab, with the rest switched on | The experimental engines that are still in git |
 
-A second switch is the API key. `AUTOREDTEAM_AUTH_MODE` defaults to `strict`, and protected tools then need `AUTOREDTEAM_API_KEY` (`MCP_API_KEY` is the other accepted name). `permissive` logs and allows. `disabled` works only when `AUTOREDTEAM_ENV=test` or pytest is running. Choosing `full` does not turn the key off.
+A second switch is the API key. `AUTOREDTEAM_AUTH_MODE` defaults to `strict`, and protected tools then need `AUTOREDTEAM_API_KEY` (`MCP_API_KEY` is the other accepted name). Issue a key with `autort capabilities auth-key`; the MCP wrapper enforces the manifest `auth_required` flag even when a handler forgot its decorator. `permissive` logs and allows. `disabled` works only when `AUTOREDTEAM_ENV=test` or pytest is running. Choosing `full` does not turn the key off.
 
 ```mermaid
 sequenceDiagram

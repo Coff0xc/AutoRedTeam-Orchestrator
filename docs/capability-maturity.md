@@ -82,9 +82,10 @@ executor.
   those entry points stay ungated.
 - MCP profiles still filter surfaces after a handler module is imported and do not provide
   dependency or import-side-effect isolation for mixed-profile modules.
-- MCP authentication is applied by individual decorators rather than a uniform registration-layer
-  boundary.
-- MCP key provisioning does not yet have a stable operator CLI contract.
+- MCP authentication is enforced at the tool wrapper from the capability manifest
+  (`auth_required`) plus decorator rank. Prompts and resources stay outside that wrapper.
+- MCP API keys are issued with `autort capabilities auth-key`. The secret is printed once;
+  the store keeps only the hash.
 - Runtime policy and sandbox metadata do not automatically move execution into a container.
 - The AI red-team runner produces planned attempts and `not_run` scores; it is not an autonomous
   target executor. The eval contract scores local scanners and instruction text against labels; it

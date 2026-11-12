@@ -46,6 +46,7 @@ autort runtime-api run config/runtime.local.example.yaml --local
 autort runtime-api serve --run-state run.json --host 127.0.0.1 --port 8765
 autort sandbox docker-smoke
 autort capabilities matrix
+autort capabilities auth-key --name operator --storage ./data/auth
 autort skills catalog
 autort skills read --path ./skills/recon
 ```
