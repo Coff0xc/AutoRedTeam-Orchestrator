@@ -66,7 +66,12 @@ pytest tests/test_sdk.py::test_name
 pytest --cov=core --cov=handlers --cov-report=html
 ```
 
-`pyproject.toml` 已配置 `tests/`、`pytest-asyncio` auto mode、strict markers，以及 `slow`、`integration`、`e2e`、`network`、`unit`、`security` markers。`tests/conftest.py` 会在测试 session 中禁用 MCP auth 检查，避免 strict auth 阻断单元测试。
+`pyproject.toml` 已配置 `tests/`、`pytest-asyncio` auto mode、strict markers，以及 `slow`、`integration`、`e2e`、`network`、`unit`、`security` markers。`tests/conftest.py` 会在测试 session 中禁用 MCP auth 检查，避免 strict auth 阻断单元测试。CI 的 Windows smoke 和 Ubuntu test job 还会跑：
+
+```bash
+python -m cli.main ai-redteam eval-run config/ai_redteam.eval.example.yaml --ci
+python -m cli.main runtime-api run config/runtime.local.example.yaml --local --ci
+```
 
 ### 格式化与质量检查
 

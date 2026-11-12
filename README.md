@@ -597,7 +597,7 @@ The older `poc` plus `list` shortcut stays while `labels.json` pins it.
 
 Tag `v3.1` stays where it is. Callers who want the `self-audit` default set `mode`, or they track `main`.
 
-Effect labels are not yet checked against parameter names.
+Effect labels are checked against target-shaped parameter names at reconcile time. `session_create` is the pinned mismatch.
 
 </details>
 
