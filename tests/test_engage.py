@@ -18,7 +18,8 @@ from core.engage import (
     plan_next,
     run_engagement,
 )
-from core.engage.runner import dispatch_engage_step, empty_state
+from core.engage.runner import dispatch_engage_step, empty_state, save_state
+from core.security.hitl import HitlDecision, reset_hitl, set_approver
 
 runner = CliRunner()
 
@@ -220,3 +221,72 @@ def test_cli_ci_exits_2_on_doom_loop(tmp_path: Path, monkeypatch):
 def test_engage_steps_are_listed():
     assert "engage.recon" in ENGAGE_STEPS
     assert engagement_next.__name__ == "engagement_next"
+
+
+def _pending_verify_engagement(tmp_path: Path, *, hitl: str) -> Path:
+    path = tmp_path / "engage.yaml"
+    payload = init_engagement(
+        "http://127.0.0.1:9",
+        path=path,
+        output_dir=str(tmp_path),
+        profile="scan",
+        hitl=hitl,
+    )
+    config = EngagementConfig.from_dict(payload["config"])
+    state = empty_state()
+    state["recon"] = {"ok": True}
+    state["findings"] = [{"url": "http://127.0.0.1:9", "vuln_type": "xss", "vulnerable": True}]
+    save_state(config, state)
+    return path
+
+
+def test_hitl_denies_live_verify(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    path = _pending_verify_engagement(tmp_path, hitl="approval")
+    called: list[str] = []
+
+    async def _spy(name, inputs, state, dry_run=False):
+        called.append(name)
+        return {"success": True, "step": name}
+
+    monkeypatch.setattr("core.engage.runner.dispatch_engage_step", _spy)
+    try:
+        result = run_engagement(path, dry_run=False, max_steps=1)
+    finally:
+        reset_hitl()
+
+    assert result["loop"]["stopped"] == "hitl_denied"
+    assert result["state"]["status"] == "hitl_denied"
+    assert called == []
+
+
+def test_hitl_approval_runs_verify(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    path = _pending_verify_engagement(tmp_path, hitl="approval")
+    called: list[str] = []
+
+    async def _allow(_request):
+        return HitlDecision(allowed=True, reason="approved")
+
+    async def _spy(name, inputs, state, dry_run=False):
+        called.append(name)
+        return {"success": True, "step": name}
+
+    set_approver(_allow)
+    monkeypatch.setattr("core.engage.runner.dispatch_engage_step", _spy)
+    try:
+        result = run_engagement(path, dry_run=False, max_steps=1)
+    finally:
+        reset_hitl()
+
+    assert called == ["engage.verify"]
+    assert result["loop"]["stopped"] == "max_steps"
+
+
+def test_hitl_skipped_on_dry_run(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    path = _pending_verify_engagement(tmp_path, hitl="approval")
+    result = run_engagement(path, dry_run=True)
+    assert result["passed"] is True
+    assert result["dry_run"] is True
+    assert result["loop"]["stopped"] is None

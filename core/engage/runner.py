@@ -245,6 +245,12 @@ async def _run(
             break
         action = _action_from_card(nxt)
         task.add_action(action)
+        hitl_stop = await _maybe_hitl(action, dry_run=dry_run)
+        if hitl_stop:
+            stopped = hitl_stop
+            state["status"] = hitl_stop
+            state["stopped"] = hitl_stop
+            break
         try:
             output = await dispatch_engage_step(action.name, action.inputs, state, dry_run=dry_run)
         except (OSError, ValueError, KeyError, TypeError) as exc:
@@ -298,6 +304,23 @@ async def _run(
         "run_state": run_state.to_dict(),
         "summary": run_state.summary(),
     }
+
+
+async def _maybe_hitl(action: Action, *, dry_run: bool) -> Optional[str]:
+    """Ask HITL before a live verify step. Dry-run skips the gate."""
+    if dry_run or not action.policy.requires_human_gate:
+        return None
+    from core.security.hitl import gate_tool
+
+    level = action.policy.risk_level
+    auth_level = level.value if hasattr(level, "value") else str(level)
+    decision = await gate_tool(action.name, action.inputs, auth_level)
+    if not decision.allowed:
+        action.mark_blocked(decision.reason)
+        return "hitl_denied"
+    if decision.edited_kwargs:
+        action.inputs.update(decision.edited_kwargs)
+    return None
 
 
 def _action_from_card(card: Mapping[str, Any]) -> Action:
@@ -448,8 +471,19 @@ def _record_dry(state: Dict[str, Any], name: str, output: Mapping[str, Any]) -> 
     elif name == "engage.detect":
         state["findings"] = []
     elif name == "engage.verify":
+        findings = list(state.get("findings") or [])
+        for item in findings:
+            if not isinstance(item, dict):
+                continue
+            if item.get("engagement_verified") is True:
+                continue
+            if str(item.get("verification_status") or "") == "verified":
+                continue
+            item["engagement_verified"] = True
+            item["verification_status"] = "dry_run"
+            break
+        state["findings"] = findings
         state.setdefault("verified", [])
-        state["findings"] = list(state.get("findings") or [])
     elif name == "engage.export":
         state["exported"] = True
         state["report_path"] = "(dry-run)"
