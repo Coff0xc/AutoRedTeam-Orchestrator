@@ -80,6 +80,8 @@ copy procedures into the tool schema or the prompt body.
   registration. The default is `off`. `approval` and `review_edit` ask an independent
   approver before moderate-or-higher tools; a missing, timed-out, or failing approver
   denies and the tool body does not run. A same-process env flag is not that approver.
+  The engagement loop also calls this gate on live `engage.verify` when the engagement
+  file sets `hitl` to `approval` or `review_edit`. Dry-run skips that step gate.
 - Safe active operation requires a separately attached executor and an external authorization
   decision. Current legacy SDK and handler paths do not enforce this universally.
 

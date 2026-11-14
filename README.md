@@ -143,7 +143,7 @@ AUTORT_CAPABILITY_PROFILE=scan autort engage run
 autort engage status
 ```
 
-`engage init`, `status`, and `next` stay on `safe`. They write or read `.autort/engage.yaml`. They do not contact the target. `engage run` needs `scan`. It applies the engagement profile, allowlist, and HITL for the duration of the run, then restores the previous environment. A finding is confirmed only after `vuln_verifier`, `statistical_verifier`, `oob_callback`, or `manual_review`. The same execution hash more than three times stops the loop.
+`engage init`, `status`, and `next` stay on `safe`. They write or read `.autort/engage.yaml`. They do not contact the target. `engage run` needs `scan`. It applies the engagement profile, allowlist, and HITL for the duration of the run, then restores the previous environment. Live `engage.verify` asks HITL when the engagement file sets `hitl` to `approval` or `review_edit`; dry-run skips that gate. A finding is confirmed only after `vuln_verifier`, `statistical_verifier`, `oob_callback`, or `manual_review`. The same execution hash more than three times stops the loop. `--ci` exits 2 when the loop does not pass. CI runs `engage run --path config/engage.lab.example.yaml --dry-run --ci`.
 
 MCP tools: `engage_init`, `engage_status`, `engage_next` (safe), `engage_run` (scan). A model that only has `safe` can still plan the next step. Live recon needs the operator to raise the level.
 
@@ -372,7 +372,7 @@ These do not contact a target. CVE search reads the local notes.
 | `engage init` | Write `.autort/engage.yaml` and print the next step | `autort engage init http://127.0.0.1:3000 --profile scan` |
 | `engage status` | Config, finding counts, next step | `autort engage status` |
 | `engage next` | Next recon/detect/verify/export card | `autort engage next` |
-| `engage run --dry-run` | Walk the loop without contacting the host | `autort engage run --dry-run` |
+| `engage run --dry-run` | Walk the loop without contacting the host | `autort engage run --dry-run --ci` |
 | `version` | The version string | `autort version` |
 
 `autort tools` is the lint group. A function of the same name still exists and is limited to the `scan` level, but the group occupies the command, so that function is not what `autort tools` runs.

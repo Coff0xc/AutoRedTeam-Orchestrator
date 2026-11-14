@@ -49,6 +49,8 @@ autort capabilities matrix
 autort capabilities auth-key --name operator --storage ./data/auth
 autort skills catalog
 autort skills read --path ./skills/recon
+autort engage init http://127.0.0.1:3000 --profile scan
+autort engage run --dry-run --ci
 ```
 
 SDK smoke：
@@ -72,6 +74,7 @@ pytest --cov=core --cov=handlers --cov-report=html
 ```bash
 python -m cli.main ai-redteam eval-run config/ai_redteam.eval.example.yaml --ci
 python -m cli.main runtime-api run config/runtime.local.example.yaml --local --ci
+python -m cli.main engage run --path config/engage.lab.example.yaml --dry-run --ci
 ```
 
 ### 格式化与质量检查
@@ -93,8 +96,8 @@ Black/isort 行宽为 100。`.pre-commit-config.yaml` 还包含 trailing whitesp
 ### 入口层
 
 - `mcp_stdio_server.py` 创建 `FastMCP("AutoRedTeam")`，调用 `handlers.register_all_handlers()` 注册 MCP tools/resources/prompts，并在启动时配置日志、显示法律声明和 auth 模式。
-- `cli/main.py` 是 Typer CLI，命令封装 SDK 和 core 功能；主要命令包括 `scan`、`detect`、`exploit`、`cve-search`、`pentest`、`report`、`nuclei`，以及 `ai-redteam`、`ai-surface`、`code-agent`、`runtime-api`、`sandbox`、`capabilities`、`skills` 子命令。
-- `autort/` 是异步 Python SDK 门面：`Scanner`、`Exploiter`、`AutoPentest`、`RedTeam`、`Reporter`。它们尽量保持薄封装，将实际工作委托给 `core/`。
+- `cli/main.py` 是 Typer CLI，命令封装 SDK 和 core 功能；主要命令包括 `scan`、`detect`、`exploit`、`cve-search`、`pentest`、`report`、`nuclei`，以及 `ai-redteam`、`ai-surface`、`code-agent`、`runtime-api`、`sandbox`、`capabilities`、`skills`、`engage` 子命令。
+- `autort/` 是异步 Python SDK 门面：`Scanner`、`Exploiter`、`AutoPentest`、`RedTeam`、`Reporter`、`Engagement`。它们尽量保持薄封装，将实际工作委托给 `core/`。
 
 ### MCP handler 层
 
@@ -106,6 +109,7 @@ Black/isort 行宽为 100。`.pre-commit-config.yaml` 还包含 trailing whitesp
 - `core/detectors/` 是漏洞检测体系。`DetectorFactory` 管理 detector 注册、创建、按类型/严重级别筛选；具体检测器按 access/auth/file/injection/misc/request 分组，结果模型在 `core/detectors/result.py`。
 - `core/exploit/` 提供 exploit engine、具体 exploiter、纯 Python SQLi/扫描能力和 exploit orchestrator。
 - `core/orchestrator/` 实现一键渗透阶段编排：RECON → VULN_SCAN → POC_EXEC → EXPLOIT → PRIV_ESC → LATERAL → EXFILTRATE → REPORT。`AutoPentestOrchestrator` 支持 checkpoint/resume、阶段状态和 runtime policy/sandbox gate。
+- `core/engage/` 是授权 engagement 循环：一份 YAML，heuristic planner，recon/detect/verify/export，证据门和三次同哈希停跑。Live `engage.verify` 走 HITL；dry-run 跳过。
 - `core/agent_runtime/` 提供受控 AI red-team runtime primitives：run state、action policy、risk level、middleware、sandbox enforcement、observability、benchmark、薄本地循环、只读 runtime API view 和进程内 registry。循环只跑 allowlist 本地步骤，不调模型、不接 P3 harness。
 - 外部工具（nmap/sqlmap/nuclei/ffuf）目前**没有**后端选择层：handler 与 SDK 直接调用 `core.recon` / `core.detectors` / `core.exploit` 的纯 Python 引擎。曾被当作路由层的 `core/engine_router.py` 已删除（零调用者，且其外部工具分支在干净 checkout 中不可达）。引入后端选择时必须带真实消费者，见 `docs/agent-refactor-plan.md`。
 - `core/config/` 使用 Pydantic 模型加载配置，优先级为环境变量（`AUTORT_` 等）→ `config/config.yaml`/`config.yml` → 默认值。
