@@ -11,6 +11,9 @@ The model can decide. This program keeps the permission, the evidence, and the r
 
 [Maturity notes](docs/capability-maturity.md) · [Trust boundaries](docs/security-model.md) · [Security audits](docs/security-audits/)
 
+Companion tool: **[AI API Key Scanner](https://github.com/Coff0xc/Github-API-scan)** — find leaked OpenAI / Claude / Gemini / DeepSeek keys, pair each one with the relay URL beside it, and check if it still works.
+
+
 > [!IMPORTANT]
 > Beta. The supported work is reading your own project, dry-runs, and tests on systems you are allowed to touch. A setting named "sandbox" is a note in the record. It is not a container, and it is not an operating-system boundary.
 
