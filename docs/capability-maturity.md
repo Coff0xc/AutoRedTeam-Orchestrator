@@ -30,7 +30,8 @@ only because an implementation exists in the repository.
 | Session storage | Preview | Basic persistence exists; orchestrator checkpoint/resume remains Experimental. |
 | MCP stdio integration | Preview | Defaults to a fail-closed `safe` registration profile; treat as trusted-local only because authentication is not yet a uniform global boundary. |
 | AI-system red-team scenario runner | Preview | Plan-only dry-run plus a local eval suite (`autort.eval/v1`: text, surface, skill, run-state). It does not call a model, shell, or remote target. |
-| Agent runtime models, policy, trace, and local API | Preview | Thin local loop walks planned actions through policy/sandbox, runs allowlisted local scanners, then eval. It does not call a model, shell, or remote target. |
+| Agent runtime models, policy, trace, and local API | Preview | Thin local loop walks planned actions through policy/sandbox, runs allowlisted local scanners, then eval. Engage steps in that loop are dry-run unless the action opts into network and the sandbox allows it. It does not call a model or a shell. |
+| Authorized engagement loop | Preview | `autort engage` / MCP `engage_*` / `autort.Engagement`. Heuristic planner (optional LLM pick among remaining steps). Evidence gate plus a three-repeat doom-loop stop. Live `engage_run` is `scan`. Profile `safe` is refused as an engagement profile. |
 | Automated pentest orchestrator | Experimental | Defaults to dry-run; checkpoint/resume is not release-certified. |
 | Docker sandbox executor | Experimental | An attached container executor reduces exposure; policy checks alone do not isolate execution. |
 | External engine routing | Planned | No backend-selection layer exists: `core/engine_router.py` had zero callers and unreachable external-tool branches, and has been removed. Handlers and the SDK call the pure-Python engines directly. |
@@ -52,11 +53,13 @@ executor.
 - Local finding export and deterministic evaluation.
 - Metadata, local session state, SDK/CLI import, and schema development.
 - Default MCP server profile; no target network access or host command execution is registered.
+- Engagement plan tools (`engage_init`, `engage_status`, `engage_next`) and `engage run --dry-run`.
 
 ### Scan
 
 - Includes the `safe` profile.
 - Reconnaissance and vulnerability detection against an explicit local or owned target.
+- Live `engage_run` against that same scoped target.
 - Run from an isolated environment with outbound network controls.
 - Record written target authorization and set `AUTORT_TARGET_ALLOWLIST` when contacting a host.
 

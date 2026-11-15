@@ -1,6 +1,8 @@
 # AutoRedTeam-Orchestrator
 
-You point it at your own code, your AI client config, or your instruction files. It reads them, writes what it found with a file and a line, and only offers the tools your permission level allows.
+Two loops, one allowlist. The default is a local MCP/AI attack-surface audit: you point it at your own code, your AI client config, or your instruction files. It reads them, writes what it found with a file and a line, and only offers the tools your permission level allows.
+
+The other loop is an authorized engagement. You write one target file. Humans and models share the same steps: plan, recon, detect, verify, export. A finding is confirmed only after an outside check. The same step three times in a row stops the run.
 
 The model can decide. This program keeps the permission, the evidence, and the record.
 
@@ -20,6 +22,7 @@ Companion tool: **[AI API Key Scanner](https://github.com/Coff0xc/Github-API-sca
 ## In one minute
 
 - The default permission level is `safe`. It reads your project. It does not contact a target.
+- `autort engage init` writes a local engagement file. `engage run --dry-run` plans recon → detect → verify → export without touching the host. Live `engage run` needs `scan`.
 - There are four levels. Each higher level includes everything below it.
 - The model does not read the old notes in the code. It reads a short card: name, level, risk, effects, and limits.
 - The file reader parses Python. It does not import it, and it does not call the tools.
@@ -33,12 +36,13 @@ flowchart LR
   files --> reader --> report
 ```
 
-The counts in this page come from the allowed list in this tree: **149 entries** (139 tools, 6 prompts, 4 resources). `tools/list` registers resident surfaces only (`registered_count`: safe 18, scan 22, active-lab 23, full 23). Catalog-only tools are found with `tool_search` and run through `detect_run` / `recon_run` / `exploit_run`, or unlocked with `tool_enable`. Pinned SKILL.md packs are metadata only: `skill_catalog` / `skill_read` scan a local checkout and never clone or execute third-party scripts. `autort capabilities profiles` is the live count after a later change.
+The counts in this page come from the allowed list in this tree: **153 entries** (143 tools, 6 prompts, 4 resources). `tools/list` registers resident surfaces only (`registered_count`: safe 21, scan 26, active-lab 27, full 27). Catalog-only tools are found with `tool_search` and run through `detect_run` / `recon_run` / `exploit_run`, or unlocked with `tool_enable`. Pinned SKILL.md packs are metadata only: `skill_catalog` / `skill_read` scan a local checkout and never clone or execute third-party scripts. `autort capabilities profiles` is the live count after a later change.
 
 ## Contents
 
 - [Three ways in](#three-ways-in)
 - [Start](#start)
+- [Authorized engagement](#authorized-engagement)
 - [Four permission levels](#four-permission-levels)
 - [The card the model reads](#the-card-the-model-reads)
 - [What the server does at startup](#what-the-server-does-at-startup)
@@ -76,7 +80,7 @@ flowchart TB
 | Editor server | `autoredteam-mcp --stdio` | Start at `safe` |
 | Python | `from autort import Scanner` | Search local CVE notes, or export findings you already have |
 
-`Scanner` and `Reporter` load immediately. `Exploiter`, `AutoPentest`, and `RedTeam` load the first time you ask for them. Importing `Scanner` does not load those three.
+`Scanner` and `Reporter` load immediately. `Engagement`, `Exploiter`, `AutoPentest`, and `RedTeam` load the first time you ask for them. Importing `Scanner` does not load those four.
 
 A script that imports `core` directly does not pass this check. The check is the three doors above. It is also separate from the API key, from "did a person approve this", and from any container.
 
@@ -89,6 +93,8 @@ pip install typer
 python -m cli.main ai-surface scan --path handlers --format sarif -o surface.sarif
 python -m cli.main ai-surface scan-mcp-config --path .mcp.json
 python -m cli.main capabilities manifest --profile safe
+python -m cli.main engage init http://127.0.0.1:3000 --profile scan
+python -m cli.main engage run --dry-run
 ```
 
 On your path:
@@ -113,25 +119,55 @@ Python 3.10 or newer. Version `3.1.0` lives only in `_version.py`. The two comma
 
 Any subcommand, including `--help`, prints the legal notice on stderr. `--help` does not ask the allowed list.
 
+## Authorized engagement
+
+One YAML file is the session. Humans on the CLI and a model on MCP share it.
+
+```mermaid
+flowchart LR
+  init["engage init<br/>local file"]
+  plan["engage next"]
+  recon["recon"]
+  detect["detect"]
+  verify["verify"]
+  export["export"]
+  init --> plan --> recon --> detect --> verify --> export
+```
+
+```bash
+docker compose -f docker-compose.lab.yml up -d
+autort engage init http://127.0.0.1:3000 --profile scan
+autort engage next
+autort engage run --dry-run
+AUTORT_CAPABILITY_PROFILE=scan autort engage run
+autort engage status
+```
+
+`engage init`, `status`, and `next` stay on `safe`. They write or read `.autort/engage.yaml`. They do not contact the target. `engage run` needs `scan`. It applies the engagement profile, allowlist, and HITL for the duration of the run, then restores the previous environment. A finding is confirmed only after `vuln_verifier`, `statistical_verifier`, `oob_callback`, or `manual_review`. The same execution hash more than three times stops the loop.
+
+MCP tools: `engage_init`, `engage_status`, `engage_next` (safe), `engage_run` (scan). A model that only has `safe` can still plan the next step. Live recon needs the operator to raise the level.
+
+The example lab is Juice Shop bound to `127.0.0.1:3000` in `docker-compose.lab.yml`. Copy `config/engage.lab.example.yaml` if you want the file without running `init`.
+
 ## Four permission levels
 
 The level is an argument, or the environment variable `AUTORT_CAPABILITY_PROFILE`, or `safe` when you set neither. `active_lab` and `active-lab` are the same name. Anything else is an error.
 
 ```mermaid
 flowchart BT
-  safe["safe · 27 entries<br/>read your own project"]
-  scan["scan · 92 entries<br/>a system you are allowed to test"]
-  lab["active-lab · 113 entries<br/>a disposable lab"]
-  full["full · 149 entries<br/>you turned the rest on"]
+  safe["safe · 30 entries<br/>read your own project"]
+  scan["scan · 96 entries<br/>a system you are allowed to test"]
+  lab["active-lab · 117 entries<br/>a disposable lab"]
+  full["full · 153 entries<br/>you turned the rest on"]
   safe --> scan --> lab --> full
 ```
 
-The numbers are totals, including the levels below. New catalog entries at each step: 27, then 65, then 21, then 36. `tools/list` stays small: 18 / 22 / 23 / 23 resident surfaces. Factory detectors, recon modules, exploit modes, and the rest of the catalog stay searchable.
+The numbers are totals, including the levels below. New catalog entries at each step: 30, then 66, then 21, then 36. `tools/list` stays small: 21 / 26 / 27 / 27 resident surfaces. Factory detectors, recon modules, exploit modes, and the rest of the catalog stay searchable.
 
 | Level | Use it for | What it adds |
 |---|---|---|
-| `safe` | Your own checkout, on your own machine | The reader, local CVE search, exporting findings |
-| `scan` | A target the owner allowed | Recon and detection. They ship in the install, and they stay behind this level |
+| `safe` | Your own checkout, on your own machine | The reader, local CVE search, exporting findings, engagement plan files |
+| `scan` | A target the owner allowed | Recon, detection, and `engage run`. They ship in the install, and they stay behind this level |
 | `active-lab` | A machine you can throw away | Lab-only tools. They ask for a separate approval in the record |
 | `full` | The same kind of lab, with the rest switched on | The experimental engines that are still in git |
 
@@ -228,7 +264,7 @@ Calls to the permission helpers themselves are ignored. A tool should not look d
 
 An older shortcut is separate from that word matcher. If the only risky word is `poc`, and the tool name contains the letters `list`, `search`, `stats`, `status`, or `query`, the rating is lowered. `poc_listener` contains `list`, so it is lowered. `tests/fixtures/ai_surface/labels.json` locks that result. Changing the shortcut changes the default handlers scan. It is a measured change, not a cleanup.
 
-A scan of this repository's `handlers/` folder is expected to have **zero auth, validator, or payload issues**. `session_create` is pinned for `declared_effects_omit_target_contact`: it stores a target string locally and the card still says `local-read` / `local-write`. New issues outside that pin are a regression in the handlers or in the rules.
+A scan of this repository's `handlers/` folder is expected to have **zero auth, validator, or payload issues**. `session_create` and `engage_init` are pinned for `declared_effects_omit_target_contact`: they store a target string locally and the card still says `local-read` / `local-write`. New issues outside that pin are a regression in the handlers or in the rules.
 
 ### Client config and instruction files
 
@@ -303,7 +339,7 @@ flowchart LR
 
 Left out of the package: command-and-control, moving between machines, staying on a machine, post-access work, raising privilege, taking data out, hiding, credentials, Active Directory, and exploit code. They remain in git so an explicit `full` checkout can still import them. Deleting them would break that checkout. A second repository would split the allowed list from the code it describes.
 
-The CI build job installs the package into a clean virtual environment. Those ten packages are not importable there. The `safe` list still prints. A scan of the installed `handlers` folder still reports no auth, validator, or payload issues. `session_create` stays pinned for the effect/parameter mismatch. Importing `Scanner` still does not load the three lazy engines. Tests that run inside the checkout do not prove this. Those tests can still import the engines from the working tree. Package the wheel with `pyproject-build`. A leftover setuptools `build/` directory hides `python -m build`.
+The CI build job installs the package into a clean virtual environment. Those ten packages are not importable there. The `safe` list still prints. A scan of the installed `handlers` folder still reports no auth, validator, or payload issues. `session_create` and `engage_init` stay pinned for the effect/parameter mismatch. Importing `Scanner` still does not load the four lazy engines. Tests that run inside the checkout do not prove this. Those tests can still import the engines from the working tree. Package the wheel with `pyproject-build`. A leftover setuptools `build/` directory hides `python -m build`.
 
 A published install can still serve the `safe` reader when a handler fails to import a missing engine. That failure is logged. The other groups still register.
 
@@ -333,6 +369,10 @@ These do not contact a target. CVE search reads the local notes.
 | `cve-search` | Local CVE search | `autort cve-search "Log4j" --severity critical --has-poc -n 20` |
 | `skills catalog` | Pinned SKILL.md packs (URL, sha, license) | `autort skills catalog` |
 | `skills read` | Scan a local checkout, then print SKILL.md if it is not critical | `autort skills read --path ./skills/recon` |
+| `engage init` | Write `.autort/engage.yaml` and print the next step | `autort engage init http://127.0.0.1:3000 --profile scan` |
+| `engage status` | Config, finding counts, next step | `autort engage status` |
+| `engage next` | Next recon/detect/verify/export card | `autort engage next` |
+| `engage run --dry-run` | Walk the loop without contacting the host | `autort engage run --dry-run` |
 | `version` | The version string | `autort version` |
 
 `autort tools` is the lint group. A function of the same name still exists and is limited to the `scan` level, but the group occupies the command, so that function is not what `autort tools` runs.
@@ -343,6 +383,7 @@ These do not contact a target. CVE search reads the local notes.
 | `capabilities` | `matrix`, `readiness`, `manifest`, `profiles` | The allowed list |
 | `tools` | `lint` | Contract check |
 | `skills` | `catalog`, `read` | Pinned SKILL.md packs. Read-only |
+| `engage` | `init`, `status`, `next`, `run`, `resume` | One authorized target. Plan on `safe`, run on `scan` |
 | `code-agent` | `expand` | Who calls whom, from the source |
 | `runtime-api` | `run`, `serve` | A local loop over planned actions, or a read-only view of a saved run |
 | `sandbox` | `docker-smoke` | A local Docker smoke test, network off |
@@ -354,6 +395,7 @@ These do not contact a target. CVE search reads the local notes.
 
 | Command | Level | Example |
 |---|---|---|
+| `engage run` | `scan` | `AUTORT_CAPABILITY_PROFILE=scan autort engage run` |
 | `scan` | `scan` | `autort scan http://127.0.0.1:8000 --full` |
 | `detect` | `scan` | `autort detect http://127.0.0.1:8000 -c sqli,xss,ssrf --format sarif` |
 | `nuclei` | `scan` | `autort nuclei http://127.0.0.1:8000 -t cve,rce -s high,critical` |
@@ -368,8 +410,11 @@ These do not contact a target. CVE search reads the local notes.
 Calls are async. Most return a dict. A failure carries an `"error"` string. If the level is too low, the call stops before the engine is imported.
 
 ```python
-from autort import Exploiter, Reporter
+from autort import Engagement, Exploiter, Reporter
 from autort import __version__  # "3.1.0"
+
+engagement = Engagement("http://127.0.0.1:3000", profile="scan")
+plan = await engagement.run(dry_run=True)
 
 exploiter = Exploiter("http://127.0.0.1:8000")
 cves = await exploiter.cve_search("Apache Log4j", severity="critical", has_poc=True)
@@ -454,11 +499,11 @@ The row type is `Capability` in `core/capability_manifest.py`. The index key is 
 | `risk` | `low`, `moderate`, `high`, `critical`. A label, not a measurement |
 | `maturity` | `preview`, `beta`, `experimental`, `restricted-experimental`, `internal`. A label. It does not change registration |
 | `auth_required` / `approval_required` | Whether the card mentions a key and a separate approval |
-| `executor` | `in-process` (86), `isolated-required` (57), or `external-process` (6) |
+| `executor` | `in-process` (90), `isolated-required` (57), or `external-process` (6) |
 | `effects` | Labels joined into the card. Empty renders as `none` |
 | `locator` | Resource URI, for a resource |
 
-Current risk mix: moderate 61, critical 47, high 19, low 22. Current maturity mix: restricted-experimental 47, preview 45, beta 40, experimental 11, internal 6.
+Current risk mix: moderate 62, critical 47, high 19, low 25. Current maturity mix: restricted-experimental 47, preview 48, beta 41, experimental 11, internal 6.
 
 `require_surface` raises `ProfileDenied` when the level is too low. The command line turns that into exit 2. SDK methods call it before they import the engine, and before the broad `except Exception` that turns an engine failure into `{"success": False, "error": ...}`. A refused level is its own failure.
 
@@ -480,7 +525,7 @@ Current risk mix: moderate 61, critical 47, high 19, low 22. Current maturity mi
 | 12 | `ad_handlers` | `ad` | 3 |
 | 13 | `session_handlers` | `session` | 4 |
 | 14 | `report_handlers` | `report` | 2 |
-| 15 | `ai_handlers` | `ai` | 13 |
+| 15 | `ai_handlers` | `ai` | 17 |
 | 16 | `misc_handlers` | `misc` | 5 |
 | 17 | `external_tools_handlers` | `external_tools` | 8 |
 | 18 | `parallel_handlers` | `parallel` | 1 |
@@ -564,6 +609,8 @@ CVE search on `safe` reads `core/cve`. Sync and PoC execution are higher levels.
 | `pentest` | `auto_pentest` | `full` |
 | `pentest --resume` | `pentest_resume` | `full` |
 | `AutoPentest.status` | `session_status` | `safe` |
+| `engage init` / `status` / `next` | `engage_init` / `engage_status` / `engage_next` | `safe` |
+| `engage run` | `engage_run` | `scan` |
 
 Package exclude globs:
 
@@ -579,7 +626,7 @@ Coverage in CI measures this same install. The ten engine globs are omitted from
 
 `core/agent_runtime` is the state of a planned run: tasks, actions, a trace, and an approval marker. `enforce_sandbox_policy` returns a decision. `execute_action_in_docker_sandbox` stays a decision unless the caller passes `allow_execute=True`. `autort sandbox docker-smoke` runs a local container with the network off. A missing Docker daemon is a skip.
 
-`autort runtime-api run` walks a local plan through policy and sandbox, then either skips the steps or runs the allowlisted scanners. `autort runtime-api serve` reads `/api/runs` on the host and port you pass. The usual local pair is `127.0.0.1` and `8765`. Neither command calls a model or a remote target.
+`autort runtime-api run` walks a local plan through policy and sandbox, then either skips the steps or runs the allowlisted scanners. Engage steps in that loop are dry-run unless the action sets `dry_run: false` and the sandbox allows network. Live recon, detect, and verify go through `autort engage run`. `autort runtime-api serve` reads `/api/runs` on the host and port you pass. The usual local pair is `127.0.0.1` and `8765`. Neither command calls a model.
 
 `AIRedTeamRunner` plans from a written scenario. Active mode raises `PermissionError` unless the caller passed `allow_active=True`. `core/code_agent` maps Python calls with `ast` and does not run the program.
 
@@ -600,7 +647,7 @@ The older `poc` plus `list` shortcut stays while `labels.json` pins it.
 
 Tag `v3.1` stays where it is. Callers who want the `self-audit` default set `mode`, or they track `main`.
 
-Effect labels are checked against target-shaped parameter names at reconcile time. `session_create` is the pinned mismatch.
+Effect labels are checked against target-shaped parameter names at reconcile time. `session_create` and `engage_init` are the pinned mismatches.
 
 </details>
 
