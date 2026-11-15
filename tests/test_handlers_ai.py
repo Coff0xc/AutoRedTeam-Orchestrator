@@ -26,8 +26,9 @@ def _register_ai_tools():
 def test_register_ai_tools_count():
     _, mock_counter, mock_logger = _register_ai_tools()
 
-    mock_counter.add.assert_called_once_with("ai", 13)
-    assert any("13 个AI辅助工具" in str(call) for call in mock_logger.info.call_args_list)
+    mock_counter.add.assert_called_once_with("ai", 17)
+    assert mock_logger.info.call_args[0][0] == "[AI] 已注册 %s 个AI辅助工具"
+    assert mock_logger.info.call_args[0][1] == 17
 
 
 @pytest.mark.asyncio

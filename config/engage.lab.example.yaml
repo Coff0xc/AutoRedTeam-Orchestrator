@@ -1,0 +1,22 @@
+schema: autort.engage/v1
+name: lab
+target: http://127.0.0.1:3000
+profile: scan
+phases:
+  - recon
+  - detect
+  - verify
+  - export
+classes: []
+recon_modules: []
+hitl: off
+scope_mode: enforce
+allowlist:
+  - http://127.0.0.1:3000
+  - 127.0.0.1
+  - 127.0.0.0/8
+  - localhost
+output_dir: .autort
+max_steps: 16
+quick_mode: true
+use_model: false

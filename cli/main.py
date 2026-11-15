@@ -107,6 +107,14 @@ skills_app = typer.Typer(
 )
 app.add_typer(skills_app, name="skills")
 
+engage_app = typer.Typer(
+    name="engage",
+    help="Authorized red-team engagement: init, plan, run, verify, export",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(engage_app, name="engage")
+
 
 def _show_disclaimer() -> None:
     """启动时显示法律声明"""
@@ -961,6 +969,99 @@ def skills_read(
         _output(read_skill(path, pin_id=pin_id, reference=reference), output)
     except (SkillAdapterError, FileNotFoundError) as exc:
         raise typer.BadParameter(str(exc)) from exc
+
+
+# ──────────────────────────── engage ────────────────────────────
+
+
+@engage_app.command("init")
+def engage_init(
+    target: str = typer.Argument(..., help="授权目标 URL 或主机"),
+    profile: str = typer.Option("scan", "--profile", "-p", help="scan, active-lab, or full"),
+    path: str = typer.Option(".autort/engage.yaml", "--path", help="Engagement YAML"),
+    phases: str = typer.Option(
+        "recon,detect,verify,export", "--phases", help="Comma-separated phases"
+    ),
+    classes: Optional[str] = typer.Option(None, "--classes", "-c", help="Detector classes"),
+    hitl: str = typer.Option("off", "--hitl", help="off, approval, review_edit"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """Write a local engagement file and print the next step. Does not contact the target."""
+    from core.engage import EngagementError, init_engagement
+
+    _require_surface("engage_init")
+    kwargs: dict = {"profile": profile, "path": path, "phases": phases, "hitl": hitl}
+    if classes:
+        kwargs["classes"] = classes
+    try:
+        result = init_engagement(target, **kwargs)
+    except (EngagementError, ValueError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(2) from exc
+    _output(result, output)
+
+
+@engage_app.command("status")
+def engage_status_cmd(
+    path: str = typer.Option(".autort/engage.yaml", "--path", help="Engagement YAML"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """Show engagement state and the next planned step."""
+    from core.engage import EngagementError, engagement_status
+
+    _require_surface("engage_status")
+    try:
+        _output(engagement_status(path), output)
+    except (EngagementError, OSError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(2) from exc
+
+
+@engage_app.command("next")
+def engage_next_cmd(
+    path: str = typer.Option(".autort/engage.yaml", "--path", help="Engagement YAML"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """Print the next recon/detect/verify/export step without running it."""
+    from core.engage import EngagementError, engagement_next
+
+    _require_surface("engage_next")
+    try:
+        _output(engagement_next(path), output)
+    except (EngagementError, OSError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(2) from exc
+
+
+@engage_app.command("run")
+def engage_run_cmd(
+    path: str = typer.Option(".autort/engage.yaml", "--path", help="Engagement YAML"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Plan steps without contacting the target"
+    ),
+    max_steps: Optional[int] = typer.Option(None, "--max-steps", help="Planner iteration cap"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """Run recon → detect → verify → export against the engagement target."""
+    from core.capability_manifest import CapabilityManifestError
+    from core.engage import EngagementError, run_engagement
+    from core.security.target_scope import TargetScopeError
+
+    try:
+        result = run_engagement(path, dry_run=dry_run, max_steps=max_steps)
+    except (EngagementError, CapabilityManifestError, TargetScopeError, OSError, ValueError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(2) from exc
+    _output(result, output)
+
+
+@engage_app.command("resume")
+def engage_resume_cmd(
+    path: str = typer.Option(".autort/engage.yaml", "--path", help="Engagement YAML"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """Continue a saved engagement from .autort/state.json."""
+    engage_run_cmd(path=path, dry_run=False, max_steps=None, output=output)
 
 
 # ──────────────────────────── helpers ────────────────────────────

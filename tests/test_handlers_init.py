@@ -236,6 +236,8 @@ def test_safe_profile_skips_mixed_profile_exploit_tool_definitions():
     assert "poc_execute" not in registered
     assert "cve_generate_poc" not in registered
     assert "skill_catalog" in registered
+    assert "engage_init" in registered
+    assert "engage_run" not in registered
     assert "attack_chain_plan" not in registered
     assert "smart_payload" not in registered
     assert "smart_analyze" not in registered

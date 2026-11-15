@@ -47,6 +47,8 @@ def test_scan_repo_ai_handlers_includes_surface_tool():
 
     assert "ai_redteam_run_scenario" in names
     assert "ai_surface_scan_handlers" in names
+    assert "engage_init" in names
+    assert "engage_next" in names
     assert result.to_dict()["summary"]["tools_scanned"] >= 5
     assert result.to_dict()["summary"]["risk_counts"]["moderate"] >= 1
 
@@ -126,7 +128,7 @@ def test_scan_repo_handlers_has_no_surface_issues():
     ]
 
     assert other == []
-    assert mismatch == {"session_create"}
+    assert mismatch == {"session_create", "engage_init"}
 
 
 def test_scan_skill_surface_finds_dangerous_instruction(tmp_path: Path):
@@ -423,9 +425,9 @@ def test_factory_config_and_manifest_coverage():
     assert len(prompts) == 6
     assert len(resources) == 4
     assert len(factory) == 26
-    assert coverage["manifest_total"] == 149
-    assert coverage["accounted"] == 149
-    assert coverage["ratio"] == "149/149"
+    assert coverage["manifest_total"] == 153
+    assert coverage["accounted"] == 153
+    assert coverage["ratio"] == "153/153"
     assert coverage["invisible_count"] == 0
     assert coverage["factory_accounted"] == 26
     assert coverage["unlisted_count"] == 0

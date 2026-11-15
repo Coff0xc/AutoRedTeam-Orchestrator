@@ -1,0 +1,11 @@
+# Authorized local lab. The Juice Shop target is bound to localhost.
+# From the host:
+#   docker compose -f docker-compose.lab.yml up -d
+#   autort engage init http://127.0.0.1:3000 --profile scan
+#   autort engage run
+services:
+  juiceshop:
+    image: bkimminich/juice-shop:latest
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped

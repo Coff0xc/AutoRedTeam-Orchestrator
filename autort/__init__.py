@@ -13,12 +13,21 @@ from _version import __version__
 from autort.report import Reporter
 from autort.scanner import Scanner
 
-__all__ = ["Scanner", "Exploiter", "AutoPentest", "RedTeam", "Reporter", "__version__"]
+__all__ = [
+    "Scanner",
+    "Exploiter",
+    "AutoPentest",
+    "RedTeam",
+    "Reporter",
+    "Engagement",
+    "__version__",
+]
 
 _LAZY_EXPORTS = {
     "Exploiter": "autort.exploiter",
     "AutoPentest": "autort.pentest",
     "RedTeam": "autort.redteam",
+    "Engagement": "autort.engage",
 }
 
 

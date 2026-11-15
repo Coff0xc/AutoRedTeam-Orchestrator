@@ -105,7 +105,10 @@ flagged = {
     for item in scan.get("findings") or []
     for issue in item.get("issues") or []
 }
-allowed = {("session_create", "declared_effects_omit_target_contact")}
+allowed = {
+    ("session_create", "declared_effects_omit_target_contact"),
+    ("engage_init", "declared_effects_omit_target_contact"),
+}
 unexpected = sorted(flagged - allowed)
 if unexpected:
     fail(f"installed handlers scan unexpected issues: {unexpected}")

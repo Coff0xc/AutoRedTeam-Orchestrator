@@ -87,6 +87,42 @@ def test_unknown_step_and_forbidden_kind_fail_closed():
     assert "model_call" in actions[1]["error"]
 
 
+def test_engage_step_runs_when_allowed():
+    plan = {
+        "schema": RUNTIME_SCHEMA,
+        "mode": "local",
+        "allow_engage": True,
+        "steps": [
+            {
+                "name": "engage.recon",
+                "inputs": {"target": "http://127.0.0.1:9", "dry_run": True},
+            }
+        ],
+    }
+    result = run_runtime_document(plan, allow_local=True, base_dir=REPO_ROOT)
+    actions = result["run_state"]["flow"]["tasks"][0]["actions"]
+
+    assert result["loop"]["allow_engage"] is True
+    assert actions[0]["status"] == "completed"
+    assert actions[0]["output"]["dry_run"] is True
+
+
+def test_engage_step_blocked_without_allow_engage():
+    plan = {
+        "schema": RUNTIME_SCHEMA,
+        "mode": "local",
+        "steps": [{"name": "engage.recon", "inputs": {"dry_run": True}}],
+    }
+    result = run_runtime_document(
+        plan, allow_local=True, allow_engage=False, stop_on_block=False, base_dir=REPO_ROOT
+    )
+    actions = result["run_state"]["flow"]["tasks"][0]["actions"]
+
+    assert result["passed"] is False
+    assert actions[0]["status"] == "blocked"
+    assert "unknown local step" in actions[0]["error"]
+
+
 def test_network_policy_blocks_local_execution():
     state = AgentRunState(flow=Flow(name="net"))
     action = Action(

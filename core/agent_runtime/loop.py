@@ -38,7 +38,16 @@ LOCAL_STEPS = frozenset(
         "eval.document",
     }
 )
+ENGAGE_STEPS = frozenset(
+    {
+        "engage.recon",
+        "engage.detect",
+        "engage.verify",
+        "engage.export",
+    }
+)
 _FORBIDDEN_KINDS = frozenset({ActionKind.SHELL, ActionKind.BROWSER, ActionKind.MODEL_CALL})
+_NETWORK_OK = frozenset({"deny", "controlled", "scoped"})
 _DEFAULT_MAX_STEPS = 32
 
 
@@ -93,6 +102,7 @@ def run_runtime_path(
     *,
     allow_local: Optional[bool] = None,
     max_steps: Optional[int] = None,
+    allow_engage: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Load ``path`` and run it as a plan or an existing AgentRunState dump."""
     document_path = Path(path)
@@ -101,6 +111,7 @@ def run_runtime_path(
         allow_local=allow_local,
         max_steps=max_steps,
         base_dir=document_path.parent,
+        allow_engage=allow_engage,
     )
 
 
@@ -111,6 +122,7 @@ def run_runtime_document(
     max_steps: Optional[int] = None,
     base_dir: Optional[Path] = None,
     stop_on_block: Optional[bool] = None,
+    allow_engage: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Run a plan mapping or an AgentRunState mapping."""
     root = Path(base_dir) if base_dir is not None else Path.cwd()
@@ -129,12 +141,14 @@ def run_runtime_document(
             allow_local=local,
             max_steps=int(max_steps if max_steps is not None else steps),
             stop_on_block=halt,
+            allow_engage=_resolve_allow_engage(data, allow_engage=allow_engage, local=local),
         ).run(state, base_dir=root)
     state = agent_run_state_from_dict(data)
     return RuntimeLoop(
         allow_local=bool(allow_local),
         max_steps=int(max_steps if max_steps is not None else _DEFAULT_MAX_STEPS),
         stop_on_block=True if stop_on_block is None else bool(stop_on_block),
+        allow_engage=_resolve_allow_engage(data, allow_engage=allow_engage, local=False),
     ).run(state, base_dir=root)
 
 
@@ -148,12 +162,14 @@ class RuntimeLoop:
         max_steps: int = _DEFAULT_MAX_STEPS,
         stop_on_block: bool = True,
         pipeline: RuntimePipeline | None = None,
+        allow_engage: bool = False,
     ) -> None:
         if max_steps < 1:
             raise ValueError("max_steps must be >= 1")
         self.allow_local = bool(allow_local)
         self.max_steps = int(max_steps)
         self.stop_on_block = bool(stop_on_block)
+        self.allow_engage = bool(allow_engage)
         self.pipeline = pipeline or RuntimePipeline()
 
     def run(self, run_state: AgentRunState, *, base_dir: Optional[Path] = None) -> Dict[str, Any]:
@@ -194,10 +210,15 @@ class RuntimeLoop:
         if action.kind in _FORBIDDEN_KINDS:
             action.mark_blocked(f"kind {action.kind.value} is not a local runtime step")
             return "forbidden_kind"
-        if action.policy.network_policy != "deny":
+        engage_step = action.name in ENGAGE_STEPS and self.allow_engage
+        if engage_step:
+            if action.policy.network_policy not in _NETWORK_OK:
+                action.mark_blocked("engage steps require network_policy deny|controlled|scoped")
+                return "network"
+        elif action.policy.network_policy != "deny":
             action.mark_blocked("local runtime loop requires network_policy=deny")
             return "network"
-        if action.name not in LOCAL_STEPS:
+        if action.name not in LOCAL_STEPS and not engage_step:
             action.mark_blocked(f"unknown local step {action.name!r}; failing closed")
             return "unknown_step"
         try:
@@ -232,6 +253,7 @@ class RuntimeLoop:
         passed = bool(eval_result.get("passed")) and not blocked and not failed
         loop_meta = {
             "allow_local": self.allow_local,
+            "allow_engage": self.allow_engage,
             "max_steps": self.max_steps,
             "processed": processed,
             "stopped": stopped,
@@ -259,15 +281,18 @@ def _action_from_step(raw: Mapping[str, Any]) -> Action:
         raw_inputs = raw.get("input")
     inputs: Mapping[str, Any] = raw_inputs if isinstance(raw_inputs, Mapping) else {}
     kind = str(raw.get("kind") or ActionKind.TOOL_CALL.value)
+    name = str(raw.get("name") or "").strip()
+    dry = bool(inputs.get("dry_run", False))
+    default_network = "controlled" if name in ENGAGE_STEPS and not dry else "deny"
     return Action(
-        name=str(raw.get("name") or "").strip(),
+        name=name,
         kind=kind,
         inputs=dict(inputs),
         policy=ActionPolicy(
             risk_level=str(policy_raw.get("risk_level") or "low"),
             requires_human_gate=bool(policy_raw.get("requires_human_gate", False)),
             allowed_in_dry_run=bool(policy_raw.get("allowed_in_dry_run", True)),
-            network_policy=str(policy_raw.get("network_policy") or "deny"),
+            network_policy=str(policy_raw.get("network_policy") or default_network),
         ),
     )
 
@@ -306,7 +331,47 @@ def _dispatch(action: Action, run_state: AgentRunState, base_dir: Path) -> Dict[
         }
     if action.name == "eval.document":
         return _eval_document(inputs, run_state, base_dir)
+    if action.name in ENGAGE_STEPS:
+        from core.engage.runner import dispatch_engage_step, empty_state
+
+        engage_state = run_state.metadata.setdefault("engage_state", empty_state())
+        if "dry_run" in inputs:
+            dry_run = bool(inputs.get("dry_run"))
+        else:
+            dry_run = run_state.mode != RunMode.ACTIVE
+        return _await_engage(
+            dispatch_engage_step(action.name, inputs, engage_state, dry_run=dry_run)
+        )
     raise ValueError(f"unhandled local step {action.name!r}")
+
+
+def _resolve_allow_engage(
+    data: Mapping[str, Any], *, allow_engage: Optional[bool], local: bool
+) -> bool:
+    if allow_engage is not None:
+        return bool(allow_engage)
+    if "allow_engage" in data:
+        return bool(data.get("allow_engage"))
+    return local and _plan_has_engage(data)
+
+
+def _plan_has_engage(data: Mapping[str, Any]) -> bool:
+    steps = data.get("steps")
+    if not isinstance(steps, list):
+        return False
+    return any(
+        isinstance(item, Mapping) and str(item.get("name") or "") in ENGAGE_STEPS for item in steps
+    )
+
+
+def _await_engage(coro):
+    import asyncio
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    raise ValueError("engage runtime steps must run from a sync loop")
 
 
 def _scan_surface(

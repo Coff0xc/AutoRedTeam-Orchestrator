@@ -17,6 +17,7 @@ from core.agent_runtime.benchmark import (
     score_run_summary,
 )
 from core.agent_runtime.loop import (
+    ENGAGE_STEPS,
     LOCAL_STEPS,
     RUNTIME_SCHEMA,
     RuntimeLoop,
@@ -94,6 +95,7 @@ __all__ = [
     "RuntimeMiddleware",
     "RuntimePipeline",
     "RuntimeRunRegistry",
+    "ENGAGE_STEPS",
     "LOCAL_STEPS",
     "RUNTIME_SCHEMA",
     "SandboxDecision",

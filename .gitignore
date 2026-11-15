@@ -25,6 +25,7 @@ ENV/
 *.sublime-workspace
 
 # Project Specific
+.autort/
 logs/*.log
 logs/*.txt
 reports/*.html

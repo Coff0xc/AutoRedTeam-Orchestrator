@@ -2,7 +2,8 @@
 AI辅助工具处理器
 包含: smart_analyze, attack_chain_plan, smart_payload, ai_redteam_run_scenario,
      ai_surface_scan_handlers, code_agent_expand_context, ai_redteam_eval_run_state,
-     ai_prompt_convert, ai_capability_matrix, skill_catalog, skill_read
+     ai_prompt_convert, ai_capability_matrix, skill_catalog, skill_read,
+     engage_init, engage_status, engage_next, engage_run
 """
 
 from typing import Any, Dict, Optional
@@ -22,11 +23,13 @@ def register_ai_tools(mcp, counter, logger):
         logger: Logger实例
     """
 
-    registered = 10
+    registered = 13
     if surface_enabled_for_mcp(mcp, "tool", "smart_analyze"):
         registered += _register_ai_scan_tools(mcp, logger)
     if surface_enabled_for_mcp(mcp, "tool", "attack_chain_plan"):
         registered += _register_ai_attack_tools(mcp, logger)
+    if surface_enabled_for_mcp(mcp, "tool", "engage_run"):
+        registered += _register_engage_run(mcp, logger)
 
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.AI)
@@ -187,11 +190,82 @@ def register_ai_tools(mcp, counter, logger):
 
         return read_skill(path, pin_id=pin_id, reference=reference)
 
+    @tool(mcp)
+    @validate_inputs(target="target")
+    @handle_errors(logger, category=ErrorCategory.AI, context_extractor=extract_target)
+    @no_target_contact("Writes a local engagement file; does not contact the target")
+    async def engage_init(
+        target: str,
+        profile: str = "scan",
+        path: str = ".autort/engage.yaml",
+        phases: Optional[str] = None,
+        hitl: str = "off",
+        quick_mode: bool = True,
+    ) -> Dict[str, Any]:
+        """Create a local authorized engagement. Next step is engage_run or engage_next.
+
+        Args:
+            target: Authorized URL or host stored in the engagement file
+            profile: scan, active-lab, or full
+            path: Engagement YAML path
+            phases: Comma-separated recon,detect,verify,export
+            hitl: off, approval, or review_edit
+            quick_mode: Skip slow recon phases
+        """
+        from core.engage import init_engagement
+
+        kwargs: Dict[str, Any] = {
+            "profile": profile,
+            "path": path,
+            "hitl": hitl,
+            "quick_mode": quick_mode,
+        }
+        if phases:
+            kwargs["phases"] = phases
+        return init_engagement(target, **kwargs)
+
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    @no_target_contact("Reads local engagement state; does not contact the target")
+    async def engage_status(path: str = ".autort/engage.yaml") -> Dict[str, Any]:
+        """Show engagement config, finding counts, and the next step."""
+        from core.engage import engagement_status
+
+        return engagement_status(path)
+
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    @no_target_contact("Plans the next engagement step; does not contact the target")
+    async def engage_next(path: str = ".autort/engage.yaml") -> Dict[str, Any]:
+        """Return the next recon/detect/verify/export step for this engagement."""
+        from core.engage import engagement_next
+
+        return engagement_next(path)
+
     counter.add("ai", registered)
-    if registered == 13:
-        logger.info("[AI] 已注册 13 个AI辅助工具")
-    else:
-        logger.info("[AI] 已注册 %s 个AI辅助工具", registered)
+    logger.info("[AI] 已注册 %s 个AI辅助工具", registered)
+
+
+def _register_engage_run(mcp, logger) -> int:
+    @tool(mcp)
+    @handle_errors(logger, category=ErrorCategory.AI)
+    async def engage_run(
+        path: str = ".autort/engage.yaml",
+        dry_run: bool = False,
+        max_steps: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Run the engagement loop: recon, detect, verify, export.
+
+        Args:
+            path: Engagement YAML written by engage_init
+            dry_run: Plan and record steps without contacting the target
+            max_steps: Cap on planner iterations
+        """
+        from core.engage import async_run_engagement
+
+        return await async_run_engagement(path, dry_run=dry_run, max_steps=max_steps)
+
+    return 1
 
 
 def _register_ai_scan_tools(mcp, logger) -> int:

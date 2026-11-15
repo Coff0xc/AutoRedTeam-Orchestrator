@@ -92,6 +92,10 @@ RESIDENT_SURFACES = frozenset(
         ("tool", "ai_surface_scan_mcp_config"),
         ("tool", "skill_catalog"),
         ("tool", "skill_read"),
+        ("tool", "engage_init"),
+        ("tool", "engage_status"),
+        ("tool", "engage_next"),
+        ("tool", "engage_run"),
         ("tool", "cve_search"),
         ("tool", "session_create"),
         ("tool", "session_status"),
@@ -586,13 +590,28 @@ def _build_capabilities() -> tuple[Capability, ...]:
                 "ai_capability_matrix",
                 "skill_catalog",
                 "skill_read",
+                "engage_init",
+                "engage_status",
+                "engage_next",
             ),
             handler="ai",
             category="ai",
             minimum_profile="safe",
             risk="low",
             maturity="preview",
-            effects=("local-read", "dry-run"),
+            effects=("local-read", "local-write", "dry-run"),
+        )
+    )
+    add(
+        _surface_group(
+            ("engage_run",),
+            handler="ai",
+            category="ai",
+            minimum_profile="scan",
+            risk="moderate",
+            maturity="beta",
+            auth_required=True,
+            effects=("network-probe", "finding-data"),
         )
     )
     add(

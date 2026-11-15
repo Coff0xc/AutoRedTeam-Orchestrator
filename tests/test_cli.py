@@ -288,7 +288,7 @@ class TestCLICapabilities:
 
         assert result.exit_code == 0
         assert payload["profile"] == "safe"
-        assert payload["summary"]["total"] == 27
+        assert payload["summary"]["total"] == 30
         assert all("safe" in item["profiles"] for item in payload["capabilities"])
 
     def test_capabilities_profiles_outputs_boundaries(self):
@@ -299,8 +299,8 @@ class TestCLICapabilities:
 
         assert result.exit_code == 0
         assert payload["default_mcp_profile"] == "safe"
-        assert [item["surface_count"] for item in payload["profiles"]] == [27, 92, 113, 149]
-        assert [item["registered_count"] for item in payload["profiles"]] == [18, 22, 23, 23]
+        assert [item["surface_count"] for item in payload["profiles"]] == [30, 96, 117, 153]
+        assert [item["registered_count"] for item in payload["profiles"]] == [21, 26, 27, 27]
         assert "do not replace authentication" in payload["security_note"]
 
     def test_capabilities_manifest_rejects_unknown_profile(self):
