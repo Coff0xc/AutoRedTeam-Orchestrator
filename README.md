@@ -91,6 +91,7 @@ From a checkout, `typer` is enough for the read-only commands.
 ```bash
 pip install typer
 python -m cli.main ai-surface scan --path handlers --format sarif -o surface.sarif
+python -m cli.main ai-surface inventory
 python -m cli.main ai-surface scan-mcp-config --path .mcp.json
 python -m cli.main capabilities manifest --profile safe
 python -m cli.main engage init http://127.0.0.1:3000 --profile scan
@@ -360,6 +361,7 @@ These do not contact a target. CVE search reads the local notes.
 | Command | You get | Example |
 |---|---|---|
 | `ai-surface scan` | An inventory of the handlers | `autort ai-surface scan --path handlers --format sarif -o surface.sarif` |
+| `ai-surface inventory` | Local MCP client configs and skill roots, no network | `autort ai-surface inventory` |
 | `ai-surface scan-mcp-config` | A read of a client config | `autort ai-surface scan-mcp-config --path .mcp.json` |
 | `ai-surface scan-skills` | Markers in instruction files | `autort ai-surface scan-skills --path ./skills` |
 | `ai-surface diff` | What changed since a saved scan | `autort ai-surface diff --baseline surface.json --path handlers` |
@@ -379,7 +381,7 @@ These do not contact a target. CVE search reads the local notes.
 
 | Group | Commands | What it is |
 |---|---|---|
-| `ai-surface` | `scan`, `scan-mcp-config`, `scan-skills`, `diff` | The reader |
+| `ai-surface` | `scan`, `inventory`, `scan-mcp-config`, `scan-skills`, `diff` | The reader |
 | `capabilities` | `matrix`, `readiness`, `manifest`, `profiles` | The allowed list |
 | `tools` | `lint` | Contract check |
 | `skills` | `catalog`, `read` | Pinned SKILL.md packs. Read-only |
