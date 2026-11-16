@@ -619,6 +619,33 @@ def ai_surface_scan_mcp_config(
     _emit_surface_result(result, output, format, severity_threshold, exit_code)
 
 
+@ai_surface_app.command("inventory")
+def ai_surface_inventory(
+    home: Optional[str] = typer.Option(
+        None,
+        "--home",
+        help="Inventory home. Defaults to AUTORT_INVENTORY_HOME or the user home.",
+    ),
+    project: str = typer.Option(
+        ".",
+        "--project",
+        "-p",
+        help="Project directory walked for workspace MCP configs",
+    ),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """List local MCP client configs and skill roots. Read only; no network."""
+    from core.ai_surface import discover_agent_stack
+
+    try:
+        result = discover_agent_stack(home=home, project=project)
+    except (OSError, ValueError) as exc:
+        typer.echo(f"AI surface inventory failed: {exc}", err=True)
+        raise typer.Exit(2) from exc
+
+    _output(result.to_dict(), output)
+
+
 @ai_surface_app.command("scan-skills")
 def ai_surface_scan_skills(
     path: str = typer.Option(..., "--path", "-p", help="skill/prompt 目录或文件"),

@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -148,6 +149,45 @@ async def test_ai_surface_scan_mcp_config_static_scan(tmp_path):
     assert result["success"] is True
     assert result["data"]["summary"]["issue_count"] == 2
     assert result["data"]["findings"][0]["finding_type"] == "mcp_config"
+
+
+@pytest.mark.asyncio
+async def test_ai_surface_scan_mcp_config_discover_inventory(tmp_path):
+    from core.ai_surface import INVENTORY_SCHEMA
+
+    registered_tools, _, _ = _register_ai_tools()
+    home = tmp_path / "home"
+    project = tmp_path / "repo"
+    config = home / ".cursor" / "mcp.json"
+    config.parent.mkdir(parents=True)
+    config.write_text(
+        json.dumps(
+            {
+                "mcpServers": {
+                    "cursor-user": {
+                        "command": "npx",
+                        "env": {"TOKEN": "tok_live_should_not_leak"},
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    project.mkdir()
+
+    result = await registered_tools["ai_surface_scan_mcp_config"](
+        path=str(project),
+        discover=True,
+        home=str(home),
+    )
+    payload = result["data"]
+
+    assert result["success"] is True
+    assert payload["schema"] == INVENTORY_SCHEMA
+    assert payload["network"] is False
+    assert payload["summary"]["server_count"] == 1
+    assert payload["configs"][0]["client"] == "cursor"
+    assert "tok_live_should_not_leak" not in json.dumps(payload)
 
 
 @pytest.mark.asyncio

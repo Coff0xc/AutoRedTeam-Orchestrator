@@ -86,14 +86,22 @@ def register_ai_tools(mcp, counter, logger):
 
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.AI)
-    async def ai_surface_scan_mcp_config(path: str) -> Dict[str, Any]:
+    async def ai_surface_scan_mcp_config(
+        path: str,
+        discover: bool = False,
+        home: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """MCP 配置静态盘点 - 发现泛化命令运行时和敏感 env key
 
         Args:
-            path: MCP 配置文件或所在目录
+            path: MCP 配置文件或所在目录。discover 时作为项目根
+            discover: True 时枚举本机客户端配置和 skill 根，不启动 server
+            home: 可选库存主目录；默认 AUTORT_INVENTORY_HOME 或用户主目录
         """
-        from core.ai_surface import scan_mcp_config
+        from core.ai_surface import discover_agent_stack, scan_mcp_config
 
+        if discover:
+            return discover_agent_stack(home=home, project=path).to_dict()
         return scan_mcp_config(path).to_dict()
 
     @tool(mcp)

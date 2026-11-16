@@ -70,6 +70,34 @@ class TestCLIHelp:
         assert result.exit_code == 0
         assert "path" in result.output.lower()
 
+    def test_ai_surface_inventory_help(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["ai-surface", "inventory", "--help"])
+        assert result.exit_code == 0
+        assert "home" in result.output.lower()
+        assert "project" in result.output.lower()
+
+    def test_ai_surface_inventory_empty_home(self, tmp_path):
+        from cli.main import app
+
+        result = runner.invoke(
+            app,
+            [
+                "ai-surface",
+                "inventory",
+                "--home",
+                str(tmp_path),
+                "--project",
+                str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.stdout[result.stdout.index("{") :])
+        assert data["schema"] == "autort.inventory/v1"
+        assert data["network"] is False
+        assert data["summary"]["server_count"] == 0
+
     def test_ai_redteam_eval_run_help(self):
         """ai-redteam eval-run --help 应返回成功"""
         from cli.main import app
