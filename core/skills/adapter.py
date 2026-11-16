@@ -15,7 +15,7 @@ from typing import Any, Optional
 import yaml
 
 from core.ai_surface import scan_skill_surface
-from core.ai_surface.models import SurfaceRiskLevel
+from core.ai_surface.rules import skill_finding_is_blocking
 
 DISTRIBUTABLE_LICENSES = frozenset({"MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause"})
 FLOATING_REFS = frozenset({"", "main", "master", "head", "latest", "origin/main"})
@@ -154,11 +154,7 @@ def _operator_stop(text: str) -> list[str]:
 def _scan_markdown(path: Path) -> dict[str, Any]:
     result = scan_skill_surface(path)
     findings = [item.to_dict() for item in result.findings]
-    blocked = any(
-        item.risk_level == SurfaceRiskLevel.CRITICAL
-        or "critical_skill_instruction_requires_review" in item.issues
-        for item in result.findings
-    )
+    blocked = any(skill_finding_is_blocking(item) for item in result.findings)
     return {
         "blocked": blocked,
         "findings": findings,

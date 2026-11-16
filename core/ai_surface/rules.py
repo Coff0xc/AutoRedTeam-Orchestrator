@@ -18,6 +18,11 @@ ISSUE_UNPINNED_PACKAGE = "mcp_server_unpinned_package"
 ISSUE_REMOTE_SKILL_CODE = "skill_fetches_remote_code"
 ISSUE_OVERLONG_DESCRIPTION = "mcp_tool_description_overlong"
 ISSUE_SECRET_IN_SCHEMA = "mcp_tool_schema_contains_secret"
+ISSUE_SKILL_PROMPT_INJECTION = "skill_prompt_injection"
+ISSUE_SKILL_HARDCODED_SECRET = "skill_hardcoded_secret"
+ISSUE_SKILL_SUSPICIOUS_URL = "skill_suspicious_download_url"
+ISSUE_SKILL_UNVERIFIABLE = "skill_unverifiable_remote_code"
+ISSUE_MISSING_SKILL_MD = "skill_missing_skill_md"
 
 RULE_ID = {
     ISSUE_TOOL_POISONING: "mcp.MCP03.tool-poisoning",
@@ -26,6 +31,11 @@ RULE_ID = {
     ISSUE_REMOTE_SKILL_CODE: "mcp.MCP04.remote-skill-code",
     ISSUE_OVERLONG_DESCRIPTION: "mcp.MCP10.overlong-description",
     ISSUE_SECRET_IN_SCHEMA: "mcp.MCP10.secret-in-schema",
+    ISSUE_SKILL_PROMPT_INJECTION: "skill.prompt_injection",
+    ISSUE_SKILL_HARDCODED_SECRET: "skill.hardcoded_secret",
+    ISSUE_SKILL_SUSPICIOUS_URL: "skill.suspicious_download_url",
+    ISSUE_SKILL_UNVERIFIABLE: "skill.unverifiable_remote_code",
+    ISSUE_MISSING_SKILL_MD: "skill.missing_skill_md",
 }
 
 OWASP_MCP = {
@@ -35,6 +45,11 @@ OWASP_MCP = {
     ISSUE_REMOTE_SKILL_CODE: "MCP04",
     ISSUE_OVERLONG_DESCRIPTION: "MCP10",
     ISSUE_SECRET_IN_SCHEMA: "MCP10",
+    ISSUE_SKILL_PROMPT_INJECTION: "MCP06",
+    ISSUE_SKILL_HARDCODED_SECRET: "MCP01",
+    ISSUE_SKILL_SUSPICIOUS_URL: "MCP04",
+    ISSUE_SKILL_UNVERIFIABLE: "MCP04",
+    ISSUE_MISSING_SKILL_MD: "MCP04",
 }
 
 ISSUE_RISK = {
@@ -44,6 +59,11 @@ ISSUE_RISK = {
     ISSUE_REMOTE_SKILL_CODE: SurfaceRiskLevel.CRITICAL,
     ISSUE_OVERLONG_DESCRIPTION: SurfaceRiskLevel.MODERATE,
     ISSUE_SECRET_IN_SCHEMA: SurfaceRiskLevel.HIGH,
+    ISSUE_SKILL_PROMPT_INJECTION: SurfaceRiskLevel.CRITICAL,
+    ISSUE_SKILL_HARDCODED_SECRET: SurfaceRiskLevel.CRITICAL,
+    ISSUE_SKILL_SUSPICIOUS_URL: SurfaceRiskLevel.HIGH,
+    ISSUE_SKILL_UNVERIFIABLE: SurfaceRiskLevel.HIGH,
+    ISSUE_MISSING_SKILL_MD: SurfaceRiskLevel.MODERATE,
 }
 
 ISSUE_RECOMMENDATION = {
@@ -62,16 +82,37 @@ ISSUE_RECOMMENDATION = {
     ISSUE_SECRET_IN_SCHEMA: (
         "Remove secret literals from descriptions, defaults, and schema examples."
     ),
+    ISSUE_SKILL_PROMPT_INJECTION: (
+        "Remove instructions that try to override the agent or hide the skill's purpose."
+    ),
+    ISSUE_SKILL_HARDCODED_SECRET: "Remove secret literals from the skill text.",
+    ISSUE_SKILL_SUSPICIOUS_URL: ("Do not point the agent at untrusted download URLs from a skill."),
+    ISSUE_SKILL_UNVERIFIABLE: "Pin package versions in skill install steps.",
+    ISSUE_MISSING_SKILL_MD: "Add a SKILL.md manifest before installing this skill.",
 }
 
 # Prefer poisoning, then supply chain, then over-sharing when several fire.
 ISSUE_ORDER = (
+    ISSUE_SKILL_PROMPT_INJECTION,
+    ISSUE_SKILL_HARDCODED_SECRET,
     ISSUE_TOOL_POISONING,
     ISSUE_HIDDEN_UNICODE,
     ISSUE_REMOTE_SKILL_CODE,
+    ISSUE_SKILL_UNVERIFIABLE,
     ISSUE_UNPINNED_PACKAGE,
     ISSUE_SECRET_IN_SCHEMA,
+    ISSUE_SKILL_SUSPICIOUS_URL,
     ISSUE_OVERLONG_DESCRIPTION,
+    ISSUE_MISSING_SKILL_MD,
+)
+
+BLOCKING_SKILL_ISSUES = frozenset(
+    {
+        ISSUE_SKILL_PROMPT_INJECTION,
+        ISSUE_SKILL_HARDCODED_SECRET,
+        ISSUE_REMOTE_SKILL_CODE,
+        "critical_skill_instruction_requires_review",
+    }
 )
 
 OVERLONG_DESCRIPTION_CHARS = 2048
@@ -187,11 +228,68 @@ def analyze_mcp_command(command: str, args: Sequence[str]) -> List[str]:
     return []
 
 
+_URL_RE = re.compile(r"https?://[^\s)\]>'\"`]+", re.IGNORECASE)
+_UNPINNED_IN_SKILL = re.compile(
+    r"\b(npx|uvx|npm|pnpm|yarn|pipx|pip3?)\s+"
+    r"(?:-[yY]\s+|install\s+|exec\s+|dlx\s+|add\s+)*"
+    r"(@?[A-Za-z0-9_./-]+(?:@[A-Za-z0-9_.*-]+)?)",
+    re.IGNORECASE,
+)
+
+
 def analyze_skill_text(text: str) -> List[str]:
-    """Return MCP04 issues for a SKILL.md body."""
-    if any(pattern.search(text or "") for pattern in _REMOTE_SKILL_PATTERNS):
-        return [ISSUE_REMOTE_SKILL_CODE]
-    return []
+    """Return named skill-install issues for a SKILL.md or instruction file."""
+    haystack = text or ""
+    issues: List[str] = []
+    if any(pattern.search(haystack) for pattern in _POISONING_PATTERNS):
+        issues.append(ISSUE_SKILL_PROMPT_INJECTION)
+    if any(pattern.search(haystack) for pattern in _SECRET_PATTERNS):
+        issues.append(ISSUE_SKILL_HARDCODED_SECRET)
+    if any(marker in haystack for marker in _HIDDEN_UNICODE):
+        issues.append(ISSUE_HIDDEN_UNICODE)
+    if any(pattern.search(haystack) for pattern in _REMOTE_SKILL_PATTERNS):
+        issues.append(ISSUE_REMOTE_SKILL_CODE)
+    if _unpinned_install_in_skill(haystack):
+        issues.append(ISSUE_SKILL_UNVERIFIABLE)
+    if _has_suspicious_download_url(haystack):
+        issues.append(ISSUE_SKILL_SUSPICIOUS_URL)
+    return issues
+
+
+def _has_suspicious_download_url(text: str) -> bool:
+    for raw in _URL_RE.findall(text or ""):
+        url = raw.lower().rstrip(".,;:")
+        if "/releases/download/" in url:
+            return True
+        if "raw.githubusercontent.com" in url:
+            return True
+        if "gist.githubusercontent.com" in url:
+            return True
+        if re.search(r"\.(?:sh|ps1|exe|bat|cmd|msi|dmg|zip)(?:\?|$)", url):
+            return True
+    return False
+
+
+def _unpinned_install_in_skill(text: str) -> bool:
+    for match in _UNPINNED_IN_SKILL.finditer(text or ""):
+        command = match.group(1).lower()
+        token = match.group(2)
+        if token.startswith("-"):
+            continue
+        if token.lower() in {"install", "exec", "dlx", "add"}:
+            continue
+        if _looks_like_local_path(token) or token.lower().endswith((".txt", ".in")):
+            continue
+        if not _is_pinned(token, command):
+            return True
+    return False
+
+
+def skill_finding_is_blocking(finding: SurfaceFinding) -> bool:
+    """True when skill_read must withhold the body."""
+    if finding.risk_level == SurfaceRiskLevel.CRITICAL:
+        return True
+    return any(issue in BLOCKING_SKILL_ISSUES for issue in finding.issues)
 
 
 def apply_policy(finding: SurfaceFinding, issues: Iterable[str]) -> None:

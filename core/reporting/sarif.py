@@ -57,6 +57,11 @@ SURFACE_RULE_TEXT: Dict[str, str] = {
         "MCP server launches npx/uvx/pip without a pinned package version"
     ),
     "mcp.MCP04.remote-skill-code": "Skill text downloads and executes remote code",
+    "skill.prompt_injection": "Skill instructions try to override the agent",
+    "skill.hardcoded_secret": "Skill text embeds a secret literal",
+    "skill.suspicious_download_url": "Skill text points at an untrusted download URL",
+    "skill.unverifiable_remote_code": "Skill install step uses an unpinned package",
+    "skill.missing_skill_md": "Skill directory has no SKILL.md manifest",
     "mcp.MCP10.overlong-description": "Tool description is long enough to hide extra instructions",
     "mcp.MCP10.secret-in-schema": "Tool description or schema embeds a secret literal",
 }

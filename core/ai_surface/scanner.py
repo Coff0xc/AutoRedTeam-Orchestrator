@@ -20,6 +20,7 @@ from core.ai_surface.models import (
     max_risk,
 )
 from core.ai_surface.rules import (
+    ISSUE_MISSING_SKILL_MD,
     analyze_mcp_command,
     analyze_skill_text,
     analyze_tool_text,
@@ -89,20 +90,6 @@ TARGET_PARAMS = {
     "targets",
     "url",
     "urls",
-}
-
-SKILL_RISK_TERMS: Dict[str, SurfaceRiskLevel] = {
-    "credential": SurfaceRiskLevel.CRITICAL,
-    "exfil": SurfaceRiskLevel.CRITICAL,
-    "persistence": SurfaceRiskLevel.CRITICAL,
-    "c2": SurfaceRiskLevel.CRITICAL,
-    "shell": SurfaceRiskLevel.HIGH,
-    "command": SurfaceRiskLevel.HIGH,
-    "network": SurfaceRiskLevel.HIGH,
-    "write": SurfaceRiskLevel.MODERATE,
-    "delete": SurfaceRiskLevel.MODERATE,
-    "token": SurfaceRiskLevel.MODERATE,
-    "secret": SurfaceRiskLevel.MODERATE,
 }
 
 SAFE_RUNTIME_HELPER_CALLS = {
@@ -209,13 +196,25 @@ def scan_handler_surface(
 
 
 def scan_skill_surface(path: str | Path) -> SurfaceScanResult:
-    """Scan local agent skills or plugin prompts for risky instructions."""
+    """Scan local agent skills or plugin prompts for named install risks."""
     root = Path(path)
     if not root.exists():
         raise FileNotFoundError(f"Skill scan path does not exist: {root}")
     files, skipped = _iter_text_files(root)
     result = SurfaceScanResult(root_path=str(root))
     result.warnings.extend(skipped)
+    if root.is_dir() and not (root / "SKILL.md").is_file():
+        missing = SurfaceFinding(
+            tool_name=root.name or "skill",
+            file_path=str(root),
+            line=1,
+            risk_level=SurfaceRiskLevel.INFO,
+            description="Skill directory has no SKILL.md",
+            finding_type="skill_instruction",
+        )
+        apply_policy(missing, [ISSUE_MISSING_SKILL_MD])
+        _finalize_finding(missing)
+        result.findings.append(missing)
     for file_path in files:
         result.scanned_files += 1
         try:
@@ -223,29 +222,23 @@ def scan_skill_surface(path: str | Path) -> SurfaceScanResult:
         except OSError as exc:
             result.warnings.append(f"{file_path}: {type(exc).__name__}: {exc}")
             continue
-        risk_terms, risk_level = _risk_terms([text], catalog=SKILL_RISK_TERMS)
-        issues = []
-        if risk_level == SurfaceRiskLevel.CRITICAL:
-            issues.append("critical_skill_instruction_requires_review")
-        elif risk_level == SurfaceRiskLevel.HIGH:
-            issues.append("high_risk_skill_instruction_requires_review")
+        named = analyze_skill_text(text)
         recommendations = (
             ["Require human review before installing or enabling this skill."]
-            if issues
+            if named
             else ["No high-risk instruction marker found."]
         )
         finding = SurfaceFinding(
             tool_name=file_path.stem,
             file_path=str(file_path),
             line=1,
-            risk_level=risk_level if risk_terms else SurfaceRiskLevel.LOW,
-            risk_terms=risk_terms,
-            issues=issues,
+            risk_level=SurfaceRiskLevel.LOW,
+            issues=[],
             recommendations=recommendations,
             description="Static skill/prompt instruction scan",
             finding_type="skill_instruction",
         )
-        apply_policy(finding, analyze_skill_text(text))
+        apply_policy(finding, named)
         _finalize_finding(finding)
         result.findings.append(finding)
     result.findings.sort(key=lambda item: (-RISK_ORDER[item.risk_level], item.file_path, item.line))
