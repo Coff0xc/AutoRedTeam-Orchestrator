@@ -1,32 +1,32 @@
-## 变更描述
+## Description of Changes
 
-简要描述这个 PR 做了什么。
+Briefly describe what this PR does.
 
-## 关联 Issue
+## Related Issue
 
 Closes #(issue number)
 
-## 变更类型
+## Type of Change
 
-- [ ] 🐛 Bug 修复
-- [ ] ✨ 新功能
-- [ ] 📝 文档更新
-- [ ] 🔧 重构
-- [ ] 🧪 测试
-- [ ] 🔒 安全修复
+- [ ] 🐛 Bug fix
+- [ ] ✨ New feature
+- [ ] 📝 Documentation update
+- [ ] 🔧 Refactor
+- [ ] 🧪 Tests
+- [ ] 🔒 Security fix
 
-## 测试清单
+## Testing Checklist
 
-- [ ] 本地测试通过
-- [ ] 代码通过 `flake8` 检查
-- [ ] 代码通过 `black` 格式化
-- [ ] 添加了必要的测试用例
-- [ ] 更新了相关文档
+- [ ] Local tests pass
+- [ ] Code passes `flake8` checks
+- [ ] Code is formatted with `black`
+- [ ] Necessary test cases added
+- [ ] Relevant documentation updated
 
-## 截图/日志 (如适用)
+## Screenshots / Logs (if applicable)
 
-如果有 UI 变更或重要输出，请附上截图或日志。
+If there are UI changes or important output, please attach screenshots or logs.
 
-## 其他说明
+## Additional Notes
 
-添加任何其他需要审查者了解的信息。
+Add any other information reviewers should know.
