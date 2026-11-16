@@ -537,6 +537,54 @@ def test_diff_surface_inventory_reports_added_removed_and_changed():
     assert by_name["added"].issues == ["surface_added"]
     assert by_name["gone"].issues == ["surface_removed"]
     assert by_name["gone"].file_path == "b.py"
+    assert by_name["clock"].rule_id == "surface_description_changed"
+    assert by_name["added"].rule_id == "surface_added"
+    assert by_name["gone"].rule_id == "surface_removed"
+
+
+def test_committed_handlers_baseline_has_no_drift():
+    from core.ai_surface import diff_surface_inventory, scan_handler_surface
+
+    saved = json.loads(
+        Path("tests/fixtures/ai_surface/handlers.baseline.json").read_text(encoding="utf-8")
+    )
+    current = scan_handler_surface("handlers")
+    result = diff_surface_inventory(saved, current)
+
+    assert saved["schema"] == "autort.surface.baseline/v1"
+    assert result.findings == []
+
+
+def test_diff_ignores_description_trailing_whitespace():
+    from core.ai_surface import diff_surface_inventory
+    from core.ai_surface.models import SurfaceFinding, SurfaceRiskLevel, SurfaceScanResult
+
+    current = SurfaceScanResult(
+        root_path="handlers",
+        findings=[
+            SurfaceFinding(
+                tool_name="clock",
+                file_path="a.py",
+                line=4,
+                risk_level=SurfaceRiskLevel.LOW,
+                description="Return the local clock.  ",
+                kind="tool",
+            )
+        ],
+    )
+    baseline = {
+        "findings": [
+            {
+                "kind": "tool",
+                "tool_name": "clock",
+                "description": "  Return the local clock.",
+            }
+        ]
+    }
+
+    result = diff_surface_inventory(baseline, current)
+
+    assert result.findings == []
 
 
 def test_action_v3_1_still_runs_ai_surface_scan():
@@ -545,6 +593,8 @@ def test_action_v3_1_still_runs_ai_surface_scan():
     readme = Path("README.md").read_text(encoding="utf-8")
 
     assert "python -m cli.main ai-surface scan" in action
+    assert "python -m cli.main ai-surface diff" in action
+    assert "--ci" in action
     assert "default: 'self-audit'" in action
     assert "uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1" in example
     assert "uses: Coff0xc/AutoRedTeam-Orchestrator@v3.1" in readme

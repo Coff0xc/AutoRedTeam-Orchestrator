@@ -46,6 +46,11 @@ SURFACE_RULE_TEXT: Dict[str, str] = {
     "mcp_tool": "MCP tool surface",
     "mcp_config": "MCP client configuration exposure",
     "skill_instruction": "Agent skill or prompt instruction",
+    "surface_inventory_diff": "MCP surface added, removed, or changed against a saved scan",
+    "surface_added": "MCP surface added since the saved scan",
+    "surface_removed": "MCP surface missing from the current scan",
+    "surface_description_changed": "MCP surface description changed since the saved scan",
+    "surface_parameters_changed": "MCP surface parameters changed since the saved scan",
     "mcp.MCP03.tool-poisoning": "Tool description contains instructions directed at the model",
     "mcp.MCP03.hidden-unicode": "Tool description contains hidden or bidi Unicode characters",
     "mcp.MCP04.unpinned-package": (

@@ -98,6 +98,81 @@ class TestCLIHelp:
         assert data["network"] is False
         assert data["summary"]["server_count"] == 0
 
+    def test_ai_surface_diff_help(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["ai-surface", "diff", "--help"])
+        assert result.exit_code == 0
+        assert "--ci" in result.output
+        assert "baseline" in result.output.lower()
+
+
+class TestAISurfaceDiffCI:
+    def _write_handler(self, tmp_path, description: str) -> None:
+        (tmp_path / "demo.py").write_text(
+            "def register(mcp):\n"
+            "    @mcp.tool()\n"
+            "    async def clock_status():\n"
+            f'        """{description}"""\n'
+            "        return {}\n",
+            encoding="utf-8",
+        )
+
+    def _baseline(self, tmp_path, description: str):
+        from core.ai_surface import scan_handler_surface
+
+        self._write_handler(tmp_path, description)
+        payload = scan_handler_surface(tmp_path, exclude_tests=False, reconcile=False).to_dict()
+        path = tmp_path / "baseline.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        return path
+
+    def test_diff_ci_fails_on_description_change(self, tmp_path):
+        from cli.main import app
+
+        baseline = self._baseline(tmp_path, "Return the local clock.")
+        self._write_handler(tmp_path, "Return the local clock now.")
+        result = runner.invoke(
+            app,
+            ["ai-surface", "diff", "--baseline", str(baseline), "--path", str(tmp_path), "--ci"],
+        )
+        assert result.exit_code == 2
+        text = f"{result.output or ''}{result.stderr or ''}".lower()
+        assert "surface diff" in text or "surface_description_changed" in text
+
+    def test_diff_ci_passes_on_trailing_whitespace(self, tmp_path):
+        from cli.main import app
+
+        baseline = self._baseline(tmp_path, "Return the local clock.")
+        self._write_handler(tmp_path, "Return the local clock. ")
+        result = runner.invoke(
+            app,
+            ["ai-surface", "diff", "--baseline", str(baseline), "--path", str(tmp_path), "--ci"],
+        )
+        assert result.exit_code == 0
+
+    def test_diff_ci_passes_when_unchanged(self, tmp_path):
+        from cli.main import app
+
+        baseline = self._baseline(tmp_path, "Return the local clock.")
+        result = runner.invoke(
+            app,
+            ["ai-surface", "diff", "--baseline", str(baseline), "--path", str(tmp_path), "--ci"],
+        )
+        assert result.exit_code == 0
+
+    def test_diff_ci_fails_when_baseline_missing(self, tmp_path):
+        from cli.main import app
+
+        missing = tmp_path / "missing.json"
+        result = runner.invoke(
+            app,
+            ["ai-surface", "diff", "--baseline", str(missing), "--path", str(tmp_path), "--ci"],
+        )
+        assert result.exit_code == 2
+
+
+class TestCLIHelpRest:
     def test_ai_redteam_eval_run_help(self):
         """ai-redteam eval-run --help 应返回成功"""
         from cli.main import app

@@ -67,6 +67,7 @@ def _index(findings: Sequence[Mapping[str, Any]]) -> Dict[InventoryKey, Mapping[
 def _added(item: Mapping[str, Any]) -> SurfaceFinding:
     finding = _from_item(item, "Surface added since the saved inventory.")
     finding.issues = ["surface_added"]
+    finding.rule_id = "surface_added"
     finding.risk_level = max_risk(finding.risk_level, SurfaceRiskLevel.MODERATE)
     return finding
 
@@ -74,15 +75,41 @@ def _added(item: Mapping[str, Any]) -> SurfaceFinding:
 def _removed(item: Mapping[str, Any]) -> SurfaceFinding:
     finding = _from_item(item, "Surface missing from the current inventory.")
     finding.issues = ["surface_removed"]
+    finding.rule_id = "surface_removed"
     finding.risk_level = max_risk(finding.risk_level, SurfaceRiskLevel.MODERATE)
     return finding
+
+
+DIFF_ISSUES = frozenset(
+    {
+        "surface_added",
+        "surface_removed",
+        "surface_description_changed",
+        "surface_parameters_changed",
+    }
+)
+
+
+def has_inventory_drift(findings: Sequence[Mapping[str, Any]]) -> bool:
+    """True when a diff result contains added, removed, or changed surfaces."""
+    for item in findings:
+        issues = item.get("issues") if isinstance(item, Mapping) else None
+        if not isinstance(issues, list):
+            continue
+        if DIFF_ISSUES.intersection(str(issue) for issue in issues):
+            return True
+    return False
+
+
+def _normalized_description(value: object) -> str:
+    return str(value or "").strip()
 
 
 def _changed(saved: Mapping[str, Any], item: Mapping[str, Any]) -> SurfaceFinding | None:
     issues: List[str] = []
     notes: List[str] = []
-    old_description = str(saved.get("description") or "")
-    new_description = str(item.get("description") or "")
+    old_description = _normalized_description(saved.get("description"))
+    new_description = _normalized_description(item.get("description"))
     if old_description != new_description:
         issues.append("surface_description_changed")
         notes.append(f"Saved description: {old_description[:200]}")
@@ -95,6 +122,7 @@ def _changed(saved: Mapping[str, Any], item: Mapping[str, Any]) -> SurfaceFindin
         return None
     finding = _from_item(item, new_description or "Surface changed since the saved inventory.")
     finding.issues = issues
+    finding.rule_id = issues[0]
     finding.recommendations = notes
     finding.risk_level = max_risk(finding.risk_level, SurfaceRiskLevel.MODERATE)
     return finding

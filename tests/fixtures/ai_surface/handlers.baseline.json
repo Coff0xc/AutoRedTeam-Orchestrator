@@ -1,0 +1,1487 @@
+{
+  "schema": "autort.surface.baseline/v1",
+  "findings": [
+    {
+      "kind": "prompt",
+      "tool_name": "analyze_findings",
+      "description": "Returns the manifest constraint and the declared parameters.",
+      "parameters": [
+        "findings_json"
+      ]
+    },
+    {
+      "kind": "prompt",
+      "tool_name": "explain_vulnerability",
+      "description": "Returns the manifest constraint and the declared parameters.",
+      "parameters": [
+        "vuln_type",
+        "context"
+      ]
+    },
+    {
+      "kind": "prompt",
+      "tool_name": "plan_attack_chain",
+      "description": "Returns the manifest constraint and the declared parameters.",
+      "parameters": [
+        "target",
+        "vulnerabilities",
+        "access_level"
+      ]
+    },
+    {
+      "kind": "prompt",
+      "tool_name": "plan_pentest",
+      "description": "Returns the manifest constraint and the declared parameters.",
+      "parameters": [
+        "target",
+        "scope"
+      ]
+    },
+    {
+      "kind": "prompt",
+      "tool_name": "suggest_next_phase",
+      "description": "Returns the manifest constraint and the declared parameters.",
+      "parameters": [
+        "current_phase",
+        "findings_summary",
+        "access_level"
+      ]
+    },
+    {
+      "kind": "prompt",
+      "tool_name": "write_report",
+      "description": "Returns the manifest constraint and the declared parameters.",
+      "parameters": [
+        "target",
+        "findings_json",
+        "report_type"
+      ]
+    },
+    {
+      "kind": "resource",
+      "tool_name": "active_sessions",
+      "description": "列出所有活跃的渗透测试会话及其状态",
+      "parameters": []
+    },
+    {
+      "kind": "resource",
+      "tool_name": "payload_library",
+      "description": "按分类获取 payload 列表 (sqli, xss, ssti, cmd_injection, path_traversal)",
+      "parameters": [
+        "category"
+      ]
+    },
+    {
+      "kind": "resource",
+      "tool_name": "registered_tools",
+      "description": "列出所有已注册的 AutoRedTeam MCP 工具及其分类",
+      "parameters": []
+    },
+    {
+      "kind": "resource",
+      "tool_name": "security_config",
+      "description": "当前 AutoRedTeam 安全配置（授权模式、速率限制等）",
+      "parameters": []
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ad_enumerate",
+      "description": "AD枚举 - 枚举Active Directory对象",
+      "parameters": [
+        "domain",
+        "dc_ip",
+        "username",
+        "password",
+        "enum_type"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ad_kerberos_attack",
+      "description": "Kerberos攻击 - 执行Kerberos协议攻击",
+      "parameters": [
+        "domain",
+        "dc_ip",
+        "attack_type",
+        "username",
+        "password",
+        "targets"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ad_spn_scan",
+      "description": "SPN扫描 - 扫描域内SPN服务",
+      "parameters": [
+        "domain",
+        "dc_ip",
+        "username",
+        "password",
+        "service_class"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ai_capability_matrix",
+      "description": "AI red-team 目标能力覆盖矩阵 - 本地只读 capability registry",
+      "parameters": []
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ai_prompt_convert",
+      "description": "本地 Prompt converter - PyRIT 风格 converter 抽象，不调用模型或目标",
+      "parameters": [
+        "prompt",
+        "converter"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ai_redteam_eval_run_state",
+      "description": "本地评测 AgentRunState 或 autort.eval/v1 suite — 不调用模型或目标",
+      "parameters": [
+        "run_state"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ai_redteam_run_scenario",
+      "description": "AI红队场景 dry-run - 规划 Target/Probe/Strategy/Scorer 组合",
+      "parameters": [
+        "scenario",
+        "scenario_path"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ai_surface_scan_handlers",
+      "description": "AI/MCP 工具攻击面静态盘点 - 解析 handler 源码并输出风险边界",
+      "parameters": [
+        "path"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ai_surface_scan_mcp_config",
+      "description": "MCP 配置静态盘点 - 发现泛化命令运行时和敏感 env key",
+      "parameters": [
+        "path",
+        "discover",
+        "home"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ai_surface_scan_skills",
+      "description": "Agent Skill/插件提示静态盘点 - 发现危险指令和敏感能力边界",
+      "parameters": [
+        "path"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "analyze_exploit_failure",
+      "description": "分析利用失败原因 - 深度分析漏洞利用失败的原因并给出建议",
+      "parameters": [
+        "failed_result",
+        "context"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "attack_chain_plan",
+      "description": "攻击链规划 - 基于侦察数据规划攻击链",
+      "parameters": [
+        "target",
+        "reconnaissance_data"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "auth_bypass_scan",
+      "description": "认证绕过检测 - 检测身份认证绕过漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "auto_pentest",
+      "description": "全自动渗透测试 - 执行完整的自动化渗透测试流程",
+      "parameters": [
+        "target",
+        "quick_mode",
+        "skip_exfiltrate",
+        "skip_phases",
+        "report_formats"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "aws_scan",
+      "description": "AWS安全扫描 - 检测AWS配置安全问题",
+      "parameters": [
+        "region",
+        "services"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "c2_beacon_start",
+      "description": "启动C2 Beacon - 创建到C2服务器的Beacon连接",
+      "parameters": [
+        "server",
+        "port",
+        "protocol",
+        "interval"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "cache_poisoning_scan",
+      "description": "缓存投毒检测 - 检测Web缓存投毒漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "cicd_scan",
+      "description": "CI/CD配置扫描 - 检测CI/CD配置安全问题",
+      "parameters": [
+        "config_path"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "code_agent_expand_context",
+      "description": "代码 Agent 调用链上下文扩展 - 静态 AST 分析和 confidence score",
+      "parameters": [
+        "path",
+        "seed",
+        "file_path",
+        "line",
+        "max_depth"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "cors_deep_scan",
+      "description": "CORS深度扫描 - 全面检测CORS配置问题",
+      "parameters": [
+        "url"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "cors_scan",
+      "description": "CORS配置检测 - 检测跨域资源共享配置问题",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "credential_find",
+      "description": "凭证发现 - 在文件中搜索敏感凭证",
+      "parameters": [
+        "path"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "credential_spray",
+      "description": "凭证喷洒 - 对多个目标进行凭证测试",
+      "parameters": [
+        "targets",
+        "usernames",
+        "passwords",
+        "protocol",
+        "domain"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "crlf_injection_scan",
+      "description": "CRLF注入检测 - 检测HTTP响应头注入/拆分漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "csrf_scan",
+      "description": "CSRF跨站请求伪造检测 - 检测CSRF防护缺失或配置问题",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "cve_auto_exploit",
+      "description": "CVE自动利用 - 通过CVE ID自动生成PoC并利用",
+      "parameters": [
+        "target",
+        "cve_id",
+        "custom_vars"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "cve_exploit_with_desc",
+      "description": "通过CVE描述利用 - 已知描述时直接生成PoC并利用",
+      "parameters": [
+        "target",
+        "cve_id",
+        "description",
+        "severity",
+        "custom_vars"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "cve_generate_poc",
+      "description": "AI生成PoC - 根据CVE描述智能生成PoC模板",
+      "parameters": [
+        "cve_id",
+        "description",
+        "severity"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "cve_search",
+      "description": "搜索CVE漏洞 - 在本地CVE数据库中搜索",
+      "parameters": [
+        "keyword",
+        "severity",
+        "has_poc",
+        "limit"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "cve_stats",
+      "description": "CVE数据库统计 - 获取本地CVE数据库统计信息",
+      "parameters": []
+    },
+    {
+      "kind": "tool",
+      "tool_name": "cve_sync",
+      "description": "同步CVE数据 - 从多个数据源同步最新CVE",
+      "parameters": [
+        "days",
+        "sources"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "dependency_audit",
+      "description": "依赖审计 - 检查项目依赖的已知漏洞",
+      "parameters": [
+        "project_path"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "deserialize_scan",
+      "description": "反序列化漏洞检测 - 检测不安全的反序列化",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "detect_run",
+      "description": "Run one or more vulnerability detectors against a URL.",
+      "parameters": [
+        "url",
+        "classes",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "dir_scan",
+      "description": "目录扫描 - 发现Web应用的隐藏路径",
+      "parameters": [
+        "url",
+        "wordlist",
+        "extensions"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "dns_lookup",
+      "description": "DNS查询 - 获取域名的DNS记录",
+      "parameters": [
+        "domain",
+        "record_types"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "engage_init",
+      "description": "Create a local authorized engagement. Next step is engage_run or engage_next.",
+      "parameters": [
+        "target",
+        "profile",
+        "path",
+        "phases",
+        "hitl",
+        "quick_mode"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "engage_next",
+      "description": "Return the next recon/detect/verify/export step for this engagement.",
+      "parameters": [
+        "path"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "engage_run",
+      "description": "Run the engagement loop: recon, detect, verify, export.",
+      "parameters": [
+        "path",
+        "dry_run",
+        "max_steps"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "engage_status",
+      "description": "Show engagement config, finding counts, and the next step.",
+      "parameters": [
+        "path"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "exfiltrate_data",
+      "description": "数据外泄 - 通过加密通道外泄数据",
+      "parameters": [
+        "data",
+        "channel",
+        "destination",
+        "encryption",
+        "dns_domain",
+        "nameserver"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "exfiltrate_file",
+      "description": "文件外泄 - 外泄指定文件",
+      "parameters": [
+        "file_path",
+        "channel",
+        "destination",
+        "dns_domain",
+        "nameserver"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "exploit_by_cve",
+      "description": "利用已知CVE漏洞 - 使用PoC模板利用指定CVE",
+      "parameters": [
+        "target",
+        "cve_id",
+        "variables"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "exploit_orchestrate",
+      "description": "编排多漏洞利用 - 智能编排多个漏洞的利用流程",
+      "parameters": [
+        "detections",
+        "top_n",
+        "verify_first",
+        "parallel"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "exploit_run",
+      "description": "Run one exploit mode. Catalog exploit_* tools dispatch here.",
+      "parameters": [
+        "mode",
+        "detection_result",
+        "detections",
+        "target",
+        "cve_id",
+        "template_id",
+        "targets",
+        "variables",
+        "custom_vars",
+        "use_feedback",
+        "max_retries",
+        "top_n",
+        "verify_first",
+        "parallel",
+        "verification_method"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "exploit_vulnerability",
+      "description": "利用检测到的漏洞 - 根据漏洞检测结果自动执行利用",
+      "parameters": [
+        "detection_result",
+        "targets",
+        "use_feedback",
+        "max_retries"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "exploit_with_retry",
+      "description": "带重试的漏洞利用 - 失败时自动分析原因并调整策略重试",
+      "parameters": [
+        "detection_result",
+        "max_retries",
+        "targets"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "export_findings",
+      "description": "导出漏洞发现 - 导出会话中发现的漏洞",
+      "parameters": [
+        "session_id",
+        "severity",
+        "format"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "exposure_scan",
+      "description": "暴露面检测 - 检测 .msf4/.sliver/.git/.env/历史记录/私钥/凭证等高价值暴露",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ext_ffuf_fuzz",
+      "description": "ffuf Web模糊测试",
+      "parameters": [
+        "url",
+        "wordlist",
+        "mode",
+        "extensions",
+        "extra_args"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ext_masscan_scan",
+      "description": "Masscan高速端口扫描",
+      "parameters": [
+        "target",
+        "ports",
+        "rate",
+        "extra_args"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ext_nmap_scan",
+      "description": "Nmap深度端口扫描与服务识别",
+      "parameters": [
+        "target",
+        "ports",
+        "preset",
+        "extra_args"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ext_nuclei_scan",
+      "description": "Nuclei漏洞模板扫描",
+      "parameters": [
+        "target",
+        "preset",
+        "tags",
+        "severity",
+        "extra_args"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ext_sqlmap_scan",
+      "description": "SQLMap SQL注入检测与利用",
+      "parameters": [
+        "url",
+        "data",
+        "preset",
+        "tamper",
+        "extra_args"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ext_tool_chain",
+      "description": "工具链编排执行",
+      "parameters": [
+        "target",
+        "chain_name",
+        "config_override"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ext_tools_reload",
+      "description": "重新加载工具配置",
+      "parameters": []
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ext_tools_status",
+      "description": "查看外部工具状态",
+      "parameters": []
+    },
+    {
+      "kind": "tool",
+      "tool_name": "fingerprint",
+      "description": "Web指纹识别 - 识别目标Web应用的技术栈",
+      "parameters": [
+        "url"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "full_api_scan",
+      "description": "完整API安全扫描 - 执行全面的API安全测试",
+      "parameters": [
+        "target",
+        "jwt_token"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "full_recon",
+      "description": "完整侦察扫描 - 执行全面的目标信息收集",
+      "parameters": [
+        "target",
+        "quick_mode"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "generate_report",
+      "description": "生成渗透测试报告 - 生成详细的安全评估报告",
+      "parameters": [
+        "session_id",
+        "format",
+        "output_path"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "get_attack_paths",
+      "description": "获取攻击路径建议 - 基于侦察数据智能推荐攻击路径",
+      "parameters": [
+        "target",
+        "session_id",
+        "reconnaissance_data"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "graphql_scan",
+      "description": "GraphQL安全扫描 - 检测GraphQL API安全问题",
+      "parameters": [
+        "url"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "grpc_scan",
+      "description": "gRPC安全扫描 - 检测gRPC服务安全问题",
+      "parameters": [
+        "target"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "health_check",
+      "description": "健康检查 - 检查MCP服务器状态",
+      "parameters": []
+    },
+    {
+      "kind": "tool",
+      "tool_name": "host_header_injection_scan",
+      "description": "Host头注入检测 - 检测Host Header Injection漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "http_smuggling_scan",
+      "description": "HTTP请求走私检测 - 检测CL.TE/TE.CL/TE.TE走私漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "idor_scan",
+      "description": "IDOR漏洞检测 - 检测不安全的直接对象引用",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "info_disclosure_scan",
+      "description": "信息泄露检测 - 检测敏感信息泄露",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "js_analyze",
+      "description": "JS代码分析 - 分析JavaScript代码中的敏感信息",
+      "parameters": [
+        "url"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "jwt_scan",
+      "description": "JWT安全扫描 - 检测JWT令牌的安全问题",
+      "parameters": [
+        "token",
+        "target"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "k8s_scan",
+      "description": "Kubernetes安全扫描 - 检测K8s配置安全问题",
+      "parameters": [
+        "manifest_path",
+        "namespace"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "kg_attack_paths",
+      "description": "查询两个实体间的攻击路径",
+      "parameters": [
+        "source_id",
+        "target_id",
+        "max_depth"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "kg_query",
+      "description": "查询知识图谱中的实体",
+      "parameters": [
+        "entity_type",
+        "severity",
+        "limit"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "kg_store",
+      "description": "向知识图谱存储实体",
+      "parameters": [
+        "entity_type",
+        "name",
+        "properties",
+        "parent_id"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "lateral_auto",
+      "description": "自动横向移动 - 自动选择最佳横向移动方法",
+      "parameters": [
+        "target",
+        "username",
+        "password",
+        "ntlm_hash",
+        "command",
+        "domain"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "lateral_psexec",
+      "description": "PsExec横向移动 - 通过PsExec执行远程命令",
+      "parameters": [
+        "target",
+        "username",
+        "password",
+        "ntlm_hash",
+        "command",
+        "domain"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "lateral_smb",
+      "description": "SMB横向移动 - 通过SMB执行远程命令",
+      "parameters": [
+        "target",
+        "username",
+        "password",
+        "ntlm_hash",
+        "command"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "lateral_ssh",
+      "description": "SSH横向移动 - 通过SSH执行远程命令",
+      "parameters": [
+        "target",
+        "username",
+        "password",
+        "key_file",
+        "command",
+        "port"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "lateral_ssh_tunnel",
+      "description": "SSH隧道 - 创建SSH端口转发隧道",
+      "parameters": [
+        "target",
+        "username",
+        "password",
+        "local_port",
+        "remote_host",
+        "remote_port",
+        "port"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "lateral_winrm",
+      "description": "WinRM横向移动 - 通过WinRM执行远程命令",
+      "parameters": [
+        "target",
+        "username",
+        "password",
+        "command",
+        "domain",
+        "use_ssl"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "lateral_winrm_ps",
+      "description": "WinRM PowerShell - 通过WinRM执行PowerShell脚本",
+      "parameters": [
+        "target",
+        "username",
+        "password",
+        "script",
+        "domain",
+        "use_ssl"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "lateral_wmi",
+      "description": "WMI横向移动 - 通过WMI执行远程命令",
+      "parameters": [
+        "target",
+        "username",
+        "password",
+        "command",
+        "domain"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "lateral_wmi_query",
+      "description": "WMI查询 - 执行WQL查询获取系统信息",
+      "parameters": [
+        "target",
+        "username",
+        "password",
+        "query",
+        "domain"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ldap_scan",
+      "description": "LDAP注入检测 - 检测LDAP注入漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "lfi_scan",
+      "description": "本地文件包含检测 - 检测LFI漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "nuclei_scan",
+      "description": "Nuclei 模板扫描 - 使用 Nuclei 社区模板检测漏洞（纯Python，无需二进制）",
+      "parameters": [
+        "url",
+        "tags",
+        "severity",
+        "template_dir",
+        "concurrency",
+        "limit"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "oauth_scan",
+      "description": "OAuth安全扫描 - 检测OAuth 2.0实现问题",
+      "parameters": [
+        "url",
+        "client_id"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "open_redirect_scan",
+      "description": "开放重定向检测 - 检测URL重定向漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "parallel_scan",
+      "description": "并发漏洞扫描 — 对多个URL并行执行指定类型的安全扫描",
+      "parameters": [
+        "urls",
+        "scan_types",
+        "concurrency",
+        "timeout_per_url"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "passive_subdomain_enum",
+      "description": "被动子域名枚举 - 通过公开API零流量发现子域名",
+      "parameters": [
+        "domain",
+        "timeout"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "path_traversal_scan",
+      "description": "路径遍历检测 - 检测目录遍历/LFI漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "payload_obfuscate",
+      "description": "Payload混淆 - 对payload进行混淆处理",
+      "parameters": [
+        "payload",
+        "technique"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "pentest_phase",
+      "description": "执行单个渗透阶段 - 可以单独执行某一阶段",
+      "parameters": [
+        "target",
+        "phase",
+        "session_id",
+        "config"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "pentest_resume",
+      "description": "恢复渗透测试 - 从检查点恢复之前中断的渗透测试",
+      "parameters": [
+        "session_id"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "pentest_status",
+      "description": "查询渗透测试状态 - 获取渗透测试会话的当前状态",
+      "parameters": [
+        "session_id"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "persistence_linux",
+      "description": "Linux持久化 - 在Linux系统上建立持久化",
+      "parameters": [
+        "method",
+        "payload",
+        "name",
+        "schedule",
+        "execute"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "persistence_webshell",
+      "description": "Webshell生成 - 生成各类Webshell",
+      "parameters": [
+        "shell_type",
+        "password",
+        "obfuscation",
+        "features"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "persistence_windows",
+      "description": "Windows持久化 - 在Windows系统上建立持久化",
+      "parameters": [
+        "method",
+        "payload",
+        "name",
+        "trigger",
+        "execute"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "plan_attack_path",
+      "description": "使用 MCTS 树搜索规划最优攻击路径",
+      "parameters": [
+        "target",
+        "target_type",
+        "open_ports",
+        "technologies",
+        "vulnerabilities",
+        "credentials",
+        "access_level",
+        "iterations",
+        "session_id"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "poc_execute",
+      "description": "执行PoC验证 - 使用PoC模板验证目标漏洞",
+      "parameters": [
+        "target",
+        "template_id",
+        "variables"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "poc_list",
+      "description": "列出PoC模板 - 查看已加载的PoC模板",
+      "parameters": [
+        "keyword",
+        "limit"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "port_scan",
+      "description": "端口扫描 - 探测目标开放端口和服务",
+      "parameters": [
+        "target",
+        "ports",
+        "timeout"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "post_exploit_amsi_bypass",
+      "description": "AMSI绕过 - 生成AMSI绕过代码",
+      "parameters": [
+        "technique"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "post_exploit_etw_bypass",
+      "description": "ETW绕过 - 获取ETW Patch代码",
+      "parameters": []
+    },
+    {
+      "kind": "tool",
+      "tool_name": "post_exploit_evasion_chain",
+      "description": "获取推荐的后渗透规避链",
+      "parameters": [
+        "target_os"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "post_exploit_privesc_suggest",
+      "description": "根据当前权限建议提权路径",
+      "parameters": [
+        "current_privileges",
+        "target_os"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "post_exploit_stager",
+      "description": "生成后渗透stager代码",
+      "parameters": [
+        "payload_type",
+        "include_amsi_bypass",
+        "include_etw_bypass"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "privilege_check",
+      "description": "检查当前权限级别 - 获取当前系统权限和可用提权向量",
+      "parameters": []
+    },
+    {
+      "kind": "tool",
+      "tool_name": "privilege_escalate",
+      "description": "执行权限提升 - 尝试提升系统权限",
+      "parameters": [
+        "method",
+        "timeout"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "prototype_pollution_scan",
+      "description": "原型链污染检测 - 检测JavaScript Prototype Pollution漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "rce_scan",
+      "description": "命令注入检测 - 检测远程命令执行漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "recon_run",
+      "description": "Run one or more reconnaissance modules against a target.",
+      "parameters": [
+        "target",
+        "modules",
+        "ports",
+        "timeout",
+        "wordlist",
+        "extensions",
+        "methods",
+        "record_types",
+        "limit",
+        "quick_mode",
+        "source_timeout"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "registry_stats",
+      "description": "工具统计 - 获取已注册工具的统计信息",
+      "parameters": []
+    },
+    {
+      "kind": "tool",
+      "tool_name": "sbom_generate",
+      "description": "生成SBOM - 生成软件物料清单",
+      "parameters": [
+        "project_path",
+        "output_format"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "security_headers_scan",
+      "description": "安全头检测 - 检测HTTP安全响应头配置",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "security_headers_score",
+      "description": "安全头评分 - 评估网站的安全头配置",
+      "parameters": [
+        "url"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "session_complete",
+      "description": "完成会话 - 结束会话并生成报告",
+      "parameters": [
+        "session_id"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "session_create",
+      "description": "创建扫描会话 - 创建新的渗透测试会话",
+      "parameters": [
+        "target",
+        "config"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "session_list",
+      "description": "列出会话 - 获取会话列表",
+      "parameters": [
+        "status",
+        "limit"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "session_scan",
+      "description": "会话安全检测 - 检测会话管理漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "session_status",
+      "description": "查询会话状态 - 获取会话的当前状态",
+      "parameters": [
+        "session_id"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "skill_catalog",
+      "description": "List pinned SKILL.md packs. Metadata only; no clone, no script execution.",
+      "parameters": []
+    },
+    {
+      "kind": "tool",
+      "tool_name": "skill_read",
+      "description": "Scan a local SKILL.md checkout, then return the body if it is not critical.",
+      "parameters": [
+        "path",
+        "pin_id",
+        "reference"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "smart_analyze",
+      "description": "智能分析 - AI辅助分析目标并推荐测试策略",
+      "parameters": [
+        "target",
+        "context"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "smart_payload",
+      "description": "智能Payload生成 - 根据上下文生成优化的payload",
+      "parameters": [
+        "vuln_type",
+        "context",
+        "waf_detected"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "sqli_scan",
+      "description": "SQL注入检测 - 检测SQL注入漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ssrf_scan",
+      "description": "SSRF漏洞检测 - 检测服务端请求伪造漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "ssti_scan",
+      "description": "模板注入检测 - 检测服务端模板注入漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "subdomain_enum",
+      "description": "子域名枚举 - 发现目标域名的子域名",
+      "parameters": [
+        "domain",
+        "methods",
+        "limit"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "tech_detect",
+      "description": "技术栈检测 - 识别网站使用的技术",
+      "parameters": [
+        "url"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "tool_enable",
+      "description": "Enable a catalog-only surface on this server for the current profile.",
+      "parameters": [
+        "name",
+        "kind"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "tool_search",
+      "description": "Search the capability catalog for tools, prompts, and resources.",
+      "parameters": [
+        "query",
+        "kind",
+        "limit"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "upload_scan",
+      "description": "文件上传漏洞检测 - 检测文件上传安全问题",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "verify_and_exploit",
+      "description": "验证并利用 - 先验证漏洞真实性，再执行利用",
+      "parameters": [
+        "detection_result",
+        "verification_method",
+        "targets"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "verify_finding",
+      "description": "验证单个 finding 的真实性并输出可复核证据",
+      "parameters": [
+        "finding",
+        "deep",
+        "oob"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "vuln_scan",
+      "description": "综合漏洞扫描 - 检测多种Web漏洞",
+      "parameters": [
+        "url",
+        "params",
+        "detectors"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "waf_bypass",
+      "description": "WAF绕过Payload生成 - 生成变异Payload与绕过方案",
+      "parameters": [
+        "payload",
+        "waf_name",
+        "max_variants",
+        "include_headers",
+        "include_paths",
+        "path"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "waf_detect",
+      "description": "WAF检测 - 识别目标是否有Web应用防火墙",
+      "parameters": [
+        "url"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "weak_password_scan",
+      "description": "弱密码检测 - 检测弱密码和默认凭据",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "websocket_scan",
+      "description": "WebSocket安全扫描 - 检测WebSocket安全问题",
+      "parameters": [
+        "url"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "xss_scan",
+      "description": "XSS漏洞检测 - 检测跨站脚本攻击漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    },
+    {
+      "kind": "tool",
+      "tool_name": "xxe_scan",
+      "description": "XXE漏洞检测 - 检测XML外部实体注入漏洞",
+      "parameters": [
+        "url",
+        "params"
+      ]
+    }
+  ]
+}

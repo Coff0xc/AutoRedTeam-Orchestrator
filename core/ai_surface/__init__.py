@@ -6,7 +6,7 @@ from core.ai_surface.discover import (
     InventoryResult,
     discover_agent_stack,
 )
-from core.ai_surface.inventory import diff_surface_inventory
+from core.ai_surface.inventory import diff_surface_inventory, has_inventory_drift
 from core.ai_surface.models import SurfaceFinding, SurfaceRiskLevel, SurfaceScanResult
 from core.ai_surface.scanner import scan_handler_surface, scan_mcp_config, scan_skill_surface
 
@@ -18,6 +18,7 @@ __all__ = [
     "SurfaceRiskLevel",
     "SurfaceScanResult",
     "diff_surface_inventory",
+    "has_inventory_drift",
     "discover_agent_stack",
     "scan_handler_surface",
     "scan_mcp_config",

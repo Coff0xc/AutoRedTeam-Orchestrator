@@ -675,9 +675,14 @@ def ai_surface_diff(
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
     format: str = typer.Option("json", "--format", "-f", help="输出格式: json/sarif"),
     severity_threshold: str = typer.Option(
-        "high", "--severity-threshold", help="CI 失败阈值: info/low/moderate/high/critical"
+        "high", "--severity-threshold", help="CI 失败阈值: info/low/medium/high/critical"
     ),
     exit_code: bool = typer.Option(False, "--exit-code", help="发现达阈值项时返回非零退出码"),
+    ci: bool = typer.Option(
+        False,
+        "--ci",
+        help="Fail when surfaces are added, removed, or have changed text or arguments",
+    ),
     exclude_tests: bool = typer.Option(
         True,
         "--exclude-tests/--include-tests",
@@ -690,7 +695,7 @@ def ai_surface_diff(
     ),
 ):
     """对照已保存的工具清单和当前源码，不连接服务器，也不调用工具"""
-    from core.ai_surface import diff_surface_inventory, scan_handler_surface
+    from core.ai_surface import diff_surface_inventory, has_inventory_drift, scan_handler_surface
 
     try:
         saved = json.loads(Path(baseline).read_text(encoding="utf-8"))
@@ -707,6 +712,12 @@ def ai_surface_diff(
         raise typer.Exit(2) from exc
 
     _emit_surface_result(result, output, format, severity_threshold, exit_code)
+    if ci and has_inventory_drift(result.to_dict().get("findings") or []):
+        typer.echo(
+            f"[CI] surface diff: {len(result.findings)} added, removed, or changed",
+            err=True,
+        )
+        raise typer.Exit(2)
 
 
 # ──────────────────────────── tools ────────────────────────────
