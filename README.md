@@ -91,6 +91,7 @@ From a checkout, `typer` is enough for the read-only commands.
 ```bash
 pip install typer
 python -m cli.main ai-surface scan --path handlers --format sarif -o surface.sarif
+python -m cli.main ai-surface diff --baseline tests/fixtures/ai_surface/handlers.baseline.json --path handlers --ci
 python -m cli.main ai-surface inventory
 python -m cli.main ai-surface scan-mcp-config --path .mcp.json
 python -m cli.main capabilities manifest --profile safe
@@ -291,7 +292,7 @@ Instruction files are markdown, text, YAML, JSON, and TOML. Lockfiles are skippe
 
 ### Two scans, side by side
 
-`autort ai-surface diff` compares a saved JSON scan with a fresh read of the handlers. It is a command, not a tool the model can call.
+`autort ai-surface diff` compares a saved JSON scan with a fresh read of the handlers. It is a command, not a tool the model can call. `--ci` exits 2 when a surface is added, removed, or has a changed first-line description or argument list. Leading and trailing spaces in the description are ignored. This repository pins `handlers/` at `tests/fixtures/ai_surface/handlers.baseline.json` and runs that check in CI.
 
 ```mermaid
 flowchart LR
@@ -364,7 +365,7 @@ These do not contact a target. CVE search reads the local notes.
 | `ai-surface inventory` | Local MCP client configs and skill roots, no network | `autort ai-surface inventory` |
 | `ai-surface scan-mcp-config` | A read of a client config | `autort ai-surface scan-mcp-config --path .mcp.json` |
 | `ai-surface scan-skills` | Markers in instruction files | `autort ai-surface scan-skills --path ./skills` |
-| `ai-surface diff` | What changed since a saved scan | `autort ai-surface diff --baseline surface.json --path handlers` |
+| `ai-surface diff` | What changed since a saved scan | `autort ai-surface diff --baseline tests/fixtures/ai_surface/handlers.baseline.json --path handlers --ci` |
 | `capabilities profiles` | The four levels and their counts | `autort capabilities profiles` |
 | `capabilities manifest` | One level, as data | `autort capabilities manifest --profile safe` |
 | `tools lint` | A contract check of the same parse | `autort tools lint --path handlers` |
@@ -441,7 +442,7 @@ The example sets `mode` on purpose. Current `main` defaults the Action to `self-
     severity-threshold: high
 ```
 
-The full workflow is [`.github/workflows/self-audit.example.yml`](.github/workflows/self-audit.example.yml). Output defaults to SARIF and is uploaded for code scanning. `self-audit` runs `python -m cli.main ai-surface scan`.
+The full workflow is [`.github/workflows/self-audit.example.yml`](.github/workflows/self-audit.example.yml). Output defaults to SARIF and is uploaded for code scanning. `self-audit` runs `python -m cli.main ai-surface scan`. Pass `baseline` to also run `ai-surface diff --ci`. This repository's CI pins `tests/fixtures/ai_surface/handlers.baseline.json`.
 
 `mode: target-scan` remains for an authorized URL. It runs detection, and it needs `target`.
 
@@ -561,7 +562,7 @@ Issues a `@tool` function can get:
 
 Prompts and resources skip the auth and validator rows. Effect mismatch still applies when the row is local-only and the parameters include a target-shaped name.
 
-SARIF rule ids are grouped by class, not one rule per tool: `mcp_tool.auth-critical`, `mcp_tool.auth-missing`, `mcp_tool.effect-mismatch`, `mcp_tool.target-input`, `mcp_tool.factory`, `mcp_tool.lowlevel`, `mcp_prompt`, `mcp_resource`, `mcp_config`, `skill_instruction`, `surface_inventory_diff`.
+SARIF rule ids are grouped by class, not one rule per tool: `mcp_tool.auth-critical`, `mcp_tool.auth-missing`, `mcp_tool.effect-mismatch`, `mcp_tool.target-input`, `mcp_tool.factory`, `mcp_tool.lowlevel`, `mcp_prompt`, `mcp_resource`, `mcp_config`, `skill_instruction`, `surface_added`, `surface_removed`, `surface_description_changed`, `surface_parameters_changed`.
 
 The comparison (`reconcile_capability_manifest`) joins on `(kind, name)` when you scan the repo root or a directory named `handlers`.
 
@@ -574,7 +575,7 @@ The comparison (`reconcile_capability_manifest`) joins on `(kind, name)` when yo
 
 JSON stores this at `summary.static_coverage`. SARIF stores it at `runs[].properties.static_coverage`.
 
-Diff issues are `surface_added`, `surface_removed`, `surface_description_changed`, and `surface_parameters_changed`. The join key is `(kind or "tool", tool_name)`. A description change quotes the first 200 characters of the saved text. Rule id is `surface_inventory_diff`.
+Diff issues are `surface_added`, `surface_removed`, `surface_description_changed`, and `surface_parameters_changed`. The join key is `(kind or "tool", tool_name)`. A description change quotes the first 200 characters of the saved text. Rule id is the issue name. `--ci` fails on those four issues. Trailing spaces in the description are not a change.
 
 `core/tooling/contract.py` is `autort tools lint`. It reuses the parse and adds duplicate names, missing annotations, a missing `Args:` section, and whether a high-risk tool looks able to return evidence.
 
