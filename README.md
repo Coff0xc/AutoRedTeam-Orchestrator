@@ -360,7 +360,7 @@ These do not contact a target. CVE search reads the local notes.
 
 | Command | You get | Example |
 |---|---|---|
-| `ai-surface scan` | An inventory of the handlers | `autort ai-surface scan --path handlers --format sarif -o surface.sarif` |
+| `ai-surface scan` | Handler inventory plus MCP03/04/10 rules | `autort ai-surface scan --path handlers --format sarif -o surface.sarif` |
 | `ai-surface inventory` | Local MCP client configs and skill roots, no network | `autort ai-surface inventory` |
 | `ai-surface scan-mcp-config` | A read of a client config | `autort ai-surface scan-mcp-config --path .mcp.json` |
 | `ai-surface scan-skills` | Markers in instruction files | `autort ai-surface scan-skills --path ./skills` |
