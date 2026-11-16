@@ -1,8 +1,8 @@
-# Pre-commit hooks 配置
-# 安装: pip install pre-commit && pre-commit install
+# Pre-commit hooks configuration
+# Install: pip install pre-commit && pre-commit install
 
 repos:
-  # Black 代码格式化
+  # Black code formatting
   - repo: https://github.com/psf/black
     rev: 24.1.1
     hooks:
@@ -10,14 +10,14 @@ repos:
         args: ['--line-length=100']
         language_version: python3
 
-  # isort 导入排序
+  # isort import sorting
   - repo: https://github.com/PyCQA/isort
     rev: 5.13.2
     hooks:
       - id: isort
         args: ['--profile=black', '--line-length=100']
 
-  # flake8 代码检查
+  # flake8 code linting
   - repo: https://github.com/PyCQA/flake8
     rev: 7.0.0
     hooks:
@@ -26,7 +26,7 @@ repos:
         additional_dependencies:
           - flake8-bugbear
 
-  # 标准 hooks
+  # Standard hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
@@ -39,10 +39,10 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
 
-  # 本地 hooks
+  # Local hooks
   - repo: local
     hooks:
-      # 检查硬编码路径（跨平台兼容性）
+      # Check for hardcoded paths (cross-platform compatibility)
       - id: check-hardcoded-paths
         name: Check for hardcoded Unix paths
         entry: python scripts/check_paths.py
