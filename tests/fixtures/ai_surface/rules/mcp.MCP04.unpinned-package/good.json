@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "wide": {
+      "command": "npx",
+      "args": ["-y", "@scope/mcp-server@1.4.2"]
+    }
+  }
+}

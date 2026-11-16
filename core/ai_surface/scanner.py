@@ -19,6 +19,14 @@ from core.ai_surface.models import (
     SurfaceScanResult,
     max_risk,
 )
+from core.ai_surface.rules import (
+    analyze_mcp_command,
+    analyze_skill_text,
+    analyze_tool_text,
+    apply_policy,
+    owasp_mcp_for_issues,
+    rule_id_for_issues,
+)
 
 AUTH_DECORATORS: Dict[str, Tuple[str, SurfaceRiskLevel]] = {
     "require_moderate_auth": ("moderate", SurfaceRiskLevel.MODERATE),
@@ -226,19 +234,20 @@ def scan_skill_surface(path: str | Path) -> SurfaceScanResult:
             if issues
             else ["No high-risk instruction marker found."]
         )
-        result.findings.append(
-            SurfaceFinding(
-                tool_name=file_path.stem,
-                file_path=str(file_path),
-                line=1,
-                risk_level=risk_level if risk_terms else SurfaceRiskLevel.LOW,
-                risk_terms=risk_terms,
-                issues=issues,
-                recommendations=recommendations,
-                description="Static skill/prompt instruction scan",
-                finding_type="skill_instruction",
-            )
+        finding = SurfaceFinding(
+            tool_name=file_path.stem,
+            file_path=str(file_path),
+            line=1,
+            risk_level=risk_level if risk_terms else SurfaceRiskLevel.LOW,
+            risk_terms=risk_terms,
+            issues=issues,
+            recommendations=recommendations,
+            description="Static skill/prompt instruction scan",
+            finding_type="skill_instruction",
         )
+        apply_policy(finding, analyze_skill_text(text))
+        _finalize_finding(finding)
+        result.findings.append(finding)
     result.findings.sort(key=lambda item: (-RISK_ORDER[item.risk_level], item.file_path, item.line))
     return result
 
@@ -413,7 +422,7 @@ def _mcp_server_finding(file_path: Path, name: str, server: dict, line: int) -> 
     description = (
         f"MCP server command: {command}" if command else "MCP server declares a remote endpoint"
     )
-    return SurfaceFinding(
+    finding = SurfaceFinding(
         tool_name=name,
         file_path=str(file_path),
         line=line,
@@ -424,6 +433,9 @@ def _mcp_server_finding(file_path: Path, name: str, server: dict, line: int) -> 
         description=description,
         finding_type="mcp_config",
     )
+    apply_policy(finding, analyze_mcp_command(command, args))
+    _finalize_finding(finding)
+    return finding
 
 
 def _env_key_is_secret(key: str) -> bool:
@@ -519,7 +531,13 @@ class _HandlerToolVisitor(ast.NodeVisitor):
             ],
             kind=kind,
         )
-        finding.rule_id = _surface_rule_id(finding)
+        if kind == "tool":
+            policy_text = declared_description.strip() or doc.strip()
+            apply_policy(
+                finding,
+                analyze_tool_text(policy_text, _default_string_literals(node)),
+            )
+        _finalize_finding(finding)
         return finding
 
     def _build_lowlevel_finding(self, node: ast.Call) -> Optional[SurfaceFinding]:
@@ -556,7 +574,11 @@ class _HandlerToolVisitor(ast.NodeVisitor):
             finding_type="mcp_tool_lowlevel",
             kind="tool",
         )
-        finding.rule_id = _surface_rule_id(finding)
+        apply_policy(
+            finding,
+            analyze_tool_text(description, _schema_literal_strings(keywords.get("inputSchema"))),
+        )
+        _finalize_finding(finding)
         return finding
 
     def _build_factory_finding(self, node: ast.Call) -> Optional[SurfaceFinding]:
@@ -583,7 +605,8 @@ class _HandlerToolVisitor(ast.NodeVisitor):
             finding_type="mcp_tool_factory",
             kind="tool",
         )
-        finding.rule_id = _surface_rule_id(finding)
+        apply_policy(finding, analyze_tool_text(description))
+        _finalize_finding(finding)
         return finding
 
 
@@ -648,9 +671,18 @@ def _call_string_arg(node: ast.Call, index: int, keyword: str, bindings: Dict[st
     return ""
 
 
+def _finalize_finding(finding: SurfaceFinding) -> None:
+    """Set SARIF rule_id and OWASP MCP category from the issue list."""
+    finding.rule_id = _surface_rule_id(finding)
+    finding.owasp_mcp = owasp_mcp_for_issues(finding.issues)
+
+
 def _surface_rule_id(finding: SurfaceFinding) -> str:
     """Stable SARIF rule ids so Code Scanning can group by risk class."""
     issues = set(finding.issues)
+    policy_rule = rule_id_for_issues(finding.issues)
+    if policy_rule:
+        return policy_rule
     if "critical_tool_without_critical_auth" in issues:
         return "mcp_tool.auth-critical"
     if "high_risk_tool_without_dangerous_auth" in issues or (
@@ -723,6 +755,26 @@ def _resolve_str(node: Optional[ast.AST], bindings: Dict[str, str]) -> str:
                     parts.append(inner)
         return " ".join(parts)
     return ""
+
+
+def _default_string_literals(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+    """String defaults on parameters. Bodies are not scanned."""
+    values: List[str] = []
+    for item in list(node.args.defaults) + list(node.args.kw_defaults):
+        if isinstance(item, ast.Constant) and isinstance(item.value, str):
+            values.append(item.value)
+    return "\n".join(values)
+
+
+def _schema_literal_strings(node: Optional[ast.AST]) -> str:
+    """String constants inside a Tool inputSchema literal."""
+    if node is None:
+        return ""
+    values: List[str] = []
+    for child in ast.walk(node):
+        if isinstance(child, ast.Constant) and isinstance(child.value, str):
+            values.append(child.value)
+    return "\n".join(values)
 
 
 def _input_schema_params(node: Optional[ast.AST]) -> List[str]:
@@ -845,6 +897,8 @@ def _mcp_config_recommendations(issues: List[str]) -> List[str]:
         recommendations.append(
             "Review the remote endpoint and its authentication before enabling it."
         )
+    if "mcp_server_unpinned_package" in issues:
+        recommendations.append("Pin npx/uvx/pip package versions. Do not use @latest.")
     if not recommendations:
         recommendations.append("Review server command and env before enabling.")
     return recommendations
@@ -920,7 +974,8 @@ def _recommendations(
         recommendations.append("Enforce a critical-level authorization gate, or keep it plan-only.")
     elif "high_risk_tool_without_dangerous_auth" in issues:
         recommendations.append(
-            "Enforce a strong authorization gate for this high-risk tool, or document why it is safe."
+            "Enforce a strong authorization gate for this high-risk tool, "
+            "or document why it is safe."
         )
     if "target_input_without_handler_validator" in issues:
         recommendations.append("Validate target/url-like parameters before use.")
@@ -955,3 +1010,4 @@ def _relax_missing_auth_issues(findings: List[SurfaceFinding]) -> None:
         finding.recommendations = [
             rec for rec in finding.recommendations if "authorization gate" not in rec.lower()
         ]
+        _finalize_finding(finding)

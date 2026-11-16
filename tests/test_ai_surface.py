@@ -437,7 +437,11 @@ def test_factory_config_and_manifest_coverage():
 def test_labeled_fixtures_pin_description_false_positives_and_false_negatives():
     root = Path("tests/fixtures/ai_surface")
     labels = json.loads((root / "labels.json").read_text(encoding="utf-8"))
-    result = scan_handler_surface(root, exclude_tests=False, reconcile=False)
+    result = scan_handler_surface(
+        root / "labeled_handlers.py",
+        exclude_tests=False,
+        reconcile=False,
+    )
     by_name = {finding.tool_name: finding for finding in result.findings}
 
     assert set(by_name) == {case["name"] for case in labels["cases"]}

@@ -49,6 +49,7 @@ class SurfaceFinding:
     finding_type: str = "mcp_tool"
     kind: str = "tool"
     rule_id: str = ""
+    owasp_mcp: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -66,6 +67,7 @@ class SurfaceFinding:
             "finding_type": self.finding_type,
             "kind": self.kind,
             "rule_id": self.rule_id or self.finding_type,
+            "owasp_mcp": self.owasp_mcp,
         }
 
 

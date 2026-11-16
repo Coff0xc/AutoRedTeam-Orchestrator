@@ -104,7 +104,7 @@ def apply_effect_parameter_mismatches(
     come from the AST scan; effects come from the capability row. Unlisted
     findings and empty effect tuples are skipped. Mutates ``result.findings``.
     """
-    from core.ai_surface.scanner import TARGET_PARAMS, _surface_rule_id
+    from core.ai_surface.scanner import TARGET_PARAMS, _finalize_finding
 
     catalog = {(str(item.kind), str(item.name)): item for item in capabilities}
     for finding in result.findings:
@@ -129,7 +129,7 @@ def apply_effect_parameter_mismatches(
         if recommendation not in finding.recommendations:
             finding.recommendations.append(recommendation)
         finding.risk_level = max_risk(finding.risk_level, SurfaceRiskLevel.MODERATE)
-        finding.rule_id = _surface_rule_id(finding)
+        _finalize_finding(finding)
 
 
 def _invisible_reason(capability: Any) -> str:
