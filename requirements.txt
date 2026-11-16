@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 # AI Red Team MCP Tool - Dependencies
-# 核心依赖 (必需)
+# Core dependencies (required)
 
 # Core MCP Framework
 mcp>=2.2.0,<3.0.0
 
-# HTTP Clients (核心功能)
+# HTTP Clients (core functionality)
 requests>=2.31.0,<3.0.0
 aiohttp>=3.9.0,<4.0.0
 httpx>=0.26.0,<1.0.0
 
-# AI/LLM Integration (核心功能)
+# AI/LLM Integration (core functionality)
 openai>=1.12.0,<3.0.0
 anthropic>=0.18.0,<1.0.0
-# 多 provider 统一接口（ollama/deepseek 等；未安装时仅 openai/anthropic 直连可用）
+# Unified multi-provider interface (ollama/deepseek, etc.; without it installed, only direct openai/anthropic connections work)
 litellm>=1.101.0,<2.0.0
 
-# Security Tools Integration (核心功能)
+# Security Tools Integration (core functionality)
 python-nmap>=0.7.1,<1.0.0
 shodan>=1.31.0,<2.0.0
 censys>=2.2.0,<3.0.0
@@ -24,7 +24,7 @@ dnspython>=2.5.0,<3.0.0
 whois>=0.9.27,<1.0.0
 paramiko>=5.0.0,<6.0.0
 
-# Red Team Advanced Features (核心功能)
+# Red Team Advanced Features (core functionality)
 # Required for SMB/WMI Pass-the-Hash, lateral movement
 impacket>=0.11.0,<0.12.0
 # Required for AES encryption for payload obfuscation
@@ -35,18 +35,18 @@ cryptography>=50.0.0,<51.0.0  # 2026 advisories fixed in 50.0.0
 # Config & Validation
 pydantic>=2.6.0,<3.0.0
 
-# Utilities (核心功能)
+# Utilities (core functionality)
 pyyaml>=6.0.0,<7.0.0
 jinja2>=3.1.0,<4.0.0
 defusedxml>=0.7.1,<1.0.0
 
-# Reporting (实际使用)
+# Reporting (actually used)
 markdown>=3.5.0,<4.0.0
 python-docx>=1.1.0,<2.0.0
 
-# HTML/XML 解析 (实际使用)
+# HTML/XML parsing (actually used)
 beautifulsoup4>=4.12.0,<5.0.0
 
-# CLI (实际使用)
+# CLI (actually used)
 click>=8.1.0,<9.0.0
 typer>=0.9.0,<1.0.0
