@@ -2,23 +2,23 @@
 
 ## Reporting a Vulnerability
 
-**请勿通过公开 Issue 报告安全漏洞！**
+**Do not report security vulnerabilities through public issues!**
 
-如果你发现了安全漏洞，请通过以下方式私下报告：
+If you discover a security vulnerability, please report it privately through one of the following channels:
 
 📧 **Email**: Coff0xc@protonmail.com
 
-请在报告中包含：
-- 漏洞描述
-- 复现步骤
-- 潜在影响
-- (可选) 修复建议
+Please include in your report:
+- Vulnerability description
+- Steps to reproduce
+- Potential impact
+- (Optional) Suggested fix
 
 ## Response Timeline
 
-- **确认收到**: 48 小时内
-- **初步评估**: 7 天内
-- **修复发布**: 视严重程度而定
+- **Acknowledgement**: Within 48 hours
+- **Initial assessment**: Within 7 days
+- **Fix release**: Depends on severity
 
 ## Supported Versions
 
@@ -29,6 +29,6 @@
 
 ## Responsible Disclosure
 
-我们遵循负责任的漏洞披露原则。在漏洞修复并发布后，我们会在 Release Notes 中致谢报告者（如果你愿意）。
+We follow the principles of responsible vulnerability disclosure. After a vulnerability is fixed and released, we will credit the reporter in the Release Notes (if you wish).
 
-感谢你帮助保护 AutoRedTeam-Orchestrator！
+Thank you for helping protect AutoRedTeam-Orchestrator!
