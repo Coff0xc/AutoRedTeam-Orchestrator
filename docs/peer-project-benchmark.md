@@ -1,188 +1,188 @@
-# AutoRedTeam-Orchestrator AI 自动化红队同类项目对照
+# AutoRedTeam-Orchestrator Benchmark Against Peer AI Automated Red-Team Projects
 
-日期：2026-05-19
+Date: 2026-05-19
 
-## 本轮口径
+## Scope of This Round
 
-用户明确要求聚焦：
+The user explicitly asked to focus on:
 
-- AI 自动化红队
-- AI 红队攻击 / LLM 红队
-- AI 自动化渗透平台
-- Agentic pentest / autonomous cyber agent
+- AI automated red-teaming
+- AI red-team attacks / LLM red-teaming
+- AI automated penetration platforms
+- Agentic pentest / autonomous cyber agents
 
-因此本轮不再把 Metasploit、Nuclei、ZAP、DefectDojo 这类传统高星安全项目放进主对照表。它们仍有工程参考价值，但不是“同类产品主样本”。
+So this round no longer puts traditional high-star security projects like Metasploit, Nuclei, ZAP, or DefectDojo in the main comparison table. They still have engineering reference value, but they are not "peer products" for the main sample.
 
-## 分析边界
+## Analysis Boundaries
 
-- 本轮只做公开项目检索、仓库结构观察、许可证判断和架构对照。
-- 不运行任何外部扫描、漏洞利用、C2、横向移动、持久化、钓鱼或数据外传能力。
-- “抄”限定为借鉴架构、模块边界、元数据模型、评测/评分、沙箱、记忆、观测、报告和 UX。
-- 第三方代码默认不直接复制。确需引入 MIT/BSD/Apache-2.0 小段通用代码时，必须记录来源、许可证、文件级归属和 NOTICE/PROVENANCE。
-- GPL/AGPL/许可证不明项目只借鉴思路，不复制代码到当前仓库。
+- This round only covers public project searches, repository structure observation, license checks, and architecture comparison.
+- No external scanning, exploitation, C2, lateral movement, persistence, phishing, or data exfiltration capability was run.
+- "Borrowing" is limited to architecture, module boundaries, metadata models, evaluation/scoring, sandboxes, memory, observability, reporting, and UX.
+- Third-party code is not copied directly by default. When a small generic snippet under MIT/BSD/Apache-2.0 genuinely needs to be brought in, its source, license, file-level attribution, and NOTICE/PROVENANCE must be recorded.
+- GPL/AGPL/unclear-license projects are used for ideas only; their code is not copied into this repository.
 
-## 当前项目基线
+## Current Project Baseline
 
-AutoRedTeam-Orchestrator 当前定位是**研究预览（research preview）**的 AI 红队编排工具，有三类入口：
+AutoRedTeam-Orchestrator is currently positioned as a **research preview** AI red-team orchestration tool, with three entry points:
 
-- CLI：`autort`，覆盖 scan、detect、exploit、cve-search、pentest、report、nuclei。
-- SDK：`Scanner`、`Exploiter`、`AutoPentest`、`RedTeam`、`Reporter`。
-- MCP：本地注册共 142 项能力，其中 132 tools、6 prompts、4 resources（2026-05-19 基线；现行计数见 README）。
+- CLI: `autort`, covering scan, detect, exploit, cve-search, pentest, report, and nuclei.
+- SDK: `Scanner`, `Exploiter`, `AutoPentest`, `RedTeam`, `Reporter`.
+- MCP: 142 registered capabilities locally, of which 132 tools, 6 prompts, and 4 resources (2026-05-19 baseline; see README for the current count).
 
-当前优势：
+Current strengths:
 
-- 传统安全能力覆盖广：recon、detector、CVE、exploit、lateral、persistence、AD、C2、report、knowledge、MCTS、prompt。
-- 已有 MCP/CLI/SDK 三层入口，适合做 AI 编排外壳。
-- 本地测试面较大：tests/ 下 83 个测试文件、2107 个 test 函数（按 `def test_` 静态计数）；全量通过结论需重新执行验证，本文件不再引用历史数字。
+- Broad traditional security coverage: recon, detector, CVE, exploit, lateral, persistence, AD, C2, report, knowledge, MCTS, and prompt.
+- MCP/CLI/SDK three-layer entry points already exist, suitable as an AI orchestration shell.
+- Large local test surface: 83 test files and 2,107 test functions under tests/ (static count by `def test_`); any claim that the full suite passes needs to be re-verified by running it, and this document no longer cites historical numbers.
 
-当前短板：
+Current weaknesses:
 
-- AI 自动化红队的“任务闭环”不足：缺 planner、executor、critic、human gate、run state、artifact、cost、trace 的统一对象模型。
-- 缺 agent 沙箱：当前有安全工具能力，但没有像 PentAGI/Decepticon 那种隔离执行、浏览器、命令、日志、工件的统一 agent runtime。
-- 缺 AI red-team 专用 schema：prompt injection、tool injection、data exfiltration、jailbreak、agent overreach、MCP/skill 风险没有统一插件接口。
-- 缺安全评测闭环：没有 promptfoo/garak/PyRIT/Giskard 那种 target、probe/plugin、strategy/converter、scorer/assertion、report 的标准链路。
-- 缺企业级观测：没有 Langfuse/OTel/Grafana 级 trace、token、成本、失败率和工具调用审计指标。
+- The AI automated red-team "task loop" is incomplete: no unified object model for planner, executor, critic, human gate, run state, artifact, cost, or trace.
+- No agent sandbox: there are security tool capabilities, but no unified agent runtime for isolated execution, browser, commands, logs, and artifacts like PentAGI/Decepticon have.
+- No AI red-team-specific schema: prompt injection, tool injection, data exfiltration, jailbreak, agent overreach, and MCP/skill risks have no unified plugin interface.
+- No security evaluation loop: no standard target, probe/plugin, strategy/converter, scorer/assertion, report chain like promptfoo/garak/PyRIT/Giskard.
+- No enterprise-grade observability: no Langfuse/OTel/Grafana-level trace, token, cost, failure-rate, or tool-call audit metrics.
 
-## 主对照项目
+## Main Peer Projects
 
-数据来源：GitHub REST API + GitHub 仓库页面，检索时间为 2026-05-19。Stars 为当时 API/页面读取值，后续会变化。
+Data source: GitHub REST API + GitHub repository pages, retrieved 2026-05-19. Stars are the values read from the API/pages at the time and will change later.
 
-| 项目 | Stars | 许可证 | 活跃度 | 类型 | 与本项目最相关的可抄点 |
+| Project | Stars | License | Activity | Type | Most relevant takeaway for this project |
 | --- | ---: | --- | --- | --- | --- |
-| [promptfoo](https://github.com/promptfoo/promptfoo) | 21381 | MIT | 2026-05-18 | LLM eval/red-team 平台 | 声明式配置、providers/assertions/plugins/strategies、CI/CD、结果视图、风险评分。 |
-| [PentAGI](https://github.com/vxcontrol/pentagi) | 17005 | MIT | 2026-05-18 | 全自动 AI 渗透平台 | 多 Agent、沙箱 Docker、20+ 工具、长期记忆、知识图谱、Langfuse/Grafana/OTel、REST/GraphQL、Web UI。 |
-| [PentestGPT](https://github.com/GreyDGL/PentestGPT) | 13170 | MIT | 2026-02-23 | LLM 渗透测试 Agent 框架 | pentest 任务树、reasoning/session 分离、prompt/tool 组织、benchmark、研究论文背书。 |
-| [CAI](https://github.com/aliasrobotics/cai) | 8545 | NOASSERTION / MIT files | 2026-05-18 | Cybersecurity AI 框架 | offensive/defensive automation、prompt injection 防护、MCP 支持、benchmark/fluency、bug-bounty-ready 定位。 |
-| [garak](https://github.com/NVIDIA/garak) | 7846 | Apache-2.0 | 2026-05-15 | LLM 漏洞扫描器 | probes/generators/detectors/evaluators/harnesses、攻击策略库、可扩展检测器。 |
-| [Giskard OSS](https://github.com/Giskard-AI/giskard-oss) | 5357 | Apache-2.0 | 2026-05-18 | LLM Agent 评测库 | black-box agent/multi-step pipeline 包装、agent evaluation、rag evaluation、模块化包。 |
-| [PurpleLlama](https://github.com/meta-llama/PurpleLlama) | 4180 | NOASSERTION | 2026-05-18 | LLM 安全评测集合 | CyberSecEval、visual prompt injection、spear phishing capability、autonomous offensive cyber operations 测试套件。 |
-| [Decepticon](https://github.com/PurpleAILAB/Decepticon) | 3886 | Apache-2.0 | 2026-05-18 | Autonomous Hacking Agent | agents/backends/llm/middleware/sandbox/tools 分层，适合抄 agent runtime 结构。 |
-| [PyRIT](https://github.com/microsoft/PyRIT) | 3851 | MIT | 2026-05-19 | 生成式 AI 风险识别框架 | prompt_target、prompt_converter、scenario、score、memory、dataset、executor。 |
-| [AI-Infra-Guard](https://github.com/Tencent/AI-Infra-Guard) | 3743 | Apache-2.0 | 2026-05-15 | 全栈 AI 红队平台 | OpenClaw scan、Agent scan、Skills scan、MCP scan、AI infra scan、LLM jailbreak evaluation。 |
-| [Vulnhuntr](https://github.com/protectai/vulnhuntr) | 2660 | AGPL-3.0 | 2025-02-06 | LLM 代码漏洞发现 | 从远程输入到 server output 的 call-chain context expansion、二次分析、confidence score。AGPL，不复制代码。 |
-| [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) | 2076 | MIT | 2026-05-18 | LLM eval 框架 | prompt engineering、tool usage、multi-turn dialog、model-graded evals、200+ 预置评测。 |
-| [AI Red Teaming Playground Labs](https://github.com/microsoft/AI-Red-Teaming-Playground-Labs) | 1938 | MIT | 2026-02-13 | AI 红队训练靶场 | challenge/lab 组织、Docker/K8s 部署、可训练和演示的 AI red-team lab。 |
-| [Agentic Security](https://github.com/msoedov/agentic_security) | 1875 | Apache-2.0 | 2026-05-14 | Agentic LLM 漏洞扫描器 | attack_rules、probe_actor、probe_data、refusal_classifier、report_chart、MCP 集成。 |
+| [promptfoo](https://github.com/promptfoo/promptfoo) | 21381 | MIT | 2026-05-18 | LLM eval/red-team platform | Declarative config, providers/assertions/plugins/strategies, CI/CD, results views, risk scoring. |
+| [PentAGI](https://github.com/vxcontrol/pentagi) | 17005 | MIT | 2026-05-18 | Fully automated AI penetration platform | Multi-agent, Docker sandbox, 20+ tools, long-term memory, knowledge graph, Langfuse/Grafana/OTel, REST/GraphQL, Web UI. |
+| [PentestGPT](https://github.com/GreyDGL/PentestGPT) | 13170 | MIT | 2026-02-23 | LLM penetration testing agent framework | Pentest task tree, reasoning/session separation, prompt/tool organization, benchmark, research-paper backing. |
+| [CAI](https://github.com/aliasrobotics/cai) | 8545 | NOASSERTION / MIT files | 2026-05-18 | Cybersecurity AI framework | Offensive/defensive automation, prompt injection protection, MCP support, benchmark/fluency, bug-bounty-ready positioning. |
+| [garak](https://github.com/NVIDIA/garak) | 7846 | Apache-2.0 | 2026-05-15 | LLM vulnerability scanner | probes/generators/detectors/evaluators/harnesses, attack strategy library, extensible detectors. |
+| [Giskard OSS](https://github.com/Giskard-AI/giskard-oss) | 5357 | Apache-2.0 | 2026-05-18 | LLM agent evaluation library | Black-box agent/multi-step pipeline wrapping, agent evaluation, RAG evaluation, modular packaging. |
+| [PurpleLlama](https://github.com/meta-llama/PurpleLlama) | 4180 | NOASSERTION | 2026-05-18 | LLM security evaluation collection | CyberSecEval, visual prompt injection, spear phishing capability, autonomous offensive cyber operations test suite. |
+| [Decepticon](https://github.com/PurpleAILAB/Decepticon) | 3886 | Apache-2.0 | 2026-05-18 | Autonomous Hacking Agent | agents/backends/llm/middleware/sandbox/tools layering — a good model for the agent runtime structure. |
+| [PyRIT](https://github.com/microsoft/PyRIT) | 3851 | MIT | 2026-05-19 | Generative AI risk identification framework | prompt_target, prompt_converter, scenario, score, memory, dataset, executor. |
+| [AI-Infra-Guard](https://github.com/Tencent/AI-Infra-Guard) | 3743 | Apache-2.0 | 2026-05-15 | Full-stack AI red-team platform | OpenClaw scan, Agent scan, Skills scan, MCP scan, AI infra scan, LLM jailbreak evaluation. |
+| [Vulnhuntr](https://github.com/protectai/vulnhuntr) | 2660 | AGPL-3.0 | 2025-02-06 | LLM code vulnerability discovery | Call-chain context expansion from remote input to server output, second-pass analysis, confidence score. AGPL — do not copy code. |
+| [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) | 2076 | MIT | 2026-05-18 | LLM eval framework | Prompt engineering, tool usage, multi-turn dialog, model-graded evals, 200+ built-in evaluations. |
+| [AI Red Teaming Playground Labs](https://github.com/microsoft/AI-Red-Teaming-Playground-Labs) | 1938 | MIT | 2026-02-13 | AI red-team training range | Challenge/lab organization, Docker/K8s deployment, trainable and demonstrable AI red-team labs. |
+| [Agentic Security](https://github.com/msoedov/agentic_security) | 1875 | Apache-2.0 | 2026-05-14 | Agentic LLM vulnerability scanner | attack_rules, probe_actor, probe_data, refusal_classifier, report_chart, MCP integration. |
 
-## 最该抄谁
+## Who to Borrow From Most
 
-### P0：PentAGI
+### P0: PentAGI
 
-理由：它最像“AI 自动化渗透平台”，不是单纯 LLM eval。GitHub README 明确强调 autonomous penetration testing、Docker 沙箱、专业安全工具、长期记忆、知识图谱、Langfuse/Grafana 观测、REST/GraphQL API 和 Web UI。
+Why: it is the closest thing to an "AI automated penetration platform", not just an LLM eval tool. Its GitHub README explicitly emphasizes autonomous penetration testing, Docker sandboxing, professional security tools, long-term memory, knowledge graphs, Langfuse/Grafana observability, REST/GraphQL APIs, and a Web UI.
 
-本项目应抄的不是它的工具调用细节，而是平台骨架：
+What this project should borrow is not its tool-call details, but its platform skeleton:
 
-- `Flow -> Task -> SubTask -> Action -> Artifact -> Memory` 数据模型。
-- Agent 分工：researcher、developer、executor、critic、reporter。
-- 沙箱执行：命令、浏览器、工具、文件工件、网络出口策略统一由 runtime 管。
-- 长期记忆：成功攻击路径、目标画像、工具输出、失败原因可复用。
-- 知识图谱：target、service、vulnerability、credential、artifact、finding 的关系图。
-- 观测：Langfuse 记录 LLM trace，OTel/Grafana 记录系统指标。
+- `Flow -> Task -> SubTask -> Action -> Artifact -> Memory` data model.
+- Agent roles: researcher, developer, executor, critic, reporter.
+- Sandboxed execution: commands, browser, tools, file artifacts, and network egress policy all governed by the runtime.
+- Long-term memory: successful attack paths, target profiles, tool outputs, and failure causes are reusable.
+- Knowledge graph: relationships between target, service, vulnerability, credential, artifact, and finding.
+- Observability: Langfuse records LLM traces; OTel/Grafana records system metrics.
 
-对 AutoRedTeam 的落地动作：
+Landing actions for AutoRedTeam:
 
-- 新增 `core/agent_runtime/`：flow、task、action、artifact、memory、sandbox、trace。
-- 新增 `core/agent_roles/`：researcher、planner、executor、verifier、reporter。
-- 把现有 MCP/CLI 工具封装成受控 `Action`，而不是让 Agent 直接随意调用危险函数。
+- Add `core/agent_runtime/`: flow, task, action, artifact, memory, sandbox, trace.
+- Add `core/agent_roles/`: researcher, planner, executor, verifier, reporter.
+- Wrap existing MCP/CLI tools as governed `Action`s instead of letting the agent call dangerous functions freely.
 
-### P0：promptfoo
+### P0: promptfoo
 
-理由：它最成熟地解决了“AI red-team 可配置、可复测、可进 CI”的问题。
+Why: it most maturely solves "AI red-teaming that is configurable, repeatable, and CI-ready".
 
-可抄设计：
+Borrowable design:
 
-- `targets`：HTTP、OpenAI-compatible、custom provider、MCP target。
-- `plugins`：prompt injection、data exfiltration、agentic overreach、tool abuse、RAG leakage。
-- `strategies`：base64、hex、homoglyph、多语言、multi-turn、jailbreak variants。
-- `assertions`：拒答质量、敏感数据泄露、越权工具调用、政策绕过。
-- `report`：json、markdown、sarif、html、CI exit code。
+- `targets`: HTTP, OpenAI-compatible, custom provider, MCP target.
+- `plugins`: prompt injection, data exfiltration, agentic overreach, tool abuse, RAG leakage.
+- `strategies`: base64, hex, homoglyph, multilingual, multi-turn, jailbreak variants.
+- `assertions`: refusal quality, sensitive data leakage, out-of-scope tool calls, policy bypass.
+- `report`: json, markdown, sarif, html, CI exit code.
 
-对 AutoRedTeam 的落地动作：
+Landing actions for AutoRedTeam:
 
-- 新增 `config/ai_redteam.schema.yaml`。
-- 新增 `core/ai_redteam/runner.py`，把 target/plugin/strategy/assertion/report 串起来。
-- 新增 `autort ai-redteam run scenario.yaml` CLI。
-- 新增 MCP tool：`ai_redteam_run_scenario`，默认 dry-run，需要显式授权真实调用外部目标。
+- Add `config/ai_redteam.schema.yaml`.
+- Add `core/ai_redteam/runner.py` to chain target/plugin/strategy/assertion/report.
+- Add the `autort ai-redteam run scenario.yaml` CLI.
+- Add the MCP tool `ai_redteam_run_scenario`, defaulting to dry-run and requiring explicit authorization for real calls to external targets.
 
-### P0：garak + PyRIT
+### P0: garak + PyRIT
 
-理由：它们是 LLM 红队插件边界最清楚的两个项目。
+Why: they are the two projects with the clearest LLM red-team plugin boundaries.
 
-可抄合并模型：
+Borrowable merged model:
 
-- `Target`：被测模型、HTTP agent、browser agent、MCP agent、RAG app。
-- `Probe`：要测什么风险。
-- `Strategy/Converter`：怎么变形 payload。
-- `Scorer/Detector`：怎么判断结果。
-- `Memory/Dataset`：样本、历史结果、上下文。
-- `Executor`：批量、并发、重试、成本控制。
+- `Target`: the model under test, HTTP agent, browser agent, MCP agent, RAG app.
+- `Probe`: what risk to test.
+- `Strategy/Converter`: how to transform the payload.
+- `Scorer/Detector`: how to judge the result.
+- `Memory/Dataset`: samples, historical results, context.
+- `Executor`: batching, concurrency, retries, cost control.
 
-对 AutoRedTeam 的落地动作：
+Landing actions for AutoRedTeam:
 
-- 新增 `core/ai_redteam/targets/`
-- 新增 `core/ai_redteam/probes/`
-- 新增 `core/ai_redteam/strategies/`
-- 新增 `core/ai_redteam/scorers/`
-- 新增 `core/ai_redteam/datasets/`
-- 新增 `core/ai_redteam/executors/`
+- Add `core/ai_redteam/targets/`
+- Add `core/ai_redteam/probes/`
+- Add `core/ai_redteam/strategies/`
+- Add `core/ai_redteam/scorers/`
+- Add `core/ai_redteam/datasets/`
+- Add `core/ai_redteam/executors/`
 
-### P1：AI-Infra-Guard
+### P1: AI-Infra-Guard
 
-理由：它是“AI 基础设施红队”方向最贴近当前趋势的样本，覆盖 Agent、Skills、MCP、AI infra 和 jailbreak evaluation。
+Why: it is the closest sample to the current trend of "AI infrastructure red-teaming", covering Agent, Skills, MCP, AI infra, and jailbreak evaluation.
 
-可抄设计：
+Borrowable design:
 
-- MCP scan：扫描 MCP server 暴露工具、危险参数、越权调用、prompt/tool injection 面。
-- Skills scan：扫描 Agent skills / 插件中的危险指令、外部写入、凭据访问、隐藏后门。
-- Agent scan：扫描 agent 工具边界、记忆污染、权限升级、跨会话泄露。
-- Infra scan：扫描 OpenClaw/AI infra 组件风险。
+- MCP scan: scan an MCP server's exposed tools, dangerous parameters, out-of-scope calls, and prompt/tool injection surface.
+- Skills scan: scan Agent skills / plugins for dangerous instructions, external writes, credential access, and hidden backdoors.
+- Agent scan: scan agent tool boundaries, memory poisoning, privilege escalation, and cross-session leakage.
+- Infra scan: scan OpenClaw/AI infra component risks.
 
-对 AutoRedTeam 的落地动作：
+Landing actions for AutoRedTeam:
 
-- 新增 `core/ai_surface/`，专门做 MCP/skills/agent/plugin 攻击面静态分析。
-- 把当前安全能力从传统 web/pentest 扩展到 AI agent supply chain。
-- 增加 `mcp_surface_scan`、`skill_surface_scan`、`agent_tool_boundary_scan`。
+- Add `core/ai_surface/`, dedicated to static analysis of the MCP/skills/agent/plugin attack surface.
+- Extend current security capability from traditional web/pentest to the AI agent supply chain.
+- Add `mcp_surface_scan`, `skill_surface_scan`, and `agent_tool_boundary_scan`.
 
-### P1：Vulnhuntr
+### P1: Vulnhuntr
 
-理由：它不是红队平台，但在“LLM 自动漏洞发现”上有很强的 call-chain 思路。
+Why: it is not a red-team platform, but its call-chain approach to "LLM automated vulnerability discovery" is strong.
 
-可抄设计：
+Borrowable design:
 
-- 从远程用户输入入口开始。
-- 让模型请求更多上下文函数/类/变量。
-- 逐步扩展到完整 source -> sink call chain。
-- 二次分析具体漏洞类型。
-- 输出 confidence score。
+- Start from remote user input entry points.
+- Let the model request more context functions/classes/variables.
+- Expand step by step to a complete source -> sink call chain.
+- Run a second-pass analysis for the specific vulnerability type.
+- Output a confidence score.
 
-注意：Vulnhuntr 是 AGPL-3.0，不复制代码。
+Note: Vulnhuntr is AGPL-3.0 — do not copy its code.
 
-对 AutoRedTeam 的落地动作：
+Landing actions for AutoRedTeam:
 
-- 新增 `core/code_agent/`：entrypoint discovery、context expansion、source-sink trace、LLM verifier、confidence scoring。
-- 输出只给授权代码审计和防御修复，不生成可直接攻击第三方的 weaponized exploit。
+- Add `core/code_agent/`: entrypoint discovery, context expansion, source-sink trace, LLM verifier, confidence scoring.
+- Output is only for authorized code auditing and defensive remediation — it must not generate weaponized exploits directly usable against third parties.
 
-### P1：CAI / PentestGPT / Decepticon
+### P1: CAI / PentestGPT / Decepticon
 
-理由：它们贴近“AI 自动化渗透 agent”研究方向，适合抄 agent prompt、任务状态和 benchmark 组织，而不是复制攻击实现。
+Why: they are close to the "AI automated penetration agent" research direction, good for borrowing agent prompts, task state, and benchmark organization — not for copying attack implementations.
 
-可抄设计：
+Borrowable design:
 
-- PentestGPT：任务树、session、reasoning、benchmark。
-- CAI：offensive/defensive 双向自动化、prompt injection guardrails、MCP 支持、bug-bounty-ready benchmark。
-- Decepticon：agents/backends/llm/middleware/sandbox/tools 分层。
+- PentestGPT: task tree, session, reasoning, benchmark.
+- CAI: offensive/defensive two-way automation, prompt injection guardrails, MCP support, bug-bounty-ready benchmark.
+- Decepticon: agents/backends/llm/middleware/sandbox/tools layering.
 
-对 AutoRedTeam 的落地动作：
+Landing actions for AutoRedTeam:
 
-- 统一 `RunState`：目标、已知信息、计划、工具调用、证据、下一步、风险门禁。
-- 增加 `HumanGate`：高危动作前暂停确认。
-- 增加 `BenchmarkHarness`：用靶场/CTF/lab 评测 agent 成功率、成本、误报和违规动作。
+- Unify `RunState`: target, known information, plan, tool calls, evidence, next step, risk gates.
+- Add `HumanGate`: pause for confirmation before high-risk actions.
+- Add `BenchmarkHarness`: evaluate agent success rate, cost, false positives, and policy-violating actions using ranges/CTFs/labs.
 
-## 本项目应重排的产品路线
+## Product Roadmap, Re-prioritized for This Project
 
-### 1. 从“工具平台”升级为“Agent 平台”
+### 1. From "Tool Platform" to "Agent Platform"
 
-现在的 AutoRedTeam 更像工具集合 + MCP wrapper。下一步应把所有工具纳入 agent runtime：
+AutoRedTeam today is more like a tool collection + MCP wrapper. The next step is to bring every tool under an agent runtime:
 
 ```text
 Scenario
@@ -195,9 +195,9 @@ Scenario
           -> Finding
 ```
 
-### 2. 从“命令式调用”升级为“声明式场景”
+### 2. From "Imperative Calls" to "Declarative Scenarios"
 
-新增 `scenario.yaml`：
+Add `scenario.yaml`:
 
 ```yaml
 name: authorized-ai-redteam
@@ -235,18 +235,18 @@ gates:
     - persistence
 ```
 
-### 3. 从“扫描结果”升级为“证据/评分/复测”
+### 3. From "Scan Results" to "Evidence / Scoring / Re-testing"
 
-统一输出：
+Unified output:
 
-- `Attempt`：一次 probe/strategy/target 组合。
-- `Trace`：模型输入、模型输出、工具调用、错误、重试。
-- `Score`：通过/失败、严重度、confidence、evaluator、证据片段。
-- `Finding`：可去重、可复测、可导出 SARIF/Markdown/JSON。
+- `Attempt`: one probe/strategy/target combination.
+- `Trace`: model input, model output, tool calls, errors, retries.
+- `Score`: pass/fail, severity, confidence, evaluator, evidence excerpt.
+- `Finding`: deduplicable, re-testable, exportable as SARIF/Markdown/JSON.
 
-### 4. 从“危险能力暴露”升级为“分级授权”
+### 4. From "Exposed Dangerous Capabilities" to "Tiered Authorization"
 
-每个 action 必须带：
+Every action must carry:
 
 - `risk_level`
 - `requires_auth`
@@ -256,44 +256,44 @@ gates:
 - `artifact_policy`
 - `cleanup_policy`
 
-## 该删/该降级的方向
+## Directions to Cut / Downgrade
 
-不是删掉传统安全能力，而是降级为 Agent 可调用工具：
+This is not about deleting traditional security capabilities, but downgrading them to agent-callable tools:
 
-- `exploit/lateral/persistence/c2/exfiltration` 不应该作为默认 AI 自动执行路径。
-- 这些能力应只作为 `Action` 注册，默认 `dry_run`，真实执行前必须 human gate。
-- AI 自动化红队主线应优先做：AI app 测试、MCP/skills/agent 边界、授权靶场、代码审计、报告闭环。
+- `exploit/lateral/persistence/c2/exfiltration` should not be default AI auto-execution paths.
+- These capabilities should only be registered as `Action`s, defaulting to `dry_run`, with a human gate required before any real execution.
+- The AI automated red-team main line should prioritize: AI app testing, MCP/skills/agent boundaries, authorized ranges, code auditing, and the reporting loop.
 
-## 代码复制边界
+## Code-Copying Boundaries
 
-可以抄设计：
+Designs that can be borrowed:
 
-- PentAGI 的 flow/task/action/artifact/memory/observability 模型。
-- promptfoo 的 scenario 配置和 plugin/strategy/assertion/report 思路。
-- garak/PyRIT 的 target/probe/strategy/scorer/executor 分层。
-- AI-Infra-Guard 的 MCP/skills/agent/infra scan 分类。
-- Vulnhuntr 的 call-chain context expansion 和 confidence score。
-- Giskard/Inspect 的 agent eval、multi-turn、model-graded scoring。
+- PentAGI's flow/task/action/artifact/memory/observability model.
+- promptfoo's scenario configuration and plugin/strategy/assertion/report approach.
+- garak/PyRIT's target/probe/strategy/scorer/executor layering.
+- AI-Infra-Guard's MCP/skills/agent/infra scan categories.
+- Vulnhuntr's call-chain context expansion and confidence score.
+- Giskard/Inspect's agent eval, multi-turn, model-graded scoring.
 
-不复制代码：
+Code that must not be copied:
 
-- AGPL/GPL/许可证不明项目实现。
-- C2、持久化、规避检测、凭据获取、外传、钓鱼执行实现。
-- 可直接攻击第三方目标的 payload 和 weaponized exploit。
+- Implementations from AGPL/GPL/unclear-license projects.
+- C2, persistence, detection-evasion, credential acquisition, exfiltration, or phishing execution implementations.
+- Payloads and weaponized exploits directly usable against third-party targets.
 
-## 最终排序
+## Final Ranking
 
-最值得对标和“抄思路”的顺序：
+The order most worth benchmarking against and "borrowing ideas from":
 
-1. PentAGI：平台骨架、沙箱、多 Agent、记忆、观测、Web/API。
-2. promptfoo：声明式 AI red-team、CI、评分和报告。
-3. garak + PyRIT：LLM 红队插件边界。
-4. AI-Infra-Guard：MCP/skills/agent/AI infra 安全面。
-5. PentestGPT + CAI + Decepticon：AI 自动渗透 agent 任务流和 benchmark。
-6. Vulnhuntr：代码漏洞自动发现的上下文扩展与 confidence scoring。
-7. Giskard + Inspect：评测、multi-turn、model-graded scoring 和 agent eval。
+1. PentAGI: platform skeleton, sandbox, multi-agent, memory, observability, Web/API.
+2. promptfoo: declarative AI red-teaming, CI, scoring, and reporting.
+3. garak + PyRIT: LLM red-team plugin boundaries.
+4. AI-Infra-Guard: MCP/skills/agent/AI infra security surface.
+5. PentestGPT + CAI + Decepticon: AI automated penetration agent task flows and benchmarks.
+6. Vulnhuntr: context expansion and confidence scoring for automated code vulnerability discovery.
+7. Giskard + Inspect: evaluation, multi-turn, model-graded scoring, and agent eval.
 
-下一步最该做的不是再堆传统 detector，而是先实现两个基础层：
+The next thing to build is not more traditional detectors, but two foundation layers first:
 
-- `core/agent_runtime/`：Flow/Task/Action/Artifact/Memory/Trace/HumanGate。
-- `core/ai_redteam/`：Target/Probe/Strategy/Scorer/Scenario/Report。
+- `core/agent_runtime/`: Flow/Task/Action/Artifact/Memory/Trace/HumanGate.
+- `core/ai_redteam/`: Target/Probe/Strategy/Scorer/Scenario/Report.
