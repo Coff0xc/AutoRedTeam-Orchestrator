@@ -3,7 +3,7 @@
 AutoRedTeam-Orchestrator MCP Server
 MCP-native 授权安全自动化工作台 - MCP 协议服务端
 
-版本: 3.1.0
+版本: see _version.py
 作者: AutoRedTeam Team
 许可: 仅限授权安全测试使用
 
@@ -31,11 +31,13 @@ sys.path.insert(0, PROJECT_ROOT)
 
 from mcp.server import MCPServer
 
+from _version import __version__
+
 # ==================== MCP服务器实例 ====================
 
 # version 会作为 _meta.io.modelcontextprotocol/serverInfo 发给客户端；
 # 不传时客户端看到的将是 MCP SDK 自己的版本号，而不是本项目的版本。
-mcp = MCPServer("AutoRedTeam", version="3.1.0")
+mcp = MCPServer("AutoRedTeam", version=__version__)
 
 
 # ==================== 日志配置 (延迟到 main 调用) ====================
@@ -99,7 +101,8 @@ def register_all_tools(profile: str | None = None):
 
     logger.info("=" * 60)
     logger.info(
-        "AutoRedTeam MCP Server v3.1.0 - capability profile: %s",
+        "AutoRedTeam MCP Server v%s - capability profile: %s",
+        __version__,
         selected_profile,
     )
     logger.info("=" * 60)
@@ -143,7 +146,7 @@ def main():
         logger.warning("无法读取授权模式配置")
 
     # 启动MCP服务器
-    logger.info("AutoRedTeam MCP Server v3.1.0 启动中...")
+    logger.info("AutoRedTeam MCP Server v%s 启动中...", __version__)
     logger.info("支持: Cursor / Windsurf / Kiro 等AI编辑器")
     logger.info("-" * 60)
 

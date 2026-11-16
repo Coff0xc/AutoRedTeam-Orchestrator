@@ -39,6 +39,9 @@ class TestCLIHelp:
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
         assert "AutoRedTeam" in result.output
+        assert "attack-surface" in result.output.lower() or "audit" in result.output.lower()
+        assert "ai-surface" in result.output
+        assert "engage" in result.output
 
     def test_scan_help(self):
         """scan --help 应返回成功"""
@@ -177,9 +180,14 @@ class TestCLIHelpRest:
         """ai-redteam eval-run --help 应返回成功"""
         from cli.main import app
 
-        result = runner.invoke(app, ["ai-redteam", "eval-run", "--help"])
+        result = runner.invoke(app, ["ai-redteam", "--help"])
         assert result.exit_code == 0
-        assert "run" in result.output.lower()
+        assert "eval-run" in result.output.lower()
+        assert "internal" in result.output.lower() or "plan-only" in result.output.lower()
+
+        eval_help = runner.invoke(app, ["ai-redteam", "eval-run", "--help"])
+        assert eval_help.exit_code == 0
+        assert "run" in eval_help.output.lower()
 
     def test_skills_help(self):
         from cli.main import app
@@ -225,9 +233,13 @@ class TestCLIHelpRest:
         """sandbox docker-smoke --help 应返回成功"""
         from cli.main import app
 
-        result = runner.invoke(app, ["sandbox", "docker-smoke", "--help"])
+        result = runner.invoke(app, ["sandbox", "--help"])
         assert result.exit_code == 0
-        assert "image" in result.output.lower()
+        assert "record" in result.output.lower()
+
+        smoke = runner.invoke(app, ["sandbox", "docker-smoke", "--help"])
+        assert smoke.exit_code == 0
+        assert "image" in smoke.output.lower()
 
     def test_capabilities_matrix_help(self):
         """capabilities matrix --help 应返回成功"""

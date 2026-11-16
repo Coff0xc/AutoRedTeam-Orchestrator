@@ -38,82 +38,75 @@ _configure_stdio_encoding()
 
 app = typer.Typer(
     name="autort",
-    help="AutoRedTeam — MCP-native 授权安全自动化工作台",
+    help="AutoRedTeam — local MCP/AI attack-surface audit and evidence gate",
     no_args_is_help=True,
     add_completion=False,
 )
-
-ai_redteam_app = typer.Typer(
-    name="ai-redteam",
-    help="声明式 AI 红队场景（默认 dry-run，不触发目标调用）",
-    no_args_is_help=True,
-    add_completion=False,
-)
-app.add_typer(ai_redteam_app, name="ai-redteam")
 
 ai_surface_app = typer.Typer(
     name="ai-surface",
-    help="AI/MCP 工具攻击面静态盘点（只读，不执行工具）",
+    help="Read-only MCP/skill/config attack-surface scan",
     no_args_is_help=True,
     add_completion=False,
 )
-app.add_typer(ai_surface_app, name="ai-surface")
-
-code_agent_app = typer.Typer(
-    name="code-agent",
-    help="代码 Agent 静态分析（call-chain context expansion，不执行代码）",
-    no_args_is_help=True,
-    add_completion=False,
-)
-app.add_typer(code_agent_app, name="code-agent")
-
-runtime_api_app = typer.Typer(
-    name="runtime-api",
-    help="Agent runtime 本地循环与只读 API",
-    no_args_is_help=True,
-    add_completion=False,
-)
-app.add_typer(runtime_api_app, name="runtime-api")
-
-sandbox_app = typer.Typer(
-    name="sandbox",
-    help="本地沙箱验证和诊断",
-    no_args_is_help=True,
-    add_completion=False,
-)
-app.add_typer(sandbox_app, name="sandbox")
-
 capabilities_app = typer.Typer(
     name="capabilities",
-    help="AI red-team 重构能力矩阵",
+    help="Capability profiles, manifest, and auth keys",
     no_args_is_help=True,
     add_completion=False,
 )
-app.add_typer(capabilities_app, name="capabilities")
-
-tools_app = typer.Typer(
-    name="tools",
-    help="MCP 工具面契约检查（静态分析，不执行 handler）",
-    no_args_is_help=True,
-    add_completion=False,
-)
-app.add_typer(tools_app, name="tools")
-
 skills_app = typer.Typer(
     name="skills",
     help="Pinned SKILL.md packs (read-only; no clone, no script execution)",
     no_args_is_help=True,
     add_completion=False,
 )
-app.add_typer(skills_app, name="skills")
-
 engage_app = typer.Typer(
     name="engage",
-    help="Authorized red-team engagement: init, plan, run, verify, export",
+    help="Authorized engagement: plan, recon, detect, verify, export",
     no_args_is_help=True,
     add_completion=False,
 )
+ai_redteam_app = typer.Typer(
+    name="ai-redteam",
+    help="Local eval contract. eval-run scores saved runs; run is plan-only Internal",
+    no_args_is_help=True,
+    add_completion=False,
+)
+code_agent_app = typer.Typer(
+    name="code-agent",
+    help="Static call-chain expansion. Does not execute code",
+    no_args_is_help=True,
+    add_completion=False,
+)
+runtime_api_app = typer.Typer(
+    name="runtime-api",
+    help="Allowlisted local audit loop and read-only run API",
+    no_args_is_help=True,
+    add_completion=False,
+)
+sandbox_app = typer.Typer(
+    name="sandbox",
+    help="Sandbox metadata on a run record, plus local docker-smoke",
+    no_args_is_help=True,
+    add_completion=False,
+)
+tools_app = typer.Typer(
+    name="tools",
+    help="MCP tool-contract lint (static; does not execute handlers)",
+    no_args_is_help=True,
+    add_completion=False,
+)
+
+app.add_typer(ai_surface_app, name="ai-surface")
+app.add_typer(capabilities_app, name="capabilities")
+app.add_typer(skills_app, name="skills")
 app.add_typer(engage_app, name="engage")
+app.add_typer(ai_redteam_app, name="ai-redteam")
+app.add_typer(code_agent_app, name="code-agent")
+app.add_typer(runtime_api_app, name="runtime-api")
+app.add_typer(sandbox_app, name="sandbox")
+app.add_typer(tools_app, name="tools")
 
 
 def _show_disclaimer() -> None:
@@ -170,7 +163,7 @@ def scan(
     quick: bool = typer.Option(False, "--quick", "-q", help="快速模式"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
-    """扫描目标 — 端口扫描 / 完整侦察"""
+    """Port or recon scan. Requires capability profile scan."""
     _require_surface("full_recon" if full or recon_only else "port_scan")
     _require_target(target)
     from autort import Scanner
@@ -208,7 +201,7 @@ def detect(
     ),
     exit_code: bool = typer.Option(False, "--exit-code", help="发现漏洞时返回非零退出码"),
 ):
-    """漏洞检测 — 扫描目标漏洞"""
+    """Vulnerability detect. Requires capability profile scan."""
     _require_surface("vuln_scan")
     _require_target(target)
     from autort import Scanner
@@ -256,7 +249,7 @@ def exploit(
     top_n: int = typer.Option(5, "--top-n", help="自动模式下最多尝试的漏洞数"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
-    """漏洞利用 — CVE利用 / 自动利用"""
+    """Exploit validation. Requires capability profile active-lab."""
     if cve:
         surface = "cve_auto_exploit"
     elif auto:
@@ -315,7 +308,7 @@ def pentest(
     timeout: int = typer.Option(3600, "--timeout", "-t", help="超时时间（秒）"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
-    """一键渗透测试"""
+    """Automated pentest orchestrator. Requires capability profile full. Experimental."""
     _require_surface("pentest_resume" if resume else "auto_pentest")
     _require_target(target)
     from autort import AutoPentest
@@ -431,7 +424,7 @@ def ai_redteam_run(
         "high", "--severity-threshold", help="CI 失败阈值: info/low/medium/high/critical"
     ),
 ):
-    """规划 AI 红队场景 — dry-run，只生成 attempts/scores/trace，不请求目标"""
+    """Internal plan-only scenario. Prefer eval-run for scored local eval."""
     from core.ai_redteam import AIRedTeamRunner, load_scenario
     from core.ai_redteam.report import render_markdown, should_fail_ci
 

@@ -14,7 +14,6 @@ from core.agent_runtime.models import (
     Action,
     ActionKind,
     ActionPolicy,
-    ActionStatus,
     AgentRunState,
     Flow,
     RunMode,
@@ -283,6 +282,13 @@ async def _run(
         for item in (state.get("verified") or [])
         if isinstance(item, dict) and item.get("verification_status") == "verified"
     ]
+    gated_findings = (
+        [_gate_finding(item) for item in (state.get("findings") or []) if isinstance(item, dict)]
+        if isinstance(state.get("findings"), list)
+        else []
+    )
+    from core.engage.scorecard import build_scorecard
+
     return {
         "success": stopped is None,
         "passed": stopped is None and state.get("status") == "complete",
@@ -291,15 +297,8 @@ async def _run(
         "state": public_state(state),
         "next": nxt,
         "confirmed": confirmed,
-        "findings": (
-            [
-                _gate_finding(item)
-                for item in (state.get("findings") or [])
-                if isinstance(item, dict)
-            ]
-            if isinstance(state.get("findings"), list)
-            else []
-        ),
+        "findings": gated_findings,
+        "scorecard": build_scorecard(gated_findings),
         "loop": {"processed": processed, "stopped": stopped, "max_steps": limit},
         "run_state": run_state.to_dict(),
         "summary": run_state.summary(),
@@ -438,12 +437,19 @@ async def _exec_export(inputs: Mapping[str, Any], state: Dict[str, Any]) -> Dict
     output_dir.mkdir(parents=True, exist_ok=True)
     findings = [item for item in (state.get("findings") or []) if isinstance(item, dict)]
     gated = [_gate_finding(item) for item in findings]
+    from core.engage.scorecard import build_scorecard
+
+    card = build_scorecard(gated)
     report = {
         "schema": "autort.engage.report/v1",
         "findings": gated,
         "confirmed": [
             item for item in gated if str(item.get("verification_status") or "") == "verified"
         ],
+        "unconfirmed": [
+            item for item in gated if str(item.get("verification_status") or "") != "verified"
+        ],
+        "scorecard": card,
         "state": public_state(state),
     }
     report_path = output_dir / "report.json"

@@ -580,7 +580,7 @@ class TestSDKPackage:
         """测试版本号"""
         from autort import __version__
 
-        assert __version__ == "3.1.0"
+        assert __version__ == "4.0.0"
 
     def test_exports(self):
         """测试所有公共类均可导入"""
@@ -619,7 +619,7 @@ class TestCLI:
         runner = CliRunner()
         result = runner.invoke(app, ["version"])
         assert result.exit_code == 0
-        assert "3.1.0" in result.output
+        assert "4.0.0" in result.output
 
     def test_cli_scan_help(self):
         """测试 scan 子命令 help"""

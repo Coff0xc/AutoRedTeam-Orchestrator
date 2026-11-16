@@ -81,7 +81,7 @@ SEVERITY_ORDER: Dict[str, int] = {
 def findings_to_sarif(
     findings: List[Dict[str, Any]],
     tool_name: str = "AutoRedTeam",
-    tool_version: str = "3.1.0",
+    tool_version: str | None = None,
     run_properties: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     """将检测结果转换为 SARIF 2.1.0 格式
@@ -94,6 +94,8 @@ def findings_to_sarif(
     Returns:
         SARIF JSON 字典
     """
+    if tool_version is None:
+        from _version import __version__ as tool_version
     sarif: Dict[str, Any] = {
         "$schema": SARIF_SCHEMA,
         "version": SARIF_VERSION,

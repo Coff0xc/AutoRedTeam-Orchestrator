@@ -20,6 +20,7 @@ from core.engage.runner import (
     init_engagement,
     run_engagement,
 )
+from core.engage.scorecard import SCORECARD_SCHEMA, build_scorecard
 
 __all__ = [
     "DEFAULT_CONFIG_PATH",
@@ -40,4 +41,6 @@ __all__ = [
     "plan_next",
     "run_engagement",
     "save_config",
+    "SCORECARD_SCHEMA",
+    "build_scorecard",
 ]

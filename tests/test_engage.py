@@ -106,6 +106,10 @@ def test_dry_run_loop_completes(tmp_path: Path, monkeypatch):
     assert result["state"]["status"] == "complete"
     assert result["next"] is None
     assert result["loop"]["stopped"] is None
+    assert result["scorecard"]["schema"] == "autort.engage.scorecard/v1"
+    assert result["scorecard"]["total"] == 0
+    assert result["scorecard"]["confirmed"] == 0
+    assert result["scorecard"]["unconfirmed"] == 0
 
 
 def test_doom_loop_stops(tmp_path: Path, monkeypatch):

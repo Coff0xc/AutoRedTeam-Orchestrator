@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from _version import __version__
 from core.capability_manifest import surface_enabled_for_mcp
 
 from .runtime_helpers import (
@@ -156,7 +157,7 @@ def register_resource_handlers(mcp, counter, logger):
         """获取当前安全配置"""
         runtime_gate = _gate_resource_runtime("resource.get_security_config")
         config = {
-            "version": "3.1.0",
+            "version": __version__,
             "auth_mode": "unknown",
             "tools_registered": counter.total,
         }
