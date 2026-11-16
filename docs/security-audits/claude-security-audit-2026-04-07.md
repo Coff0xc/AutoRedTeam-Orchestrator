@@ -1,28 +1,28 @@
 
 ---
 
-## 依赖链 CVE (pip-audit 扫描结果)
+## Dependency-chain CVEs (pip-audit scan results)
 
-共发现 **4 个已知 CVE**，涉及 2 个包：
+Found **4 known CVEs** across 2 packages:
 
-| 包 | 当前版本 | CVE | 严重程度 | 修复版本 | 说明 |
+| Package | Current Version | CVE | Severity | Fixed Version | Notes |
 |---|---|---|---|---|---|
-| `cryptography` | 44.0.3 | CVE-2026-26007 | **High** | ≥46.0.5 | ECDH/ECDSA 小子群攻击 — 公钥未验证子群归属，可泄露私钥低位 (SECT 曲线) |
-| `cryptography` | 44.0.3 | CVE-2026-34073 | Medium | ≥46.0.6 | X.509 名称约束绕过 — DNS 名称约束未应用于 peer name |
-| `pyopenssl` | 25.1.0 | CVE-2026-27448 | **High** | ≥26.0.0 | TLS SNI 回调异常 → 连接被允许 — 安全回调可被绕过 |
-| `pyopenssl` | 25.1.0 | CVE-2026-27459 | Medium | ≥26.0.0 | DTLS cookie 回调 >256 字节缓冲区溢出 |
+| `cryptography` | 44.0.3 | CVE-2026-26007 | **High** | ≥46.0.5 | ECDH/ECDSA small-subgroup attack — public keys are not validated for subgroup membership, leaking low bits of the private key (SECT curves) |
+| `cryptography` | 44.0.3 | CVE-2026-34073 | Medium | ≥46.0.6 | X.509 name-constraints bypass — DNS name constraints not applied to the peer name |
+| `pyopenssl` | 25.1.0 | CVE-2026-27448 | **High** | ≥26.0.0 | TLS SNI callback exception → connection allowed — the security callback can be bypassed |
+| `pyopenssl` | 25.1.0 | CVE-2026-27459 | Medium | ≥26.0.0 | DTLS cookie callback buffer overflow on payloads >256 bytes |
 
-**影响评估**:
-- `cryptography` 被 `SecretsManager` (Fernet/PBKDF2) 和 `mcp_auth_middleware` 依赖 — **直接影响认证安全**
-- `pyopenssl` 为间接依赖 — 如果 C2 隧道或 recon 模块使用了 pyopenssl 的 TLS 回调，SNI 绕过可导致认证降级
+**Impact assessment**:
+- `cryptography` is depended on by `SecretsManager` (Fernet/PBKDF2) and `mcp_auth_middleware` — **directly affects authentication security**
+- `pyopenssl` is a transitive dependency — if a C2 tunnel or recon module uses pyopenssl's TLS callbacks, the SNI bypass could lead to authentication downgrade
 
-**修复**: 升级 `requirements.txt` 版本约束:
+**Fix**: bump the version constraints in `requirements.txt`:
 ```
 cryptography>=46.0.6,<48.0.0   # was >=42.0.0,<45.0.0
-pyopenssl>=26.0.0               # 新增（pin 安全版本）
+pyopenssl>=26.0.0               # new (pin a safe version)
 ```
 
-修复优先级表中追加:
+Add to the fix-priority table:
 
-| P0 | DEP-01 | 升级 cryptography ≥46.0.6 | 0.5h |
-| P1 | DEP-02 | 升级 pyopenssl ≥26.0.0 | 0.5h |
+| P0 | DEP-01 | Upgrade cryptography to ≥46.0.6 | 0.5h |
+| P1 | DEP-02 | Upgrade pyopenssl to ≥26.0.0 | 0.5h |
