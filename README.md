@@ -8,7 +8,7 @@ The model can decide. This program keeps the permission, the evidence, and the r
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-3.1.0-orange)
+![Version](https://img.shields.io/badge/version-4.0.0-orange)
 ![Status](https://img.shields.io/badge/status-Beta%20%2F%20Research%20Preview-yellow)
 
 [Maturity notes](docs/capability-maturity.md) · [Trust boundaries](docs/security-model.md) · [Security audits](docs/security-audits/)
@@ -117,7 +117,7 @@ pip install -r requirements.txt
 python -m cli.main --help
 ```
 
-Python 3.10 or newer. Version `3.1.0` lives only in `_version.py`. The two commands are `autort` and `autoredteam-mcp`.
+Python 3.10 or newer. Version `4.0.0` lives only in `_version.py`. The two commands are `autort` and `autoredteam-mcp`.
 
 Any subcommand, including `--help`, prints the legal notice on stderr. `--help` does not ask the allowed list.
 
@@ -145,7 +145,7 @@ AUTORT_CAPABILITY_PROFILE=scan autort engage run
 autort engage status
 ```
 
-`engage init`, `status`, and `next` stay on `safe`. They write or read `.autort/engage.yaml`. They do not contact the target. `engage run` needs `scan`. It applies the engagement profile, allowlist, and HITL for the duration of the run, then restores the previous environment. Live `engage.verify` asks HITL when the engagement file sets `hitl` to `approval` or `review_edit`; dry-run skips that gate. A finding is confirmed only after `vuln_verifier`, `statistical_verifier`, `oob_callback`, or `manual_review`. The same execution hash more than three times stops the loop. `--ci` exits 2 when the loop does not pass. CI runs `engage run --path config/engage.lab.example.yaml --dry-run --ci`.
+`engage init`, `status`, and `next` stay on `safe`. They write or read `.autort/engage.yaml`. They do not contact the target. `engage run` needs `scan`. It applies the engagement profile, allowlist, and HITL for the duration of the run, then restores the previous environment. Live `engage.verify` asks HITL when the engagement file sets `hitl` to `approval` or `review_edit`; dry-run skips that gate. A finding is confirmed only after `vuln_verifier`, `statistical_verifier`, `oob_callback`, or `manual_review`. The same execution hash more than three times stops the loop. `--ci` exits 2 when the loop does not pass. The run JSON includes `scorecard` (`autort.engage.scorecard/v1`) with `confirmed`, `unconfirmed`, and `total`. CI runs `engage run --path config/engage.lab.example.yaml --dry-run --ci`.
 
 MCP tools: `engage_init`, `engage_status`, `engage_next` (safe), `engage_run` (scan). A model that only has `safe` can still plan the next step. Live recon needs the operator to raise the level.
 
@@ -388,9 +388,9 @@ These do not contact a target. CVE search reads the local notes.
 | `skills` | `catalog`, `read` | Pinned SKILL.md packs. Read-only |
 | `engage` | `init`, `status`, `next`, `run`, `resume` | One authorized target. Plan on `safe`, run on `scan` |
 | `code-agent` | `expand` | Who calls whom, from the source |
-| `runtime-api` | `run`, `serve` | A local loop over planned actions, or a read-only view of a saved run |
-| `sandbox` | `docker-smoke` | A local Docker smoke test, network off |
-| `ai-redteam` | `run`, `catalog`, `convert`, `eval-run` | A written scenario or local eval suite. Dry-run unless you go further |
+| `runtime-api` | `run`, `serve` | Allowlisted local audit loop, or a read-only view of a saved run |
+| `sandbox` | `docker-smoke` | A record field on the run, plus local docker-smoke |
+| `ai-redteam` | `eval-run`, `catalog`, `convert`, `run` | eval-run scores local runs. `run` is plan-only Internal |
 
 ### Higher levels
 
@@ -414,7 +414,7 @@ Calls are async. Most return a dict. A failure carries an `"error"` string. If t
 
 ```python
 from autort import Engagement, Exploiter, Reporter
-from autort import __version__  # "3.1.0"
+from autort import __version__  # "4.0.0"
 
 engagement = Engagement("http://127.0.0.1:3000", profile="scan")
 plan = await engagement.run(dry_run=True)

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-11-16
+
+### Added
+
+- `autort.engage.scorecard/v1`: `confirmed` / `unconfirmed` / `total` on `engage run` and export, with a local XSS reflect lab proving the evidence gate
+- `autort ai-surface inventory` (`autort.inventory/v1`)
+- OWASP MCP03/04/10 static rules and named skill-install risks (`skill.prompt_injection` and siblings)
+- `ai-surface diff --ci` against `tests/fixtures/ai_surface/handlers.baseline.json`
+
+### Changed
+
+- Default CLI help leads with the local audit and evidence gate
+- `ai-redteam run` is documented Internal/plan-only; `eval-run` is the scored local path
+- Version is `4.0.0` in `_version.py` only. The GitHub Action pin `v3.1` is unchanged
+
 ## [3.1.0] - 2026-04-08
 
 ### Added
