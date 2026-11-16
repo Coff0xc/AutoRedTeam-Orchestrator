@@ -364,7 +364,7 @@ These do not contact a target. CVE search reads the local notes.
 | `ai-surface scan` | Handler inventory plus MCP03/04/10 rules | `autort ai-surface scan --path handlers --format sarif -o surface.sarif` |
 | `ai-surface inventory` | Local MCP client configs and skill roots, no network | `autort ai-surface inventory` |
 | `ai-surface scan-mcp-config` | A read of a client config | `autort ai-surface scan-mcp-config --path .mcp.json` |
-| `ai-surface scan-skills` | Markers in instruction files | `autort ai-surface scan-skills --path ./skills` |
+| `ai-surface scan-skills` | Named skill risks (`skill.prompt_injection`, secrets, downloads) | `autort ai-surface scan-skills --path ./skills` |
 | `ai-surface diff` | What changed since a saved scan | `autort ai-surface diff --baseline tests/fixtures/ai_surface/handlers.baseline.json --path handlers --ci` |
 | `capabilities profiles` | The four levels and their counts | `autort capabilities profiles` |
 | `capabilities manifest` | One level, as data | `autort capabilities manifest --profile safe` |
@@ -562,7 +562,7 @@ Issues a `@tool` function can get:
 
 Prompts and resources skip the auth and validator rows. Effect mismatch still applies when the row is local-only and the parameters include a target-shaped name.
 
-SARIF rule ids are grouped by class, not one rule per tool: `mcp_tool.auth-critical`, `mcp_tool.auth-missing`, `mcp_tool.effect-mismatch`, `mcp_tool.target-input`, `mcp_tool.factory`, `mcp_tool.lowlevel`, `mcp_prompt`, `mcp_resource`, `mcp_config`, `skill_instruction`, `surface_added`, `surface_removed`, `surface_description_changed`, `surface_parameters_changed`.
+SARIF rule ids are grouped by class, not one rule per tool: `mcp_tool.auth-critical`, `mcp_tool.auth-missing`, `mcp_tool.effect-mismatch`, `mcp_tool.target-input`, `mcp_tool.factory`, `mcp_tool.lowlevel`, `mcp_prompt`, `mcp_resource`, `mcp_config`, `skill.prompt_injection`, `skill.hardcoded_secret`, `skill.suspicious_download_url`, `skill.unverifiable_remote_code`, `skill.missing_skill_md`, `surface_added`, `surface_removed`, `surface_description_changed`, `surface_parameters_changed`.
 
 The comparison (`reconcile_capability_manifest`) joins on `(kind, name)` when you scan the repo root or a directory named `handlers`.
 
