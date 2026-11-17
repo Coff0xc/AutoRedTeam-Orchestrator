@@ -5,7 +5,7 @@ info:
   author: autoredteam-test
   severity: medium
   tags: xss,test
-  description: 测试用反射型 XSS 检测模板
+  description: Test template for reflected XSS detection
 
 http:
   - method: GET
