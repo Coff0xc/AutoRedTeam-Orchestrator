@@ -61,6 +61,46 @@ def test_plan_advances_recon_detect_verify_export():
     assert plan_next(config, state) is None
 
 
+def test_model_pick_frames_state_and_uses_authorized_system(monkeypatch):
+    captured: dict[str, str] = {}
+
+    class FakeProvider:
+        available = True
+
+        def complete(self, prompt, system=""):
+            captured["prompt"] = prompt
+            captured["system"] = system
+            return "engage.detect extra prose"
+
+    monkeypatch.setattr("core.llm.provider.LLMProvider", FakeProvider)
+    from core.llm.prompts import DATA_MARKER_STEM, ENGAGE_PICK_SYSTEM_PROMPT
+
+    config = EngagementConfig(target="http://127.0.0.1:3000", profile="scan")
+    state = empty_state()
+    state["recon"] = {"ok": True}
+    card = plan_next(config, state, use_model=True)
+    assert card["name"] == "engage.detect"
+    assert captured["system"] == ENGAGE_PICK_SYSTEM_PROMPT
+    assert DATA_MARKER_STEM in captured["prompt"]
+    assert "has_recon" in captured["prompt"]
+    assert "engage.detect" in captured["prompt"]
+
+
+def test_model_pick_unknown_reply_keeps_heuristic(monkeypatch):
+    class FakeProvider:
+        available = True
+
+        def complete(self, prompt, system=""):
+            return "not-a-step"
+
+    monkeypatch.setattr("core.llm.provider.LLMProvider", FakeProvider)
+    config = EngagementConfig(target="http://127.0.0.1:3000", profile="scan")
+    state = empty_state()
+    state["recon"] = {"ok": True}
+    card = plan_next(config, state, use_model=True)
+    assert card["name"] == "engage.detect"
+
+
 @pytest.mark.asyncio
 async def test_dry_dispatch_records_without_network():
     state = empty_state()

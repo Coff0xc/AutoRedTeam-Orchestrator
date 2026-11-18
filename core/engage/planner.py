@@ -112,24 +112,26 @@ def _model_pick(remaining: list[str], state: Mapping[str, Any]) -> Optional[str]
     provider = LLMProvider()
     if not provider.available:
         return None
+    from core.llm.prompts import ENGAGE_PICK_SYSTEM_PROMPT, envelope_intro, wrap_untrusted
+
+    summary = {
+        "has_recon": bool(state.get("recon")),
+        "findings": (
+            len(state.get("findings") or []) if isinstance(state.get("findings"), list) else None
+        ),
+        "exported": bool(state.get("exported")),
+    }
+    nonce, framed = wrap_untrusted("state", str(summary))
     prompt = (
         "Pick exactly one next engagement step from this list: "
         + ", ".join(remaining)
-        + ". Reply with the step name only. State summary: "
-        + str(
-            {
-                "has_recon": bool(state.get("recon")),
-                "findings": (
-                    len(state.get("findings") or [])
-                    if isinstance(state.get("findings"), list)
-                    else None
-                ),
-                "exported": bool(state.get("exported")),
-            }
-        )
+        + ".\n"
+        + envelope_intro(nonce)
+        + "\n"
+        + framed
     )
     try:
-        reply = provider.complete(prompt)
+        reply = provider.complete(prompt, system=ENGAGE_PICK_SYSTEM_PROMPT)
     except Exception:
         return None
     if not isinstance(reply, str):
