@@ -84,6 +84,13 @@ copy procedures into the tool schema or the prompt body.
   denies and the tool body does not run. A same-process env flag is not that approver.
   The engagement loop also calls this gate on live `engage.verify` when the engagement
   file sets `hitl` to `approval` or `review_edit`. Dry-run skips that step gate.
+- Optional LLM calls default off (`AUTORT_LLM_PROVIDER=none`). When a provider is
+  set, engage pick and decision analysis send a code-owned authorized-engagement
+  system prompt. Scan results and state summaries are framed as DATA with a nonce
+  envelope; nested marker stems are neutralized. Jailbreak strings stay out of
+  those prompts. Live `engage.verify` HITL stays in code. A HITL permit is not
+  verification evidence. Model refusal or an unknown step name falls back to the
+  heuristic remaining list.
 - Safe active operation requires a separately attached executor and an external authorization
   decision. Current legacy SDK and handler paths do not enforce this universally.
 

@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In-process MCP `initialize` / `tools/list` (plus prompts and resources list) matches the resident set for `safe` / `scan` / `active-lab` / `full`
 - Orchestrator checkpoint persist/resume pin (`tests/test_orchestrator_checkpoint.py`): `SessionStorage` on `tmp_path`, stubbed phase executors, no live target
 - `autort.engage.scorecard/v1` additive fields: `unverified`, `contradicted`, `confirmation_rate` (null when `total` is 0), per-row `proof` (`bound` / `none`), and `gaps` (`no_findings_is_not_clean` on an empty finding list)
+- Optional LLM path: code-owned authorized-engagement system prompt plus nonce `AUTORT_DATA` envelope for engage pick and decision analysis. Nested marker stems are neutralized. Jailbreak strings stay out of those prompts. Default `AUTORT_LLM_PROVIDER` remains `none`
 
 ### Changed
 
@@ -22,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Default CLI `--help` hides Internal groups `code-agent`, `runtime-api`, and `sandbox`; they stay callable
 - Catalog MCP tools `ext_nmap_scan`, `ext_nuclei_scan`, `ext_sqlmap_scan`, `ext_ffuf_fuzz`, and `ext_masscan_scan` drop unbounded `extra_args`. Presets and ffuf modes are Literal enums. `ext_sqlmap_scan` `preset=exploit` and `ext_ffuf_fuzz` fail closed unless `confirmed=true`. Internally built flags still pass `validate_extra_args`.
 - Mixed-profile scan and active-lab handler registrars load from sibling modules only when the current profile enables them. Parent modules that contain a safe surface still import under `safe`.
+- Optional engage `_model_pick` wraps state as DATA, passes the authorized system prompt, continues remaining in-scope steps, and treats HITL on live `engage.verify` as code. A HITL permit is not verification evidence. Unknown model replies fall back to the heuristic queue.
 
 ### Fixed
 
