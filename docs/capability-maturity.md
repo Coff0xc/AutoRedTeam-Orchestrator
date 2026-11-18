@@ -5,7 +5,8 @@ capability is supported. It is a product-status document, not a count of modules
 source files.
 
 The project is currently a **research preview**. A capability is not considered production-ready
-only because an implementation exists in the repository.
+only because an implementation exists in the repository. The OWASP MCP Top 10 coverage table
+is [GAPS.md](../GAPS.md); `autort ai-surface ledger` prints the same map.
 
 ## Status definitions
 
@@ -22,18 +23,18 @@ only because an implementation exists in the repository.
 
 | Capability | Status | Current boundary |
 |---|---|---|
-| Python SDK and Typer CLI entry points | Beta | Validated primarily from a source checkout. |
-| Local static AI/MCP surface scan | Preview | Read-only AST analysis of FastMCP `@tool` / `@prompt` / `@resource`, low-level `Tool(...)`, and `DetectorConfig` factory names. Factory tools have no inline function body, so they are accounted for by config name. `--exclude-tests` is the default. `--reconcile` (automatic for the repo root and `handlers/`) reports manifest coverage. SARIF findings carry `properties.tool_name`, `properties.owasp_mcp`, and risk-class `ruleId`s (`mcp.MCP03.*`, `mcp.MCP04.*`, `mcp.MCP10.*` for tool poisoning, unpinned packages, remote skill installs, overlong descriptions, and secret literals). Skill scans emit named rule ids (`skill.prompt_injection`, `skill.hardcoded_secret`, `skill.suspicious_download_url`, `skill.unverifiable_remote_code`, `skill.missing_skill_md`). `skills read` still withholds the body when a finding is critical. Operator-stop markers stay separate. The scan does not execute handlers. `autort ai-surface diff --ci` exits 2 when a surface is added, removed, or has a changed first-line description or argument list against a saved JSON baseline. This repository pins `handlers/` at `tests/fixtures/ai_surface/handlers.baseline.json`. `autort ai-surface inventory` (`autort.inventory/v1`) lists documented client configs and skill roots without starting a server or copying env values or remote URLs. |
+| Python SDK and Typer CLI entry points | Beta | Validated primarily from a source checkout. Default `--help` leads with `ai-surface`, `capabilities`, `skills`, and `engage`. `code-agent`, `runtime-api`, and `sandbox` stay callable and are hidden from that list. |
+| Local static AI/MCP surface scan | Preview | Read-only AST analysis of FastMCP `@tool` / `@prompt` / `@resource`, low-level `Tool(...)`, and `DetectorConfig` factory names. Factory tools have no inline function body, so they are accounted for by config name. `--exclude-tests` is the default. `--reconcile` (automatic for the repo root and `handlers/`) reports manifest coverage. SARIF findings carry `properties.tool_name`, `properties.owasp_mcp`, and risk-class `ruleId`s (`mcp.MCP01.secret-env-key`, `mcp.MCP03.*`, `mcp.MCP04.*`, `mcp.MCP05.general-command`, `mcp.MCP09.remote-endpoint`, `mcp.MCP10.*`). Handler auth stays `mcp_tool.auth-*` (MCP07). Effect mismatch stays `mcp_tool.effect-mismatch` (MCP02). `autort ai-surface ledger` (`autort.owasp.mcp/v1`) is the offline Top 10 map; MCP08 is a documented gap. Skill scans emit named rule ids (`skill.prompt_injection`, `skill.hardcoded_secret`, `skill.suspicious_download_url`, `skill.unverifiable_remote_code`, `skill.missing_skill_md`). `skills read` still withholds the body when a finding is critical. Operator-stop markers stay separate. The scan does not execute handlers. `autort ai-surface diff --ci` exits 2 when a surface is added, removed, or has a changed first-line description or argument list against a saved JSON baseline. This repository pins `handlers/` at `tests/fixtures/ai_surface/handlers.baseline.json`. `autort ai-surface inventory` (`autort.inventory/v1`) lists documented client configs and skill roots without starting a server or copying env values or remote URLs. |
 | Reconnaissance and vulnerability detectors | Beta | Authorized targets only; accuracy is not yet backed by a public benchmark. |
 | JSON and SARIF export primitives | Beta | Finding and artifact schemas still need consolidation. |
 | HTML reporting | Preview | Jinja2 HTML, executive, and Markdown templates render with `autoescape=True`. JSON report files encode `<>&` as Unicode escapes; `json.loads` recovers original finding text. |
 | Session storage | Preview | Basic persistence exists; orchestrator checkpoint/resume remains Experimental. |
 | MCP stdio integration | Preview | Defaults to a fail-closed `safe` registration profile; treat as trusted-local only because authentication is not yet a uniform global boundary. |
 | AI-system red-team scenario runner | Internal (`run`); Preview (`eval-run`) | `ai-redteam run` is plan-only Internal. `eval-run` scores local scanners and instruction text (`autort.eval/v1`). It does not call a model, shell, or remote target. |
-| Agent runtime models, policy, trace, and local API | Preview | `runtime-api run --local --ci` is the allowlisted audit loop. Engage steps in that loop are dry-run unless the action opts into network and the sandbox allows it. It does not call a model or a shell. |
+| Agent runtime models, policy, trace, and local API | Preview | Hidden from default CLI help; still callable. `runtime-api run --local --ci` is the allowlisted audit loop. Engage steps in that loop are dry-run unless the action opts into network and the sandbox allows it. It does not call a model or a shell. |
 | Authorized engagement loop | Preview | `autort engage` / MCP `engage_*` / `autort.Engagement`. Heuristic planner (optional LLM pick among remaining steps). Evidence gate plus a three-repeat doom-loop stop. Live `engage.verify` uses HITL when the engagement `hitl` field is `approval` or `review_edit`; dry-run skips it. Live `engage_run` is `scan`. Profile `safe` is refused as an engagement profile. The run JSON includes `scorecard` (`autort.engage.scorecard/v1`: confirmed / unconfirmed / total). CI smokes `engage run --dry-run --ci`. |
 | Automated pentest orchestrator | Experimental | Defaults to dry-run; checkpoint/resume is not release-certified. |
-| Docker sandbox executor | Experimental | `sandbox` on a run is a record field. `docker-smoke` is a local check with the network off. Policy metadata is not isolation. |
+| Docker sandbox executor | Experimental | Hidden from default CLI help; still callable. `sandbox` on a run is a record field. `docker-smoke` is a local check with the network off. Policy metadata is not isolation. |
 | External engine routing | Planned | No backend-selection layer exists: `core/engine_router.py` had zero callers and unreachable external-tool branches, and has been removed. Handlers and the SDK call the pure-Python engines directly. |
 | MCTS, knowledge, feedback, and agent-role research | Experimental | Research components without outcome-backed optimization claims. |
 | All active/high-risk operations | Restricted Experimental | Includes exploit, privilege escalation, lateral, AD, post-exploit, persistence, C2, credential, external-tool execution, stealth/evasion, and exfiltration. |
@@ -114,7 +115,11 @@ executor.
   engine router still need further integration testing.
 - Windows CI runs the fast suite on Python 3.10 and 3.12 (`windows-latest`, no
   `--maxfail`). Slow, integration, and network tests stay out of that job. Ubuntu
-  still covers 3.10/3.11/3.12.
+  covers 3.10/3.11/3.12 with the same marker set and also has no `--maxfail`.
+- MCP08 (Lack of Audit and Telemetry) is a documented gap: third-party MCP run
+  logs are unread, and stdio is not wrapped as a TOFU or telemetry gateway.
+  MCP02 is partial: capability profiles plus effect-mismatch, with no runtime
+  monitor of growing grants. See [GAPS.md](../GAPS.md).
 
 ## Promotion criteria
 

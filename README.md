@@ -11,7 +11,7 @@ The model can decide. This program keeps the permission, the evidence, and the r
 ![Version](https://img.shields.io/badge/version-4.0.0-orange)
 ![Status](https://img.shields.io/badge/status-Beta%20%2F%20Research%20Preview-yellow)
 
-[Maturity notes](docs/capability-maturity.md) · [Trust boundaries](docs/security-model.md) · [Security audits](docs/security-audits/)
+[Maturity notes](docs/capability-maturity.md) · [Trust boundaries](docs/security-model.md) · [Gaps](GAPS.md) · [Security audits](docs/security-audits/)
 
 Companion tool: **[AI API Key Scanner](https://github.com/Coff0xc/Github-API-scan)** — find leaked OpenAI / Claude / Gemini / DeepSeek keys, pair each one with the relay URL beside it, and check if it still works.
 
@@ -50,6 +50,7 @@ The counts in this page come from the allowed list in this tree: **153 entries**
 - [When a result counts](#when-a-result-counts)
 - [The install and the git tree](#the-install-and-the-git-tree)
 - [Commands](#commands)
+- [Gaps](GAPS.md)
 - [GitHub Action](#github-action)
 - [Container and client](#container-and-client)
 - [Names in the code](#names-in-the-code)
@@ -93,6 +94,7 @@ pip install typer
 python -m cli.main ai-surface scan --path handlers --format sarif -o surface.sarif
 python -m cli.main ai-surface diff --baseline tests/fixtures/ai_surface/handlers.baseline.json --path handlers --ci
 python -m cli.main ai-surface inventory
+python -m cli.main ai-surface ledger
 python -m cli.main ai-surface scan-mcp-config --path .mcp.json
 python -m cli.main capabilities manifest --profile safe
 python -m cli.main engage init http://127.0.0.1:3000 --profile scan
@@ -305,6 +307,10 @@ flowchart LR
 
 Unchanged tools are left out. Parameter order alone is not a change. Each reported row is at least moderate. A saved file with no findings list warns you, then treats every current tool as added.
 
+### OWASP MCP Top 10
+
+`autort ai-surface ledger` prints the offline coverage map (`autort.owasp.mcp/v1`). MCP08 (Lack of Audit and Telemetry) is a documented gap. MCP02 is partial. The table lives in [GAPS.md](GAPS.md).
+
 ## When a result counts
 
 Detectors do not share one result type. Several of them set `verified=True` after a single echo or a syntax check. Treating that flag as proof made the check a test of whether a field was filled in.
@@ -361,8 +367,9 @@ These do not contact a target. CVE search reads the local notes.
 
 | Command | You get | Example |
 |---|---|---|
-| `ai-surface scan` | Handler inventory plus MCP03/04/10 rules | `autort ai-surface scan --path handlers --format sarif -o surface.sarif` |
+| `ai-surface scan` | Handler inventory plus OWASP MCP rule ids on findings | `autort ai-surface scan --path handlers --format sarif -o surface.sarif` |
 | `ai-surface inventory` | Local MCP client configs and skill roots, no network | `autort ai-surface inventory` |
+| `ai-surface ledger` | Offline OWASP MCP Top 10 map. MCP08 is a documented gap | `autort ai-surface ledger` |
 | `ai-surface scan-mcp-config` | A read of a client config | `autort ai-surface scan-mcp-config --path .mcp.json` |
 | `ai-surface scan-skills` | Named skill risks (`skill.prompt_injection`, secrets, downloads) | `autort ai-surface scan-skills --path ./skills` |
 | `ai-surface diff` | What changed since a saved scan | `autort ai-surface diff --baseline tests/fixtures/ai_surface/handlers.baseline.json --path handlers --ci` |
@@ -382,15 +389,14 @@ These do not contact a target. CVE search reads the local notes.
 
 | Group | Commands | What it is |
 |---|---|---|
-| `ai-surface` | `scan`, `inventory`, `scan-mcp-config`, `scan-skills`, `diff` | The reader |
+| `ai-surface` | `scan`, `inventory`, `ledger`, `scan-mcp-config`, `scan-skills`, `diff` | The reader |
 | `capabilities` | `matrix`, `readiness`, `manifest`, `profiles` | The allowed list |
 | `tools` | `lint` | Contract check |
 | `skills` | `catalog`, `read` | Pinned SKILL.md packs. Read-only |
 | `engage` | `init`, `status`, `next`, `run`, `resume` | One authorized target. Plan on `safe`, run on `scan` |
-| `code-agent` | `expand` | Who calls whom, from the source |
-| `runtime-api` | `run`, `serve` | Allowlisted local audit loop, or a read-only view of a saved run |
-| `sandbox` | `docker-smoke` | A record field on the run, plus local docker-smoke |
 | `ai-redteam` | `eval-run`, `catalog`, `convert`, `run` | eval-run scores local runs. `run` is plan-only Internal |
+
+Default `--help` hides `code-agent`, `runtime-api`, and `sandbox`. They stay callable.
 
 ### Higher levels
 
@@ -627,9 +633,9 @@ core.credential*  core.ad*  core.exploit*
 
 Coverage in CI measures this same install. The ten engine globs are omitted from both the run and the report, and the workflow fails under 50%. Omitting them only while collecting is not enough: a report will still show files already stored in a `.coverage` file. The floor is "the published install stays measured." It is not a claim that the detectors are fully covered.
 
-`core/agent_runtime` is the state of a planned run: tasks, actions, a trace, and an approval marker. `enforce_sandbox_policy` returns a decision. `execute_action_in_docker_sandbox` stays a decision unless the caller passes `allow_execute=True`. `autort sandbox docker-smoke` runs a local container with the network off. A missing Docker daemon is a skip.
+`core/agent_runtime` is the state of a planned run: tasks, actions, a trace, and an approval marker. `enforce_sandbox_policy` returns a decision. `execute_action_in_docker_sandbox` stays a decision unless the caller passes `allow_execute=True`. `autort sandbox docker-smoke` runs a local container with the network off. A missing Docker daemon is a skip. The `sandbox` group is hidden from default `--help`.
 
-`autort runtime-api run` walks a local plan through policy and sandbox, then either skips the steps or runs the allowlisted scanners. Engage steps in that loop are dry-run unless the action sets `dry_run: false` and the sandbox allows network. Live recon, detect, and verify go through `autort engage run`. `autort runtime-api serve` reads `/api/runs` on the host and port you pass. The usual local pair is `127.0.0.1` and `8765`. Neither command calls a model.
+`autort runtime-api run` walks a local plan through policy and sandbox, then either skips the steps or runs the allowlisted scanners. Engage steps in that loop are dry-run unless the action sets `dry_run: false` and the sandbox allows network. Live recon, detect, and verify go through `autort engage run`. `autort runtime-api serve` reads `/api/runs` on the host and port you pass. The usual local pair is `127.0.0.1` and `8765`. Neither command calls a model. The `runtime-api` group is hidden from default `--help`.
 
 `AIRedTeamRunner` plans from a written scenario. Active mode raises `PermissionError` unless the caller passed `allow_active=True`. `core/code_agent` maps Python calls with `ast` and does not run the program.
 
@@ -639,6 +645,8 @@ The knowledge graph (`kg_store`, `kg_query`, `kg_attack_paths`) and `plan_attack
 
 <details>
 <summary>What this tree leaves undone</summary>
+
+The coverage table is [GAPS.md](GAPS.md). `autort ai-surface ledger` is the same map as JSON. MCP08 is a gap. MCP02 is partial.
 
 The reader does not open an MCP session. A live `initialize` / `tools/list` client would see the tools the server registered, which the allowed list already names, and it would have to start the server. The static comparison is the check CI can run on a checkout.
 
