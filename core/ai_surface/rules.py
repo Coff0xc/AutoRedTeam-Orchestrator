@@ -23,6 +23,13 @@ ISSUE_SKILL_HARDCODED_SECRET = "skill_hardcoded_secret"
 ISSUE_SKILL_SUSPICIOUS_URL = "skill_suspicious_download_url"
 ISSUE_SKILL_UNVERIFIABLE = "skill_unverifiable_remote_code"
 ISSUE_MISSING_SKILL_MD = "skill_missing_skill_md"
+ISSUE_GENERAL_COMMAND = "mcp_server_uses_general_command_runtime"
+ISSUE_SECRET_ENV_KEY = "mcp_server_env_contains_secret_like_keys"
+ISSUE_REMOTE_ENDPOINT = "mcp_server_declares_remote_endpoint"
+ISSUE_AUTH_CRITICAL = "critical_tool_without_critical_auth"
+ISSUE_AUTH_MISSING = "high_risk_tool_without_dangerous_auth"
+ISSUE_PAYLOAD_AUTH = "payload_generation_without_auth_gate"
+ISSUE_EFFECT_MISMATCH = "declared_effects_omit_target_contact"
 
 RULE_ID = {
     ISSUE_TOOL_POISONING: "mcp.MCP03.tool-poisoning",
@@ -36,6 +43,9 @@ RULE_ID = {
     ISSUE_SKILL_SUSPICIOUS_URL: "skill.suspicious_download_url",
     ISSUE_SKILL_UNVERIFIABLE: "skill.unverifiable_remote_code",
     ISSUE_MISSING_SKILL_MD: "skill.missing_skill_md",
+    ISSUE_GENERAL_COMMAND: "mcp.MCP05.general-command",
+    ISSUE_SECRET_ENV_KEY: "mcp.MCP01.secret-env-key",
+    ISSUE_REMOTE_ENDPOINT: "mcp.MCP09.remote-endpoint",
 }
 
 OWASP_MCP = {
@@ -50,6 +60,13 @@ OWASP_MCP = {
     ISSUE_SKILL_SUSPICIOUS_URL: "MCP04",
     ISSUE_SKILL_UNVERIFIABLE: "MCP04",
     ISSUE_MISSING_SKILL_MD: "MCP04",
+    ISSUE_GENERAL_COMMAND: "MCP05",
+    ISSUE_SECRET_ENV_KEY: "MCP01",
+    ISSUE_REMOTE_ENDPOINT: "MCP09",
+    ISSUE_AUTH_CRITICAL: "MCP07",
+    ISSUE_AUTH_MISSING: "MCP07",
+    ISSUE_PAYLOAD_AUTH: "MCP07",
+    ISSUE_EFFECT_MISMATCH: "MCP02",
 }
 
 ISSUE_RISK = {
@@ -64,6 +81,13 @@ ISSUE_RISK = {
     ISSUE_SKILL_SUSPICIOUS_URL: SurfaceRiskLevel.HIGH,
     ISSUE_SKILL_UNVERIFIABLE: SurfaceRiskLevel.HIGH,
     ISSUE_MISSING_SKILL_MD: SurfaceRiskLevel.MODERATE,
+    ISSUE_GENERAL_COMMAND: SurfaceRiskLevel.HIGH,
+    ISSUE_SECRET_ENV_KEY: SurfaceRiskLevel.MODERATE,
+    ISSUE_REMOTE_ENDPOINT: SurfaceRiskLevel.MODERATE,
+    ISSUE_AUTH_CRITICAL: SurfaceRiskLevel.CRITICAL,
+    ISSUE_AUTH_MISSING: SurfaceRiskLevel.HIGH,
+    ISSUE_PAYLOAD_AUTH: SurfaceRiskLevel.HIGH,
+    ISSUE_EFFECT_MISMATCH: SurfaceRiskLevel.MODERATE,
 }
 
 ISSUE_RECOMMENDATION = {
@@ -89,9 +113,14 @@ ISSUE_RECOMMENDATION = {
     ISSUE_SKILL_SUSPICIOUS_URL: ("Do not point the agent at untrusted download URLs from a skill."),
     ISSUE_SKILL_UNVERIFIABLE: "Pin package versions in skill install steps.",
     ISSUE_MISSING_SKILL_MD: "Add a SKILL.md manifest before installing this skill.",
+    ISSUE_GENERAL_COMMAND: "Prefer a narrow wrapper command with fixed arguments.",
+    ISSUE_SECRET_ENV_KEY: "Use secret manager references and redact env from logs.",
+    ISSUE_REMOTE_ENDPOINT: (
+        "Review the remote endpoint and its authentication before enabling it."
+    ),
 }
 
-# Prefer poisoning, then supply chain, then over-sharing when several fire.
+# Prefer poisoning, then auth, then supply chain, then command, then shadow.
 ISSUE_ORDER = (
     ISSUE_SKILL_PROMPT_INJECTION,
     ISSUE_SKILL_HARDCODED_SECRET,
@@ -101,6 +130,13 @@ ISSUE_ORDER = (
     ISSUE_SKILL_UNVERIFIABLE,
     ISSUE_UNPINNED_PACKAGE,
     ISSUE_SECRET_IN_SCHEMA,
+    ISSUE_AUTH_CRITICAL,
+    ISSUE_AUTH_MISSING,
+    ISSUE_PAYLOAD_AUTH,
+    ISSUE_GENERAL_COMMAND,
+    ISSUE_SECRET_ENV_KEY,
+    ISSUE_REMOTE_ENDPOINT,
+    ISSUE_EFFECT_MISMATCH,
     ISSUE_SKILL_SUSPICIOUS_URL,
     ISSUE_OVERLONG_DESCRIPTION,
     ISSUE_MISSING_SKILL_MD,
@@ -318,14 +354,14 @@ def recommendations_for_issues(issues: Sequence[str]) -> List[str]:
 
 def owasp_mcp_for_issues(issues: Sequence[str]) -> str:
     for issue in ISSUE_ORDER:
-        if issue in issues:
+        if issue in issues and issue in OWASP_MCP:
             return OWASP_MCP[issue]
     return ""
 
 
 def rule_id_for_issues(issues: Sequence[str]) -> str:
     for issue in ISSUE_ORDER:
-        if issue in issues:
+        if issue in issues and issue in RULE_ID:
             return RULE_ID[issue]
     return ""
 

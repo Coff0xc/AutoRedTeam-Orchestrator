@@ -639,6 +639,16 @@ def ai_surface_inventory(
     _output(result.to_dict(), output)
 
 
+@ai_surface_app.command("ledger")
+def ai_surface_ledger(
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """OWASP MCP Top 10 coverage ledger. Static mapping; MCP08 is a documented gap."""
+    from core.ai_surface import owasp_mcp_ledger
+
+    _output(owasp_mcp_ledger(), output)
+
+
 @ai_surface_app.command("scan-skills")
 def ai_surface_scan_skills(
     path: str = typer.Option(..., "--path", "-p", help="skill/prompt 目录或文件"),

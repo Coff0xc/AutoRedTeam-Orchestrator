@@ -109,6 +109,18 @@ class TestCLIHelp:
         assert "--ci" in result.output
         assert "baseline" in result.output.lower()
 
+    def test_ai_surface_ledger(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["ai-surface", "ledger"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout[result.stdout.index("{") :])
+        assert data["schema"] == "autort.owasp.mcp/v1"
+        assert data["network"] is False
+        assert data["summary"]["total"] == 10
+        mcp08 = next(entry for entry in data["entries"] if entry["id"] == "MCP08")
+        assert mcp08["status"] == "gap"
+
 
 class TestAISurfaceDiffCI:
     def _write_handler(self, tmp_path, description: str) -> None:

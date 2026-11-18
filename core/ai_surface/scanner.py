@@ -20,7 +20,16 @@ from core.ai_surface.models import (
     max_risk,
 )
 from core.ai_surface.rules import (
+    ISSUE_AUTH_CRITICAL,
+    ISSUE_AUTH_MISSING,
+    ISSUE_EFFECT_MISMATCH,
+    ISSUE_GENERAL_COMMAND,
     ISSUE_MISSING_SKILL_MD,
+    ISSUE_PAYLOAD_AUTH,
+    ISSUE_RECOMMENDATION,
+    ISSUE_REMOTE_ENDPOINT,
+    ISSUE_SECRET_ENV_KEY,
+    ISSUE_UNPINNED_PACKAGE,
     analyze_mcp_command,
     analyze_skill_text,
     analyze_tool_text,
@@ -403,13 +412,13 @@ def _mcp_server_finding(file_path: Path, name: str, server: dict, line: int) -> 
     issues: List[str] = []
     if command.lower() in _GENERAL_COMMANDS:
         risk_level = max_risk(risk_level, SurfaceRiskLevel.HIGH)
-        issues.append("mcp_server_uses_general_command_runtime")
+        issues.append(ISSUE_GENERAL_COMMAND)
     if remote:
         risk_level = max_risk(risk_level, SurfaceRiskLevel.MODERATE)
-        issues.append("mcp_server_declares_remote_endpoint")
+        issues.append(ISSUE_REMOTE_ENDPOINT)
     if isinstance(env, dict) and any(_env_key_is_secret(str(key)) for key in env):
         risk_level = max_risk(risk_level, SurfaceRiskLevel.MODERATE)
-        issues.append("mcp_server_env_contains_secret_like_keys")
+        issues.append(ISSUE_SECRET_ENV_KEY)
     if risk_level == SurfaceRiskLevel.INFO:
         risk_level = SurfaceRiskLevel.LOW
     description = (
@@ -676,13 +685,11 @@ def _surface_rule_id(finding: SurfaceFinding) -> str:
     policy_rule = rule_id_for_issues(finding.issues)
     if policy_rule:
         return policy_rule
-    if "critical_tool_without_critical_auth" in issues:
+    if ISSUE_AUTH_CRITICAL in issues:
         return "mcp_tool.auth-critical"
-    if "high_risk_tool_without_dangerous_auth" in issues or (
-        "payload_generation_without_auth_gate" in issues
-    ):
+    if ISSUE_AUTH_MISSING in issues or ISSUE_PAYLOAD_AUTH in issues:
         return "mcp_tool.auth-missing"
-    if "declared_effects_omit_target_contact" in issues:
+    if ISSUE_EFFECT_MISMATCH in issues:
         return "mcp_tool.effect-mismatch"
     if "target_input_without_handler_validator" in issues:
         return "mcp_tool.target-input"
@@ -882,16 +889,14 @@ def _risk_terms(
 
 def _mcp_config_recommendations(issues: List[str]) -> List[str]:
     recommendations: List[str] = []
-    if "mcp_server_uses_general_command_runtime" in issues:
-        recommendations.append("Prefer a narrow wrapper command with fixed arguments.")
-    if "mcp_server_env_contains_secret_like_keys" in issues:
-        recommendations.append("Use secret manager references and redact env from logs.")
-    if "mcp_server_declares_remote_endpoint" in issues:
-        recommendations.append(
-            "Review the remote endpoint and its authentication before enabling it."
-        )
-    if "mcp_server_unpinned_package" in issues:
-        recommendations.append("Pin npx/uvx/pip package versions. Do not use @latest.")
+    for issue in (
+        ISSUE_GENERAL_COMMAND,
+        ISSUE_SECRET_ENV_KEY,
+        ISSUE_REMOTE_ENDPOINT,
+        ISSUE_UNPINNED_PACKAGE,
+    ):
+        if issue in issues and issue in ISSUE_RECOMMENDATION:
+            recommendations.append(ISSUE_RECOMMENDATION[issue])
     if not recommendations:
         recommendations.append("Review server command and env before enabling.")
     return recommendations

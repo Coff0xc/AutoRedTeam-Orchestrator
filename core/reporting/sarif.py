@@ -51,12 +51,17 @@ SURFACE_RULE_TEXT: Dict[str, str] = {
     "surface_removed": "MCP surface missing from the current scan",
     "surface_description_changed": "MCP surface description changed since the saved scan",
     "surface_parameters_changed": "MCP surface parameters changed since the saved scan",
+    "mcp.MCP01.secret-env-key": "MCP server env names look like secrets (key/token/password)",
     "mcp.MCP03.tool-poisoning": "Tool description contains instructions directed at the model",
     "mcp.MCP03.hidden-unicode": "Tool description contains hidden or bidi Unicode characters",
     "mcp.MCP04.unpinned-package": (
         "MCP server launches npx/uvx/pip without a pinned package version"
     ),
     "mcp.MCP04.remote-skill-code": "Skill text downloads and executes remote code",
+    "mcp.MCP05.general-command": (
+        "MCP server launches a general interpreter (powershell/bash/python/node)"
+    ),
+    "mcp.MCP09.remote-endpoint": "MCP server declares a remote URL endpoint",
     "skill.prompt_injection": "Skill instructions try to override the agent",
     "skill.hardcoded_secret": "Skill text embeds a secret literal",
     "skill.suspicious_download_url": "Skill text points at an untrusted download URL",

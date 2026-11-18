@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "wide": {
+      "command": "powershell",
+      "args": ["-File", "server.ps1"]
+    }
+  }
+}

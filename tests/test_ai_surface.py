@@ -162,6 +162,8 @@ def test_scan_mcp_config_flags_general_runtime_and_secret_env(tmp_path: Path):
     assert finding.risk_level == SurfaceRiskLevel.HIGH
     assert "mcp_server_uses_general_command_runtime" in finding.issues
     assert "mcp_server_env_contains_secret_like_keys" in finding.issues
+    assert finding.rule_id == "mcp.MCP05.general-command"
+    assert finding.owasp_mcp == "MCP05"
 
 
 def test_scan_mcp_config_reads_client_shapes_without_connecting(tmp_path: Path):
@@ -353,6 +355,7 @@ async def list_tools():
     assert finding.risk_level == SurfaceRiskLevel.HIGH
     assert finding.finding_type == "mcp_tool_lowlevel"
     assert finding.rule_id == "mcp_tool.auth-missing"
+    assert finding.owasp_mcp == "MCP07"
     assert "command" in finding.parameters
 
 
@@ -706,6 +709,7 @@ def test_local_effects_with_target_params_are_flagged():
     assert by_name["notes_read"].issues == [EFFECT_PARAMETER_MISMATCH]
     assert by_name["notes_read"].risk_level == SurfaceRiskLevel.MODERATE
     assert by_name["notes_read"].rule_id == "mcp_tool.effect-mismatch"
+    assert by_name["notes_read"].owasp_mcp == "MCP02"
     assert "url" in by_name["notes_read"].recommendations[0]
     assert by_name["notes_path"].issues == []
     assert by_name["port_scan"].issues == []
