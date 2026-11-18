@@ -112,9 +112,13 @@ def test_image_context_matches_wheel_excludes():
         "--path handlers --ci"
     ) in ci
     windows_job = ci.split("test-windows:", 1)[1].split("security:", 1)[0]
+    ubuntu_job = ci.split("\n  test:", 1)[1].split("\n  build:", 1)[0]
     assert "python-version: ['3.10', '3.12']" in windows_job
+    assert "python-version: ['3.10', '3.11', '3.12']" in ubuntu_job
     assert "--maxfail" not in windows_job
+    assert "--maxfail" not in ubuntu_job
     assert "not slow and not integration and not network" in windows_job
+    assert "not slow and not integration and not network" in ubuntu_job
 
 
 def test_env_example_documents_live_gates():

@@ -162,7 +162,6 @@ jobs:
             --ignore=tests/test_modules_jwt.py \
             -m "not slow and not integration and not network" \
             --timeout=30 \
-            --maxfail=10 \
             --junitxml=pytest.xml
           status=$?
           set -e
