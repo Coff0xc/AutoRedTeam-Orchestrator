@@ -33,6 +33,10 @@ inputs:
     description: 'Output format: json | sarif'
     required: false
     default: 'sarif'
+  baseline:
+    description: 'Optional JSON from a prior ai-surface scan. When set, self-audit also runs diff --ci.'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -58,6 +62,7 @@ runs:
         INPUT_FORMAT: ${{ inputs.output-format }}
         INPUT_SEVERITY: ${{ inputs.severity-threshold }}
         INPUT_CATEGORIES: ${{ inputs.categories }}
+        INPUT_BASELINE: ${{ inputs.baseline }}
       run: |
         set -e
         OUT="$GITHUB_WORKSPACE/results.sarif"
@@ -73,6 +78,16 @@ runs:
             --severity-threshold "$INPUT_SEVERITY" \
             --exit-code \
             -o "$OUT"
+          if [ -n "$INPUT_BASELINE" ]; then
+            case "$INPUT_BASELINE" in
+              /*) BASELINE_PATH="$INPUT_BASELINE" ;;
+              *)  BASELINE_PATH="$GITHUB_WORKSPACE/$INPUT_BASELINE" ;;
+            esac
+            PYTHONPATH="${{ github.action_path }}" python -m cli.main ai-surface diff \
+              --baseline "$BASELINE_PATH" \
+              --path "$SCAN_PATH" \
+              --ci
+          fi
         else
           # Active scan: only for authorized external targets
           if [ -z "$INPUT_TARGET" ]; then
