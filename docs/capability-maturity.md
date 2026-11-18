@@ -120,6 +120,11 @@ executor.
   logs are unread, and stdio is not wrapped as a TOFU or telemetry gateway.
   MCP02 is partial: capability profiles plus effect-mismatch, with no runtime
   monitor of growing grants. See [GAPS.md](../GAPS.md).
+- Catalog-only `ext_nmap_scan` / `ext_nuclei_scan` / `ext_sqlmap_scan` /
+  `ext_ffuf_fuzz` / `ext_masscan_scan` take named parameters and Literal
+  presets/modes. Unbounded `extra_args` is not on the MCP schema; internally
+  built flags still pass `validate_extra_args`. Sqlmap `preset=exploit` and
+  ffuf fail closed unless `confirmed=true`. See [GAPS.md](../GAPS.md).
 
 ## Promotion criteria
 

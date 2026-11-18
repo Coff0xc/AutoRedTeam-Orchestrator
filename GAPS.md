@@ -44,6 +44,12 @@ These stay paused. They are product stance.
 - Moving tag `v3.1`
 - Windows CI Python 3.11, and slow/integration/network on Windows
 
+## Catalog external tools
+
+`ext_nmap_scan`, `ext_nuclei_scan`, `ext_sqlmap_scan`, `ext_ffuf_fuzz`, and `ext_masscan_scan` stay catalog-only. MCP signatures use named parameters and Literal presets/modes. Unbounded `extra_args` is not on the MCP schema; internally built flags still pass `validate_extra_args`. `ext_sqlmap_scan` `preset=exploit` and `ext_ffuf_fuzz` fail closed unless `confirmed=true`.
+
+A public Arcade ToolBench card for this server is a 2026-09-22 crawl of those four `ext_*` wrappers. It is stale against the current schemas. This repo does not submit a rescore as part of the default product.
+
 ## Still open in the tree
 
 - Mixed-profile whole-file import when a module contains a safe surface
