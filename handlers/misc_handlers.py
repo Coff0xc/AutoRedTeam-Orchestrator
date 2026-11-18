@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 from core import __version__
 from core.capability_manifest import surface_enabled_for_mcp
 
-from .error_handling import ErrorCategory, extract_url, handle_errors, validate_inputs
+from .error_handling import ErrorCategory, handle_errors
 from .tooling import tool
 
 
@@ -163,29 +163,9 @@ def register_misc_tools(mcp, counter, logger):
 
     registered = 4
     if surface_enabled_for_mcp(mcp, "tool", "js_analyze"):
+        from .misc_scan_handlers import register_js_analyze
 
-        @tool(mcp)
-        @validate_inputs(url="url")
-        @handle_errors(logger, category=ErrorCategory.MISC, context_extractor=extract_url)
-        async def js_analyze(url: str) -> Dict[str, Any]:
-            """JS代码分析 - 分析JavaScript代码中的敏感信息
-
-            提取: API端点、密钥、令牌、内部路径
-
-            Args:
-                url: 目标URL或JS文件URL
-
-            Returns:
-                分析结果
-            """
-            from core.recon.js_analyzer import JSAnalyzer
-
-            analyzer = JSAnalyzer()
-            results = analyzer.analyze(url)
-
-            return {"success": True, "url": url, "findings": results}
-
-        registered += 1
+        registered += register_js_analyze(mcp, logger)
 
     counter.add("misc", registered)
     logger.info("[Misc] 已注册 %s 个杂项工具", registered)

@@ -64,48 +64,9 @@ def register_resource_handlers(mcp, counter, logger):
 
     registered = 0
     if surface_enabled_for_mcp(mcp, "resource", "active_sessions"):
+        from .resource_scan_handlers import register_active_sessions
 
-        @mcp.resource(
-            uri="redteam://sessions",
-            name="active_sessions",
-            title="活跃渗透测试会话",
-            description="列出所有活跃的渗透测试会话及其状态",
-            mime_type="application/json",
-        )
-        def list_sessions() -> dict:
-            """获取活跃会话列表"""
-            runtime_gate = _gate_resource_runtime("resource.list_sessions")
-            try:
-                from core.session import get_session_manager
-
-                manager = get_session_manager()
-                sessions = manager.list_sessions() if hasattr(manager, "list_sessions") else []
-                payload = {
-                    "sessions": [
-                        {
-                            "session_id": s.session_id if hasattr(s, "session_id") else str(s),
-                            "target": s.target if hasattr(s, "target") else "unknown",
-                            "status": s.status if hasattr(s, "status") else "unknown",
-                        }
-                        for s in sessions
-                    ],
-                    "count": len(sessions),
-                }
-                return _complete_resource_runtime(
-                    runtime_gate,
-                    payload,
-                    summary_keys=["count"],
-                )
-            except Exception as e:
-                logger.debug("获取会话列表失败: %s", e)
-                return _complete_resource_runtime(
-                    runtime_gate,
-                    {"sessions": [], "count": 0, "note": "会话管理器未初始化"},
-                    success=False,
-                    error=str(e),
-                )
-
-        registered += 1
+        registered += register_active_sessions(mcp, logger)
         counter.add("misc", 1)
 
     @mcp.resource(
@@ -190,60 +151,9 @@ def register_resource_handlers(mcp, counter, logger):
     counter.add("misc", 1)
 
     if surface_enabled_for_mcp(mcp, "resource", "payload_library"):
+        from .resource_lab_handlers import register_payload_library
 
-        @mcp.resource(
-            uri="redteam://payloads/{category}",
-            name="payload_library",
-            title="Payload 库",
-            description="按分类获取 payload 列表 (sqli, xss, ssti, cmd_injection, path_traversal)",
-            mime_type="application/json",
-        )
-        def get_payloads(category: str) -> dict:
-            """按分类获取 payload 列表"""
-            runtime_gate = _gate_resource_runtime(
-                "resource.get_payloads",
-                {"category": category},
-            )
-            try:
-                from core.detectors.payloads import PayloadManager
-
-                manager = PayloadManager()
-                payloads = (
-                    manager.get_payloads(category) if hasattr(manager, "get_payloads") else []
-                )
-                payload = {
-                    "category": category,
-                    "payloads": payloads[:50],  # 限制返回数量
-                    "count": len(payloads),
-                }
-                return _complete_resource_runtime(
-                    runtime_gate,
-                    payload,
-                    summary_keys=["category", "count"],
-                )
-            except Exception as e:
-                logger.debug("获取 payload 列表失败: %s", e)
-                categories = {
-                    "sqli": "SQL Injection payloads",
-                    "xss": "Cross-Site Scripting payloads",
-                    "ssti": "Server-Side Template Injection payloads",
-                    "cmd_injection": "Command Injection payloads",
-                    "path_traversal": "Path Traversal payloads",
-                }
-                return _complete_resource_runtime(
-                    runtime_gate,
-                    {
-                        "category": category,
-                        "description": categories.get(category, f"Unknown category: {category}"),
-                        "payloads": [],
-                        "count": 0,
-                    },
-                    success=False,
-                    error=str(e),
-                    summary_keys=["category", "count"],
-                )
-
-        registered += 1
+        registered += register_payload_library(mcp, logger)
         counter.add("misc", 1)
 
     logger.info("MCP Resources 注册完成: %s 个资源端点", registered + 2)

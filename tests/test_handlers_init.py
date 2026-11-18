@@ -322,6 +322,54 @@ def test_scan_profile_defines_scan_mixed_surfaces_not_active_lab():
     assert "payload_library" not in resources
 
 
+_MIXED_PROFILE_SAFE_DEFERRED = (
+    "handlers.ai_scan_handlers",
+    "handlers.ai_attack_handlers",
+    "handlers.cve_exploit_handlers",
+    "handlers.misc_scan_handlers",
+    "handlers.prompt_lab_handlers",
+    "handlers.report_scan_handlers",
+    "handlers.resource_scan_handlers",
+    "handlers.resource_lab_handlers",
+)
+
+_SCAN_HANDLER_MODULES = (
+    "handlers.ai_scan_handlers",
+    "handlers.misc_scan_handlers",
+    "handlers.report_scan_handlers",
+    "handlers.resource_scan_handlers",
+)
+
+_LAB_HANDLER_MODULES = (
+    "handlers.ai_attack_handlers",
+    "handlers.cve_exploit_handlers",
+    "handlers.prompt_lab_handlers",
+    "handlers.resource_lab_handlers",
+)
+
+
+def test_safe_profile_does_not_import_mixed_profile_handler_modules():
+    from handlers import register_all_handlers
+
+    _drop_modules(_MIXED_PROFILE_SAFE_DEFERRED)
+    register_all_handlers(MagicMock(), MagicMock(), MagicMock(), profile="safe")
+
+    for module_name in _MIXED_PROFILE_SAFE_DEFERRED:
+        assert module_name not in sys.modules, module_name
+
+
+def test_scan_profile_imports_scan_handler_modules_not_lab():
+    from handlers import register_all_handlers
+
+    _drop_modules(_MIXED_PROFILE_SAFE_DEFERRED)
+    register_all_handlers(MagicMock(), MagicMock(), MagicMock(), profile="scan")
+
+    for module_name in _SCAN_HANDLER_MODULES:
+        assert module_name in sys.modules, module_name
+    for module_name in _LAB_HANDLER_MODULES:
+        assert module_name not in sys.modules, module_name
+
+
 class TestRegisterAllHandlers:
     """测试 register_all_handlers 函数"""
 

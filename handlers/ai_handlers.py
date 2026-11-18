@@ -25,11 +25,17 @@ def register_ai_tools(mcp, counter, logger):
 
     registered = 13
     if surface_enabled_for_mcp(mcp, "tool", "smart_analyze"):
-        registered += _register_ai_scan_tools(mcp, logger)
+        from .ai_scan_handlers import register_ai_scan_tools
+
+        registered += register_ai_scan_tools(mcp, logger)
     if surface_enabled_for_mcp(mcp, "tool", "attack_chain_plan"):
-        registered += _register_ai_attack_tools(mcp, logger)
+        from .ai_attack_handlers import register_ai_attack_tools
+
+        registered += register_ai_attack_tools(mcp, logger)
     if surface_enabled_for_mcp(mcp, "tool", "engage_run"):
-        registered += _register_engage_run(mcp, logger)
+        from .ai_scan_handlers import register_engage_run
+
+        registered += register_engage_run(mcp, logger)
 
     @tool(mcp)
     @handle_errors(logger, category=ErrorCategory.AI)
@@ -252,140 +258,3 @@ def register_ai_tools(mcp, counter, logger):
 
     counter.add("ai", registered)
     logger.info("[AI] 已注册 %s 个AI辅助工具", registered)
-
-
-def _register_engage_run(mcp, logger) -> int:
-    @tool(mcp)
-    @handle_errors(logger, category=ErrorCategory.AI)
-    async def engage_run(
-        path: str = ".autort/engage.yaml",
-        dry_run: bool = False,
-        max_steps: Optional[int] = None,
-    ) -> Dict[str, Any]:
-        """Run the engagement loop: recon, detect, verify, export.
-
-        Args:
-            path: Engagement YAML written by engage_init
-            dry_run: Plan and record steps without contacting the target
-            max_steps: Cap on planner iterations
-        """
-        from core.engage import async_run_engagement
-
-        return await async_run_engagement(path, dry_run=dry_run, max_steps=max_steps)
-
-    return 1
-
-
-def _register_ai_scan_tools(mcp, logger) -> int:
-    @tool(mcp)
-    @validate_inputs(target="target")
-    @handle_errors(logger, category=ErrorCategory.AI, context_extractor=extract_target)
-    async def smart_analyze(target: str, context: Optional[str] = None) -> Dict[str, Any]:
-        """智能分析 - AI辅助分析目标并推荐测试策略
-
-        Args:
-            target: 目标URL
-            context: 额外上下文信息
-
-        Returns:
-            分析结果和建议
-        """
-        from core.ai_engine import AIDecisionEngine
-
-        analyzer = AIDecisionEngine()
-        result = analyzer.analyze_target(target, {"note": context} if context else None)
-
-        return {"success": True, "target": target, "analysis": result}
-
-    return 1
-
-
-def _register_ai_attack_tools(mcp, logger) -> int:
-    from core.security import require_dangerous_auth
-
-    @tool(mcp)
-    @require_dangerous_auth
-    @validate_inputs(target="target")
-    @handle_errors(logger, category=ErrorCategory.AI, context_extractor=extract_target)
-    @no_target_contact("根据传入的侦察数据规划攻击链，不接触目标")
-    async def attack_chain_plan(
-        target: str, reconnaissance_data: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """攻击链规划 - 基于侦察数据规划攻击链
-
-        Args:
-            target: 目标URL
-            reconnaissance_data: 侦察数据 (可选)
-
-        Returns:
-            推荐的攻击链
-        """
-        from urllib.parse import urlparse
-
-        from core.attack_chain import AttackChainEngine
-
-        if target.startswith(("http://", "https://")):
-            urlparse(target)
-            target_type = "url"
-        elif "." in target and not target.replace(".", "").isdigit():
-            target_type = "domain"
-        else:
-            target_type = "ip"
-
-        engine = AttackChainEngine(tool_registry=None)
-        chain = engine.create_chain(target, target_type)
-
-        return {
-            "success": True,
-            "target": target,
-            "target_type": target_type,
-            "attack_chain": {
-                "id": chain.id,
-                "name": chain.name,
-                "nodes": [
-                    {
-                        "id": node.id,
-                        "phase": node.phase.value,
-                        "technique": node.technique,
-                        "tool": node.tool,
-                        "params": node.params,
-                        "dependencies": node.dependencies,
-                    }
-                    for node in chain.nodes
-                ],
-                "total_nodes": len(chain.nodes),
-            },
-        }
-
-    @tool(mcp)
-    @require_dangerous_auth
-    @handle_errors(logger, category=ErrorCategory.AI)
-    @no_target_contact("从本地 payload 库挑选，不接触目标")
-    async def smart_payload(
-        vuln_type: str, context: Optional[Dict[str, Any]] = None, waf_detected: bool = False
-    ) -> Dict[str, Any]:
-        """智能Payload生成 - 根据上下文生成优化的payload
-
-        Args:
-            vuln_type: 漏洞类型 (sqli, xss, rce, ssrf, etc.)
-            context: 上下文信息 (WAF类型、过滤规则等)
-            waf_detected: 是否检测到WAF
-
-        Returns:
-            推荐的payloads
-        """
-        from core.payload import smart_select_payloads
-
-        waf = context.get("waf") if context else None
-        payloads = smart_select_payloads(
-            vuln_type=vuln_type, waf=waf if waf_detected else None, top_n=20
-        )
-
-        return {
-            "success": True,
-            "vuln_type": vuln_type,
-            "payloads": payloads,
-            "count": len(payloads),
-        }
-
-    return 2
