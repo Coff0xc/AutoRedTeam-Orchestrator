@@ -16,7 +16,7 @@
 - ext_tools_reload: 重新加载工具配置
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional, Tuple, get_args
 
 from core.security import require_dangerous_auth
 
@@ -33,6 +33,46 @@ from .runtime_helpers import (
     gate_handler_runtime_action,
 )
 from .tooling import tool
+
+NmapPreset = Literal["quick", "full", "stealth", "version", "vuln"]
+NucleiPreset = Literal["quick", "full", "cve"]
+SqlmapPreset = Literal["detect", "exploit", "tamper"]
+FfufMode = Literal["dir", "param", "vhost"]
+
+NMAP_PRESETS: Tuple[str, ...] = get_args(NmapPreset)
+NUCLEI_PRESETS: Tuple[str, ...] = get_args(NucleiPreset)
+SQLMAP_PRESETS: Tuple[str, ...] = get_args(SqlmapPreset)
+FFUF_MODES: Tuple[str, ...] = get_args(FfufMode)
+
+
+def _invalid_choice(
+    param: str, value: object, allowed: Tuple[str, ...]
+) -> Optional[Dict[str, Any]]:
+    if isinstance(value, str) and value in allowed:
+        return None
+    return {
+        "success": False,
+        "error": f"invalid {param}: {value!r}",
+        "hint": f"allowed {param} values: {', '.join(allowed)}",
+        "allowed": list(allowed),
+    }
+
+
+def _tool_unavailable(name: str) -> Dict[str, Any]:
+    return {
+        "success": False,
+        "error": f"{name} is not installed or the path is unset",
+        "hint": f"Set {name} in config/external_tools.yaml and retry.",
+    }
+
+
+def _confirm_required(action: str) -> Dict[str, Any]:
+    return {
+        "success": False,
+        "action_required": action,
+        "error": f"{action} requires confirmed=true",
+        "hint": "Retry with confirmed=true after operator approval.",
+    }
 
 
 def _gate_external_runtime(
@@ -69,45 +109,34 @@ def register_external_tools(mcp, counter, logger):
     async def ext_nmap_scan(
         target: str,
         ports: str = "1-1000",
-        preset: str = "quick",
-        extra_args: Optional[List[str]] = None,
+        preset: NmapPreset = "quick",
     ) -> Dict[str, Any]:
-        """Nmap深度端口扫描与服务识别
+        """Nmap port scan and service detection
 
-        使用外部Nmap工具进行专业级端口扫描，支持服务版本检测、NSE脚本扫描。
-        相比内置端口扫描，提供更准确的服务识别和漏洞检测能力。
+        Use after a host is in scope when service versions or NSE scripts are needed.
+        Use masscan for wide port discovery and nuclei for CVE templates.
 
         Args:
-            target: 目标IP或主机名
-            ports: 端口范围 (例: "22,80,443" 或 "1-1000" 或 "top100")
-            preset: 预设模式
-                - quick: 快速扫描 (-sT -T4)
-                - full: 完整扫描 (-sT -sV -sC -T4)
-                - stealth: 隐蔽扫描 (-sS -T2) [需要root]
-                - version: 版本检测 (-sV -sC)
-                - vuln: 漏洞扫描 (-sV --script=vuln)
-            extra_args: 额外的Nmap参数
+            target: IP or hostname in the authorized scope
+            ports: "22,80,443", "1-1000", or "top100"
+            preset: quick (-sT -T4), full (-sT -sV -sC -T4), stealth (-sS -T2, root),
+                version (-sV -sC), vuln (-sV --script=vuln)
 
         Returns:
-            扫描结果，包含:
-            - success: 是否成功
-            - hosts: 主机列表
-            - ports: 开放端口及服务信息
-            - raw_output: 原始输出
+            success, hosts, ports, raw_output, plus the observation payload.
+            Missing binary: success=false plus hint to config/external_tools.yaml.
+            Invalid preset: success=false plus allowed list.
         """
         from core.tools import get_tool_manager, run_nmap
 
+        bad = _invalid_choice("preset", preset, NMAP_PRESETS)
+        if bad:
+            return bad
+
         manager = get_tool_manager()
-
-        # 检查工具是否可用
         if not manager.is_tool_available("nmap"):
-            return {
-                "success": False,
-                "error": "Nmap未安装或路径未配置",
-                "hint": "请检查 config/external_tools.yaml 中的 nmap 配置",
-            }
+            return _tool_unavailable("nmap")
 
-        # 处理端口参数
         if ports == "top100":
             ports = "21,22,23,25,53,80,110,111,135,139,143,443,445,993,995,1723,3306,3389,5900,8080"
 
@@ -118,7 +147,7 @@ def register_external_tools(mcp, counter, logger):
         if not gate["allowed"]:
             return blocked_handler_runtime_response(gate)
 
-        result = await run_nmap(target=target, ports=ports, preset=preset, extra_args=extra_args)
+        result = await run_nmap(target=target, ports=ports, preset=preset)
 
         parsed = result.get("parsed_data") or {}
         hosts = parsed.get("hosts") or []
@@ -144,45 +173,37 @@ def register_external_tools(mcp, counter, logger):
     @handle_external_tool_errors(logger, "ext_nuclei_scan", extract_target)
     async def ext_nuclei_scan(
         target: str,
-        preset: str = "quick",
+        preset: NucleiPreset = "quick",
         tags: Optional[List[str]] = None,
         severity: Optional[str] = None,
-        extra_args: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        """Nuclei漏洞模板扫描
+        """Nuclei template vulnerability scan
 
-        使用Nuclei进行基于模板的漏洞扫描，覆盖CVE、配置错误、敏感信息泄露等。
-        支持7000+模板，自动更新。
+        Use for CVE and misconfiguration templates on an in-scope URL.
+        Use nmap for ports and services and sqlmap for injection on a parameterized URL.
 
         Args:
-            target: 目标URL
-            preset: 预设模式
-                - quick: 快速扫描 (只扫描critical/high)
-                - full: 完整扫描 (所有严重级别)
-                - cve: CVE专项扫描
-            tags: 模板标签过滤 (例: ["cve", "rce", "sqli"])
-            severity: 严重级别过滤 (例: "critical,high,medium")
-            extra_args: 额外的Nuclei参数
+            target: Target URL
+            preset: quick (critical/high), full (all severities), cve (CVE templates)
+            tags: Template tags such as ["cve", "rce", "sqli"]
+            severity: Comma-separated severities such as "critical,high,medium"
 
         Returns:
-            扫描结果，包含:
-            - success: 是否成功
-            - findings: 发现的漏洞列表
-            - stats: 扫描统计
+            success, findings, stats, plus the observation payload.
+            Missing binary: success=false plus hint to config/external_tools.yaml.
+            Invalid preset: success=false plus allowed list.
         """
         from core.tools import get_tool_manager, run_nuclei
 
+        bad = _invalid_choice("preset", preset, NUCLEI_PRESETS)
+        if bad:
+            return bad
+
         manager = get_tool_manager()
-
         if not manager.is_tool_available("nuclei"):
-            return {
-                "success": False,
-                "error": "Nuclei未安装或路径未配置",
-                "hint": "请检查 config/external_tools.yaml 中的 nuclei 配置",
-            }
+            return _tool_unavailable("nuclei")
 
-        # 构建额外参数
-        args = extra_args or []
+        args: List[str] = []
         if tags:
             args.extend(["-tags", ",".join(tags)])
         if severity:
@@ -195,7 +216,7 @@ def register_external_tools(mcp, counter, logger):
         if not gate["allowed"]:
             return blocked_handler_runtime_response(gate)
 
-        result = await run_nuclei(target=target, preset=preset, extra_args=args if args else None)
+        result = await run_nuclei(target=target, preset=preset, extra_args=args or None)
 
         parsed = result.get("parsed_data") or {}
         findings = parsed.get("findings") or []
@@ -219,49 +240,41 @@ def register_external_tools(mcp, counter, logger):
     async def ext_sqlmap_scan(
         url: str,
         data: Optional[str] = None,
-        preset: str = "detect",
+        preset: SqlmapPreset = "detect",
         tamper: Optional[List[str]] = None,
-        extra_args: Optional[List[str]] = None,
+        confirmed: bool = False,
     ) -> Dict[str, Any]:
-        """SQLMap SQL注入检测与利用
+        """SQLMap SQL injection detect and exploit
 
-        使用SQLMap进行专业级SQL注入检测，支持:
-        - 6种注入技术 (布尔盲注、时间盲注、报错注入、联合查询、堆叠查询、带外)
-        - 数据库指纹识别
-        - WAF/IPS绕过 (tamper脚本)
-        - 数据提取
+        Use on an in-scope URL with parameters. Use nuclei for template CVEs.
 
         Args:
-            url: 目标URL (带参数，如 http://example.com/page?id=1)
-            data: POST数据 (可选)
-            preset: 预设模式
-                - detect: 检测模式 (--level=2 --risk=1)
-                - exploit: 利用模式 (--level=5 --risk=3 --dump)
-                - tamper: 绕过模式 (带tamper脚本)
-            tamper: tamper脚本列表 (例: ["space2comment", "randomcase"])
-            extra_args: 额外的SQLMap参数
+            url: Target URL with parameters, e.g. http://example.com/page?id=1
+            data: Optional POST body
+            preset: detect (--level=2 --risk=1), exploit (--level=5 --risk=3 --dump),
+                tamper (WAF bypass scripts)
+            tamper: Tamper script names such as ["space2comment", "randomcase"]
+            confirmed: Required true for preset=exploit; otherwise action_required=confirm_exploit
 
         Returns:
-            扫描结果，包含:
-            - success: 是否成功
-            - vulnerable: 是否存在注入
-            - injection_type: 注入类型
-            - dbms: 数据库类型
-            - data: 提取的数据 (如有)
+            success, vulnerable, injection_type, dbms, data, plus the observation payload.
+            Missing binary: success=false plus hint to config/external_tools.yaml.
+            Invalid preset: success=false plus allowed list.
         """
         from core.tools import get_tool_manager, run_sqlmap
 
+        bad = _invalid_choice("preset", preset, SQLMAP_PRESETS)
+        if bad:
+            return bad
+
         manager = get_tool_manager()
-
         if not manager.is_tool_available("sqlmap"):
-            return {
-                "success": False,
-                "error": "SQLMap未安装或路径未配置",
-                "hint": "请检查 config/external_tools.yaml 中的 sqlmap 配置",
-            }
+            return _tool_unavailable("sqlmap")
 
-        # 构建额外参数
-        args = extra_args or []
+        if preset == "exploit" and not confirmed:
+            return _confirm_required("confirm_exploit")
+
+        args: List[str] = []
         if data:
             args.extend(["--data", data])
         if tamper:
@@ -269,13 +282,13 @@ def register_external_tools(mcp, counter, logger):
 
         gate = _gate_external_runtime(
             "ext_sqlmap_scan",
-            {"url": url, "preset": preset, "has_data": bool(data)},
+            {"url": url, "preset": preset, "has_data": bool(data), "confirmed": confirmed},
             risk_level="critical" if preset == "exploit" else "high",
         )
         if not gate["allowed"]:
             return blocked_handler_runtime_response(gate)
 
-        result = await run_sqlmap(url=url, preset=preset, extra_args=args if args else None)
+        result = await run_sqlmap(url=url, preset=preset, extra_args=args or None)
 
         parsed = result.get("parsed_data") or {}
         vulnerable = bool(parsed.get("vulnerable"))
@@ -299,50 +312,40 @@ def register_external_tools(mcp, counter, logger):
     async def ext_ffuf_fuzz(
         url: str,
         wordlist: str = "common",
-        mode: str = "dir",
+        mode: FfufMode = "dir",
         extensions: Optional[List[str]] = None,
-        extra_args: Optional[List[str]] = None,
+        confirmed: bool = False,
     ) -> Dict[str, Any]:
-        """ffuf Web模糊测试
+        """ffuf web content discovery
 
-        使用ffuf进行高速Web模糊测试，支持:
-        - 目录/文件发现
-        - 参数爆破
-        - 虚拟主机枚举
-        - 自定义字典
+        Use for directory, parameter, or vhost discovery on an in-scope URL.
+        Use nmap for ports and nuclei for template hits.
 
         Args:
-            url: 目标URL (用FUZZ标记注入点，如 http://example.com/FUZZ)
-            wordlist: 字典名称或路径
-                - common: 通用目录字典
-                - large: 大型字典
-                - api: API端点字典
-                - 或自定义路径
-            mode: 模式
-                - dir: 目录扫描
-                - param: 参数爆破
-                - vhost: 虚拟主机枚举
-            extensions: 要测试的扩展名 (例: [".php", ".bak", ".old"])
-            extra_args: 额外的ffuf参数
+            url: Target URL; insert FUZZ or let dir/param mode append it
+            wordlist: Named list common/large/api, or a local path
+            mode: dir, param, or vhost
+            extensions: File suffixes such as [".php", ".bak"]
+            confirmed: Required true; otherwise action_required=confirm_fuzz
 
         Returns:
-            扫描结果，包含:
-            - success: 是否成功
-            - results: 发现的路径列表
-            - stats: 扫描统计
+            success, results, stats, plus the observation payload.
+            Missing binary: success=false plus hint to config/external_tools.yaml.
+            Invalid mode: success=false plus allowed list.
         """
         from core.tools import get_tool_manager, run_ffuf
 
+        bad = _invalid_choice("mode", mode, FFUF_MODES)
+        if bad:
+            return bad
+
         manager = get_tool_manager()
-
         if not manager.is_tool_available("ffuf"):
-            return {
-                "success": False,
-                "error": "ffuf未安装或路径未配置",
-                "hint": "请检查 config/external_tools.yaml 中的 ffuf 配置",
-            }
+            return _tool_unavailable("ffuf")
 
-        # 确保URL包含FUZZ标记
+        if not confirmed:
+            return _confirm_required("confirm_fuzz")
+
         if "FUZZ" not in url:
             if mode == "dir":
                 url = url.rstrip("/") + "/FUZZ"
@@ -352,21 +355,18 @@ def register_external_tools(mcp, counter, logger):
                 else:
                     url = url + "?FUZZ=test"
 
-        # 构建额外参数
-        args = extra_args or []
+        args: List[str] = []
         if extensions:
             args.extend(["-e", ",".join(extensions)])
 
         gate = _gate_external_runtime(
             "ext_ffuf_fuzz",
-            {"url": url, "wordlist": wordlist, "mode": mode},
+            {"url": url, "wordlist": wordlist, "mode": mode, "confirmed": confirmed},
         )
         if not gate["allowed"]:
             return blocked_handler_runtime_response(gate)
 
-        result = await run_ffuf(
-            url=url, wordlist=wordlist, preset=mode, extra_args=args if args else None
-        )
+        result = await run_ffuf(url=url, wordlist=wordlist, preset=mode, extra_args=args or None)
 
         parsed = result.get("parsed_data") or {}
         results_list = parsed.get("results") or []
@@ -391,45 +391,31 @@ def register_external_tools(mcp, counter, logger):
         target: str,
         ports: str = "1-10000",
         rate: int = 10000,
-        extra_args: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        """Masscan高速端口扫描
+        """Masscan high-speed port scan
 
-        使用Masscan进行超高速端口扫描，适合大规模资产发现。
-        扫描速度可达每秒数百万包。
-
-        注意: 高速扫描可能触发IDS/IPS，建议在授权测试中使用。
+        Use for wide authorized ranges. Use nmap on the hosts that respond.
 
         Args:
-            target: 目标IP或CIDR (例: "192.168.1.0/24")
-            ports: 端口范围 (例: "1-65535" 或 "80,443,8080")
-            rate: 发包速率 (每秒包数，默认10000)
-            extra_args: 额外的Masscan参数
+            target: IP or CIDR, e.g. "192.168.1.0/24"
+            ports: "1-65535" or "80,443,8080"
+            rate: Packets per second, 1-10000000, default 10000
 
         Returns:
-            扫描结果，包含:
-            - success: 是否成功
-            - hosts: 发现的主机列表
-            - ports: 开放端口列表
+            success, hosts, ports, plus the observation payload.
+            Missing binary: success=false plus hint to config/external_tools.yaml.
+            Invalid rate: success=false.
         """
         from core.tools import get_tool_manager, run_masscan
 
         manager = get_tool_manager()
-
         if not manager.is_tool_available("masscan"):
-            return {
-                "success": False,
-                "error": "Masscan未安装或路径未配置",
-                "hint": "请检查 config/external_tools.yaml 中的 masscan 配置",
-            }
+            return _tool_unavailable("masscan")
 
-        # 速率验证
         if rate <= 0 or rate > 10000000:
-            return {"success": False, "error": "rate 必须在 1-10000000 之间"}
+            return {"success": False, "error": "rate must be between 1 and 10000000"}
 
-        # 构建额外参数
-        args = extra_args or []
-        args.extend(["--rate", str(rate)])
+        args = ["--rate", str(rate)]
 
         gate = _gate_external_runtime(
             "ext_masscan_scan",

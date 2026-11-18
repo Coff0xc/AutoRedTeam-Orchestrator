@@ -4,7 +4,8 @@
 测试 handlers/external_tools_handlers.py 中的 8 个工具注册和执行
 """
 
-from typing import Any, Dict
+import inspect
+from typing import Any, Dict, get_args, get_origin
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -90,6 +91,52 @@ class TestExternalToolsRegistration:
             assert tool_name in registered_tools, f"工具 {tool_name} 未注册"
 
 
+class TestExtToolSchema:
+    """MCP-facing signatures: named params only, enum presets, confirm gates."""
+
+    def test_extra_args_removed_from_mcp_signatures(self):
+        registered_tools, _, _ = _make_mcp_and_register()
+        names = (
+            "ext_nmap_scan",
+            "ext_nuclei_scan",
+            "ext_sqlmap_scan",
+            "ext_ffuf_fuzz",
+            "ext_masscan_scan",
+        )
+        for name in names:
+            params = inspect.signature(registered_tools[name]).parameters
+            assert "extra_args" not in params, name
+
+    def test_preset_and_mode_are_literals(self):
+        from typing import Literal as TypingLiteral
+
+        from handlers.external_tools_handlers import (
+            FFUF_MODES,
+            NMAP_PRESETS,
+            NUCLEI_PRESETS,
+            SQLMAP_PRESETS,
+        )
+
+        registered_tools, _, _ = _make_mcp_and_register()
+        cases = (
+            ("ext_nmap_scan", "preset", NMAP_PRESETS),
+            ("ext_nuclei_scan", "preset", NUCLEI_PRESETS),
+            ("ext_sqlmap_scan", "preset", SQLMAP_PRESETS),
+            ("ext_ffuf_fuzz", "mode", FFUF_MODES),
+        )
+        for name, param, allowed in cases:
+            annotation = inspect.signature(registered_tools[name]).parameters[param].annotation
+            assert get_origin(annotation) is TypingLiteral
+            assert set(get_args(annotation)) == set(allowed)
+
+    def test_confirm_param_only_on_sqlmap_and_ffuf(self):
+        registered_tools, _, _ = _make_mcp_and_register()
+        assert "confirmed" in inspect.signature(registered_tools["ext_sqlmap_scan"]).parameters
+        assert "confirmed" in inspect.signature(registered_tools["ext_ffuf_fuzz"]).parameters
+        for name in ("ext_nmap_scan", "ext_nuclei_scan", "ext_masscan_scan"):
+            assert "confirmed" not in inspect.signature(registered_tools[name]).parameters
+
+
 # ==================== ext_nmap_scan 测试 ====================
 
 
@@ -151,7 +198,7 @@ class TestExtNmapScanTool:
             result = await registered_tools["ext_nmap_scan"](target="192.168.1.1")
 
             assert result["success"] is False
-            assert "Nmap未安装" in result["error"]
+            assert "nmap is not installed" in result["error"]
 
     @pytest.mark.asyncio
     async def test_nmap_top100_ports(self):
@@ -191,6 +238,27 @@ class TestExtNmapScanTool:
 
             assert result["success"] is False
             assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_nmap_invalid_preset(self):
+        registered_tools, _, _ = _make_mcp_and_register()
+
+        with (
+            patch("core.tools.get_tool_manager") as mock_mgr_fn,
+            patch("core.tools.run_nmap", new_callable=AsyncMock) as mock_run,
+        ):
+            manager = MagicMock()
+            manager.is_tool_available.return_value = True
+            mock_mgr_fn.return_value = manager
+
+            result = await registered_tools["ext_nmap_scan"](
+                target="192.168.1.1", preset="aggressive"
+            )
+
+            assert result["success"] is False
+            assert "invalid preset" in result["error"]
+            assert "quick" in result["allowed"]
+            mock_run.assert_not_called()
 
 
 # ==================== ext_nuclei_scan 测试 ====================
@@ -238,7 +306,7 @@ class TestExtNucleiScanTool:
             result = await registered_tools["ext_nuclei_scan"](target="https://example.com")
 
             assert result["success"] is False
-            assert "Nuclei未安装" in result["error"]
+            assert "nuclei is not installed" in result["error"]
 
     @pytest.mark.asyncio
     async def test_nuclei_with_tags_and_severity(self):
@@ -265,6 +333,27 @@ class TestExtNucleiScanTool:
             extra_args = call_args.kwargs.get("extra_args") or call_args[1].get("extra_args")
             assert "-tags" in extra_args
             assert "-severity" in extra_args
+
+    @pytest.mark.asyncio
+    async def test_nuclei_invalid_preset(self):
+        registered_tools, _, _ = _make_mcp_and_register()
+
+        with (
+            patch("core.tools.get_tool_manager") as mock_mgr_fn,
+            patch("core.tools.run_nuclei", new_callable=AsyncMock) as mock_run,
+        ):
+            manager = MagicMock()
+            manager.is_tool_available.return_value = True
+            mock_mgr_fn.return_value = manager
+
+            result = await registered_tools["ext_nuclei_scan"](
+                target="https://example.com", preset="all"
+            )
+
+            assert result["success"] is False
+            assert "invalid preset" in result["error"]
+            assert "cve" in result["allowed"]
+            mock_run.assert_not_called()
 
 
 # ==================== ext_sqlmap_scan 测试 ====================
@@ -314,7 +403,7 @@ class TestExtSqlmapScanTool:
             result = await registered_tools["ext_sqlmap_scan"](url="https://example.com/page?id=1")
 
             assert result["success"] is False
-            assert "SQLMap未安装" in result["error"]
+            assert "sqlmap is not installed" in result["error"]
 
     @pytest.mark.asyncio
     async def test_sqlmap_with_data_and_tamper(self):
@@ -340,6 +429,46 @@ class TestExtSqlmapScanTool:
             extra_args = call_args.kwargs.get("extra_args") or call_args[1].get("extra_args")
             assert "--data" in extra_args
             assert "--tamper" in extra_args
+
+    @pytest.mark.asyncio
+    async def test_sqlmap_exploit_requires_confirmed(self):
+        registered_tools, _, _ = _make_mcp_and_register()
+
+        with (
+            patch("core.tools.get_tool_manager") as mock_mgr_fn,
+            patch("core.tools.run_sqlmap", new_callable=AsyncMock) as mock_run,
+        ):
+            manager = MagicMock()
+            manager.is_tool_available.return_value = True
+            mock_mgr_fn.return_value = manager
+
+            result = await registered_tools["ext_sqlmap_scan"](
+                url="https://example.com/page?id=1", preset="exploit"
+            )
+
+            assert result["success"] is False
+            assert result["action_required"] == "confirm_exploit"
+            mock_run.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_sqlmap_exploit_runs_when_confirmed(self):
+        registered_tools, _, _ = _make_mcp_and_register()
+
+        with (
+            patch("core.tools.get_tool_manager") as mock_mgr_fn,
+            patch("core.tools.run_sqlmap", new_callable=AsyncMock) as mock_run,
+        ):
+            manager = MagicMock()
+            manager.is_tool_available.return_value = True
+            mock_mgr_fn.return_value = manager
+            mock_run.return_value = {"success": True}
+
+            result = await registered_tools["ext_sqlmap_scan"](
+                url="https://example.com/page?id=1", preset="exploit", confirmed=True
+            )
+
+            assert result["success"] is True
+            mock_run.assert_called_once()
 
 
 # ==================== ext_ffuf_fuzz 测试 ====================
@@ -367,7 +496,9 @@ class TestExtFfufFuzzTool:
             mock_mgr_fn.return_value = manager
             mock_run.return_value = mock_result
 
-            result = await registered_tools["ext_ffuf_fuzz"](url="https://example.com", mode="dir")
+            result = await registered_tools["ext_ffuf_fuzz"](
+                url="https://example.com", mode="dir", confirmed=True
+            )
 
             assert result["success"] is True
 
@@ -386,7 +517,9 @@ class TestExtFfufFuzzTool:
             mock_run.return_value = {"success": True}
 
             # URL不含FUZZ，dir模式应自动追加
-            await registered_tools["ext_ffuf_fuzz"](url="https://example.com", mode="dir")
+            await registered_tools["ext_ffuf_fuzz"](
+                url="https://example.com", mode="dir", confirmed=True
+            )
 
             call_args = mock_run.call_args
             url_arg = call_args.kwargs.get("url") or call_args[1].get("url")
@@ -405,7 +538,27 @@ class TestExtFfufFuzzTool:
             result = await registered_tools["ext_ffuf_fuzz"](url="https://example.com/FUZZ")
 
             assert result["success"] is False
-            assert "ffuf未安装" in result["error"]
+            assert "ffuf is not installed" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_ffuf_requires_confirmed(self):
+        registered_tools, _, _ = _make_mcp_and_register()
+
+        with (
+            patch("core.tools.get_tool_manager") as mock_mgr_fn,
+            patch("core.tools.run_ffuf", new_callable=AsyncMock) as mock_run,
+        ):
+            manager = MagicMock()
+            manager.is_tool_available.return_value = True
+            mock_mgr_fn.return_value = manager
+
+            result = await registered_tools["ext_ffuf_fuzz"](
+                url="https://example.com/FUZZ", mode="dir"
+            )
+
+            assert result["success"] is False
+            assert result["action_required"] == "confirm_fuzz"
+            mock_run.assert_not_called()
 
 
 # ==================== ext_masscan_scan 测试 ====================
@@ -476,7 +629,7 @@ class TestExtMasscanScanTool:
             result = await registered_tools["ext_masscan_scan"](target="192.168.1.0/24")
 
             assert result["success"] is False
-            assert "Masscan未安装" in result["error"]
+            assert "masscan is not installed" in result["error"]
 
 
 # ==================== ext_tool_chain 测试 ====================
