@@ -58,6 +58,10 @@ Parent mixed-profile modules (`cve_handlers`, `ai_handlers`, `report_handlers`, 
 
 `tests/test_mcp_protocol.py` opens an in-process `mcp.Client` in `mode=legacy` (JSON-RPC `initialize` over in-memory streams). `tools/list`, `prompts/list`, and `resources/list` match the resident set for each profile. The test does not spawn `python mcp_stdio_server.py --stdio`.
 
+## Engagement scorecard
+
+`autort.engage.scorecard/v1` keeps `confirmed` / `unconfirmed` / `total`. Additive fields: `unverified`, `contradicted`, `confirmation_rate` (null when `total` is 0), per-row `proof` (`bound` / `none`), and `gaps`. `no_findings_is_not_clean` is the empty-run gap so a dry-run cannot read as a clean target. Juice Shop live confirmation-rate remains open.
+
 ## Orchestrator checkpoint/resume
 
 `tests/test_orchestrator_checkpoint.py` persists `PentestState` through `SessionStorage` on `tmp_path` and rebuilds via `AutoPentestOrchestrator.resume`. Phase executors are stubbed. `resume` loads metadata (not the `ScanContext` envelope), restores `OrchestratorConfig`, and `run()` skips completed or skipped phases. Default dry-run still skips executors and does not create a phase checkpoint. The pin does not run a live target. `autort engage resume` is unchanged.

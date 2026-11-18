@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [GAPS.md](GAPS.md): MCP08 stays a gap; MCP02 stays partial
 - In-process MCP `initialize` / `tools/list` (plus prompts and resources list) matches the resident set for `safe` / `scan` / `active-lab` / `full`
 - Orchestrator checkpoint persist/resume pin (`tests/test_orchestrator_checkpoint.py`): `SessionStorage` on `tmp_path`, stubbed phase executors, no live target
+- `autort.engage.scorecard/v1` additive fields: `unverified`, `contradicted`, `confirmation_rate` (null when `total` is 0), per-row `proof` (`bound` / `none`), and `gaps` (`no_findings_is_not_clean` on an empty finding list)
 
 ### Changed
 
