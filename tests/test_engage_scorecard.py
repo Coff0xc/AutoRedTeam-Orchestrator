@@ -7,7 +7,13 @@ from __future__ import annotations
 
 import pytest
 
-from core.engage.scorecard import SCORECARD_SCHEMA, build_scorecard
+from core.engage.scorecard import (
+    GAP_NO_FINDINGS,
+    PROOF_BOUND,
+    PROOF_NONE,
+    SCORECARD_SCHEMA,
+    build_scorecard,
+)
 from core.evidence import UNCONFIRMED_PREFIX
 from tests.test_verify_finding_fixture import _register_verify_finding, _serve
 
@@ -45,7 +51,12 @@ def test_scorecard_marks_detector_self_report_unconfirmed():
     assert card["total"] == 1
     assert card["confirmed"] == 0
     assert card["unconfirmed"] == 1
+    assert card["unverified"] == 1
+    assert card["contradicted"] == 0
+    assert card["confirmation_rate"] == 0.0
+    assert card["gaps"] == []
     assert row["accepted"] is False
+    assert row["proof"] == PROOF_NONE
     assert row["severity"] == "medium"
     assert str(row["title"]).startswith(UNCONFIRMED_PREFIX)
 
@@ -81,7 +92,55 @@ async def test_scorecard_confirms_raw_reflection_and_rejects_escaped(raw_lab, es
     assert card["total"] == 2
     assert card["confirmed"] == 1
     assert card["unconfirmed"] == 1
+    assert card["unverified"] == 0
+    assert card["contradicted"] == 1
+    assert card["confirmation_rate"] == 0.5
+    assert card["gaps"] == []
     assert card["findings"][0]["accepted"] is True
+    assert card["findings"][0]["proof"] == PROOF_BOUND
     assert card["findings"][1]["accepted"] is False
+    assert card["findings"][1]["proof"] == PROOF_NONE
+    assert card["findings"][1]["verification_status"] == "contradicted"
     assert str(card["findings"][1]["title"]).startswith(UNCONFIRMED_PREFIX)
     assert card["findings"][1]["severity"] in {"medium", "low", "info"}
+
+
+def test_empty_scorecard_is_a_gap_not_a_clean_target():
+    card = build_scorecard([])
+    none_card = build_scorecard(None)
+
+    for item in (card, none_card):
+        assert item["schema"] == SCORECARD_SCHEMA
+        assert item["total"] == 0
+        assert item["confirmed"] == 0
+        assert item["unconfirmed"] == 0
+        assert item["unverified"] == 0
+        assert item["contradicted"] == 0
+        assert item["confirmation_rate"] is None
+        assert item["gaps"] == [GAP_NO_FINDINGS]
+        assert item["findings"] == []
+
+
+def test_scorecard_splits_contradicted_from_unverified():
+    contradicted = {
+        "url": "http://127.0.0.1:9/reflect?q=test",
+        "param": "q",
+        "vuln_type": "xss",
+        "verified": False,
+        "confidence": "high",
+        "evidence": "no delay observed",
+        "severity": "high",
+        "title": "Reflected XSS in q",
+    }
+    card = build_scorecard([contradicted, _self_report("http://127.0.0.1:9/reflect?q=x")])
+
+    assert card["total"] == 2
+    assert card["confirmed"] == 0
+    assert card["unconfirmed"] == 2
+    assert card["unverified"] == 1
+    assert card["contradicted"] == 1
+    assert card["confirmation_rate"] == 0.0
+    assert card["gaps"] == []
+    assert card["findings"][0]["verification_status"] == "contradicted"
+    assert card["findings"][0]["proof"] == PROOF_NONE
+    assert card["findings"][1]["verification_status"] == "unverified"
