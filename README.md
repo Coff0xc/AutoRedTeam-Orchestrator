@@ -602,7 +602,7 @@ Config priority is `AUTORT_` environment variables, then YAML, then field defaul
 
 CVE search on `safe` reads `core/cve`. Sync and PoC execution are higher levels. `cve_auto_exploit` is `active-lab`.
 
-`AutoPentestOrchestrator` walks recon, vuln scan, PoC execution, exploit, privilege escalation, lateral movement, exfiltrate, then report. `resume(session_id)` rebuilds it from the last checkpoint. The runtime fields on its config are notes the pipeline reads. They do not create a container.
+`AutoPentestOrchestrator` walks recon, vuln scan, PoC execution, exploit, privilege escalation, lateral movement, exfiltrate, then report. `resume(session_id)` rebuilds `PentestState` from session metadata and skips completed or skipped phases. The runtime fields on its config are notes the pipeline reads. They do not create a container. Default dry-run skips executors and does not create a phase checkpoint.
 
 | Call | Row on the list | Level |
 |---|---|---|
@@ -649,6 +649,8 @@ The knowledge graph (`kg_store`, `kg_query`, `kg_attack_paths`) and `plan_attack
 The coverage table is [GAPS.md](GAPS.md). `autort ai-surface ledger` is the same map as JSON. MCP08 is a gap. MCP02 is partial.
 
 CI opens an in-process MCP client (`mcp.Client`, `mode=legacy`) and compares `initialize`, `tools/list`, `prompts/list`, and `resources/list` with the resident set. It does not spawn `autoredteam-mcp` as a subprocess. The AST reader still never connects.
+
+Orchestrator checkpoint persist/resume is pinned with stubbed phase executors and `tmp_path` `SessionStorage`. It does not run a live target. Default dry-run still skips executors.
 
 There is no proxy in front of other MCP servers.
 

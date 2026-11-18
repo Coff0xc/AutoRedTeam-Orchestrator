@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Static mappings for MCP01 (`mcp.MCP01.secret-env-key`), MCP05 (`mcp.MCP05.general-command`), MCP07 (`mcp_tool.auth-*`), and MCP09 (`mcp.MCP09.remote-endpoint`)
 - [GAPS.md](GAPS.md): MCP08 stays a gap; MCP02 stays partial
 - In-process MCP `initialize` / `tools/list` (plus prompts and resources list) matches the resident set for `safe` / `scan` / `active-lab` / `full`
+- Orchestrator checkpoint persist/resume pin (`tests/test_orchestrator_checkpoint.py`): `SessionStorage` on `tmp_path`, stubbed phase executors, no live target
 
 ### Changed
 
@@ -24,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Restore GitHub Action `baseline` input so self-audit can run `ai-surface diff --ci`
+- `AutoPentestOrchestrator.resume` loads `PentestState` from `ScanContext.metadata`, restores `OrchestratorConfig`, and `run()` skips completed or skipped phases
 
 ## [4.0.0] - 2026-11-16
 

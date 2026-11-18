@@ -28,12 +28,12 @@ is [GAPS.md](../GAPS.md); `autort ai-surface ledger` prints the same map.
 | Reconnaissance and vulnerability detectors | Beta | Authorized targets only; accuracy is not yet backed by a public benchmark. |
 | JSON and SARIF export primitives | Beta | Finding and artifact schemas still need consolidation. |
 | HTML reporting | Preview | Jinja2 HTML, executive, and Markdown templates render with `autoescape=True`. JSON report files encode `<>&` as Unicode escapes; `json.loads` recovers original finding text. |
-| Session storage | Preview | Basic persistence exists; orchestrator checkpoint/resume remains Experimental. |
+| Session storage | Preview | Basic persistence exists. Orchestrator checkpoint persist/resume is pinned with stubbed executors on `tmp_path` `SessionStorage`; it is not a live-target run. |
 | MCP stdio integration | Preview | Defaults to a fail-closed `safe` registration profile; treat as trusted-local only because authentication is not yet a uniform global boundary. CI pins JSON-RPC `initialize` / `tools/list` to resident surfaces through an in-process client; it does not spawn the stdio server. |
 | AI-system red-team scenario runner | Internal (`run`); Preview (`eval-run`) | `ai-redteam run` is plan-only Internal. `eval-run` scores local scanners and instruction text (`autort.eval/v1`). It does not call a model, shell, or remote target. |
 | Agent runtime models, policy, trace, and local API | Preview | Hidden from default CLI help; still callable. `runtime-api run --local --ci` is the allowlisted audit loop. Engage steps in that loop are dry-run unless the action opts into network and the sandbox allows it. It does not call a model or a shell. |
 | Authorized engagement loop | Preview | `autort engage` / MCP `engage_*` / `autort.Engagement`. Heuristic planner (optional LLM pick among remaining steps). Evidence gate plus a three-repeat doom-loop stop. Live `engage.verify` uses HITL when the engagement `hitl` field is `approval` or `review_edit`; dry-run skips it. Live `engage_run` is `scan`. Profile `safe` is refused as an engagement profile. The run JSON includes `scorecard` (`autort.engage.scorecard/v1`: confirmed / unconfirmed / total). CI smokes `engage run --dry-run --ci`. |
-| Automated pentest orchestrator | Experimental | Defaults to dry-run; checkpoint/resume is not release-certified. |
+| Automated pentest orchestrator | Experimental | Defaults to dry-run. Checkpoint persist/resume is tested with stubbed phases and is not release-certified. |
 | Docker sandbox executor | Experimental | Hidden from default CLI help; still callable. `sandbox` on a run is a record field. `docker-smoke` is a local check with the network off. Policy metadata is not isolation. |
 | External engine routing | Planned | No backend-selection layer exists: `core/engine_router.py` had zero callers and unreachable external-tool branches, and has been removed. Handlers and the SDK call the pure-Python engines directly. |
 | MCTS, knowledge, feedback, and agent-role research | Experimental | Research components without outcome-backed optimization claims. |
@@ -112,8 +112,9 @@ executor.
   recovers original finding text. `to_dict()` stays unescaped for programmatic consumers.
 - The default wheel ships `core/skills/pins.yaml`. `autort skills catalog` on an installed
   wheel reads that pin table and does not vendor skill bodies or clone. Repo-root
-  `templates/` CVE YAML stays checkout-only. Checkpoint/resume and the universal external
-  engine router still need further integration testing.
+  `templates/` CVE YAML stays checkout-only. Orchestrator checkpoint persist/resume is
+  pinned with stubbed executors on `tmp_path` `SessionStorage`; it does not run a live
+  target. The universal external engine router was removed.
 - Windows CI runs the fast suite on Python 3.10 and 3.12 (`windows-latest`, no
   `--maxfail`). Slow, integration, and network tests stay out of that job. Ubuntu
   covers 3.10/3.11/3.12 with the same marker set and also has no `--maxfail`.

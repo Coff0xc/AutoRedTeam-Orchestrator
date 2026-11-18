@@ -58,9 +58,12 @@ Parent mixed-profile modules (`cve_handlers`, `ai_handlers`, `report_handlers`, 
 
 `tests/test_mcp_protocol.py` opens an in-process `mcp.Client` in `mode=legacy` (JSON-RPC `initialize` over in-memory streams). `tools/list`, `prompts/list`, and `resources/list` match the resident set for each profile. The test does not spawn `python mcp_stdio_server.py --stdio`.
 
+## Orchestrator checkpoint/resume
+
+`tests/test_orchestrator_checkpoint.py` persists `PentestState` through `SessionStorage` on `tmp_path` and rebuilds via `AutoPentestOrchestrator.resume`. Phase executors are stubbed. `resume` loads metadata (not the `ScanContext` envelope), restores `OrchestratorConfig`, and `run()` skips completed or skipped phases. Default dry-run still skips executors and does not create a phase checkpoint. The pin does not run a live target. `autort engage resume` is unchanged.
+
 ## Still open in the tree
 
-- Checkpoint/resume integration tests
 - Juice Shop live confirmation-rate demo
 - Universal engine router (removed; handlers call the Python engines directly)
 - A proxy in front of other MCP servers
