@@ -1,14 +1,13 @@
-"""AutoRedTeam CLI — AI驱动的渗透测试命令行工具
+"""AutoRedTeam CLI — local MCP/AI attack-surface audit and evidence gate.
 
-基于 typer 构建，封装 autort SDK 提供命令行接口。
+Typer wrapper around the autort SDK. Default help leads with ai-surface,
+capabilities, skills, and engage. scan/detect/exploit/pentest stay behind
+capability profiles.
 
 Usage:
-    autort scan http://target.com --full
-    autort detect http://target.com -c sqli,xss
-    autort exploit http://target.com --cve CVE-2021-44228
-    autort pentest http://target.com
-    autort report <session_id> -f html
-    autort tools
+    python -m cli.main ai-surface scan --path handlers
+    python -m cli.main capabilities manifest --profile safe
+    python -m cli.main engage init http://127.0.0.1:3000 --profile scan
 """
 
 from __future__ import annotations
@@ -103,10 +102,10 @@ app.add_typer(capabilities_app, name="capabilities")
 app.add_typer(skills_app, name="skills")
 app.add_typer(engage_app, name="engage")
 app.add_typer(ai_redteam_app, name="ai-redteam")
-app.add_typer(code_agent_app, name="code-agent")
-app.add_typer(runtime_api_app, name="runtime-api")
-app.add_typer(sandbox_app, name="sandbox")
 app.add_typer(tools_app, name="tools")
+app.add_typer(code_agent_app, name="code-agent", hidden=True)
+app.add_typer(runtime_api_app, name="runtime-api", hidden=True)
+app.add_typer(sandbox_app, name="sandbox", hidden=True)
 
 
 def _show_disclaimer() -> None:

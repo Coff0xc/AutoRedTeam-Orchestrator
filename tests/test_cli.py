@@ -42,6 +42,11 @@ class TestCLIHelp:
         assert "attack-surface" in result.output.lower() or "audit" in result.output.lower()
         assert "ai-surface" in result.output
         assert "engage" in result.output
+        assert "capabilities" in result.output
+        assert "skills" in result.output
+        assert "runtime-api" not in result.output
+        assert "code-agent" not in result.output
+        assert "sandbox" not in result.output
 
     def test_scan_help(self):
         """scan --help 应返回成功"""
