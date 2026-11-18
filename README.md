@@ -648,7 +648,7 @@ The knowledge graph (`kg_store`, `kg_query`, `kg_attack_paths`) and `plan_attack
 
 The coverage table is [GAPS.md](GAPS.md). `autort ai-surface ledger` is the same map as JSON. MCP08 is a gap. MCP02 is partial.
 
-The reader does not open an MCP session. A live `initialize` / `tools/list` client would see the tools the server registered, which the allowed list already names, and it would have to start the server. The static comparison is the check CI can run on a checkout.
+CI opens an in-process MCP client (`mcp.Client`, `mode=legacy`) and compares `initialize`, `tools/list`, `prompts/list`, and `resources/list` with the resident set. It does not spawn `autoredteam-mcp` as a subprocess. The AST reader still never connects.
 
 There is no proxy in front of other MCP servers.
 

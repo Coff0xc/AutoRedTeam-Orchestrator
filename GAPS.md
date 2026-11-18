@@ -54,10 +54,13 @@ A public Arcade ToolBench card for this server is a 2026-09-22 crawl of those fo
 
 Parent mixed-profile modules (`cve_handlers`, `ai_handlers`, `report_handlers`, `misc_handlers`, `prompt_handlers`, `resource_handlers`) still import under `safe` because they contain a safe surface. Scan and active-lab registrars live in sibling modules and import only when `surface_enabled_for_mcp` allows them. Manifest `handler` fields and MCP names are unchanged.
 
+## Live MCP protocol
+
+`tests/test_mcp_protocol.py` opens an in-process `mcp.Client` in `mode=legacy` (JSON-RPC `initialize` over in-memory streams). `tools/list`, `prompts/list`, and `resources/list` match the resident set for each profile. The test does not spawn `python mcp_stdio_server.py --stdio`.
+
 ## Still open in the tree
 
 - Checkpoint/resume integration tests
 - Juice Shop live confirmation-rate demo
 - Universal engine router (removed; handlers call the Python engines directly)
-- Live `initialize` / `tools/list` comparison against a running server
 - A proxy in front of other MCP servers

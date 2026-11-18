@@ -33,6 +33,7 @@ platform.
 - API keys are process-level environment configuration, which is appropriate only for a trusted
   local client model.
 - Do not expose the MCP server through an untrusted or shared transport.
+- CI compares JSON-RPC `initialize` / `tools/list` (and prompts/resources list) to the resident set through an in-process `mcp.Client` in `mode=legacy`. That check does not spawn the stdio server.
 
 ### Capability profiles
 
