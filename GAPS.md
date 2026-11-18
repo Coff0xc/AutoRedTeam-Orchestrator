@@ -50,9 +50,12 @@ These stay paused. They are product stance.
 
 A public Arcade ToolBench card for this server is a 2026-09-22 crawl of those four `ext_*` wrappers. It is stale against the current schemas. This repo does not submit a rescore as part of the default product.
 
+## Mixed-profile imports
+
+Parent mixed-profile modules (`cve_handlers`, `ai_handlers`, `report_handlers`, `misc_handlers`, `prompt_handlers`, `resource_handlers`) still import under `safe` because they contain a safe surface. Scan and active-lab registrars live in sibling modules and import only when `surface_enabled_for_mcp` allows them. Manifest `handler` fields and MCP names are unchanged.
+
 ## Still open in the tree
 
-- Mixed-profile whole-file import when a module contains a safe surface
 - Checkpoint/resume integration tests
 - Juice Shop live confirmation-rate demo
 - Universal engine router (removed; handlers call the Python engines directly)

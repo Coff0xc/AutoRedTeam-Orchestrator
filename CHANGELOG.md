@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ubuntu pytest fast suite no longer uses `--maxfail`; Windows and Ubuntu now both run the suite to completion
 - Default CLI `--help` hides Internal groups `code-agent`, `runtime-api`, and `sandbox`; they stay callable
 - Catalog MCP tools `ext_nmap_scan`, `ext_nuclei_scan`, `ext_sqlmap_scan`, `ext_ffuf_fuzz`, and `ext_masscan_scan` drop unbounded `extra_args`. Presets and ffuf modes are Literal enums. `ext_sqlmap_scan` `preset=exploit` and `ext_ffuf_fuzz` fail closed unless `confirmed=true`. Internally built flags still pass `validate_extra_args`.
+- Mixed-profile scan and active-lab handler registrars load from sibling modules only when the current profile enables them. Parent modules that contain a safe surface still import under `safe`.
 
 ### Fixed
 
