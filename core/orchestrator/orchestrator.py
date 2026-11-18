@@ -112,6 +112,29 @@ class OrchestratorConfig:
             "runtime_human_approved": self.runtime_human_approved,
         }
 
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]] = None) -> "OrchestratorConfig":
+        data = data or {}
+        kwargs: Dict[str, Any] = {}
+        for key in (
+            "auto_mode",
+            "skip_phases",
+            "max_retries",
+            "checkpoint_interval",
+            "timeout",
+            "quick_mode",
+            "skip_exfiltrate",
+            "report_formats",
+            "runtime_policy_enabled",
+            "runtime_mode",
+            "runtime_network_policy",
+            "runtime_sandbox_provider",
+            "runtime_human_approved",
+        ):
+            if key in data:
+                kwargs[key] = data[key]
+        return cls(**kwargs)
+
 
 class AutoPentestOrchestrator:
     """自动化渗透编排引擎
@@ -214,8 +237,20 @@ class AutoPentestOrchestrator:
         if not context:
             raise ValueError(f"会话不存在: {session_id}")
 
-        state = PentestState.from_dict(context.to_dict())
-        orchestrator = cls(target=state.target, state=state)
+        # _save_state stores PentestState.to_safe_dict() in ScanContext.metadata.
+        metadata = getattr(context, "metadata", None) or {}
+        if isinstance(metadata, dict) and metadata.get("current_phase") is not None:
+            state = PentestState.from_dict(metadata)
+        else:
+            state = PentestState.from_dict(context.to_dict())
+        if not isinstance(state.target, str) or not state.target:
+            raise ValueError(f"会话缺少目标: {session_id}")
+
+        orchestrator = cls(
+            target=state.target,
+            config=OrchestratorConfig.from_dict(state.config),
+            state=state,
+        )
         orchestrator._storage = storage
 
         return orchestrator
@@ -237,6 +272,10 @@ class AutoPentestOrchestrator:
 
         try:
             for phase in self.PHASE_ORDER[start_idx:]:
+                if start_phase is None and self._phase_already_finished(phase):
+                    self.logger.info("跳过已完成阶段: %s", phase.value)
+                    continue
+
                 if phase.value in self.config.skip_phases:
                     self.logger.info("跳过阶段: %s", phase.value)
                     self.state.phase_status[phase.value] = PhaseStatus.SKIPPED
@@ -468,6 +507,10 @@ class AutoPentestOrchestrator:
             ),
         )
         return task.add_action(action)
+
+    def _phase_already_finished(self, phase: PentestPhase) -> bool:
+        status = self.state.phase_status.get(phase.value)
+        return status in (PhaseStatus.COMPLETED, PhaseStatus.SKIPPED)
 
     def pause(self) -> bool:
         """暂停执行"""
