@@ -398,7 +398,7 @@ These do not contact a target. CVE search reads the local notes.
 | `engage` | `init`, `status`, `next`, `run`, `resume` | One authorized target. Plan on `safe`, run on `scan` |
 | `ai-redteam` | `eval-run`, `catalog`, `convert`, `run` | eval-run scores local runs. `run` is plan-only Internal |
 
-Default `--help` hides `code-agent`, `runtime-api`, and `sandbox`. They stay callable.
+Default `--help` hides `code-agent`, `runtime-api`, `sandbox`, and `pentest`. They stay callable.
 
 ### Higher levels
 
@@ -412,7 +412,7 @@ Default `--help` hides `code-agent`, `runtime-api`, and `sandbox`. They stay cal
 | `nuclei` | `scan` | `autort nuclei http://127.0.0.1:8000 -t cve,rce -s high,critical` |
 | `report` | `scan` | `autort report <session-id> -f html` |
 | `exploit` | `active-lab` | `autort exploit http://127.0.0.1:8000 --cve CVE-2021-44228` |
-| `pentest` | `full` | `autort pentest http://127.0.0.1:8000 --phases recon,vuln_scan` |
+| `pentest` (hidden from default `--help`) | `full` | `autort pentest http://127.0.0.1:8000 --phases recon,vuln_scan` |
 
 `exploit` with neither `--cve` nor `--auto` exits 1 before the permission check.
 

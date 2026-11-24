@@ -27,7 +27,7 @@ MCP08 stays a gap on purpose. A runtime TOFU/stdio wrapper is out of scope for t
 
 ## CLI
 
-Default `autort --help` leads with `ai-surface`, `capabilities`, `skills`, and `engage`. `code-agent`, `runtime-api`, and `sandbox` stay callable and are hidden from that list.
+Default `autort --help` leads with `ai-surface`, `capabilities`, `skills`, and `engage`. `code-agent`, `runtime-api`, `sandbox`, and `pentest` stay callable and are hidden from that list. MCP names `smart_analyze`, `attack_chain_plan`, `plan_attack_path`, `kg_attack_paths`, and `auto_pentest` stay catalog-only. RuntimeLoop fail-closes those names as unknown local steps.
 
 `sandbox` on a run record is a note. It is not a container and it is not an operating-system boundary.
 
