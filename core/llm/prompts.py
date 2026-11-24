@@ -33,6 +33,8 @@ AUTHORIZED_CONTEXT_RULES = (
 ENGAGE_PICK_SYSTEM_PROMPT = (
     AUTHORIZED_CONTEXT_RULES
     + " Continue unfinished in-scope work from the remaining list. "
+    + "Pick only an open coverage row id or its step name. Examined and ruled_out "
+    + "rows are closed. Unknown names are ignored. "
     + "Picking verify_finding or engage.verify is in-scope required work; HITL runs "
     + "in code before that step executes. A HITL permit is not verification evidence. "
     + "Reply with exactly one remaining step name. No other text."

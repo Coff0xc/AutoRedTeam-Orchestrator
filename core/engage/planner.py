@@ -2,8 +2,8 @@
 
 The planner is code, not a model. It reads open gaps from engagement state
 (missing recon/detect/nuclei, unverified findings, missing export) and returns
-one aggregator step. An optional LLM suggestion may pick among those open gaps;
-unknown suggestions are ignored.
+one aggregator step. An optional LLM suggestion may pick among coverage ledger
+open rows that map to those steps; unknown suggestions are ignored.
 """
 
 from __future__ import annotations
@@ -46,6 +46,13 @@ _NEXT_HINT = {
 
 _VERIFY_STEPS = frozenset({"verify_finding", "engage.verify"})
 _EXPORT_STEPS = frozenset({"export_findings", "engage.export"})
+_PHASE_TO_STEP = {
+    "recon": "recon_run",
+    "detect": "detect_run",
+    "nuclei": "nuclei_scan",
+    "verify": "verify_finding",
+    "export": "export_findings",
+}
 
 
 def canonical_step(name: str) -> str:
@@ -65,12 +72,16 @@ def plan_next(
     if not gaps:
         return None
     remaining = _remaining_names(gaps)
+    picks = coverage_picks(config, state, remaining)
     chosen = remaining[0]
+    picked_finding = None
     if use_model or config.use_model:
-        suggested = _model_pick(remaining, state)
+        suggested = _model_pick(config, state, remaining, picks)
         if suggested is not None:
-            chosen = suggested
-    return _card(chosen, config, state, gaps)
+            chosen = str(suggested.get("step") or chosen)
+            if suggested.get("kind") == "finding":
+                picked_finding = _finding_from_pick(suggested, state)
+    return _card(chosen, config, state, gaps, finding=picked_finding, open_rows=picks)
 
 
 def next_hint(step: str) -> str:
@@ -136,11 +147,80 @@ def _remaining_names(gaps: Sequence[Mapping[str, Any]]) -> list[str]:
     return names
 
 
+def coverage_picks(
+    config: EngagementConfig,
+    state: Mapping[str, Any],
+    remaining: Sequence[str] | None = None,
+) -> List[Dict[str, Any]]:
+    """Open coverage rows whose step is currently actionable.
+
+    Examined and ruled_out rows are dropped. Export stays out while verify
+    findings are still open because it is not in ``remaining``.
+    """
+    from core.engage.ledger import build_coverage_ledger, open_coverage_rows
+
+    allowed = set(
+        remaining if remaining is not None else _remaining_names(open_gaps(config, state))
+    )
+    picks: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in open_coverage_rows(build_coverage_ledger(config, state)):
+        step = _step_for_coverage_row(row)
+        if step not in allowed:
+            continue
+        row_id = str(row.get("id") or "")
+        if not row_id or row_id in seen:
+            continue
+        seen.add(row_id)
+        picks.append(
+            {
+                "id": row_id,
+                "kind": str(row.get("kind") or ""),
+                "name": str(row.get("name") or ""),
+                "step": step,
+            }
+        )
+    return picks
+
+
+def _step_for_coverage_row(row: Mapping[str, Any]) -> Optional[str]:
+    kind = str(row.get("kind") or "")
+    if kind == "phase":
+        return _PHASE_TO_STEP.get(str(row.get("name") or ""))
+    if kind == "finding":
+        return "verify_finding"
+    return None
+
+
+def _finding_from_pick(
+    pick: Mapping[str, Any], state: Mapping[str, Any]
+) -> Optional[Dict[str, Any]]:
+    row_id = str(pick.get("id") or "")
+    prefix = "finding:"
+    if not row_id.startswith(prefix):
+        return None
+    parts = row_id[len(prefix) :].split("|", 2)
+    if len(parts) != 3:
+        return None
+    url, vuln_type, param = parts
+    for item in _unverified(state):
+        if (
+            str(item.get("url") or "") == url
+            and str(item.get("vuln_type") or item.get("type") or "") == vuln_type
+            and str(item.get("param") or "") == param
+        ):
+            return dict(item)
+    return None
+
+
 def _card(
     step: str,
     config: EngagementConfig,
     state: Mapping[str, Any],
     gaps: Sequence[Mapping[str, Any]],
+    *,
+    finding: Optional[Mapping[str, Any]] = None,
+    open_rows: Sequence[Mapping[str, Any]] | None = None,
 ) -> Dict[str, Any]:
     canonical = canonical_step(step)
     inputs: Dict[str, Any] = {"target": config.target}
@@ -156,13 +236,20 @@ def _card(
         inputs["url"] = config.target
     if canonical == "verify_finding":
         pending = _unverified(state)
-        inputs["finding"] = pending[0] if pending else {}
+        if finding is not None:
+            inputs["finding"] = dict(finding)
+        else:
+            inputs["finding"] = pending[0] if pending else {}
     if canonical == "export_findings":
         inputs["output_dir"] = config.output_dir
     export = canonical in _EXPORT_STEPS
     from core.engage.ledger import build_coverage_ledger
 
     ledger = build_coverage_ledger(config, state)
+    rows = [
+        {"id": str(item.get("id") or ""), "step": str(item.get("step") or "")}
+        for item in (open_rows if open_rows is not None else coverage_picks(config, state))
+    ]
     return {
         "name": canonical,
         "kind": "tool_call",
@@ -170,6 +257,7 @@ def _card(
         "hint": next_hint(canonical),
         "gaps": [dict(item) for item in gaps],
         "remaining": _remaining_names(gaps),
+        "open_rows": rows,
         "coverage": {
             "open": ledger["open"],
             "examined": ledger["examined"],
@@ -186,7 +274,12 @@ def _card(
     }
 
 
-def _model_pick(remaining: list[str], state: Mapping[str, Any]) -> Optional[str]:
+def _model_pick(
+    config: EngagementConfig,
+    state: Mapping[str, Any],
+    remaining: Sequence[str],
+    picks: Sequence[Mapping[str, Any]],
+) -> Optional[Dict[str, Any]]:
     try:
         from core.llm.provider import LLMProvider
     except ImportError:
@@ -196,7 +289,12 @@ def _model_pick(remaining: list[str], state: Mapping[str, Any]) -> Optional[str]
         return None
     from core.llm.prompts import ENGAGE_PICK_SYSTEM_PROMPT, envelope_intro, wrap_untrusted
 
+    allowed_steps = {str(item.get("step") or "") for item in picks if item.get("step")}
+    allowed_ids = {str(item.get("id") or ""): dict(item) for item in picks if item.get("id")}
+    if not allowed_steps:
+        return None
     cov = coverage(state)
+    tokens = ["%s -> %s" % (item.get("id"), item.get("step")) for item in picks]
     summary = {
         "has_recon": cov["recon"],
         "has_nuclei": cov["nuclei"],
@@ -205,12 +303,13 @@ def _model_pick(remaining: list[str], state: Mapping[str, Any]) -> Optional[str]
         "findings": cov["finding_count"],
         "unverified": len(_unverified(state)),
         "exported": cov["exported"],
+        "open_rows": [str(item.get("id") or "") for item in picks],
         "gaps": list(remaining),
     }
     nonce, framed = wrap_untrusted("state", str(summary))
     prompt = (
-        "Pick exactly one next engagement step from this list: "
-        + ", ".join(remaining)
+        "Pick exactly one open coverage token from this list: "
+        + ", ".join(tokens)
         + ".\n"
         + envelope_intro(nonce)
         + "\n"
@@ -223,7 +322,9 @@ def _model_pick(remaining: list[str], state: Mapping[str, Any]) -> Optional[str]
     if not isinstance(reply, str):
         return None
     token = reply.strip().split()[0] if reply.strip() else ""
+    if token in allowed_ids:
+        return allowed_ids[token]
     chosen = canonical_step(token)
-    if chosen in remaining:
-        return chosen
+    if chosen in allowed_steps:
+        return {"id": None, "kind": "step", "name": chosen, "step": chosen}
     return None

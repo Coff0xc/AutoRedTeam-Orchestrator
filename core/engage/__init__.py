@@ -17,11 +17,12 @@ from core.engage.juiceshop import (
     run_juice_shop_confirmation_rate,
     seed_findings,
 )
-from core.engage.ledger import COVERAGE_SCHEMA, build_coverage_ledger
+from core.engage.ledger import COVERAGE_SCHEMA, build_coverage_ledger, open_coverage_rows
 from core.engage.planner import (
     ENGAGE_STEPS,
     PLAN_STEPS,
     canonical_step,
+    coverage_picks,
     next_hint,
     open_gaps,
     plan_next,
@@ -55,6 +56,7 @@ __all__ = [
     "engagement_status",
     "execution_id",
     "canonical_step",
+    "coverage_picks",
     "host_from_target",
     "identify_juice_shop",
     "juice_shop_reachable",
@@ -71,6 +73,7 @@ __all__ = [
     "SCORECARD_SCHEMA",
     "WORLD_SCHEMA",
     "build_coverage_ledger",
+    "open_coverage_rows",
     "build_scorecard",
     "coverage",
     "ingest_step",

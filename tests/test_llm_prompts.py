@@ -40,6 +40,8 @@ def test_engage_pick_continues_in_scope_and_defers_hitl_to_code():
     assert "hitl" in text
     assert "not verification evidence" in text
     assert "engage.verify" in text
+    assert "open coverage" in text
+    assert "examined" in text
 
 
 def test_wrap_untrusted_neutralizes_nested_markers():

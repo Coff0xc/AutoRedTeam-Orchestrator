@@ -54,6 +54,18 @@ def build_coverage_ledger(config: EngagementConfig, state: Mapping[str, Any]) ->
     }
 
 
+def open_coverage_rows(ledger: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    """Return coverage rows whose status is open."""
+    rows = ledger.get("rows") if isinstance(ledger, Mapping) else None
+    if not isinstance(rows, list):
+        return []
+    return [
+        dict(row)
+        for row in rows
+        if isinstance(row, Mapping) and str(row.get("status") or "") == STATUS_OPEN
+    ]
+
+
 def _phase_row(
     phase: str, cov: Mapping[str, Any], state: Mapping[str, Any], phases: set[str]
 ) -> Dict[str, Any]:

@@ -129,6 +129,7 @@ def test_model_pick_frames_state_and_uses_authorized_system(monkeypatch):
     assert DATA_MARKER_STEM in captured["prompt"]
     assert "has_recon" in captured["prompt"]
     assert "detect_run" in captured["prompt"]
+    assert "phase:detect" in captured["prompt"]
 
 
 def test_model_pick_unknown_reply_keeps_heuristic(monkeypatch):
@@ -144,6 +145,82 @@ def test_model_pick_unknown_reply_keeps_heuristic(monkeypatch):
     state["recon"] = {"ok": True}
     card = plan_next(config, state, use_model=True)
     assert card["name"] == "detect_run"
+
+
+def test_model_pick_ignores_closed_coverage_rows(monkeypatch):
+    class FakeProvider:
+        available = True
+
+        def complete(self, prompt, system=""):
+            return "recon_run"
+
+    monkeypatch.setattr("core.llm.provider.LLMProvider", FakeProvider)
+    config = EngagementConfig(target="http://127.0.0.1:3000", profile="scan")
+    state = empty_state()
+    state["recon"] = {"ok": True}
+    card = plan_next(config, state, use_model=True)
+    ids = [row["id"] for row in card["open_rows"]]
+    assert card["name"] == "detect_run"
+    assert "phase:recon" not in ids
+    assert "phase:export" not in ids
+    assert "phase:detect" in ids
+
+
+def test_model_pick_ignores_unknown_and_out_of_scope_steps(monkeypatch):
+    class FakeProvider:
+        available = True
+
+        def complete(self, prompt, system=""):
+            return "exploit_run"
+
+    monkeypatch.setattr("core.llm.provider.LLMProvider", FakeProvider)
+    config = EngagementConfig(target="http://127.0.0.1:3000", profile="scan")
+    state = empty_state()
+    state["recon"] = {"ok": True}
+    card = plan_next(config, state, use_model=True)
+    assert card["name"] == "detect_run"
+
+
+def test_model_pick_can_select_open_finding_row(monkeypatch):
+    class FakeProvider:
+        available = True
+
+        def complete(self, prompt, system=""):
+            return "finding:http://127.0.0.1:3000/b|xss|q"
+
+    monkeypatch.setattr("core.llm.provider.LLMProvider", FakeProvider)
+    config = EngagementConfig(target="http://127.0.0.1:3000", profile="scan")
+    state = empty_state()
+    state["recon"] = {"ok": True}
+    state["findings"] = [
+        {"url": "http://127.0.0.1:3000/a", "vuln_type": "xss", "param": "q"},
+        {"url": "http://127.0.0.1:3000/b", "vuln_type": "xss", "param": "q"},
+    ]
+    card = plan_next(config, state, use_model=True)
+    assert card["name"] == "verify_finding"
+    assert card["inputs"]["finding"]["url"] == "http://127.0.0.1:3000/b"
+    assert any(row["id"].endswith("/b|xss|q") for row in card["open_rows"])
+
+
+def test_model_pick_prompt_lists_open_coverage_tokens(monkeypatch):
+    captured: dict[str, str] = {}
+
+    class FakeProvider:
+        available = True
+
+        def complete(self, prompt, system=""):
+            captured["prompt"] = prompt
+            return "phase:detect"
+
+    monkeypatch.setattr("core.llm.provider.LLMProvider", FakeProvider)
+    config = EngagementConfig(target="http://127.0.0.1:3000", profile="scan")
+    state = empty_state()
+    state["recon"] = {"ok": True}
+    card = plan_next(config, state, use_model=True)
+    assert card["name"] == "detect_run"
+    assert "phase:detect -> detect_run" in captured["prompt"]
+    assert "phase:recon" not in captured["prompt"]
+    assert "export_findings" not in captured["prompt"]
 
 
 @pytest.mark.asyncio
