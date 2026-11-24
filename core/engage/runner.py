@@ -95,10 +95,13 @@ def engagement_status(path: Optional[str | Path] = None) -> Dict[str, Any]:
     require_surface("engage_status")
     config = load_config(path)
     state = load_state(config)
+    from core.engage.ledger import build_coverage_ledger
+
     return {
         "success": True,
         "config": config.to_dict(),
         "state": public_state(state),
+        "coverage": build_coverage_ledger(config, state),
         "next": plan_next(config, state),
     }
 
@@ -310,8 +313,10 @@ async def _run(
         if isinstance(state.get("findings"), list)
         else []
     )
+    from core.engage.ledger import build_coverage_ledger
     from core.engage.scorecard import build_scorecard
 
+    ledger = build_coverage_ledger(config, state)
     return {
         "success": stopped is None,
         "passed": stopped is None and state.get("status") == "complete",
@@ -322,6 +327,7 @@ async def _run(
         "confirmed": confirmed,
         "findings": gated_findings,
         "scorecard": build_scorecard(gated_findings),
+        "coverage": ledger,
         "loop": {"processed": processed, "stopped": stopped, "max_steps": limit},
         "run_state": run_state.to_dict(),
         "summary": run_state.summary(),

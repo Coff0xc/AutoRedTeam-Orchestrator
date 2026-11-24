@@ -35,6 +35,7 @@ def ingest_step(
     flags = _merged_flags(state, name)
     findings = _compact_findings(state)
     output_dir = inputs.get("output_dir") or state.get("output_dir")
+    ports = _ports_from_payload(payload) if isinstance(payload, Mapping) else []
     if output_dir and target:
         path = world_file(str(output_dir))
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -42,7 +43,8 @@ def ingest_step(
             _persist(store, target, name, payload, flags, findings)
             index = snapshot(store, target, path)
     else:
-        index = _index_from_memory(target, flags, findings)
+        previous = state.get("world") if isinstance(state.get("world"), Mapping) else {}
+        index = _index_from_memory(target, flags, findings, ports=ports, previous=previous)
     state["world"] = index
     return index
 
@@ -56,6 +58,18 @@ def snapshot(store: SQLiteKnowledgeStore, target: str, path: Path | None = None)
     target_row = _match_target(targets, target)
     props = dict(target_row.get("properties") or {}) if target_row else {}
     unverified = [_finding_key(item.get("properties") or {}) for item in findings if _is_open(item)]
+    port_nums: List[int] = []
+    extra_facts: List[Dict[str, str]] = []
+    for item in facts:
+        if item.get("type") == "port":
+            number = _as_int(item.get("name"))
+            if number is not None:
+                port_nums.append(number)
+        else:
+            extra_facts.append(
+                {"kind": str(item.get("type") or "asset"), "name": str(item.get("name") or "")}
+            )
+    assets_index = _assets_index(target, port_nums, extra=extra_facts)
     return {
         "schema": WORLD_SCHEMA,
         "path": str(path) if path is not None else None,
@@ -70,6 +84,7 @@ def snapshot(store: SQLiteKnowledgeStore, target: str, path: Path | None = None)
         "findings": len(findings),
         "unverified": len(unverified),
         "unverified_index": unverified,
+        "assets_index": assets_index,
     }
 
 
@@ -240,7 +255,7 @@ def _finding_key(item: Mapping[str, Any]) -> Dict[str, Any]:
 def _is_open(entity: Mapping[str, Any]) -> bool:
     props = entity.get("properties") if isinstance(entity.get("properties"), Mapping) else {}
     status = str(props.get("verification_status") or "")
-    if status in {"verified", "dry_run"}:
+    if status in {"verified", "dry_run", "contradicted"}:
         return False
     if props.get("confidence_level") == _CONFIRMED:
         return False
@@ -248,9 +263,17 @@ def _is_open(entity: Mapping[str, Any]) -> bool:
 
 
 def _index_from_memory(
-    target: str, flags: Mapping[str, bool], findings: Sequence[Mapping[str, Any]]
+    target: str,
+    flags: Mapping[str, bool],
+    findings: Sequence[Mapping[str, Any]],
+    *,
+    ports: Sequence[int] | None = None,
+    previous: Mapping[str, Any] | None = None,
 ) -> Dict[str, Any]:
     unverified = [_finding_key(item) for item in findings if _finding_is_open(item)]
+    prev_assets = previous.get("assets_index") if isinstance(previous, Mapping) else None
+    assets_index = _assets_index(target, list(ports or []), previous=prev_assets)
+    port_count = sum(1 for item in assets_index if item.get("kind") == "port")
     return {
         "schema": WORLD_SCHEMA,
         "path": None,
@@ -261,18 +284,56 @@ def _index_from_memory(
         "nuclei": bool(flags.get("nuclei")),
         "exported": bool(flags.get("exported")),
         "assets": 1 if target else 0,
-        "facts": 0,
+        "facts": port_count,
         "findings": len(list(findings)),
         "unverified": len(unverified),
         "unverified_index": unverified,
+        "assets_index": assets_index,
     }
+
+
+def _assets_index(
+    target: str,
+    ports: Sequence[int],
+    previous: Any = None,
+    extra: Sequence[Mapping[str, Any]] | None = None,
+) -> List[Dict[str, str]]:
+    rows: List[Dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def _add(kind: str, name: str) -> None:
+        key = (kind, name)
+        if not name or key in seen:
+            return
+        seen.add(key)
+        rows.append({"kind": kind, "name": name})
+
+    if isinstance(previous, list):
+        for item in previous:
+            if isinstance(item, Mapping):
+                _add(str(item.get("kind") or "asset"), str(item.get("name") or ""))
+    if target:
+        _add("target", target)
+    for port in ports:
+        _add("port", str(port))
+    for item in extra or []:
+        if isinstance(item, Mapping):
+            _add(str(item.get("kind") or "asset"), str(item.get("name") or ""))
+    return rows
+
+
+def _as_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _finding_is_open(item: Mapping[str, Any]) -> bool:
     if item.get("engagement_verified") is True:
         return False
     status = str(item.get("verification_status") or "")
-    return status not in {"verified", "dry_run"}
+    return status not in {"verified", "dry_run", "contradicted"}
 
 
 def _ports_from_payload(payload: Mapping[str, Any]) -> List[int]:

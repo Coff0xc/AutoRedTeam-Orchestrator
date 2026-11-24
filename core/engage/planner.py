@@ -160,6 +160,9 @@ def _card(
     if canonical == "export_findings":
         inputs["output_dir"] = config.output_dir
     export = canonical in _EXPORT_STEPS
+    from core.engage.ledger import build_coverage_ledger
+
+    ledger = build_coverage_ledger(config, state)
     return {
         "name": canonical,
         "kind": "tool_call",
@@ -167,6 +170,13 @@ def _card(
         "hint": next_hint(canonical),
         "gaps": [dict(item) for item in gaps],
         "remaining": _remaining_names(gaps),
+        "coverage": {
+            "open": ledger["open"],
+            "examined": ledger["examined"],
+            "ruled_out": ledger["ruled_out"],
+            "total": ledger["total"],
+            "coverage_rate": ledger["coverage_rate"],
+        },
         "policy": {
             "risk_level": "low" if export else "moderate",
             "network_policy": "deny" if export else "controlled",

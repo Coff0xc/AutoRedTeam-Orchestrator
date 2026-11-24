@@ -9,6 +9,7 @@ from core.engage.config import (
     load_config,
     save_config,
 )
+from core.engage.ledger import COVERAGE_SCHEMA, build_coverage_ledger
 from core.engage.planner import (
     ENGAGE_STEPS,
     PLAN_STEPS,
@@ -52,8 +53,10 @@ __all__ = [
     "plan_next",
     "run_engagement",
     "save_config",
+    "COVERAGE_SCHEMA",
     "SCORECARD_SCHEMA",
     "WORLD_SCHEMA",
+    "build_coverage_ledger",
     "build_scorecard",
     "coverage",
     "ingest_step",

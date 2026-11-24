@@ -1051,7 +1051,7 @@ def engage_status_cmd(
     path: str = typer.Option(".autort/engage.yaml", "--path", help="Engagement YAML"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
-    """Show engagement state and the next planned step."""
+    """Show coverage denominator (examined / ruled_out / open) and the next step."""
     from core.engage import EngagementError, engagement_status
 
     _require_surface("engage_status")
@@ -1067,7 +1067,7 @@ def engage_next_cmd(
     path: str = typer.Option(".autort/engage.yaml", "--path", help="Engagement YAML"),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
 ):
-    """Print the next recon/detect/verify/export step without running it."""
+    """Print the next gap-filling aggregator step without running it."""
     from core.engage import EngagementError, engagement_next
 
     _require_surface("engage_next")
