@@ -3,9 +3,10 @@ kind: runtime_plan
 name: local-surface-audit
 mode: local
 max_steps: 8
-# Local allowlist only: ai_surface.scan, ai_surface.scan_skills,
+# Local audit allowlist: ai_surface.scan, ai_surface.scan_skills,
 # ai_surface.scan_mcp_config, skill.read, eval.document.
-# Paths are repo-relative. The loop does not call models or remote targets.
+# Aggregators: config/runtime.aggregators.example.yaml (dry-run).
+# Paths are repo-relative. The loop does not call models.
 
 steps:
   - name: ai_surface.scan

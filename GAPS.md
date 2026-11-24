@@ -70,6 +70,14 @@ Parent mixed-profile modules (`cve_handlers`, `ai_handlers`, `report_handlers`, 
 
 Default `AUTORT_LLM_PROVIDER` stays `none`. The planner is heuristic code. When a provider is set, `core/llm/prompts.py` prepends authorized-engagement rules and `wrap_untrusted` frames scan/state as a nonce `AUTORT_DATA` block (nested marker stems neutralized). Engage pick continues remaining in-scope steps; live `engage.verify` HITL stays in code; a HITL permit is not evidence. System prompts omit jailbreak strings so MCP03/`skill.prompt_injection` does not self-flag. Model refusal or an unknown step name falls back to the remaining list. This is refusal reduction plus injection framing. Default-open LLM driving attacks stays frozen. Tool-output injection at the MCP runtime stays out of band (MCP06/MCP10 limits above).
 
+## RuntimeLoop aggregators
+
+`autort runtime-api run` can dispatch `recon_run`, `detect_run`, `verify_finding`,
+`nuclei_scan`, and `export_findings`. Example: `config/runtime.aggregators.example.yaml`
+(dry-run). Live aggregator steps need `AUTORT_CAPABILITY_PROFILE=scan` and a target
+allowlist. CI still smokes the audit plan (`runtime.local.example.yaml --local --ci`).
+The heuristic 4-step engage FIFO is unchanged.
+
 ## Still open in the tree
 
 - Juice Shop live confirmation-rate demo

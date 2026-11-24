@@ -102,9 +102,12 @@ executor.
 - Runtime policy and sandbox metadata do not automatically move execution into a container.
 - The AI red-team runner produces planned attempts and `not_run` scores; it is not an autonomous
   target executor. The eval contract scores local scanners and instruction text against labels; it
-  does not probe live models. The runtime loop executes only allowlisted local steps
+  does not probe live models. The runtime loop executes allowlisted local audit steps
   (`ai_surface.scan`, `ai_surface.scan_skills`, `ai_surface.scan_mcp_config`, `skill.read`,
-  `eval.document`). Unknown steps, shells, and model calls fail closed.
+  `eval.document`) and, when enabled, resident aggregators (`recon_run`, `detect_run`,
+  `verify_finding`, `nuclei_scan`, `export_findings`). Aggregator dry-run does not
+  contact a target; live aggregator steps need `scan` and a target allowlist.
+  Unknown steps, shells, and model calls fail closed.
 - The CLI `capabilities matrix` reports source-structure comparisons and must not be interpreted as
   this product maturity matrix.
 - HTML, executive, and Markdown reports escape finding strings. JSON report files encode `<>&`

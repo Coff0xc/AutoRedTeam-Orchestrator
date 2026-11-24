@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- RuntimeLoop dispatches resident aggregators `recon_run`, `detect_run`, `verify_finding`, `nuclei_scan`, and `export_findings`. Dry-run records shared `engage_state` without target contact (`config/runtime.aggregators.example.yaml`). Live paths require the matching capability profile and target allowlist. Unknown steps, shells, and `model_call` still fail closed
 - `autort ai-surface ledger` (`autort.owasp.mcp/v1`): offline OWASP MCP Top 10 coverage map
 - Static mappings for MCP01 (`mcp.MCP01.secret-env-key`), MCP05 (`mcp.MCP05.general-command`), MCP07 (`mcp_tool.auth-*`), and MCP09 (`mcp.MCP09.remote-endpoint`)
 - [GAPS.md](GAPS.md): MCP08 stays a gap; MCP02 stays partial
