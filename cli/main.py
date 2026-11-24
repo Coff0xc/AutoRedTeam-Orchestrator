@@ -796,7 +796,10 @@ def runtime_api_run(
     ),
     ci: bool = typer.Option(False, "--ci", help="CI 模式: 循环未通过时返回非零退出码"),
 ):
-    """本地 runtime 循环 — 规划或执行 allowlist 步骤，不调用模型或外部目标"""
+    """本地 runtime 循环 — 审计 allowlist，或执行 recon_run/detect_run 等聚合器。
+
+    默认不调用模型。聚合器 dry-run 不碰目标；live 需要 scan 档案和目标 allowlist。
+    """
     from core.agent_runtime import run_runtime_path
 
     allow_local: Optional[bool]

@@ -1,8 +1,11 @@
 """Thin local runtime loop for planned agent actions.
 
 The loop walks pending actions through ``RuntimePipeline``, then either skips
-them (plan-only) or runs an allowlisted local step. It does not call models,
-shells, or remote targets, and it does not attach the P3 executor harness.
+them (plan-only) or runs an allowlisted step. Local audit steps stay
+zero-network. Resident aggregators (``recon_run``, ``detect_run``,
+``verify_finding``, ``nuclei_scan``, ``export_findings``) dry-run by default
+and only contact a target when ``dry_run`` is false. The loop does not call
+models, shells, or browsers, and it does not attach the P3 executor harness.
 """
 
 from __future__ import annotations
@@ -13,6 +16,7 @@ from typing import Any, Dict, List, Mapping, Optional
 
 import yaml
 
+from core.agent_runtime.aggregators import AGGREGATOR_STEPS, empty_aggregator_state
 from core.agent_runtime.middleware import RuntimePipeline
 from core.agent_runtime.models import (
     Action,
@@ -103,6 +107,7 @@ def run_runtime_path(
     allow_local: Optional[bool] = None,
     max_steps: Optional[int] = None,
     allow_engage: Optional[bool] = None,
+    allow_aggregators: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Load ``path`` and run it as a plan or an existing AgentRunState dump."""
     document_path = Path(path)
@@ -112,6 +117,7 @@ def run_runtime_path(
         max_steps=max_steps,
         base_dir=document_path.parent,
         allow_engage=allow_engage,
+        allow_aggregators=allow_aggregators,
     )
 
 
@@ -123,6 +129,7 @@ def run_runtime_document(
     base_dir: Optional[Path] = None,
     stop_on_block: Optional[bool] = None,
     allow_engage: Optional[bool] = None,
+    allow_aggregators: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Run a plan mapping or an AgentRunState mapping."""
     root = Path(base_dir) if base_dir is not None else Path.cwd()
@@ -142,6 +149,9 @@ def run_runtime_document(
             max_steps=int(max_steps if max_steps is not None else steps),
             stop_on_block=halt,
             allow_engage=_resolve_allow_engage(data, allow_engage=allow_engage, local=local),
+            allow_aggregators=_resolve_allow_aggregators(
+                data, allow_aggregators=allow_aggregators, local=local
+            ),
         ).run(state, base_dir=root)
     state = agent_run_state_from_dict(data)
     return RuntimeLoop(
@@ -149,6 +159,9 @@ def run_runtime_document(
         max_steps=int(max_steps if max_steps is not None else _DEFAULT_MAX_STEPS),
         stop_on_block=True if stop_on_block is None else bool(stop_on_block),
         allow_engage=_resolve_allow_engage(data, allow_engage=allow_engage, local=False),
+        allow_aggregators=_resolve_allow_aggregators(
+            data, allow_aggregators=allow_aggregators, local=False
+        ),
     ).run(state, base_dir=root)
 
 
@@ -163,6 +176,7 @@ class RuntimeLoop:
         stop_on_block: bool = True,
         pipeline: RuntimePipeline | None = None,
         allow_engage: bool = False,
+        allow_aggregators: bool = False,
     ) -> None:
         if max_steps < 1:
             raise ValueError("max_steps must be >= 1")
@@ -170,6 +184,7 @@ class RuntimeLoop:
         self.max_steps = int(max_steps)
         self.stop_on_block = bool(stop_on_block)
         self.allow_engage = bool(allow_engage)
+        self.allow_aggregators = bool(allow_aggregators)
         self.pipeline = pipeline or RuntimePipeline()
 
     def run(self, run_state: AgentRunState, *, base_dir: Optional[Path] = None) -> Dict[str, Any]:
@@ -211,6 +226,7 @@ class RuntimeLoop:
             action.mark_blocked(f"kind {action.kind.value} is not a local runtime step")
             return "forbidden_kind"
         engage_step = action.name in ENGAGE_STEPS and self.allow_engage
+        aggregator_step = action.name in AGGREGATOR_STEPS and self.allow_aggregators
         if engage_step:
             if action.policy.network_policy not in _NETWORK_OK:
                 action.mark_blocked("engage steps require network_policy deny|controlled|scoped")
@@ -218,7 +234,7 @@ class RuntimeLoop:
         elif action.policy.network_policy != "deny":
             action.mark_blocked("local runtime loop requires network_policy=deny")
             return "network"
-        if action.name not in LOCAL_STEPS and not engage_step:
+        if action.name not in LOCAL_STEPS and not engage_step and not aggregator_step:
             action.mark_blocked(f"unknown local step {action.name!r}; failing closed")
             return "unknown_step"
         try:
@@ -254,6 +270,7 @@ class RuntimeLoop:
         loop_meta = {
             "allow_local": self.allow_local,
             "allow_engage": self.allow_engage,
+            "allow_aggregators": self.allow_aggregators,
             "max_steps": self.max_steps,
             "processed": processed,
             "stopped": stopped,
@@ -335,12 +352,19 @@ def _dispatch(action: Action, run_state: AgentRunState, base_dir: Path) -> Dict[
         from core.engage.runner import dispatch_engage_step, empty_state
 
         engage_state = run_state.metadata.setdefault("engage_state", empty_state())
-        if "dry_run" in inputs:
-            dry_run = bool(inputs.get("dry_run"))
-        else:
-            dry_run = run_state.mode != RunMode.ACTIVE
-        return _await_engage(
-            dispatch_engage_step(action.name, inputs, engage_state, dry_run=dry_run)
+        return _await_coro(
+            dispatch_engage_step(
+                action.name, inputs, engage_state, dry_run=_step_dry_run(inputs, run_state)
+            )
+        )
+    if action.name in AGGREGATOR_STEPS:
+        from core.agent_runtime.aggregators import dispatch_aggregator_step
+
+        engage_state = run_state.metadata.setdefault("engage_state", empty_aggregator_state())
+        return _await_coro(
+            dispatch_aggregator_step(
+                action.name, inputs, engage_state, dry_run=_step_dry_run(inputs, run_state)
+            )
         )
     raise ValueError(f"unhandled local step {action.name!r}")
 
@@ -356,22 +380,40 @@ def _resolve_allow_engage(
 
 
 def _plan_has_engage(data: Mapping[str, Any]) -> bool:
+    return _plan_has_names(data, ENGAGE_STEPS)
+
+
+def _resolve_allow_aggregators(
+    data: Mapping[str, Any], *, allow_aggregators: Optional[bool], local: bool
+) -> bool:
+    if allow_aggregators is not None:
+        return bool(allow_aggregators)
+    if "allow_aggregators" in data:
+        return bool(data.get("allow_aggregators"))
+    return local and _plan_has_names(data, AGGREGATOR_STEPS)
+
+
+def _plan_has_names(data: Mapping[str, Any], names: frozenset[str]) -> bool:
     steps = data.get("steps")
     if not isinstance(steps, list):
         return False
-    return any(
-        isinstance(item, Mapping) and str(item.get("name") or "") in ENGAGE_STEPS for item in steps
-    )
+    return any(isinstance(item, Mapping) and str(item.get("name") or "") in names for item in steps)
 
 
-def _await_engage(coro):
+def _step_dry_run(inputs: Mapping[str, Any], run_state: AgentRunState) -> bool:
+    if "dry_run" in inputs:
+        return bool(inputs.get("dry_run"))
+    return run_state.mode != RunMode.ACTIVE
+
+
+def _await_coro(coro):
     import asyncio
 
     try:
         asyncio.get_running_loop()
     except RuntimeError:
         return asyncio.run(coro)
-    raise ValueError("engage runtime steps must run from a sync loop")
+    raise ValueError("runtime aggregator and engage steps must run from a sync loop")
 
 
 def _scan_surface(

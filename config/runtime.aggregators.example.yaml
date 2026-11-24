@@ -1,0 +1,30 @@
+schema: autort.runtime/v1
+kind: runtime_plan
+name: aggregator-dry-run
+mode: local
+max_steps: 8
+# Resident aggregators. dry_run skips target contact.
+# Live recon_run / detect_run / verify_finding / nuclei_scan need
+# AUTORT_CAPABILITY_PROFILE=scan and AUTORT_TARGET_ALLOWLIST.
+
+steps:
+  - name: recon_run
+    inputs:
+      target: http://127.0.0.1:9
+      modules: [port]
+      dry_run: true
+  - name: detect_run
+    inputs:
+      url: http://127.0.0.1:9
+      classes: [xss]
+      dry_run: true
+  - name: nuclei_scan
+    inputs:
+      url: http://127.0.0.1:9
+      dry_run: true
+  - name: verify_finding
+    inputs:
+      dry_run: true
+  - name: export_findings
+    inputs:
+      dry_run: true
