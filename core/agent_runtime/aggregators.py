@@ -391,7 +391,12 @@ async def _exec_verify_finding(inputs: Mapping[str, Any], state: Dict[str, Any])
         finding = _first_unverified(state)
     if finding is None:
         raise ValueError("verify_finding requires a finding object")
-    from core.evidence import assess_finding, enforce_evidence_gate, evidence_from_verification
+    from core.evidence import (
+        assess_finding,
+        enforce_evidence_gate,
+        evidence_from_verification,
+        receipt_from_results,
+    )
     from core.vuln_verifier import VulnerabilityVerifier
 
     url = _require_http_url(str(finding.get("url") or inputs.get("target") or ""))
@@ -407,20 +412,25 @@ async def _exec_verify_finding(inputs: Mapping[str, Any], state: Dict[str, Any])
     verifier = VulnerabilityVerifier(timeout=10)
     results = await asyncio.to_thread(verifier.batch_verify, [verify_input])
     evidence_items = [evidence_from_verification(item) for item in results]
+    receipt = receipt_from_results(results, finding=finding)
     verified = any(getattr(item, "is_vulnerable", False) is True for item in results)
-    status = "verified" if verified else "unverified"
     gate_input = dict(finding)
     gate_input["url"] = url
     gate_input["vuln_type"] = vuln_type
     gate_input["verified"] = verified
-    gate_input["verified_by"] = "vuln_verifier" if verified else gate_input.get("verified_by")
+    gate_input["provenance"] = receipt
+    if verified and receipt.get("bound"):
+        gate_input["verified_by"] = "vuln_verifier"
+    if evidence_items and evidence_items[0].confidence:
+        gate_input["confidence"] = evidence_items[0].confidence
     gate_input["evidence"] = [item.to_dict() for item in evidence_items]
-    assessment = assess_finding(gate_input)
-    gated, _assessment = enforce_evidence_gate(gate_input)
+    assessment = assess_finding(gate_input, require_receipt=True)
+    gated, _assessment = enforce_evidence_gate(gate_input, require_receipt=True)
     record = {
         **gated,
-        "verification_status": status,
-        "engagement_verified": verified,
+        "provenance": receipt,
+        "verification_status": assessment.status,
+        "engagement_verified": assessment.accepted(),
         "assessment": assessment.to_dict(),
     }
     _upsert_finding(state, record)

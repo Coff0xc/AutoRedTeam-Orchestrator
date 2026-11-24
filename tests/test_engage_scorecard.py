@@ -78,6 +78,7 @@ async def test_scorecard_confirms_raw_reflection_and_rejects_escaped(raw_lab, es
     confirmed["evidence"] = raw_data["evidence"]
     confirmed["verified_by"] = "vuln_verifier"
     confirmed["verification_status"] = raw_data["verification_status"]
+    confirmed["provenance"] = raw_data["provenance"]
 
     escaped_row = _self_report(f"{escaped_lab}?q=test")
     escaped_row["verified"] = bool(escaped_data.get("verified"))

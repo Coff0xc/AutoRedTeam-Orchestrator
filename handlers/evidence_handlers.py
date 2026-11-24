@@ -23,7 +23,7 @@ import time
 import urllib.request
 from typing import Any, Callable, Dict, List, Optional
 
-from core.evidence import assess_finding, evidence_from_verification
+from core.evidence import assess_finding, evidence_from_verification, receipt_from_results
 from core.result import ToolResult
 from core.security import require_moderate_auth
 from core.vuln_verifier import (
@@ -352,6 +352,7 @@ def register_evidence_tools(mcp, counter, logger):
 
         evidence_items = [evidence_from_verification(result) for result in results]
         evidence_payload = [item.to_dict() for item in evidence_items]
+        receipt = receipt_from_results(results, finding=finding)
 
         # 三态结论：OOB 未收到回调 / 没有可用验证器只算“未确认”，不是“已证伪”。
         verified = _classify_results(results)
@@ -363,16 +364,25 @@ def register_evidence_tools(mcp, counter, logger):
         gate_input["verified"] = verified
         gate_input["confidence"] = verification_confidence
         gate_input["evidence"] = evidence_payload
-        assessment = assess_finding(gate_input)
+        gate_input["provenance"] = receipt
+        if verified is True and receipt.get("bound"):
+            gate_input["verified_by"] = "vuln_verifier"
+        assessment = assess_finding(gate_input, require_receipt=True)
         for check in assessment.missing_checks:
             if check not in missing_checks:
                 missing_checks.append(check)
 
+        confirmed = verified is True and assessment.accepted()
         data = {
-            "verified": verified is True,
-            "verification_status": _verification_status(verified),
+            "verified": confirmed,
+            "verification_status": (
+                "verified"
+                if confirmed
+                else _verification_status(None if verified is True else verified)
+            ),
             "verification_confidence": verification_confidence,
             "evidence": evidence_payload,
+            "provenance": receipt,
             "assessment": assessment.to_dict(),
             "missing_checks": missing_checks,
         }

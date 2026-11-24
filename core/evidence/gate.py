@@ -400,23 +400,31 @@ def _has_provenance(finding: Dict[str, Any], items: List[EvidenceItem]) -> bool:
     explicit = finding.get("verified_by")
     if isinstance(explicit, str) and explicit.strip().lower() in PROVENANCE_SOURCES:
         return True
+    from core.evidence.provenance import is_bound
+
+    if is_bound(finding):
+        return True
     return any(item.method.strip() for item in items if isinstance(item.method, str))
 
 
 def assess_finding(
-    finding: Dict[str, Any], *, require_provenance: bool = True
+    finding: Dict[str, Any],
+    *,
+    require_provenance: bool = True,
+    require_receipt: bool = False,
 ) -> EvidenceAssessment:
     """判定一个 finding 的证据状态。判据严格如下：
 
     - contradicted: ``finding["verified"] is False``，或 confidence 是 "false_positive"
     - verified:     ``verified is True`` 且 confidence ∈ {"high","medium"} 且 evidence 非空
       **且**有独立验证来源（见 ``_has_provenance``）；``require_provenance=False``
-      时退回只看前三个条件
+      时退回只看前三个条件。``require_receipt=True`` 还要求绑定的
+      request/response 收据（``finding["provenance"].bound``）
     - 其它（包括没有 verified 字段、confidence 是数字但 < 0.7、或 confidence 缺失）: unverified
     - 数字 confidence：>= 0.7 视为 high，>= 0.4 视为 medium，否则 low
     - missing_checks 具体化，例如 "verified flag missing" / "no evidence attached" /
       "confidence below threshold" / "verification reported contradiction" /
-      "no independent verification provenance"
+      "no independent verification provenance" / "no bound request/response receipt"
 
     非 dict 输入退化成 unverified，不抛异常。
     """
@@ -459,6 +467,17 @@ def assess_finding(
                     "verification method"
                 ),
             )
+        if require_receipt:
+            from core.evidence.provenance import is_bound
+
+            if not is_bound(finding):
+                return EvidenceAssessment(
+                    status="unverified",
+                    confidence=level,
+                    evidence=items,
+                    missing_checks=["no bound request/response receipt"],
+                    reason="verification did not store a request/response receipt",
+                )
         return EvidenceAssessment(
             status="verified",
             confidence=level,
@@ -496,6 +515,7 @@ def enforce_evidence_gate(
     *,
     max_unverified_severity: str = "medium",
     require_provenance: bool = True,
+    require_receipt: bool = False,
 ) -> Tuple[Dict[str, Any], EvidenceAssessment]:
     """应用证据门禁，返回 (处理后的 finding 副本, assessment)。**不修改传入的字典**。
 
@@ -504,9 +524,12 @@ def enforce_evidence_gate(
       在 title/type/name 前加 "[UNCONFIRMED] "（幂等）；写入
       ``verification_status`` 与 ``missing_checks``。
     - ``require_provenance=False`` 时退回只看自述字段（仅供兼容旧行为，不推荐）。
+    - ``require_receipt=True`` 时还要求 ``provenance.bound`` 收据。
     - 任何奇怪输入（非 dict、字段类型不对）都退化成 unverified，不抛异常。
     """
-    assessment = assess_finding(finding, require_provenance=require_provenance)
+    assessment = assess_finding(
+        finding, require_provenance=require_provenance, require_receipt=require_receipt
+    )
     if not isinstance(finding, dict):
         return {}, assessment
 

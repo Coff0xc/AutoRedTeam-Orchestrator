@@ -413,7 +413,11 @@ async def _exec_verify(inputs: Mapping[str, Any], state: Dict[str, Any]) -> Dict
     finding = inputs.get("finding")
     if not isinstance(finding, dict):
         raise EngagementError("engage.verify requires a finding object")
-    from core.evidence import assess_finding, evidence_from_verification
+    from core.evidence import (
+        assess_finding,
+        evidence_from_verification,
+        receipt_from_results,
+    )
     from core.vuln_verifier import VulnerabilityVerifier
 
     url = str(finding.get("url") or inputs.get("target") or "")
@@ -426,18 +430,23 @@ async def _exec_verify(inputs: Mapping[str, Any], state: Dict[str, Any]) -> Dict
     verifier = VulnerabilityVerifier(timeout=10)
     results = await asyncio.to_thread(verifier.batch_verify, [verify_input])
     evidence_items = [evidence_from_verification(item) for item in results]
+    receipt = receipt_from_results(results, finding=finding)
     verified = any(getattr(item, "is_vulnerable", False) is True for item in results)
-    status = "verified" if verified else "unverified"
     gate_input = dict(finding)
     gate_input["verified"] = verified
-    gate_input["verified_by"] = "vuln_verifier" if verified else gate_input.get("verified_by")
+    gate_input["provenance"] = receipt
+    if verified and receipt.get("bound"):
+        gate_input["verified_by"] = "vuln_verifier"
+    if evidence_items and evidence_items[0].confidence:
+        gate_input["confidence"] = evidence_items[0].confidence
     gate_input["evidence"] = [item.to_dict() for item in evidence_items]
-    assessment = assess_finding(gate_input)
+    assessment = assess_finding(gate_input, require_receipt=True)
     gated = _gate_finding(gate_input)
     record = {
         **gated,
-        "verification_status": status,
-        "engagement_verified": verified,
+        "provenance": receipt,
+        "verification_status": assessment.status,
+        "engagement_verified": assessment.accepted(),
         "assessment": assessment.to_dict(),
     }
     findings = list(state.get("findings") or [])

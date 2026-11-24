@@ -171,6 +171,9 @@ def _persist(
             "verified_by": finding.get("verified_by") or "",
             "confidence_level": _CONFIRMED if confirmed else _TENTATIVE,
             "source_step": name,
+            "provenance_bound": bool(finding.get("provenance_bound")),
+            "body_sha256": str(finding.get("body_sha256") or ""),
+            "response_status": int(finding.get("response_status") or 0),
         }
         _upsert(store, finding_id, "finding", key["vuln_type"] or key["url"], props)
         _rel(
@@ -238,6 +241,13 @@ def _compact_findings(state: Mapping[str, Any]) -> List[Dict[str, Any]]:
         key["verification_status"] = item.get("verification_status") or ""
         key["verified_by"] = item.get("verified_by") or ""
         key["engagement_verified"] = bool(item.get("engagement_verified"))
+        provenance = item.get("provenance") if isinstance(item.get("provenance"), Mapping) else {}
+        key["provenance_bound"] = bool(provenance.get("bound"))
+        response = (
+            provenance.get("response") if isinstance(provenance.get("response"), Mapping) else {}
+        )
+        key["body_sha256"] = str(response.get("body_sha256") or "")
+        key["response_status"] = int(response.get("status") or 0)
         rows.append(key)
     return rows
 

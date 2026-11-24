@@ -117,6 +117,11 @@ def test_verify_promotes_finding_confidence(tmp_path: Path):
             "param": "q",
             "verification_status": "verified",
             "verified_by": "vuln_verifier",
+            "provenance": {
+                "bound": True,
+                "request": {"url": "http://127.0.0.1:9"},
+                "response": {"status": 200, "body_sha256": "abc", "body_preview": "<script>"},
+            },
         }
     ]
     ingest_step(
@@ -132,6 +137,10 @@ def test_verify_promotes_finding_confidence(tmp_path: Path):
         store.close()
     assert finding["properties"]["confidence_level"] == "confirmed"
     assert finding["properties"]["verified_by"] == "vuln_verifier"
+    assert finding["properties"]["provenance_bound"] is True
+    assert finding["properties"]["body_sha256"] == "abc"
+    assert finding["properties"]["response_status"] == 200
+    assert "body_preview" not in finding["properties"]
     assert state["world"]["unverified"] == 0
 
 

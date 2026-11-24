@@ -17,6 +17,7 @@ PROOF_NONE = "none"
 def build_scorecard(findings: Sequence[Mapping[str, Any]] | None) -> Dict[str, Any]:
     """Count evidence-gated findings. Detector self-reports stay unconfirmed."""
     from core.evidence import UNCONFIRMED_PREFIX, enforce_evidence_gate
+    from core.evidence.provenance import is_bound
 
     confirmed = 0
     unverified = 0
@@ -30,7 +31,7 @@ def build_scorecard(findings: Sequence[Mapping[str, Any]] | None) -> Dict[str, A
         status = str(gated.get("verification_status") or assessment.status or "unverified")
         if accepted:
             confirmed += 1
-            proof = PROOF_BOUND
+            proof = PROOF_BOUND if is_bound(gated) else PROOF_NONE
         elif status == "contradicted":
             contradicted += 1
             proof = PROOF_NONE

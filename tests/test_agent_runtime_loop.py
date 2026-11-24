@@ -398,7 +398,16 @@ def test_aggregator_live_detect_and_nuclei(monkeypatch):
 
 def test_aggregator_live_verify_finding(monkeypatch):
     class FakeResult:
+        vuln_type = "xss"
+        payload = "q=x"
+        url = "http://127.0.0.1:9/?q=x"
         is_vulnerable = True
+        confidence = "high"
+        evidence = "<html>reflected q=x</html>"
+        response_time = 0.01
+        response_code = 200
+        response_length = 24
+        verification_method = "reflected_xss"
 
     class FakeVerifier:
         def __init__(self, timeout=10):
@@ -438,6 +447,56 @@ def test_aggregator_live_verify_finding(monkeypatch):
     assert action["status"] == "completed"
     assert finding["verification_status"] == "verified"
     assert finding["verified_by"] == "vuln_verifier"
+    assert finding["provenance"]["bound"] is True
+    assert finding["provenance"]["request"]["url"]
+    assert finding["provenance"]["response"]["status"] == 200
+    assert finding["provenance"]["response"]["body_sha256"]
+
+
+def test_aggregator_verify_without_receipt_stays_unconfirmed(monkeypatch):
+    class FakeResult:
+        is_vulnerable = True
+        confidence = "high"
+        verification_method = "reflected_xss"
+
+    class FakeVerifier:
+        def __init__(self, timeout=10):
+            self.timeout = timeout
+
+        def batch_verify(self, items):
+            return [FakeResult()]
+
+    monkeypatch.setattr(
+        "core.agent_runtime.aggregators.require_surface", lambda *args, **kwargs: "scan"
+    )
+    monkeypatch.setattr("core.agent_runtime.aggregators.assert_in_scope", lambda target: None)
+    monkeypatch.setattr("core.vuln_verifier.VulnerabilityVerifier", FakeVerifier)
+
+    plan = {
+        "schema": RUNTIME_SCHEMA,
+        "mode": "local",
+        "steps": [
+            {
+                "name": "verify_finding",
+                "inputs": {
+                    "dry_run": False,
+                    "finding": {
+                        "url": "http://127.0.0.1:9",
+                        "vuln_type": "xss",
+                        "param": "q",
+                        "vulnerable": True,
+                    },
+                },
+            }
+        ],
+    }
+    result = run_runtime_document(plan, allow_local=True, base_dir=REPO_ROOT)
+    finding = result["run_state"]["flow"]["tasks"][0]["actions"][0]["output"]["finding"]
+
+    assert finding["provenance"]["bound"] is False
+    assert finding["verification_status"] != "verified"
+    assert finding["engagement_verified"] is False
+    assert finding.get("missing_checks")
 
 
 def test_aggregator_live_requires_scan_profile():

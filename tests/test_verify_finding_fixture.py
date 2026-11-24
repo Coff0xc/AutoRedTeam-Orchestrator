@@ -93,6 +93,9 @@ async def test_verify_finding_confirms_reflected_xss_on_local_lab(raw_lab):
     assert data["assessment"]["status"] == "verified"
     assert data["evidence"]
     assert any(item.get("method") for item in data["evidence"])
+    assert data["provenance"]["bound"] is True
+    assert data["provenance"]["request"]["url"]
+    assert data["provenance"]["response"]["body_sha256"]
 
 
 @pytest.mark.asyncio

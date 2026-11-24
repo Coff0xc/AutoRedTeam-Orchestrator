@@ -17,6 +17,12 @@ from core.evidence.models import (
     EvidenceAssessment,
     EvidenceItem,
 )
+from core.evidence.provenance import (
+    PROVENANCE_SCHEMA,
+    build_provenance_receipt,
+    is_bound,
+    receipt_from_results,
+)
 
 __all__ = [
     "EvidenceItem",
@@ -26,6 +32,10 @@ __all__ = [
     "enforce_evidence_gate",
     "UNCONFIRMED_PREFIX",
     "PROVENANCE_SOURCES",
+    "PROVENANCE_SCHEMA",
+    "build_provenance_receipt",
+    "is_bound",
+    "receipt_from_results",
     "EVIDENCE_KINDS",
     "CONFIDENCE_LEVELS",
 ]
