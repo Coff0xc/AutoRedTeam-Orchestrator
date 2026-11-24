@@ -923,6 +923,38 @@ def capabilities_profiles(
     _output(build_profiles(), output)
 
 
+@capabilities_app.command("grants")
+def capabilities_grants(
+    path: Optional[str] = typer.Option(
+        None, "--path", help="Grant log JSON (default AUTORT_GRANT_LOG)"
+    ),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+):
+    """Show the tool_enable catalog grant ledger. Missing files are empty."""
+    from core.capability_grants import (
+        GRANT_LOG_ENV,
+        GrantLedgerError,
+        empty_grant_document,
+        grant_log_path,
+        grant_snapshot,
+        load_grants,
+    )
+
+    log_path = Path(path) if path else grant_log_path()
+    if log_path is None:
+        payload = empty_grant_document()
+        payload["log"] = GRANT_LOG_ENV
+        _output(payload, output)
+        return
+    try:
+        payload = grant_snapshot(load_grants(log_path))
+    except GrantLedgerError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(2) from exc
+    payload["log"] = str(log_path)
+    _output(payload, output)
+
+
 @capabilities_app.command("auth-key")
 def capabilities_auth_key(
     name: str = typer.Option("operator", "--name", "-n", help="Key label"),

@@ -4,6 +4,7 @@
 测试 handlers/misc_handlers.py 中的工具注册和执行
 """
 
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -97,6 +98,61 @@ async def test_tool_enable_rejects_unknown_kind():
     data = result.get("data", result)
     assert result["success"] is False
     assert "kind must be tool, prompt, or resource" in str(data.get("error") or data)
+
+
+@pytest.mark.asyncio
+async def test_tool_enable_records_catalog_grant_and_respects_budget(monkeypatch, tmp_path):
+    from core.capability_grants import GRANT_BUDGET_ENV, GRANT_LOG_ENV, GRANT_SCHEMA
+    from handlers.misc_handlers import register_misc_tools
+
+    registered_tools = {}
+    log_path = tmp_path / "grants.json"
+    monkeypatch.setenv(GRANT_LOG_ENV, str(log_path))
+    monkeypatch.setenv(GRANT_BUDGET_ENV, "1")
+
+    class StubMCP:
+        capability_profile = "scan"
+        _autort_catalog = {
+            ("tool", "jwt_scan"): (lambda **kwargs: {"ok": True}),
+            ("tool", "session_list"): (lambda **kwargs: {"ok": True}),
+        }
+
+        def tool(self, **kwargs):
+            def decorator(func):
+                registered_tools[func.__name__] = func
+                if kwargs.get("name"):
+                    registered_tools[str(kwargs["name"])] = func
+                return func
+
+            return decorator
+
+        def prompt(self, **kwargs):
+            def decorator(func):
+                return func
+
+            return decorator
+
+    mcp = StubMCP()
+    register_misc_tools(mcp, MagicMock(), MagicMock())
+    enable = registered_tools["tool_enable"]
+
+    first = await enable(name="jwt_scan")
+    data = first["data"]
+    assert first["success"] is True
+    assert data["grants"]["schema"] == GRANT_SCHEMA
+    assert data["grants"]["count"] == 1
+    assert data["grants"]["grants"][0]["name"] == "jwt_scan"
+
+    replay = await enable(name="jwt_scan")
+    assert replay["success"] is True
+    assert replay["data"]["grants"]["count"] == 1
+
+    blocked = await enable(name="session_list")
+    assert blocked["success"] is False
+    assert GRANT_BUDGET_ENV in str(blocked.get("error") or blocked.get("data"))
+    assert "session_list" not in registered_tools
+    saved = json.loads(log_path.read_text(encoding="utf-8"))
+    assert saved["count"] == 1
 
 
 @pytest.mark.asyncio

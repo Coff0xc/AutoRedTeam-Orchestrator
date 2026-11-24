@@ -302,6 +302,13 @@ class TestCLIHelpRest:
         assert result.exit_code == 0
         assert "AUTOREDTEAM_API_KEY" in result.output
 
+    def test_capabilities_grants_help(self):
+        from cli.main import app
+
+        result = runner.invoke(app, ["capabilities", "grants", "--help"])
+        assert result.exit_code == 0
+        assert "AUTORT_GRANT_LOG" in result.output
+
     def test_no_args_shows_help(self):
         """无参数调用应显示帮助/用法信息"""
         from cli.main import app

@@ -545,6 +545,9 @@ async def test_tool_enable_registers_catalog_detector():
 
     names = {item.name for item in await mcp.list_tools()}
     assert "sqli_scan" in names
+    grants = data.get("grants") or inner.get("grants") or {}
+    assert grants.get("count") == 1
+    assert grants.get("grants", [{}])[0].get("name") == "sqli_scan"
 
 
 @pytest.mark.asyncio

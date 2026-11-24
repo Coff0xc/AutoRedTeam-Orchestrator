@@ -36,7 +36,8 @@ OWASP_MCP_ENTRIES: Tuple[Dict[str, Any], ...] = (
         "rules": ("mcp_tool.effect-mismatch",),
         "notes": (
             "Capability profiles plus declared_effects_omit_target_contact. "
-            "No runtime monitor of growing grants."
+            "tool_enable writes autort.capability.grants/v1; AUTORT_GRANT_BUDGET "
+            "caps new catalog enables. Third-party MCP grant growth is unread."
         ),
     },
     {

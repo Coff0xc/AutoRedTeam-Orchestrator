@@ -90,15 +90,32 @@ def register_misc_tools(mcp, counter, logger):
         invoke: Dict[str, Any] = {capability.kind: capability.name}
         if capability.kind == "resource" and capability.locator:
             invoke["locator"] = capability.locator
+        from core.capability_grants import (
+            GrantBudgetExceeded,
+            GrantLedgerError,
+            bind_grant_store,
+            grant_budget,
+            grant_log_path,
+            grant_snapshot,
+            record_catalog_grant,
+        )
+
+        inner = getattr(mcp, "_mcp", mcp)
+        try:
+            budget = grant_budget()
+            log_path = grant_log_path()
+            grants = bind_grant_store(inner)
+        except GrantLedgerError as exc:
+            return {"success": False, "error": str(exc)}
         if capability.resident:
             return {
                 "success": True,
                 "enabled": True,
                 "resident": True,
                 "invoke": invoke,
+                "grants": grant_snapshot(grants),
             }
 
-        inner = getattr(mcp, "_mcp", mcp)
         catalog = getattr(inner, "_autort_catalog", None)
         if not isinstance(catalog, dict):
             catalog = {}
@@ -118,6 +135,13 @@ def register_misc_tools(mcp, counter, logger):
             enabled = set()
             setattr(inner, "_autort_enabled", enabled)
         if key not in enabled:
+            if budget is not None and len(grants) >= budget:
+                err = GrantBudgetExceeded(budget=budget, count=len(grants), name=capability.name)
+                return {
+                    "success": False,
+                    "error": str(err),
+                    "grants": grant_snapshot(grants),
+                }
             description = capability.public_description()
             if capability.kind == "tool":
                 inner.tool(name=capability.name, description=description)(func)
@@ -138,11 +162,13 @@ def register_misc_tools(mcp, counter, logger):
                     mime_type="application/json",
                 )(func)
             enabled.add(key)
+            record_catalog_grant(grants, capability, profile, log_path=log_path)
         return {
             "success": True,
             "enabled": True,
             "resident": False,
             "invoke": invoke,
+            "grants": grant_snapshot(grants),
         }
 
     @tool(mcp)

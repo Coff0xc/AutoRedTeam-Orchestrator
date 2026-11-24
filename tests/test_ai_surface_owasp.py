@@ -24,6 +24,8 @@ def test_ledger_covers_ten_ids_and_keeps_mcp08_a_gap():
     assert by_id["MCP08"]["rules"] == []
     assert "stdio" in by_id["MCP08"]["notes"].lower()
     assert by_id["MCP02"]["status"] == "partial"
+    assert "autort.capability.grants/v1" in by_id["MCP02"]["notes"]
+    assert "AUTORT_GRANT_BUDGET" in by_id["MCP02"]["notes"]
     assert by_id["MCP01"]["status"] == "implemented"
     assert by_id["MCP05"]["status"] == "implemented"
     assert by_id["MCP07"]["status"] == "implemented"
