@@ -296,7 +296,7 @@ def cve_search(
 # ──────────────────────────── pentest ────────────────────────────
 
 
-@app.command()
+@app.command(hidden=True)
 def pentest(
     target: str = typer.Argument(..., help="目标 URL"),
     phases: Optional[str] = typer.Option(

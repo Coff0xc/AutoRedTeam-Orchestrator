@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 from core.agent_runtime import (
     AGGREGATOR_STEPS,
+    ENGAGE_STEPS,
     LOCAL_STEPS,
     MODEL_STEPS,
     RUNTIME_SCHEMA,
@@ -95,6 +96,40 @@ def test_unknown_step_and_forbidden_kind_fail_closed():
     assert "unknown local step" in actions[0]["error"]
     assert actions[1]["status"] == "blocked"
     assert "model_call" in actions[1]["error"]
+
+
+def test_planning_names_fail_closed_as_unknown_steps():
+    names = (
+        "smart_analyze",
+        "attack_chain_plan",
+        "plan_attack_path",
+        "kg_attack_paths",
+        "auto_pentest",
+    )
+    for name in names:
+        assert name not in LOCAL_STEPS
+        assert name not in ENGAGE_STEPS
+        assert name not in AGGREGATOR_STEPS
+        assert name not in MODEL_STEPS
+    plan = {
+        "schema": RUNTIME_SCHEMA,
+        "mode": "local",
+        "steps": [{"name": name, "inputs": {}} for name in names],
+    }
+    result = run_runtime_document(
+        plan,
+        allow_local=True,
+        allow_engage=True,
+        stop_on_block=False,
+        base_dir=REPO_ROOT,
+    )
+    actions = result["run_state"]["flow"]["tasks"][0]["actions"]
+
+    assert result["passed"] is False
+    assert [item["name"] for item in actions] == list(names)
+    for item in actions:
+        assert item["status"] == "blocked"
+        assert "unknown local step" in item["error"]
 
 
 def test_engage_step_runs_when_allowed():

@@ -21,6 +21,10 @@ _CATALOG_CANARIES = (
     "attack_chain_plan",
     "plan_pentest",
     "payload_library",
+    "smart_analyze",
+    "plan_attack_path",
+    "kg_attack_paths",
+    "auto_pentest",
 )
 
 

@@ -91,7 +91,14 @@ if manifest.get("profile") != "safe":
     fail(f"profile is {manifest.get('profile')!r}")
 if "cve_search" not in names:
     fail("safe manifest is missing cve_search")
-for hidden in ("auto_pentest", "exploit_vulnerability"):
+for hidden in (
+    "auto_pentest",
+    "exploit_vulnerability",
+    "smart_analyze",
+    "attack_chain_plan",
+    "plan_attack_path",
+    "kg_attack_paths",
+):
     if hidden in names:
         fail(f"safe manifest includes {hidden}")
 

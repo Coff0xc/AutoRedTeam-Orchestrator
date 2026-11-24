@@ -47,6 +47,25 @@ class TestCLIHelp:
         assert "runtime-api" not in result.output
         assert "code-agent" not in result.output
         assert "sandbox" not in result.output
+        assert "pentest" not in result.output
+        for name in (
+            "smart_analyze",
+            "attack_chain_plan",
+            "plan_attack_path",
+            "kg_attack_paths",
+            "auto_pentest",
+        ):
+            assert name not in result.output
+        from typer.main import get_command
+
+        command = get_command(app)
+        visible = {name for name, cmd in command.commands.items() if not cmd.hidden}
+        assert "ai-surface" in visible
+        assert "capabilities" in visible
+        assert "skills" in visible
+        assert "engage" in visible
+        assert "pentest" not in visible
+        assert "pentest" in command.commands
 
     def test_scan_help(self):
         """scan --help 应返回成功"""
@@ -69,6 +88,8 @@ class TestCLIHelp:
 
         result = runner.invoke(app, ["pentest", "--help"])
         assert result.exit_code == 0
+        assert "Experimental" in result.output
+        assert "full" in result.output
 
     def test_ai_surface_help(self):
         """ai-surface scan --help 应返回成功"""

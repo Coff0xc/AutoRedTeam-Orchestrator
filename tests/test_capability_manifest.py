@@ -331,6 +331,16 @@ def test_factory_detector_tools_are_catalog_only():
     assert get_capability("tool", "session_list").resident is False
     assert get_capability("tool", "session_complete").resident is False
     assert get_capability("tool", "lateral_ssh").resident is False
+    for name in (
+        "smart_analyze",
+        "attack_chain_plan",
+        "plan_attack_path",
+        "kg_attack_paths",
+        "auto_pentest",
+    ):
+        cap = get_capability("tool", name)
+        assert cap.resident is False
+        assert (cap.kind, cap.name) not in RESIDENT_SURFACES
 
 
 @pytest.mark.asyncio
@@ -449,6 +459,31 @@ def test_search_surfaces_points_catalog_exploit_at_exploit_run():
     pentest = search_surfaces("auto_pentest", profile="full", kind="tool", limit=12)
     pentest_card = {item["name"]: item for item in pentest["matches"]}["auto_pentest"]
     assert pentest_card["invoke"] == {"tool": "tool_enable", "name": "auto_pentest"}
+
+
+def test_planning_surfaces_are_catalog_only_and_still_searchable():
+    planning = (
+        ("smart_analyze", "scan"),
+        ("attack_chain_plan", "active-lab"),
+        ("plan_attack_path", "full"),
+        ("kg_attack_paths", "full"),
+        ("auto_pentest", "full"),
+    )
+    for name, profile in planning:
+        cap = get_capability("tool", name)
+        assert cap.resident is False
+        assert (cap.kind, cap.name) not in RESIDENT_SURFACES
+        assert cap.allowed_in(profile)
+        assert not cap.allowed_in("safe")
+        safe = search_surfaces(name, profile="safe", kind="tool", limit=12)
+        assert name not in {item["name"] for item in safe["matches"]}
+        if cap.handler in {"orchestration", "cve"}:
+            # auto_pentest invoke card is pinned on the exploit search test
+            continue
+        found = search_surfaces(name, profile=profile, kind="tool", limit=12)
+        card = {item["name"]: item for item in found["matches"]}[name]
+        assert card["resident"] is False
+        assert card["invoke"] == {"tool": "tool_enable", "name": name}
 
 
 def test_search_surfaces_points_long_tail_at_tool_enable():
