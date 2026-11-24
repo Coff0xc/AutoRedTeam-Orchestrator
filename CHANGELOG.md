@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `tool_enable` grant ledger (`autort.capability.grants/v1`): catalog unlocks are recorded in-process, optionally persisted with `AUTORT_GRANT_LOG`, and capped with `AUTORT_GRANT_BUDGET`. Resident surfaces do not consume the budget. Replay of the same (kind, name) does not duplicate. `autort capabilities grants` reads the log. Third-party MCP grant growth stays unread. MCP02 remains partial
 - RuntimeLoop `MODEL_CALL` is only `engage.pick` via `core.llm.provider.LLMProvider`. It picks among coverage-open, currently actionable steps. `AUTORT_LLM_PROVIDER=none` fail-closes. Shell and browser kinds stay blocked. Unknown `model_call` names stay blocked
 - Aggregator idempotent execution ledger: `tool_execution_id` is sha256(name, inputs, dry_run). A completed id is replayed and does not re-run the engine. Failures are not recorded, so a retry still executes. Doom-loop still stops after three identical planner fingerprints that do not close a gap
 - Engage model pick is limited to coverage ledger open rows that map to currently actionable steps. The model may reply with a row id (`phase:detect`, `finding:url|type|param`) or a step name. Examined/ruled_out rows, `export_findings` while verify is open, and unknown names (`exploit_run`) are ignored. Default `AUTORT_LLM_PROVIDER` stays `none`

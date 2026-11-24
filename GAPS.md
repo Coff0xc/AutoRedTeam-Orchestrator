@@ -11,7 +11,7 @@ Offline map: `autort ai-surface ledger` (`autort.owasp.mcp/v1`). `network` is fa
 | ID | Status | Coverage | Limit |
 |---|---|---|---|
 | MCP01 Token Mismanagement & Secret Exposure | implemented | static | Env *names* and secret literals in schemas/skills. Values are unread. |
-| MCP02 Privilege Escalation via Scope Creep | partial | partial | Capability profiles plus `declared_effects_omit_target_contact`. No runtime monitor of growing grants. |
+| MCP02 Privilege Escalation via Scope Creep | partial | partial | Capability profiles plus `declared_effects_omit_target_contact`. `tool_enable` writes `autort.capability.grants/v1`; `AUTORT_GRANT_BUDGET` caps new catalog enables. Third-party MCP grant growth is unread. |
 | MCP03 Tool Poisoning | implemented | static | Description-as-instruction and hidden unicode. Drift is `ai-surface diff --ci`. |
 | MCP04 Supply Chain & Dependency Tampering | implemented | static | Unpinned npx/uvx/pip and remote skill install steps. No package-registry query. |
 | MCP05 Command Injection & Execution | implemented | static | Flags powershell/pwsh/cmd/bash/sh/python/node as a general interpreter. |
@@ -22,6 +22,10 @@ Offline map: `autort ai-surface ledger` (`autort.owasp.mcp/v1`). `network` is fa
 | MCP10 Context Injection & Over-Sharing | implemented | static | Overlong tool text and secret literals in schema strings. Cross-task context is out of band. |
 
 `mcp.MCP10.secret-in-schema` is shared between MCP01 and MCP10. Handler auth keeps rule ids `mcp_tool.auth-critical` / `mcp_tool.auth-missing`. Effect mismatch keeps `mcp_tool.effect-mismatch`.
+
+## Catalog grants
+
+`tool_enable` records catalog unlocks as `autort.capability.grants/v1`. Resident surfaces do not consume `AUTORT_GRANT_BUDGET`. Unset budget is unlimited. `0` denies new catalog enables. `AUTORT_GRANT_LOG` persists the ledger. `autort capabilities grants --path` reads it. This is an in-process monitor of this server's catalog enables. It does not read another MCP server's grants.
 
 MCP08 stays a gap on purpose. A runtime TOFU/stdio wrapper is out of scope for this increment.
 

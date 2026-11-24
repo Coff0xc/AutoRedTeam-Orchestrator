@@ -310,7 +310,7 @@ Unchanged tools are left out. Parameter order alone is not a change. Each report
 
 ### OWASP MCP Top 10
 
-`autort ai-surface ledger` prints the offline coverage map (`autort.owasp.mcp/v1`). MCP08 (Lack of Audit and Telemetry) is a documented gap. MCP02 is partial. The table lives in [GAPS.md](GAPS.md).
+`autort ai-surface ledger` prints the offline coverage map (`autort.owasp.mcp/v1`). MCP08 (Lack of Audit and Telemetry) is a documented gap. MCP02 is partial: this server records `tool_enable` grants and can cap them; it does not read another MCP server's grants. The table lives in [GAPS.md](GAPS.md).
 
 ## When a result counts
 
@@ -376,6 +376,7 @@ These do not contact a target. CVE search reads the local notes.
 | `ai-surface diff` | What changed since a saved scan | `autort ai-surface diff --baseline tests/fixtures/ai_surface/handlers.baseline.json --path handlers --ci` |
 | `capabilities profiles` | The four levels and their counts | `autort capabilities profiles` |
 | `capabilities manifest` | One level, as data | `autort capabilities manifest --profile safe` |
+| `capabilities grants` | Catalog `tool_enable` ledger (`autort.capability.grants/v1`) | `autort capabilities grants --path .autort/grants.json` |
 | `tools lint` | A contract check of the same parse | `autort tools lint --path handlers` |
 | `cve-search` | Local CVE search | `autort cve-search "Log4j" --severity critical --has-poc -n 20` |
 | `skills catalog` | Pinned SKILL.md packs (URL, sha, license) | `autort skills catalog` |
@@ -392,7 +393,7 @@ These do not contact a target. CVE search reads the local notes.
 | Group | Commands | What it is |
 |---|---|---|
 | `ai-surface` | `scan`, `inventory`, `ledger`, `scan-mcp-config`, `scan-skills`, `diff` | The reader |
-| `capabilities` | `matrix`, `readiness`, `manifest`, `profiles` | The allowed list |
+| `capabilities` | `matrix`, `readiness`, `manifest`, `profiles`, `grants` | The allowed list |
 | `tools` | `lint` | Contract check |
 | `skills` | `catalog`, `read` | Pinned SKILL.md packs. Read-only |
 | `engage` | `init`, `status`, `next`, `run`, `resume` | One authorized target. Plan on `safe`, run on `scan` |
