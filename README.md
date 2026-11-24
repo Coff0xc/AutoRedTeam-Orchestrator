@@ -381,7 +381,7 @@ These do not contact a target. CVE search reads the local notes.
 | `skills read` | Scan a local checkout, then print SKILL.md if it is not critical | `autort skills read --path ./skills/recon` |
 | `engage init` | Write `.autort/engage.yaml` and print the next step | `autort engage init http://127.0.0.1:3000 --profile scan` |
 | `engage status` | Config, finding counts, next step | `autort engage status` |
-| `engage next` | Next recon/detect/verify/export card | `autort engage next` |
+| `engage next` | Next gap-filling aggregator card | `autort engage next` |
 | `engage run --dry-run` | Walk the loop without contacting the host | `autort engage run --dry-run --ci` |
 | `version` | The version string | `autort version` |
 

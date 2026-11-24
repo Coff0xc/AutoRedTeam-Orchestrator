@@ -55,6 +55,7 @@ executor.
 - Metadata, local session state, SDK/CLI import, and schema development.
 - Default MCP server profile; no target network access or host command execution is registered.
 - Engagement plan tools (`engage_init`, `engage_status`, `engage_next`) and `engage run --dry-run`.
+  `engage_next` / `plan_next` return aggregator steps from open state gaps.
 
 ### Scan
 

@@ -76,7 +76,8 @@ Default `AUTORT_LLM_PROVIDER` stays `none`. The planner is heuristic code. When 
 `nuclei_scan`, and `export_findings`. Example: `config/runtime.aggregators.example.yaml`
 (dry-run). Live aggregator steps need `AUTORT_CAPABILITY_PROFILE=scan` and a target
 allowlist. CI still smokes the audit plan (`runtime.local.example.yaml --local --ci`).
-The heuristic 4-step engage FIFO is unchanged.
+`plan_next` emits those aggregator names from open state gaps. Findings skip recon.
+Unverified findings block export. `nuclei` is an optional phase, not a default.
 
 ## Still open in the tree
 
