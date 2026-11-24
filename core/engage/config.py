@@ -15,7 +15,7 @@ ENGAGE_SCHEMA = "autort.engage/v1"
 DEFAULT_CONFIG_PATH = Path(".autort") / "engage.yaml"
 DEFAULT_STATE_PATH = Path(".autort") / "state.json"
 DEFAULT_PHASES = ("recon", "detect", "verify", "export")
-ALLOWED_PHASES = frozenset(DEFAULT_PHASES)
+ALLOWED_PHASES = frozenset((*DEFAULT_PHASES, "nuclei"))
 ALLOWED_HITL = frozenset({"off", "approval", "review_edit"})
 
 

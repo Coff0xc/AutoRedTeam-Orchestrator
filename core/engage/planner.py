@@ -1,12 +1,14 @@
-"""Heuristic next-action planner for an engagement.
+"""Gap-driven next-action planner for an engagement.
 
-The planner is code, not a model. An optional LLM suggestion may pick among
-the remaining legal steps; unknown suggestions are ignored.
+The planner is code, not a model. It reads open gaps from engagement state
+(missing recon/detect/nuclei, unverified findings, missing export) and returns
+one aggregator step. An optional LLM suggestion may pick among those open gaps;
+unknown suggestions are ignored.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from core.engage.config import EngagementConfig
 
@@ -17,12 +19,38 @@ ENGAGE_STEPS = (
     "engage.export",
 )
 
-_NEXT_HINT = {
-    "engage.recon": "After recon, run engage.detect (or detect_run).",
-    "engage.detect": "After detection, run engage.verify (or verify_finding) on each finding.",
-    "engage.verify": "After verify, export confirmed findings with engage.export.",
-    "engage.export": "Engagement is complete when export succeeds.",
+PLAN_STEPS = (
+    "recon_run",
+    "detect_run",
+    "nuclei_scan",
+    "verify_finding",
+    "export_findings",
+)
+
+STEP_ALIASES = {
+    "engage.recon": "recon_run",
+    "engage.detect": "detect_run",
+    "engage.verify": "verify_finding",
+    "engage.export": "export_findings",
+    "engage.nuclei": "nuclei_scan",
 }
+
+_NEXT_HINT = {
+    "recon_run": "After recon, run detect_run (or engage.detect).",
+    "detect_run": "After detection, run verify_finding on each unverified finding.",
+    "nuclei_scan": "After nuclei, verify unverified findings or export.",
+    "verify_finding": "After verify, export confirmed findings with export_findings.",
+    "export_findings": "Engagement is complete when export succeeds.",
+}
+
+_VERIFY_STEPS = frozenset({"verify_finding", "engage.verify"})
+_EXPORT_STEPS = frozenset({"export_findings", "engage.export"})
+
+
+def canonical_step(name: str) -> str:
+    """Map an engage.* alias to the resident aggregator name."""
+    key = str(name or "").strip()
+    return STEP_ALIASES.get(key, key)
 
 
 def plan_next(
@@ -31,34 +59,72 @@ def plan_next(
     *,
     use_model: bool = False,
 ) -> Optional[Dict[str, Any]]:
-    """Return the next engage step, or None when the run is finalizable."""
-    remaining = list(_heuristic_queue(config, state))
-    if not remaining:
+    """Return the next aggregator step, or None when no gaps remain."""
+    gaps = open_gaps(config, state)
+    if not gaps:
         return None
+    remaining = _remaining_names(gaps)
     chosen = remaining[0]
     if use_model or config.use_model:
         suggested = _model_pick(remaining, state)
         if suggested is not None:
             chosen = suggested
-    return _card(chosen, config, state)
+    return _card(chosen, config, state, gaps)
 
 
 def next_hint(step: str) -> str:
-    return _NEXT_HINT.get(step, "Search the catalog with tool_search.")
+    return _NEXT_HINT.get(canonical_step(step), "Search the catalog with tool_search.")
 
 
-def _heuristic_queue(config: EngagementConfig, state: Mapping[str, Any]) -> tuple[str, ...]:
+def open_gaps(config: EngagementConfig, state: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    """Open coverage gaps in priority order. Only currently actionable steps."""
     phases = set(config.phases)
-    queue: list[str] = []
-    if "recon" in phases and not state.get("recon"):
-        queue.append("engage.recon")
+    findings = state.get("findings")
+    has_findings_list = isinstance(findings, list)
+    unverified = _unverified(state) if "verify" in phases else []
+    gaps: List[Dict[str, Any]] = []
+
+    if "recon" in phases and not state.get("recon") and not has_findings_list:
+        gaps.append({"step": "recon_run", "reason": "missing_recon"})
+    if "detect" in phases and findings is None:
+        gaps.append({"step": "detect_run", "reason": "missing_detect"})
+    if "nuclei" in phases and not state.get("nuclei") and _nuclei_surface(state, phases):
+        gaps.append({"step": "nuclei_scan", "reason": "missing_nuclei"})
+    if unverified:
+        gaps.append(
+            {
+                "step": "verify_finding",
+                "reason": "unverified_findings",
+                "count": len(unverified),
+            }
+        )
+    if (
+        "export" in phases
+        and not state.get("exported")
+        and _export_ready(phases, state, unverified)
+    ):
+        gaps.append({"step": "export_findings", "reason": "missing_export"})
+    return gaps
+
+
+def _nuclei_surface(state: Mapping[str, Any], phases: set[str]) -> bool:
+    if state.get("recon") or isinstance(state.get("findings"), list):
+        return True
+    return "recon" not in phases and "detect" not in phases
+
+
+def _export_ready(
+    phases: set[str], state: Mapping[str, Any], unverified: Sequence[Mapping[str, Any]]
+) -> bool:
+    if "verify" in phases and unverified:
+        return False
     if "detect" in phases and state.get("findings") is None:
-        queue.append("engage.detect")
-    if "verify" in phases and _unverified(state):
-        queue.append("engage.verify")
-    if "export" in phases and not state.get("exported"):
-        queue.append("engage.export")
-    return tuple(queue)
+        return False
+    if "nuclei" in phases and not state.get("nuclei") and _nuclei_surface(state, phases):
+        return False
+    if "recon" in phases and not state.get("recon") and not isinstance(state.get("findings"), list):
+        return False
+    return True
 
 
 def _unverified(state: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -77,28 +143,50 @@ def _unverified(state: Mapping[str, Any]) -> list[dict[str, Any]]:
     return pending
 
 
-def _card(step: str, config: EngagementConfig, state: Mapping[str, Any]) -> Dict[str, Any]:
+def _remaining_names(gaps: Sequence[Mapping[str, Any]]) -> list[str]:
+    names: list[str] = []
+    for gap in gaps:
+        step = str(gap.get("step") or "")
+        if step and step not in names:
+            names.append(step)
+    return names
+
+
+def _card(
+    step: str,
+    config: EngagementConfig,
+    state: Mapping[str, Any],
+    gaps: Sequence[Mapping[str, Any]],
+) -> Dict[str, Any]:
+    canonical = canonical_step(step)
     inputs: Dict[str, Any] = {"target": config.target}
-    if step == "engage.recon" and config.recon_modules:
-        inputs["modules"] = list(config.recon_modules)
+    if canonical == "recon_run":
+        if config.recon_modules:
+            inputs["modules"] = list(config.recon_modules)
         inputs["quick_mode"] = config.quick_mode
-    if step == "engage.detect" and config.classes:
-        inputs["classes"] = list(config.classes)
-    if step == "engage.verify":
+    if canonical == "detect_run":
+        inputs["url"] = config.target
+        if config.classes:
+            inputs["classes"] = list(config.classes)
+    if canonical == "nuclei_scan":
+        inputs["url"] = config.target
+    if canonical == "verify_finding":
         pending = _unverified(state)
         inputs["finding"] = pending[0] if pending else {}
-    if step == "engage.export":
+    if canonical == "export_findings":
         inputs["output_dir"] = config.output_dir
+    export = canonical in _EXPORT_STEPS
     return {
-        "name": step,
+        "name": canonical,
         "kind": "tool_call",
         "inputs": inputs,
-        "hint": next_hint(step),
-        "remaining": list(_heuristic_queue(config, state)),
+        "hint": next_hint(canonical),
+        "gaps": [dict(item) for item in gaps],
+        "remaining": _remaining_names(gaps),
         "policy": {
-            "risk_level": "moderate" if step != "engage.export" else "low",
-            "network_policy": "controlled" if step != "engage.export" else "deny",
-            "requires_human_gate": config.hitl != "off" and step in {"engage.verify"},
+            "risk_level": "low" if export else "moderate",
+            "network_policy": "deny" if export else "controlled",
+            "requires_human_gate": config.hitl != "off" and canonical in _VERIFY_STEPS,
             "allowed_in_dry_run": True,
         },
     }
@@ -116,10 +204,13 @@ def _model_pick(remaining: list[str], state: Mapping[str, Any]) -> Optional[str]
 
     summary = {
         "has_recon": bool(state.get("recon")),
+        "has_nuclei": bool(state.get("nuclei")),
         "findings": (
             len(state.get("findings") or []) if isinstance(state.get("findings"), list) else None
         ),
+        "unverified": len(_unverified(state)),
         "exported": bool(state.get("exported")),
+        "gaps": list(remaining),
     }
     nonce, framed = wrap_untrusted("state", str(summary))
     prompt = (
@@ -137,6 +228,7 @@ def _model_pick(remaining: list[str], state: Mapping[str, Any]) -> Optional[str]
     if not isinstance(reply, str):
         return None
     token = reply.strip().split()[0] if reply.strip() else ""
-    if token in remaining:
-        return token
+    chosen = canonical_step(token)
+    if chosen in remaining:
+        return chosen
     return None

@@ -251,7 +251,7 @@ def register_ai_tools(mcp, counter, logger):
     @handle_errors(logger, category=ErrorCategory.AI)
     @no_target_contact("Plans the next engagement step; does not contact the target")
     async def engage_next(path: str = ".autort/engage.yaml") -> Dict[str, Any]:
-        """Return the next recon/detect/verify/export step for this engagement."""
+        """Return the next gap-filling aggregator step for this engagement."""
         from core.engage import engagement_next
 
         return engagement_next(path)

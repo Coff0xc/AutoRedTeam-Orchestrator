@@ -34,6 +34,7 @@ def empty_aggregator_state() -> Dict[str, Any]:
     return {
         "status": "init",
         "recon": None,
+        "nuclei": None,
         "findings": None,
         "verified": [],
         "exported": False,
@@ -89,6 +90,12 @@ def _record_dry(state: Dict[str, Any], name: str, inputs: Mapping[str, Any]) -> 
         if state.get("findings") is None:
             state["findings"] = []
         output["url"] = inputs.get("url") or inputs.get("target")
+        state["nuclei"] = {
+            "dry_run": True,
+            "url": output["url"],
+            "tags": inputs.get("tags"),
+            "severity": inputs.get("severity"),
+        }
     elif name == "verify_finding":
         record = _dry_verify(state, inputs)
         output["finding"] = record
@@ -424,7 +431,7 @@ async def _exec_nuclei_scan(inputs: Mapping[str, Any], state: Dict[str, Any]) ->
     if loaded == 0:
         if state.get("findings") is None:
             state["findings"] = []
-        return {
+        payload = {
             "success": True,
             "url": url,
             "findings": [],
@@ -432,16 +439,20 @@ async def _exec_nuclei_scan(inputs: Mapping[str, Any], state: Dict[str, Any]) ->
             "total_findings": 0,
             "message": "未找到匹配的 Nuclei 模板",
         }
+        state["nuclei"] = payload
+        return payload
     raw = await engine.scan(target=url, tags=tags, severity=severity, concurrency=concurrency)
     findings = [_nuclei_finding(url, item) for item in raw]
     _append_findings(state, findings)
-    return {
+    payload = {
         "success": True,
         "url": url,
         "templates_loaded": loaded,
         "findings": findings,
         "total_findings": len(findings),
     }
+    state["nuclei"] = payload
+    return payload
 
 
 async def _exec_export_findings(inputs: Mapping[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:

@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterator, Mapping, Optional
 
+from core.agent_runtime.aggregators import AGGREGATOR_STEPS, dispatch_aggregator_step
 from core.agent_runtime.models import (
     Action,
     ActionKind,
@@ -150,7 +151,9 @@ async def dispatch_engage_step(
     *,
     dry_run: bool = False,
 ) -> Dict[str, Any]:
-    """Execute one engage.* step and merge results into ``state``."""
+    """Execute one engage.* or aggregator step and merge results into ``state``."""
+    if name in AGGREGATOR_STEPS:
+        return await dispatch_aggregator_step(name, inputs, state, dry_run=dry_run)
     if name not in ENGAGE_STEPS:
         raise EngagementError("unknown engage step %r" % name)
     if dry_run:
@@ -170,6 +173,7 @@ def empty_state() -> Dict[str, Any]:
     return {
         "status": "init",
         "recon": None,
+        "nuclei": None,
         "findings": None,
         "verified": [],
         "exported": False,

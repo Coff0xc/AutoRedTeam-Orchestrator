@@ -10,11 +10,14 @@ from typer.testing import CliRunner
 
 from core.engage import (
     ENGAGE_STEPS,
+    PLAN_STEPS,
     EngagementConfig,
     EngagementError,
+    canonical_step,
     engagement_next,
     execution_id,
     init_engagement,
+    open_gaps,
     plan_next,
     run_engagement,
 )
@@ -35,8 +38,9 @@ def test_init_writes_yaml_and_plans_recon(tmp_path: Path):
 
     assert result["success"] is True
     assert path.is_file()
-    assert result["next"]["name"] == "engage.recon"
+    assert result["next"]["name"] == "recon_run"
     assert "detect" in result["next"]["hint"]
+    assert result["next"]["remaining"] == ["recon_run", "detect_run"]
     config = EngagementConfig.from_dict(result["config"])
     assert "127.0.0.1" in config.allowlist
     assert config.scope_mode == "enforce"
@@ -50,15 +54,56 @@ def test_safe_profile_rejected():
 def test_plan_advances_recon_detect_verify_export():
     config = EngagementConfig(target="http://127.0.0.1:3000", profile="scan")
     state = empty_state()
-    assert plan_next(config, state)["name"] == "engage.recon"
+    first = plan_next(config, state)
+    assert first["name"] == "recon_run"
+    assert first["remaining"] == ["recon_run", "detect_run"]
+    assert [gap["reason"] for gap in first["gaps"]] == ["missing_recon", "missing_detect"]
     state["recon"] = {"ok": True}
-    assert plan_next(config, state)["name"] == "engage.detect"
+    second = plan_next(config, state)
+    assert second["name"] == "detect_run"
+    assert second["remaining"] == ["detect_run"]
     state["findings"] = [{"url": "http://127.0.0.1:3000", "vuln_type": "xss", "vulnerable": True}]
-    assert plan_next(config, state)["name"] == "engage.verify"
+    third = plan_next(config, state)
+    assert third["name"] == "verify_finding"
+    assert third["remaining"] == ["verify_finding"]
+    assert "export_findings" not in third["remaining"]
     state["findings"][0]["engagement_verified"] = True
-    assert plan_next(config, state)["name"] == "engage.export"
+    fourth = plan_next(config, state)
+    assert fourth["name"] == "export_findings"
     state["exported"] = True
     assert plan_next(config, state) is None
+
+
+def test_plan_skips_recon_when_findings_exist():
+    config = EngagementConfig(target="http://127.0.0.1:3000", profile="scan")
+    state = empty_state()
+    state["findings"] = [{"url": "http://127.0.0.1:3000", "vuln_type": "xss", "vulnerable": True}]
+    card = plan_next(config, state)
+    assert card["name"] == "verify_finding"
+    assert "recon_run" not in card["remaining"]
+    assert "export_findings" not in card["remaining"]
+
+
+def test_plan_nuclei_gap_when_phased():
+    config = EngagementConfig(
+        target="http://127.0.0.1:3000",
+        profile="scan",
+        phases=("recon", "detect", "nuclei", "verify", "export"),
+    )
+    state = empty_state()
+    state["recon"] = {"ok": True}
+    state["findings"] = []
+    card = plan_next(config, state)
+    assert card["name"] == "nuclei_scan"
+    assert card["gaps"][0]["reason"] == "missing_nuclei"
+    state["nuclei"] = {"ok": True}
+    assert plan_next(config, state)["name"] == "export_findings"
+
+
+def test_canonical_step_maps_engage_aliases():
+    assert canonical_step("engage.verify") == "verify_finding"
+    assert "verify_finding" in PLAN_STEPS
+    assert open_gaps.__name__ == "open_gaps"
 
 
 def test_model_pick_frames_state_and_uses_authorized_system(monkeypatch):
@@ -79,11 +124,11 @@ def test_model_pick_frames_state_and_uses_authorized_system(monkeypatch):
     state = empty_state()
     state["recon"] = {"ok": True}
     card = plan_next(config, state, use_model=True)
-    assert card["name"] == "engage.detect"
+    assert card["name"] == "detect_run"
     assert captured["system"] == ENGAGE_PICK_SYSTEM_PROMPT
     assert DATA_MARKER_STEM in captured["prompt"]
     assert "has_recon" in captured["prompt"]
-    assert "engage.detect" in captured["prompt"]
+    assert "detect_run" in captured["prompt"]
 
 
 def test_model_pick_unknown_reply_keeps_heuristic(monkeypatch):
@@ -98,7 +143,7 @@ def test_model_pick_unknown_reply_keeps_heuristic(monkeypatch):
     state = empty_state()
     state["recon"] = {"ok": True}
     card = plan_next(config, state, use_model=True)
-    assert card["name"] == "engage.detect"
+    assert card["name"] == "detect_run"
 
 
 @pytest.mark.asyncio
@@ -196,11 +241,11 @@ def test_cli_init_and_next(tmp_path: Path):
         ],
     )
     assert init_result.exit_code == 0, init_result.output
-    assert "engage.recon" in init_result.output
+    assert "recon_run" in init_result.output
 
     next_result = runner.invoke(app, ["engage", "next", "--path", str(path)])
     assert next_result.exit_code == 0, next_result.output
-    assert "engage.recon" in next_result.output
+    assert "recon_run" in next_result.output
 
 
 def test_cli_dry_run(tmp_path: Path, monkeypatch):
@@ -323,7 +368,7 @@ def test_hitl_approval_runs_verify(tmp_path: Path, monkeypatch):
     finally:
         reset_hitl()
 
-    assert called == ["engage.verify"]
+    assert called == ["verify_finding"]
     assert result["loop"]["stopped"] == "max_steps"
 
 

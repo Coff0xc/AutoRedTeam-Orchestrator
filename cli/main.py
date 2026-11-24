@@ -1023,7 +1023,9 @@ def engage_init(
     profile: str = typer.Option("scan", "--profile", "-p", help="scan, active-lab, or full"),
     path: str = typer.Option(".autort/engage.yaml", "--path", help="Engagement YAML"),
     phases: str = typer.Option(
-        "recon,detect,verify,export", "--phases", help="Comma-separated phases"
+        "recon,detect,verify,export",
+        "--phases",
+        help="Comma-separated phases: recon,detect,nuclei,verify,export",
     ),
     classes: Optional[str] = typer.Option(None, "--classes", "-c", help="Detector classes"),
     hitl: str = typer.Option("off", "--hitl", help="off, approval, review_edit"),
