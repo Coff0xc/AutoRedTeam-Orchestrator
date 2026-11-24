@@ -60,7 +60,7 @@ Parent mixed-profile modules (`cve_handlers`, `ai_handlers`, `report_handlers`, 
 
 ## Engagement scorecard
 
-`autort.engage.scorecard/v1` keeps `confirmed` / `unconfirmed` / `total`. Additive fields: `unverified`, `contradicted`, `confirmation_rate` (null when `total` is 0), per-row `proof` (`bound` / `none`), and `gaps`. `no_findings_is_not_clean` is the empty-run gap so a dry-run cannot read as a clean target. Juice Shop live confirmation-rate remains open.
+`autort.engage.scorecard/v1` keeps `confirmed` / `unconfirmed` / `total`. Additive fields: `unverified`, `contradicted`, `confirmation_rate` (null when `total` is 0), per-row `proof` (`bound` / `none`), and `gaps`. `proof=bound` only when `provenance.bound` carries a stored request/response receipt (`autort.engage.provenance/v1`). `no_findings_is_not_clean` is the empty-run gap so a dry-run cannot read as a clean target. Juice Shop live confirmation-rate remains open.
 
 ## Orchestrator checkpoint/resume
 

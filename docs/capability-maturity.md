@@ -58,7 +58,8 @@ executor.
   `engage_next` / `plan_next` return aggregator steps from open state gaps.
   The engagement world model (`world.sqlite`) stores asset/fact/finding lineage;
   the planner reads the index, not scan JSON. `engage status` prints the coverage
-  denominator (`examined` / `ruled_out` / `open`).
+  denominator (`examined` / `ruled_out` / `open`). Live `verify_finding` binds a
+  request/response receipt; without it the finding stays `[UNCONFIRMED]`.
 
 ### Scan
 
