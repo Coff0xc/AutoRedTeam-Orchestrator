@@ -1,5 +1,6 @@
 """Agent runtime primitives for controlled AI red-team orchestration."""
 
+from core.agent_runtime.aggregators import tool_execution_id
 from core.agent_runtime.api import (
     get_run_view_response,
     get_runs_index,
@@ -113,6 +114,7 @@ __all__ = [
     "flow_from_dict",
     "human_gate_from_dict",
     "task_from_dict",
+    "tool_execution_id",
     "trace_event_from_dict",
     "BenchmarkResult",
     "BenchmarkCase",

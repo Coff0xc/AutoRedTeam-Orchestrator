@@ -182,6 +182,7 @@ def empty_state() -> Dict[str, Any]:
         "exported": False,
         "report_path": None,
         "executed": [],
+        "executions": {},
         "repeats": {},
         "stopped": None,
     }

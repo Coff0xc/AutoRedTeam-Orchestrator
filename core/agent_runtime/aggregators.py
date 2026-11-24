@@ -10,6 +10,7 @@ scope.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence
@@ -40,9 +41,20 @@ def empty_aggregator_state() -> Dict[str, Any]:
         "exported": False,
         "report_path": None,
         "executed": [],
+        "executions": {},
         "repeats": {},
         "stopped": None,
     }
+
+
+def tool_execution_id(name: str, inputs: Mapping[str, Any], *, dry_run: bool = False) -> str:
+    """Stable id for one aggregator call. Re-delivery with the same id does not re-run."""
+    blob = json.dumps(
+        {"name": name, "inputs": dict(inputs or {}), "dry_run": bool(dry_run)},
+        sort_keys=True,
+        default=str,
+    )
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
 async def dispatch_aggregator_step(
@@ -55,10 +67,13 @@ async def dispatch_aggregator_step(
     """Execute one aggregator and merge results into ``state``."""
     if name not in AGGREGATOR_STEPS:
         raise ValueError("unknown aggregator step %r" % name)
+    replay = _replay_execution(state, name, inputs, dry_run=dry_run)
+    if replay is not None:
+        return replay
     if dry_run:
         output = _record_dry(state, name, inputs)
         _sync_world(state, name, output, inputs)
-        return output
+        return _complete_execution(state, name, inputs, output, dry_run=True)
     if name == "recon_run":
         output = await _exec_recon_run(inputs, state)
     elif name == "detect_run":
@@ -70,7 +85,48 @@ async def dispatch_aggregator_step(
     else:
         output = await _exec_export_findings(inputs, state)
     _sync_world(state, name, output, inputs)
+    return _complete_execution(state, name, inputs, output, dry_run=False)
+
+
+def _replay_execution(
+    state: Dict[str, Any],
+    name: str,
+    inputs: Mapping[str, Any],
+    *,
+    dry_run: bool,
+) -> Optional[Dict[str, Any]]:
+    ledger = state.setdefault("executions", {})
+    if not isinstance(ledger, dict):
+        ledger = {}
+        state["executions"] = ledger
+    eid = tool_execution_id(name, inputs, dry_run=dry_run)
+    entry = ledger.get(eid)
+    if not isinstance(entry, dict) or entry.get("status") != "completed":
+        return None
+    output = dict(entry.get("output") or {})
+    output["replay"] = True
+    output["tool_execution_id"] = eid
     return output
+
+
+def _complete_execution(
+    state: Dict[str, Any],
+    name: str,
+    inputs: Mapping[str, Any],
+    output: Mapping[str, Any],
+    *,
+    dry_run: bool,
+) -> Dict[str, Any]:
+    eid = tool_execution_id(name, inputs, dry_run=dry_run)
+    payload = dict(output)
+    payload["tool_execution_id"] = eid
+    payload.pop("replay", None)
+    ledger = state.setdefault("executions", {})
+    if not isinstance(ledger, dict):
+        ledger = {}
+        state["executions"] = ledger
+    ledger[eid] = {"status": "completed", "output": dict(payload)}
+    return payload
 
 
 def _sync_world(

@@ -527,3 +527,69 @@ def test_cli_runtime_run_aggregator_example():
     assert result.exit_code == 0
     assert payload["passed"] is True
     assert payload["loop"]["allow_aggregators"] is True
+
+
+def test_duplicate_aggregator_steps_replay_without_rerun():
+    plan = {
+        "schema": RUNTIME_SCHEMA,
+        "mode": "local",
+        "steps": [
+            {
+                "name": "recon_run",
+                "inputs": {"target": "http://127.0.0.1:9", "dry_run": True},
+            },
+            {
+                "name": "recon_run",
+                "inputs": {"target": "http://127.0.0.1:9", "dry_run": True},
+            },
+            {
+                "name": "detect_run",
+                "inputs": {"url": "http://127.0.0.1:9", "dry_run": True},
+            },
+        ],
+    }
+    result = run_runtime_document(plan, allow_local=True, base_dir=REPO_ROOT)
+    actions = result["run_state"]["flow"]["tasks"][0]["actions"]
+    first_id = actions[0]["output"]["tool_execution_id"]
+
+    assert actions[0]["output"].get("replay") is not True
+    assert actions[1]["output"]["replay"] is True
+    assert actions[1]["output"]["tool_execution_id"] == first_id
+    assert actions[2]["output"].get("replay") is not True
+    assert actions[2]["output"]["tool_execution_id"] != first_id
+
+
+def test_failed_aggregator_is_not_replayed(monkeypatch):
+    calls = {"n": 0}
+
+    async def boom(inputs, state):
+        calls["n"] += 1
+        raise ValueError("engine down")
+
+    monkeypatch.setattr(
+        "core.agent_runtime.aggregators.require_surface", lambda *args, **kwargs: "scan"
+    )
+    monkeypatch.setattr("core.agent_runtime.aggregators.assert_in_scope", lambda target: None)
+    monkeypatch.setattr("core.agent_runtime.aggregators._exec_recon_run", boom)
+
+    plan = {
+        "schema": RUNTIME_SCHEMA,
+        "mode": "local",
+        "steps": [
+            {
+                "name": "recon_run",
+                "inputs": {"target": "http://127.0.0.1:9", "dry_run": False},
+            },
+            {
+                "name": "recon_run",
+                "inputs": {"target": "http://127.0.0.1:9", "dry_run": False},
+            },
+        ],
+    }
+    result = run_runtime_document(plan, allow_local=True, stop_on_block=False, base_dir=REPO_ROOT)
+    actions = result["run_state"]["flow"]["tasks"][0]["actions"]
+
+    assert calls["n"] == 2
+    assert actions[0]["status"] == "failed"
+    assert actions[1]["status"] == "failed"
+    assert actions[1]["output"].get("replay") is not True
