@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from core.engage.config import EngagementConfig
+from core.engage.world import coverage, unverified_index
 
 ENGAGE_STEPS = (
     "engage.recon",
@@ -79,16 +80,15 @@ def next_hint(step: str) -> str:
 def open_gaps(config: EngagementConfig, state: Mapping[str, Any]) -> List[Dict[str, Any]]:
     """Open coverage gaps in priority order. Only currently actionable steps."""
     phases = set(config.phases)
-    findings = state.get("findings")
-    has_findings_list = isinstance(findings, list)
-    unverified = _unverified(state) if "verify" in phases else []
+    cov = coverage(state)
+    unverified = unverified_index(state) if "verify" in phases else []
     gaps: List[Dict[str, Any]] = []
 
-    if "recon" in phases and not state.get("recon") and not has_findings_list:
+    if "recon" in phases and not cov["recon"] and not cov["detect"]:
         gaps.append({"step": "recon_run", "reason": "missing_recon"})
-    if "detect" in phases and findings is None:
+    if "detect" in phases and not cov["detect"]:
         gaps.append({"step": "detect_run", "reason": "missing_detect"})
-    if "nuclei" in phases and not state.get("nuclei") and _nuclei_surface(state, phases):
+    if "nuclei" in phases and not cov["nuclei"] and _nuclei_surface(cov, phases):
         gaps.append({"step": "nuclei_scan", "reason": "missing_nuclei"})
     if unverified:
         gaps.append(
@@ -98,49 +98,33 @@ def open_gaps(config: EngagementConfig, state: Mapping[str, Any]) -> List[Dict[s
                 "count": len(unverified),
             }
         )
-    if (
-        "export" in phases
-        and not state.get("exported")
-        and _export_ready(phases, state, unverified)
-    ):
+    if "export" in phases and not cov["exported"] and _export_ready(phases, cov, unverified):
         gaps.append({"step": "export_findings", "reason": "missing_export"})
     return gaps
 
 
-def _nuclei_surface(state: Mapping[str, Any], phases: set[str]) -> bool:
-    if state.get("recon") or isinstance(state.get("findings"), list):
+def _nuclei_surface(cov: Mapping[str, Any], phases: set[str]) -> bool:
+    if cov.get("recon") or cov.get("detect"):
         return True
     return "recon" not in phases and "detect" not in phases
 
 
 def _export_ready(
-    phases: set[str], state: Mapping[str, Any], unverified: Sequence[Mapping[str, Any]]
+    phases: set[str], cov: Mapping[str, Any], unverified: Sequence[Mapping[str, Any]]
 ) -> bool:
     if "verify" in phases and unverified:
         return False
-    if "detect" in phases and state.get("findings") is None:
+    if "detect" in phases and not cov.get("detect"):
         return False
-    if "nuclei" in phases and not state.get("nuclei") and _nuclei_surface(state, phases):
+    if "nuclei" in phases and not cov.get("nuclei") and _nuclei_surface(cov, phases):
         return False
-    if "recon" in phases and not state.get("recon") and not isinstance(state.get("findings"), list):
+    if "recon" in phases and not cov.get("recon") and not cov.get("detect"):
         return False
     return True
 
 
 def _unverified(state: Mapping[str, Any]) -> list[dict[str, Any]]:
-    findings = state.get("findings")
-    if not isinstance(findings, list):
-        return []
-    pending: list[dict[str, Any]] = []
-    for item in findings:
-        if not isinstance(item, dict):
-            continue
-        if item.get("engagement_verified") is True:
-            continue
-        if str(item.get("verification_status") or "") == "verified":
-            continue
-        pending.append(item)
-    return pending
+    return unverified_index(state)
 
 
 def _remaining_names(gaps: Sequence[Mapping[str, Any]]) -> list[str]:
@@ -202,14 +186,15 @@ def _model_pick(remaining: list[str], state: Mapping[str, Any]) -> Optional[str]
         return None
     from core.llm.prompts import ENGAGE_PICK_SYSTEM_PROMPT, envelope_intro, wrap_untrusted
 
+    cov = coverage(state)
     summary = {
-        "has_recon": bool(state.get("recon")),
-        "has_nuclei": bool(state.get("nuclei")),
-        "findings": (
-            len(state.get("findings") or []) if isinstance(state.get("findings"), list) else None
-        ),
+        "has_recon": cov["recon"],
+        "has_nuclei": cov["nuclei"],
+        "assets": cov["assets"],
+        "facts": cov["facts"],
+        "findings": cov["finding_count"],
         "unverified": len(_unverified(state)),
-        "exported": bool(state.get("exported")),
+        "exported": cov["exported"],
         "gaps": list(remaining),
     }
     nonce, framed = wrap_untrusted("state", str(summary))

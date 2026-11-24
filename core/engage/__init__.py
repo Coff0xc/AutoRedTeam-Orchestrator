@@ -28,6 +28,7 @@ from core.engage.runner import (
     run_engagement,
 )
 from core.engage.scorecard import SCORECARD_SCHEMA, build_scorecard
+from core.engage.world import WORLD_SCHEMA, coverage, ingest_step, unverified_index
 
 __all__ = [
     "DEFAULT_CONFIG_PATH",
@@ -52,5 +53,9 @@ __all__ = [
     "run_engagement",
     "save_config",
     "SCORECARD_SCHEMA",
+    "WORLD_SCHEMA",
     "build_scorecard",
+    "coverage",
+    "ingest_step",
+    "unverified_index",
 ]

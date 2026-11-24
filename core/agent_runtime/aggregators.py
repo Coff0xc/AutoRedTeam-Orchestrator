@@ -56,16 +56,35 @@ async def dispatch_aggregator_step(
     if name not in AGGREGATOR_STEPS:
         raise ValueError("unknown aggregator step %r" % name)
     if dry_run:
-        return _record_dry(state, name, inputs)
+        output = _record_dry(state, name, inputs)
+        _sync_world(state, name, output, inputs)
+        return output
     if name == "recon_run":
-        return await _exec_recon_run(inputs, state)
-    if name == "detect_run":
-        return await _exec_detect_run(inputs, state)
-    if name == "verify_finding":
-        return await _exec_verify_finding(inputs, state)
-    if name == "nuclei_scan":
-        return await _exec_nuclei_scan(inputs, state)
-    return await _exec_export_findings(inputs, state)
+        output = await _exec_recon_run(inputs, state)
+    elif name == "detect_run":
+        output = await _exec_detect_run(inputs, state)
+    elif name == "verify_finding":
+        output = await _exec_verify_finding(inputs, state)
+    elif name == "nuclei_scan":
+        output = await _exec_nuclei_scan(inputs, state)
+    else:
+        output = await _exec_export_findings(inputs, state)
+    _sync_world(state, name, output, inputs)
+    return output
+
+
+def _sync_world(
+    state: Dict[str, Any],
+    name: str,
+    payload: Mapping[str, Any],
+    inputs: Mapping[str, Any],
+) -> None:
+    from core.engage.world import ingest_step
+
+    merged = dict(inputs)
+    if "output_dir" not in merged and state.get("output_dir"):
+        merged["output_dir"] = state.get("output_dir")
+    ingest_step(state, name, payload, inputs=merged)
 
 
 def _record_dry(state: Dict[str, Any], name: str, inputs: Mapping[str, Any]) -> Dict[str, Any]:

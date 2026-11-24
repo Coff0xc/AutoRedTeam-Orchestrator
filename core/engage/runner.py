@@ -206,15 +206,33 @@ def save_state(config: EngagementConfig, state: Mapping[str, Any]) -> Path:
 def public_state(state: Mapping[str, Any]) -> Dict[str, Any]:
     findings = state.get("findings")
     verified = state.get("verified") if isinstance(state.get("verified"), list) else []
+    world = state.get("world") if isinstance(state.get("world"), Mapping) else {}
     return {
         "status": state.get("status"),
-        "has_recon": bool(state.get("recon")),
-        "finding_count": len(findings) if isinstance(findings, list) else 0,
+        "has_recon": bool(state.get("recon") or world.get("recon")),
+        "finding_count": (
+            len(findings) if isinstance(findings, list) else int(world.get("findings") or 0)
+        ),
         "verified_count": len(verified),
-        "exported": bool(state.get("exported")),
+        "exported": bool(state.get("exported") or world.get("exported")),
         "report_path": state.get("report_path"),
         "stopped": state.get("stopped"),
         "executed": list(state.get("executed") or []),
+        "world": (
+            {
+                "recon": bool(world.get("recon")),
+                "detect": bool(world.get("detect")),
+                "nuclei": bool(world.get("nuclei")),
+                "exported": bool(world.get("exported")),
+                "assets": int(world.get("assets") or 0),
+                "facts": int(world.get("facts") or 0),
+                "findings": int(world.get("findings") or 0),
+                "unverified": int(world.get("unverified") or 0),
+                "path": world.get("path"),
+            }
+            if world
+            else None
+        ),
     }
 
 
@@ -222,6 +240,7 @@ async def _run(
     config: EngagementConfig, *, dry_run: bool, max_steps: Optional[int]
 ) -> Dict[str, Any]:
     state = load_state(config)
+    state["output_dir"] = config.output_dir
     limit = int(max_steps or config.max_steps)
     flow = Flow(name=config.name, metadata={"schema": "autort.engage/v1", "dry_run": dry_run})
     task = flow.add_task(Task(name="engage", description="Authorized engagement loop"))
