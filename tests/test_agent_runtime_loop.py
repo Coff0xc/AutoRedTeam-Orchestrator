@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 from core.agent_runtime import (
     AGGREGATOR_STEPS,
     LOCAL_STEPS,
+    MODEL_STEPS,
     RUNTIME_SCHEMA,
     Action,
     ActionKind,
@@ -593,3 +594,99 @@ def test_failed_aggregator_is_not_replayed(monkeypatch):
     assert actions[0]["status"] == "failed"
     assert actions[1]["status"] == "failed"
     assert actions[1]["output"].get("replay") is not True
+
+
+def test_model_call_without_provider_fail_closes():
+    assert "engage.pick" in MODEL_STEPS
+    plan = {
+        "schema": RUNTIME_SCHEMA,
+        "mode": "local",
+        "steps": [
+            {
+                "name": "engage.pick",
+                "kind": "model_call",
+                "inputs": {"target": "http://127.0.0.1:9"},
+            }
+        ],
+    }
+    result = run_runtime_document(plan, allow_local=True, stop_on_block=False, base_dir=REPO_ROOT)
+    action = result["run_state"]["flow"]["tasks"][0]["actions"][0]
+
+    assert result["passed"] is False
+    assert action["status"] == "failed"
+    assert "AUTORT_LLM_PROVIDER" in (action["error"] or "")
+
+
+def test_engage_pick_selects_open_coverage_row(monkeypatch):
+    class FakeProvider:
+        available = True
+        provider = "fake"
+
+        def complete(self, prompt, system=""):
+            return "detect_run"
+
+    monkeypatch.setattr("core.llm.provider.LLMProvider", FakeProvider)
+    plan = {
+        "schema": RUNTIME_SCHEMA,
+        "mode": "local",
+        "steps": [
+            {
+                "name": "recon_run",
+                "inputs": {"target": "http://127.0.0.1:9", "dry_run": True},
+            },
+            {
+                "name": "engage.pick",
+                "kind": "model_call",
+                "inputs": {"target": "http://127.0.0.1:9"},
+            },
+        ],
+    }
+    result = run_runtime_document(plan, allow_local=True, base_dir=REPO_ROOT)
+    actions = {item["name"]: item for item in result["run_state"]["flow"]["tasks"][0]["actions"]}
+
+    assert result["loop"]["allow_model"] is True
+    assert actions["engage.pick"]["status"] == "completed"
+    assert actions["engage.pick"]["output"]["next"]["name"] == "detect_run"
+    assert actions["engage.pick"]["output"]["provider"] == "fake"
+
+
+def test_engage_pick_unknown_token_uses_heuristic(monkeypatch):
+    class FakeProvider:
+        available = True
+        provider = "fake"
+
+        def complete(self, prompt, system=""):
+            return "exploit_run"
+
+    monkeypatch.setattr("core.llm.provider.LLMProvider", FakeProvider)
+    plan = {
+        "schema": RUNTIME_SCHEMA,
+        "mode": "local",
+        "steps": [
+            {
+                "name": "recon_run",
+                "inputs": {"target": "http://127.0.0.1:9", "dry_run": True},
+            },
+            {
+                "name": "engage.pick",
+                "inputs": {"target": "http://127.0.0.1:9"},
+            },
+        ],
+    }
+    result = run_runtime_document(plan, allow_local=True, base_dir=REPO_ROOT)
+    pick = result["run_state"]["flow"]["tasks"][0]["actions"][1]
+    assert pick["output"]["next"]["name"] == "detect_run"
+
+
+def test_shell_kind_stays_forbidden():
+    plan = {
+        "schema": RUNTIME_SCHEMA,
+        "mode": "local",
+        "steps": [
+            {"name": "recon_run", "kind": "shell", "inputs": {"target": "http://127.0.0.1:9"}}
+        ],
+    }
+    result = run_runtime_document(plan, allow_local=True, stop_on_block=False, base_dir=REPO_ROOT)
+    action = result["run_state"]["flow"]["tasks"][0]["actions"][0]
+    assert action["status"] == "blocked"
+    assert "shell" in (action["error"] or "")

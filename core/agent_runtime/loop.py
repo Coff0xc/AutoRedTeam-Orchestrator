@@ -4,8 +4,10 @@ The loop walks pending actions through ``RuntimePipeline``, then either skips
 them (plan-only) or runs an allowlisted step. Local audit steps stay
 zero-network. Resident aggregators (``recon_run``, ``detect_run``,
 ``verify_finding``, ``nuclei_scan``, ``export_findings``) dry-run by default
-and only contact a target when ``dry_run`` is false. The loop does not call
-models, shells, or browsers, and it does not attach the P3 executor harness.
+and only contact a target when ``dry_run`` is false. ``MODEL_CALL`` is only
+``engage.pick`` through ``core.llm.provider.LLMProvider``, and only among
+coverage-open steps. Provider ``none`` fail-closes. Shells and browsers stay
+blocked. The loop does not attach the P3 executor harness.
 """
 
 from __future__ import annotations
@@ -50,7 +52,8 @@ ENGAGE_STEPS = frozenset(
         "engage.export",
     }
 )
-_FORBIDDEN_KINDS = frozenset({ActionKind.SHELL, ActionKind.BROWSER, ActionKind.MODEL_CALL})
+MODEL_STEPS = frozenset({"engage.pick"})
+_FORBIDDEN_KINDS = frozenset({ActionKind.SHELL, ActionKind.BROWSER})
 _NETWORK_OK = frozenset({"deny", "controlled", "scoped"})
 _DEFAULT_MAX_STEPS = 32
 
@@ -108,6 +111,7 @@ def run_runtime_path(
     max_steps: Optional[int] = None,
     allow_engage: Optional[bool] = None,
     allow_aggregators: Optional[bool] = None,
+    allow_model: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Load ``path`` and run it as a plan or an existing AgentRunState dump."""
     document_path = Path(path)
@@ -118,6 +122,7 @@ def run_runtime_path(
         base_dir=document_path.parent,
         allow_engage=allow_engage,
         allow_aggregators=allow_aggregators,
+        allow_model=allow_model,
     )
 
 
@@ -130,6 +135,7 @@ def run_runtime_document(
     stop_on_block: Optional[bool] = None,
     allow_engage: Optional[bool] = None,
     allow_aggregators: Optional[bool] = None,
+    allow_model: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """Run a plan mapping or an AgentRunState mapping."""
     root = Path(base_dir) if base_dir is not None else Path.cwd()
@@ -152,6 +158,7 @@ def run_runtime_document(
             allow_aggregators=_resolve_allow_aggregators(
                 data, allow_aggregators=allow_aggregators, local=local
             ),
+            allow_model=_resolve_allow_model(data, allow_model=allow_model, local=local),
         ).run(state, base_dir=root)
     state = agent_run_state_from_dict(data)
     return RuntimeLoop(
@@ -162,6 +169,7 @@ def run_runtime_document(
         allow_aggregators=_resolve_allow_aggregators(
             data, allow_aggregators=allow_aggregators, local=False
         ),
+        allow_model=_resolve_allow_model(data, allow_model=allow_model, local=False),
     ).run(state, base_dir=root)
 
 
@@ -177,6 +185,7 @@ class RuntimeLoop:
         pipeline: RuntimePipeline | None = None,
         allow_engage: bool = False,
         allow_aggregators: bool = False,
+        allow_model: bool = False,
     ) -> None:
         if max_steps < 1:
             raise ValueError("max_steps must be >= 1")
@@ -185,6 +194,7 @@ class RuntimeLoop:
         self.stop_on_block = bool(stop_on_block)
         self.allow_engage = bool(allow_engage)
         self.allow_aggregators = bool(allow_aggregators)
+        self.allow_model = bool(allow_model)
         self.pipeline = pipeline or RuntimePipeline()
 
     def run(self, run_state: AgentRunState, *, base_dir: Optional[Path] = None) -> Dict[str, Any]:
@@ -225,6 +235,10 @@ class RuntimeLoop:
         if action.kind in _FORBIDDEN_KINDS:
             action.mark_blocked(f"kind {action.kind.value} is not a local runtime step")
             return "forbidden_kind"
+        model_step = action.name in MODEL_STEPS and self.allow_model
+        if action.kind == ActionKind.MODEL_CALL and not model_step:
+            action.mark_blocked(f"kind {action.kind.value} is not a local runtime step")
+            return "forbidden_kind"
         engage_step = action.name in ENGAGE_STEPS and self.allow_engage
         aggregator_step = action.name in AGGREGATOR_STEPS and self.allow_aggregators
         if engage_step:
@@ -234,7 +248,12 @@ class RuntimeLoop:
         elif action.policy.network_policy != "deny":
             action.mark_blocked("local runtime loop requires network_policy=deny")
             return "network"
-        if action.name not in LOCAL_STEPS and not engage_step and not aggregator_step:
+        if (
+            action.name not in LOCAL_STEPS
+            and not engage_step
+            and not aggregator_step
+            and not model_step
+        ):
             action.mark_blocked(f"unknown local step {action.name!r}; failing closed")
             return "unknown_step"
         try:
@@ -271,6 +290,7 @@ class RuntimeLoop:
             "allow_local": self.allow_local,
             "allow_engage": self.allow_engage,
             "allow_aggregators": self.allow_aggregators,
+            "allow_model": self.allow_model,
             "max_steps": self.max_steps,
             "processed": processed,
             "stopped": stopped,
@@ -297,8 +317,10 @@ def _action_from_step(raw: Mapping[str, Any]) -> Action:
     if not isinstance(raw_inputs, Mapping):
         raw_inputs = raw.get("input")
     inputs: Mapping[str, Any] = raw_inputs if isinstance(raw_inputs, Mapping) else {}
-    kind = str(raw.get("kind") or ActionKind.TOOL_CALL.value)
     name = str(raw.get("name") or "").strip()
+    kind = str(raw.get("kind") or "").strip()
+    if not kind:
+        kind = ActionKind.MODEL_CALL.value if name in MODEL_STEPS else ActionKind.TOOL_CALL.value
     dry = bool(inputs.get("dry_run", False))
     default_network = "controlled" if name in ENGAGE_STEPS and not dry else "deny"
     return Action(
@@ -366,6 +388,8 @@ def _dispatch(action: Action, run_state: AgentRunState, base_dir: Path) -> Dict[
                 action.name, inputs, engage_state, dry_run=_step_dry_run(inputs, run_state)
             )
         )
+    if action.name in MODEL_STEPS:
+        return _dispatch_engage_pick(action, run_state)
     raise ValueError(f"unhandled local step {action.name!r}")
 
 
@@ -381,6 +405,51 @@ def _resolve_allow_engage(
 
 def _plan_has_engage(data: Mapping[str, Any]) -> bool:
     return _plan_has_names(data, ENGAGE_STEPS)
+
+
+def _resolve_allow_model(
+    data: Mapping[str, Any], *, allow_model: Optional[bool], local: bool
+) -> bool:
+    if allow_model is not None:
+        return bool(allow_model)
+    if "allow_model" in data:
+        return bool(data.get("allow_model"))
+    return local and _plan_has_names(data, MODEL_STEPS)
+
+
+def _dispatch_engage_pick(action: Action, run_state: AgentRunState) -> Dict[str, Any]:
+    from core.engage.config import EngagementConfig
+    from core.engage.planner import plan_next
+    from core.engage.runner import empty_state
+    from core.llm.provider import LLMProvider
+
+    provider = LLMProvider()
+    if not provider.available:
+        raise ValueError("MODEL_CALL requires AUTORT_LLM_PROVIDER other than none")
+    target = str(action.inputs.get("target") or "").strip()
+    if not target:
+        raise ValueError("engage.pick requires target")
+    kwargs: Dict[str, Any] = {
+        "target": target,
+        "profile": str(action.inputs.get("profile") or "scan"),
+        "use_model": True,
+        "hitl": str(action.inputs.get("hitl") or "off"),
+        "output_dir": str(action.inputs.get("output_dir") or ".autort"),
+    }
+    phases = action.inputs.get("phases")
+    if phases:
+        kwargs["phases"] = phases
+    config = EngagementConfig(**kwargs)
+    engage_state = run_state.metadata.setdefault("engage_state", empty_state())
+    if action.inputs.get("output_dir"):
+        engage_state["output_dir"] = action.inputs.get("output_dir")
+    card = plan_next(config, engage_state, use_model=True)
+    return {
+        "success": True,
+        "step": "engage.pick",
+        "next": card,
+        "provider": provider.provider,
+    }
 
 
 def _resolve_allow_aggregators(
