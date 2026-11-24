@@ -8,7 +8,7 @@ The model can decide. This program keeps the permission, the evidence, and the r
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-4.0.0-orange)
+![Version](https://img.shields.io/badge/version-4.1.0-orange)
 ![Status](https://img.shields.io/badge/status-Beta%20%2F%20Research%20Preview-yellow)
 
 [Maturity notes](docs/capability-maturity.md) · [Trust boundaries](docs/security-model.md) · [Gaps](GAPS.md) · [Security audits](docs/security-audits/)
@@ -119,7 +119,7 @@ pip install -r requirements.txt
 python -m cli.main --help
 ```
 
-Python 3.10 or newer. Version `4.0.0` lives only in `_version.py`. The two commands are `autort` and `autoredteam-mcp`.
+Python 3.10 or newer. Version `4.1.0` lives only in `_version.py`. The two commands are `autort` and `autoredteam-mcp`.
 
 Any subcommand, including `--help`, prints the legal notice on stderr. `--help` does not ask the allowed list.
 
@@ -423,7 +423,7 @@ Calls are async. Most return a dict. A failure carries an `"error"` string. If t
 
 ```python
 from autort import Engagement, Exploiter, Reporter
-from autort import __version__  # "4.0.0"
+from autort import __version__  # "4.1.0"
 
 engagement = Engagement("http://127.0.0.1:3000", profile="scan")
 plan = await engagement.run(dry_run=True)

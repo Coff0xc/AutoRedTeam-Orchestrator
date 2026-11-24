@@ -2,7 +2,7 @@
 
 Honest limits of the default product. Pair this page with `autort ai-surface ledger`.
 
-The package version is `4.0.0` in `_version.py` only. The GitHub Action pin stays `Coff0xc/AutoRedTeam-Orchestrator@v3.1`.
+The package version is `4.1.0` in `_version.py` only. The GitHub Action pin stays `Coff0xc/AutoRedTeam-Orchestrator@v3.1`.
 
 ## OWASP MCP Top 10
 

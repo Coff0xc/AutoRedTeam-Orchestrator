@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-11-25
+
 ### Added
 
 - `tool_enable` grant ledger (`autort.capability.grants/v1`): catalog unlocks are recorded in-process, optionally persisted with `AUTORT_GRANT_LOG`, and capped with `AUTORT_GRANT_BUDGET`. Resident surfaces do not consume the budget. Replay of the same (kind, name) does not duplicate. `autort capabilities grants` reads the log. Third-party MCP grant growth stays unread. MCP02 remains partial
@@ -35,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Catalog MCP tools `ext_nmap_scan`, `ext_nuclei_scan`, `ext_sqlmap_scan`, `ext_ffuf_fuzz`, and `ext_masscan_scan` drop unbounded `extra_args`. Presets and ffuf modes are Literal enums. `ext_sqlmap_scan` `preset=exploit` and `ext_ffuf_fuzz` fail closed unless `confirmed=true`. Internally built flags still pass `validate_extra_args`.
 - Mixed-profile scan and active-lab handler registrars load from sibling modules only when the current profile enables them. Parent modules that contain a safe surface still import under `safe`.
 - Optional engage `_model_pick` wraps state as DATA, passes the authorized system prompt, continues remaining in-scope steps, and treats HITL on live `engage.verify` as code. A HITL permit is not verification evidence. Unknown model replies fall back to the heuristic queue.
+- Version is `4.1.0` in `_version.py` only. The GitHub Action pin `v3.1` is unchanged
 
 ### Fixed
 

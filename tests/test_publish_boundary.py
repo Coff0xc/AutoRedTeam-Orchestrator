@@ -121,6 +121,20 @@ def test_image_context_matches_wheel_excludes():
     assert "not slow and not integration and not network" in ubuntu_job
 
 
+def test_package_version_matches_changelog_cut():
+    from _version import __version__
+
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    heading = f"## [{__version__}] - "
+    assert __version__ == "4.1.0"
+    assert heading in changelog
+    unreleased, released = changelog.split(heading, 1)
+    assert "## [Unreleased]" in unreleased
+    assert "autort.capability.grants/v1" in released
+    assert "autort.capability.grants/v1" not in unreleased
+    assert "## [4.0.0] - 2026-11-16" in released
+
+
 def test_env_example_documents_live_gates():
     text = (ROOT / ".env.example").read_text(encoding="utf-8")
 

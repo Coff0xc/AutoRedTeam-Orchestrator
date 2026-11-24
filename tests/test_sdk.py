@@ -578,9 +578,11 @@ class TestSDKPackage:
 
     def test_version(self):
         """测试版本号"""
+        from _version import __version__ as canonical
         from autort import __version__
 
-        assert __version__ == "4.0.0"
+        assert canonical == "4.1.0"
+        assert __version__ == canonical
 
     def test_exports(self):
         """测试所有公共类均可导入"""
@@ -618,8 +620,11 @@ class TestCLI:
 
         runner = CliRunner()
         result = runner.invoke(app, ["version"])
+        from _version import __version__ as canonical
+
         assert result.exit_code == 0
-        assert "4.0.0" in result.output
+        assert canonical in result.output
+        assert canonical == "4.1.0"
 
     def test_cli_scan_help(self):
         """测试 scan 子命令 help"""
