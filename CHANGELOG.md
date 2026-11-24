@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Aggregator idempotent execution ledger: `tool_execution_id` is sha256(name, inputs, dry_run). A completed id is replayed and does not re-run the engine. Failures are not recorded, so a retry still executes. Doom-loop still stops after three identical planner fingerprints that do not close a gap
 - Engage model pick is limited to coverage ledger open rows that map to currently actionable steps. The model may reply with a row id (`phase:detect`, `finding:url|type|param`) or a step name. Examined/ruled_out rows, `export_findings` while verify is open, and unknown names (`exploit_run`) are ignored. Default `AUTORT_LLM_PROVIDER` stays `none`
 - Juice Shop confirmation-rate demo: `autort engage confirmation-rate` verifies product-search SQLi against an authorized local Juice Shop and scores a homepage XSS self-report. Scorecard `confirmation_rate` is confirmed/total. Default CI stays dry-run; the live pin is `tests/test_engage_juiceshop.py` (`integration`/`network`, skipped when 127.0.0.1:3000 is down)
 - Verify receipts: `verify_finding` stores `autort.engage.provenance/v1` with request URL/payload and response status/length/SHA-256/preview. `require_receipt` keeps findings `[UNCONFIRMED]` without a bound receipt. Scorecard `proof=bound` only when the receipt is present. World graph stores `provenance_bound` and `body_sha256`, not response bodies
