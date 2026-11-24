@@ -144,6 +144,7 @@ autort engage init http://127.0.0.1:3000 --profile scan
 autort engage next
 autort engage run --dry-run
 AUTORT_CAPABILITY_PROFILE=scan autort engage run
+autort engage confirmation-rate --url http://127.0.0.1:3000
 autort engage status
 ```
 
@@ -151,7 +152,7 @@ autort engage status
 
 MCP tools: `engage_init`, `engage_status`, `engage_next` (safe), `engage_run` (scan). A model that only has `safe` can still plan the next step. Live recon needs the operator to raise the level.
 
-The example lab is Juice Shop bound to `127.0.0.1:3000` in `docker-compose.lab.yml`. Copy `config/engage.lab.example.yaml` if you want the file without running `init`.
+The example lab is Juice Shop bound to `127.0.0.1:3000` in `docker-compose.lab.yml`. Copy `config/engage.lab.example.yaml` if you want the file without running `init`. `autort engage confirmation-rate` verifies product-search SQLi and scores a homepage XSS self-report so `confirmation_rate` has confirmed and unconfirmed rows. `--ci` exits 2 when the rate is 0 or empty. Default CI does not start Juice Shop.
 
 ## Four permission levels
 
@@ -383,6 +384,7 @@ These do not contact a target. CVE search reads the local notes.
 | `engage status` | Coverage denominator and next step | `autort engage status` |
 | `engage next` | Next gap-filling aggregator card | `autort engage next` |
 | `engage run --dry-run` | Walk the loop without contacting the host | `autort engage run --dry-run --ci` |
+| `engage confirmation-rate` | Juice Shop lab scorecard (`confirmation_rate`) | `autort engage confirmation-rate --url http://127.0.0.1:3000` |
 | `version` | The version string | `autort version` |
 
 `autort tools` is the lint group. A function of the same name still exists and is limited to the `scan` level, but the group occupies the command, so that function is not what `autort tools` runs.

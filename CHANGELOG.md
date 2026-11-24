@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Juice Shop confirmation-rate demo: `autort engage confirmation-rate` verifies product-search SQLi against an authorized local Juice Shop and scores a homepage XSS self-report. Scorecard `confirmation_rate` is confirmed/total. Default CI stays dry-run; the live pin is `tests/test_engage_juiceshop.py` (`integration`/`network`, skipped when 127.0.0.1:3000 is down)
 - Verify receipts: `verify_finding` stores `autort.engage.provenance/v1` with request URL/payload and response status/length/SHA-256/preview. `require_receipt` keeps findings `[UNCONFIRMED]` without a bound receipt. Scorecard `proof=bound` only when the receipt is present. World graph stores `provenance_bound` and `body_sha256`, not response bodies
 - Engagement coverage ledger (`autort.engage.coverage/v1`): in-scope phases plus discovered ports and findings, each `examined` / `ruled_out` / `open`. `engage status` and `engage run` print the denominator. `coverage_rate` is null when total is 0. Contradicted findings are ruled out
 - Engagement world model (`autort.engage.world/v1`): aggregators write asset/fact/finding nodes into `world.sqlite` via `SQLiteKnowledgeStore`. Planner reads the compact index (coverage flags, counts, unverified keys). Scan JSON stays out of the graph. Finding confidence is `tentative` until verify

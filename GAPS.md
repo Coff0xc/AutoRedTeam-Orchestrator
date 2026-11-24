@@ -60,7 +60,9 @@ Parent mixed-profile modules (`cve_handlers`, `ai_handlers`, `report_handlers`, 
 
 ## Engagement scorecard
 
-`autort.engage.scorecard/v1` keeps `confirmed` / `unconfirmed` / `total`. Additive fields: `unverified`, `contradicted`, `confirmation_rate` (null when `total` is 0), per-row `proof` (`bound` / `none`), and `gaps`. `proof=bound` only when `provenance.bound` carries a stored request/response receipt (`autort.engage.provenance/v1`). `no_findings_is_not_clean` is the empty-run gap so a dry-run cannot read as a clean target. Juice Shop live confirmation-rate remains open.
+`autort.engage.scorecard/v1` keeps `confirmed` / `unconfirmed` / `total`. Additive fields: `unverified`, `contradicted`, `confirmation_rate` (null when `total` is 0), per-row `proof` (`bound` / `none`), and `gaps`. `proof=bound` only when `provenance.bound` carries a stored request/response receipt (`autort.engage.provenance/v1`). `no_findings_is_not_clean` is the empty-run gap so a dry-run cannot read as a clean target.
+
+Juice Shop confirmation-rate: `autort engage confirmation-rate --url http://127.0.0.1:3000` after `docker compose -f docker-compose.lab.yml up -d`. It verifies `/rest/products/search?q=` (SQLi) and a homepage XSS self-report so the denominator has confirmed and unconfirmed rows. `--ci` exits 2 when `confirmation_rate` is 0 or empty. Default Windows/Ubuntu jobs skip this (`integration`/`network`). A loopback Juice Shop-shaped mock pins the contract in `tests/test_engage_juiceshop.py`.
 
 ## Orchestrator checkpoint/resume
 
@@ -86,6 +88,5 @@ denominator; `coverage_rate` is null when total is 0.
 
 ## Still open in the tree
 
-- Juice Shop live confirmation-rate demo
 - Universal engine router (removed; handlers call the Python engines directly)
 - A proxy in front of other MCP servers
