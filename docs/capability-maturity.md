@@ -56,6 +56,8 @@ executor.
 - Default MCP server profile; no target network access or host command execution is registered.
 - Engagement plan tools (`engage_init`, `engage_status`, `engage_next`) and `engage run --dry-run`.
   `engage_next` / `plan_next` return aggregator steps from open state gaps.
+  The engagement world model (`world.sqlite`) stores asset/fact/finding lineage;
+  the planner reads the index, not scan JSON.
 
 ### Scan
 

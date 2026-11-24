@@ -78,6 +78,8 @@ Default `AUTORT_LLM_PROVIDER` stays `none`. The planner is heuristic code. When 
 allowlist. CI still smokes the audit plan (`runtime.local.example.yaml --local --ci`).
 `plan_next` emits those aggregator names from open state gaps. Findings skip recon.
 Unverified findings block export. `nuclei` is an optional phase, not a default.
+Aggregator steps also write `output_dir/world.sqlite` (`autort.engage.world/v1`).
+The planner reads that index (assets/facts/findings/unverified keys), not recon JSON.
 
 ## Still open in the tree
 
