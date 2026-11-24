@@ -80,6 +80,9 @@ allowlist. CI still smokes the audit plan (`runtime.local.example.yaml --local -
 Unverified findings block export. `nuclei` is an optional phase, not a default.
 Aggregator steps also write `output_dir/world.sqlite` (`autort.engage.world/v1`).
 The planner reads that index (assets/facts/findings/unverified keys), not recon JSON.
+`engage status` and `engage run` include `autort.engage.coverage/v1`: examined / ruled_out / open
+over in-scope phases, discovered ports, and findings. An empty finding list still has a phase
+denominator; `coverage_rate` is null when total is 0.
 
 ## Still open in the tree
 

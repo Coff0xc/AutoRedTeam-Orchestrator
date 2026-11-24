@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Engagement coverage ledger (`autort.engage.coverage/v1`): in-scope phases plus discovered ports and findings, each `examined` / `ruled_out` / `open`. `engage status` and `engage run` print the denominator. `coverage_rate` is null when total is 0. Contradicted findings are ruled out
 - Engagement world model (`autort.engage.world/v1`): aggregators write asset/fact/finding nodes into `world.sqlite` via `SQLiteKnowledgeStore`. Planner reads the compact index (coverage flags, counts, unverified keys). Scan JSON stays out of the graph. Finding confidence is `tentative` until verify
 - `plan_next` reads open gaps from engagement state and returns aggregator steps (`recon_run`, `detect_run`, `nuclei_scan`, `verify_finding`, `export_findings`). Findings skip recon; unverified findings block export. Optional `nuclei` phase. `engage.*` names stay aliases
 - RuntimeLoop dispatches resident aggregators `recon_run`, `detect_run`, `verify_finding`, `nuclei_scan`, and `export_findings`. Dry-run records shared `engage_state` without target contact (`config/runtime.aggregators.example.yaml`). Live paths require the matching capability profile and target allowlist. Unknown steps, shells, and `model_call` still fail closed
