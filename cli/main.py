@@ -1112,6 +1112,31 @@ def engage_resume_cmd(
     engage_run_cmd(path=path, dry_run=False, max_steps=None, ci=False, output=output)
 
 
+@engage_app.command("confirmation-rate")
+def engage_confirmation_rate_cmd(
+    url: str = typer.Option(
+        "http://127.0.0.1:3000", "--url", help="Authorized Juice Shop base URL"
+    ),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="输出文件路径"),
+    ci: bool = typer.Option(
+        False, "--ci", help="CI 模式: confirmation_rate 为 0 或空时返回非零退出码"
+    ),
+):
+    """Juice Shop lab scorecard: known search SQLi vs a homepage XSS self-report."""
+    from core.capability_manifest import CapabilityManifestError
+    from core.engage.juiceshop import JuiceShopError, run_juice_shop_confirmation_rate
+    from core.security.target_scope import TargetScopeError
+
+    try:
+        result = run_juice_shop_confirmation_rate(url)
+    except (JuiceShopError, CapabilityManifestError, TargetScopeError, OSError, ValueError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(2) from exc
+    _output(result, output)
+    if ci and not result.get("passed"):
+        raise typer.Exit(2)
+
+
 # ──────────────────────────── helpers ────────────────────────────
 
 

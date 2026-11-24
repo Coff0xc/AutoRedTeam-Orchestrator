@@ -9,6 +9,14 @@ from core.engage.config import (
     load_config,
     save_config,
 )
+from core.engage.juiceshop import (
+    JUICE_SHOP_DEFAULT,
+    JuiceShopError,
+    identify_juice_shop,
+    juice_shop_reachable,
+    run_juice_shop_confirmation_rate,
+    seed_findings,
+)
 from core.engage.ledger import COVERAGE_SCHEMA, build_coverage_ledger
 from core.engage.planner import (
     ENGAGE_STEPS,
@@ -38,6 +46,8 @@ __all__ = [
     "PLAN_STEPS",
     "EngagementConfig",
     "EngagementError",
+    "JuiceShopError",
+    "JUICE_SHOP_DEFAULT",
     "applied_engagement",
     "async_run_engagement",
     "dispatch_engage_step",
@@ -46,6 +56,10 @@ __all__ = [
     "execution_id",
     "canonical_step",
     "host_from_target",
+    "identify_juice_shop",
+    "juice_shop_reachable",
+    "run_juice_shop_confirmation_rate",
+    "seed_findings",
     "init_engagement",
     "load_config",
     "next_hint",
