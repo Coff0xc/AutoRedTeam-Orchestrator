@@ -6,7 +6,8 @@ max_steps: 8
 # Local audit allowlist: ai_surface.scan, ai_surface.scan_skills,
 # ai_surface.scan_mcp_config, skill.read, eval.document.
 # Aggregators: config/runtime.aggregators.example.yaml (dry-run).
-# Paths are repo-relative. The loop does not call models.
+# MODEL_CALL is engage.pick only, via AUTORT_LLM_PROVIDER (default none).
+# Paths are repo-relative.
 
 steps:
   - name: ai_surface.scan

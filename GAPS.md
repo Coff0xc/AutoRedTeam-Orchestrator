@@ -80,6 +80,11 @@ Default `AUTORT_LLM_PROVIDER` stays `none`. The planner is heuristic code. When 
 allowlist. CI still smokes the audit plan (`runtime.local.example.yaml --local --ci`).
 `plan_next` emits those aggregator names from open state gaps. Findings skip recon.
 Unverified findings block export. `nuclei` is an optional phase, not a default.
+`MODEL_CALL` in the runtime loop is only `engage.pick`. It uses `LLMProvider` and
+`plan_next(..., use_model=True)`. Provider `none` raises and the action fails.
+The pick set is coverage-open rows mapped to actionable aggregator steps. Shell
+and browser kinds stay blocked. Default `AUTORT_LLM_PROVIDER` remains `none`.
+
 Completed aggregator calls store `tool_execution_id` on `state["executions"]`. A later call with
 the same name, inputs, and dry_run flag returns the saved output with `replay: true` and does
 not contact the engine. Failed calls are omitted so a retry still runs. The engage doom-loop
