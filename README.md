@@ -372,7 +372,7 @@ These do not contact a target. CVE search reads the local notes.
 | `ai-surface inventory` | Local MCP client configs and skill roots, no network | `autort ai-surface inventory` |
 | `ai-surface ledger` | Offline OWASP MCP Top 10 map. MCP08 is a documented gap | `autort ai-surface ledger` |
 | `ai-surface scan-mcp-config` | A read of a client config | `autort ai-surface scan-mcp-config --path .mcp.json` |
-| `ai-surface scan-skills` | Named skill risks (`skill.prompt_injection`, secrets, downloads) | `autort ai-surface scan-skills --path ./skills` |
+| `ai-surface scan-skills` | Named skill risks (`skill.prompt_injection`, secrets, downloads, unpinned install, curl-to-shell) | `autort ai-surface scan-skills --path tests/fixtures/skills/malicious` |
 | `ai-surface diff` | What changed since a saved scan | `autort ai-surface diff --baseline tests/fixtures/ai_surface/handlers.baseline.json --path handlers --ci` |
 | `capabilities profiles` | The four levels and their counts | `autort capabilities profiles` |
 | `capabilities manifest` | One level, as data | `autort capabilities manifest --profile safe` |

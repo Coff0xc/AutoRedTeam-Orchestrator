@@ -29,6 +29,10 @@ Offline map: `autort ai-surface ledger` (`autort.owasp.mcp/v1`). `network` is fa
 
 MCP08 stays a gap on purpose. A runtime TOFU/stdio wrapper is out of scope for this increment.
 
+## Skill fixtures
+
+`tests/fixtures/skills/` has eight named cases: benign, malicious (`skill.prompt_injection`), suspicious download URL, missing `SKILL.md`, hardcoded secret, unpinned install, `curl|bash` remote code, and hidden unicode. This is not NVIDIA SkillSpector's pattern set. `skills read` still withholds the body on critical findings.
+
 ## CLI
 
 Default `autort --help` leads with `ai-surface`, `capabilities`, `skills`, and `engage`. `code-agent`, `runtime-api`, `sandbox`, and `pentest` stay callable and are hidden from that list. MCP names `smart_analyze`, `attack_chain_plan`, `plan_attack_path`, `kg_attack_paths`, and `auto_pentest` stay catalog-only. RuntimeLoop fail-closes those names as unknown local steps.
