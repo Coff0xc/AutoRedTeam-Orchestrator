@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Skill-risk fixtures for `skill.hardcoded_secret`, `skill.unverifiable_remote_code`, `mcp.MCP04.remote-skill-code` (`curl|bash`), and `mcp.MCP03.hidden-unicode`. Catalog stays at eight named skill fixtures.
 
+### Changed
+
+- README lead and GitHub About name both loops: local MCP/AI attack-surface audit and authorized-engagement evidence gate. Package version on the README is 4.1.0.
+
 ### Fixed
 
 - `ai-surface diff --ci` against `tests/fixtures/ai_surface/handlers.baseline.json` matches the live `engage_next` first-line description (`gap-filling aggregator step`)

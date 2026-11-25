@@ -1,5 +1,5 @@
 name: 'AutoRedTeam Surface Audit'
-description: 'Local MCP/AI attack-surface audit and evidence gate for authorized testing'
+description: 'Local MCP/AI attack-surface audit and authorized-engagement evidence gate'
 branding:
   icon: 'shield'
   color: 'red'

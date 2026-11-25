@@ -1,10 +1,10 @@
 # AutoRedTeam-Orchestrator
 
-Two loops, one allowlist. The default is a local MCP/AI attack-surface audit: you point it at your own code, your AI client config, or your instruction files. It reads them, writes what it found with a file and a line, and only offers the tools your permission level allows.
+Two loops, one allowlist. The default is a local MCP/AI attack-surface audit: you point it at your own code, your AI client config, or your instruction files. It reads them, writes what it found with a file and a line, and only offers the tools your permission level allows. The offline map is `autort ai-surface ledger` (OWASP MCP Top 10; MCP08 is a gap).
 
 The other loop is an authorized engagement. You write one target file. Humans and models share the same steps: plan, recon, detect, verify, export. A finding is confirmed only after an outside check. The same step three times in a row stops the run.
 
-The model can decide. This program keeps the permission, the evidence, and the record.
+The model can decide. This program keeps the permission, the evidence, and the record. Package version **4.1.0**.
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -23,6 +23,8 @@ Companion tool: **[AI API Key Scanner](https://github.com/Coff0xc/Github-API-sca
 
 - The default permission level is `safe`. It reads your project. It does not contact a target.
 - `autort engage init` writes a local engagement file. `engage run --dry-run` plans recon → detect → verify → export without touching the host. Live `engage run` needs `scan`.
+- Default `--help` leads with `ai-surface`, `capabilities`, `skills`, and `engage`. `pentest`, `code-agent`, `runtime-api`, and `sandbox` stay callable and are hidden from that list.
+- `autort ai-surface ledger` is the offline OWASP MCP Top 10 map. MCP08 is a gap. MCP02 is partial: this server records `tool_enable` grants (`autort capabilities grants`); it does not read another MCP server's grants.
 - There are four levels. Each higher level includes everything below it.
 - The model does not read the old notes in the code. It reads a short card: name, level, risk, effects, and limits.
 - The file reader parses Python. It does not import it, and it does not call the tools.
@@ -97,6 +99,8 @@ python -m cli.main ai-surface inventory
 python -m cli.main ai-surface ledger
 python -m cli.main ai-surface scan-mcp-config --path .mcp.json
 python -m cli.main capabilities manifest --profile safe
+python -m cli.main capabilities grants
+python -m cli.main skills catalog
 python -m cli.main engage init http://127.0.0.1:3000 --profile scan
 python -m cli.main engage run --dry-run
 ```
@@ -466,7 +470,7 @@ flowchart LR
   src --> wheel --> image --> cmd
 ```
 
-The image does not install nmap. The same experimental trees are dropped, plus payload and wordlist material. The health check imports the server module. The image description is the package sentence: "Local MCP/AI attack-surface audit and evidence gate for authorized testing."
+The image does not install nmap. The same experimental trees are dropped, plus payload and wordlist material. The health check imports the server module. The image description is the package sentence: "Local MCP/AI attack-surface audit and authorized-engagement evidence gate."
 
 The server speaks stdio.
 

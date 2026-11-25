@@ -121,6 +121,17 @@ def test_image_context_matches_wheel_excludes():
     assert "not slow and not integration and not network" in ubuntu_job
 
 
+def test_public_copy_names_both_loops():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    action = (ROOT / "action.yml").read_text(encoding="utf-8")
+    sentence = "Local MCP/AI attack-surface audit and authorized-engagement evidence gate"
+    assert sentence in readme
+    assert sentence in action
+    from _version import __version__
+
+    assert f"**{__version__}**" in readme or f"`{__version__}`" in readme
+
+
 def test_package_version_matches_changelog_cut():
     from _version import __version__
 
