@@ -441,7 +441,7 @@
     {
       "kind": "tool",
       "tool_name": "engage_next",
-      "description": "Return the next recon/detect/verify/export step for this engagement.",
+      "description": "Return the next gap-filling aggregator step for this engagement.",
       "parameters": [
         "path"
       ]

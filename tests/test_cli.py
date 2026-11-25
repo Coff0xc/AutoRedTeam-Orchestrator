@@ -202,6 +202,23 @@ class TestAISurfaceDiffCI:
         )
         assert result.exit_code == 0
 
+    def test_committed_handlers_baseline_diff_ci_exits_zero(self):
+        from cli.main import app
+
+        result = runner.invoke(
+            app,
+            [
+                "ai-surface",
+                "diff",
+                "--baseline",
+                "tests/fixtures/ai_surface/handlers.baseline.json",
+                "--path",
+                "handlers",
+                "--ci",
+            ],
+        )
+        assert result.exit_code == 0
+
     def test_diff_ci_fails_when_baseline_missing(self, tmp_path):
         from cli.main import app
 
